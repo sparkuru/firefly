@@ -1,0 +1,23 @@
+{
+  "name": "@f1refly/experiment-nerv",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev --open /lab/nerv/",
+    "start": "astro dev",
+    "check": "astro check",
+    "build": "astro check && astro build",
+    "test:e2e": "playwright test",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.6",
+    "astro": "^4.16.18",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "f1refly",
+  "private": true,
+  "scripts": {
+    "dev:nerv": "npm --prefix experiments/nerv run dev",
+    "check:nerv": "npm --prefix experiments/nerv run check",
+    "build:nerv": "npm --prefix experiments/nerv run build",
+    "test:e2e:nerv": "npm --prefix experiments/nerv run test:e2e"
+  }
+}

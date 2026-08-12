@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+.devhome/
+experiments/nerv/playwright-report/
+experiments/nerv/test-results/
+.private/
+.DS_Store
+*.log

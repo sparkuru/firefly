@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# sam - Run f1refly development commands inside node:22-alpine.
+# The host needs Docker only; the repository is mounted at /app with uid mapping.
+#
+# Usage:
+#   ./sam npm --prefix experiments/nerv ci
+#   ./sam npm run check:nerv
+#   ./sam npm run build:nerv
+#   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+#     ./sam npm --prefix experiments/nerv run test:e2e
+#   WEB_HOST_PORT=4322 ./dev.sh
+#
+# Ports: the NERV Astro service maps container 4321 to host 4321 by default.
+# Change WEB_HOST_PORT for parallel agents; WEB_CONTAINER_PORT must match Astro's port.
+# Service commands must bind to 0.0.0.0 to be reachable from the host.
+set -Eeuo pipefail
+
+IMAGE="${SAM_IMAGE:-node:22-alpine}"
+SAM_IPC="${SAM_IPC-private}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEVHOME="${REPO_ROOT}/.devhome"
+STEP_INDEX=0
+
+SAM_BIND_HOST="${SAM_BIND_HOST:-127.0.0.1}"
+WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
+WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
+
+readonly IMAGE SAM_IPC REPO_ROOT DEVHOME
+
+usage() {
+	printf 'Usage: %s <command> [arguments...]\n' "$(basename "$0")" >&2
+}
+
+quote_command() {
+	local arg
+
+	for arg in "$@"; do
+		printf '%q ' "$arg"
+	done
+}
+
+log_step() {
+	local label=$1
+	shift
+
+	STEP_INDEX=$((STEP_INDEX + 1))
+	printf '#%s [sam %s] %s\n' "${STEP_INDEX}" "${label}" "$(quote_command "$@")" >&2
+}
+
+require_command() {
+	command -v "$1" >/dev/null 2>&1 || {
+		printf '[sam] required command not found: %s\n' "$1" >&2
+		exit 127
+	}
+}
+
+run_step() {
+	local label=$1
+	shift
+
+	log_step "${label}" "$@"
+	"$@"
+}
+
+main() {
+	local -a tty_flags=()
+	local -a port_flags=()
+	local -a docker_command
+
+	[[ $# -gt 0 ]] || {
+		usage
+		return 2
+	}
+
+	require_command docker
+	require_command id
+	require_command mkdir
+	run_step internal mkdir -p -- "${DEVHOME}"
+
+	[[ -t 0 ]] && tty_flags+=(-i)
+	[[ -t 0 && -t 1 ]] && tty_flags+=(-t)
+
+	case "${SAM_IPC}" in
+	private | host) ;;
+	*)
+		printf '[sam] unsupported IPC mode: %s (expected private or host)\n' "${SAM_IPC}" >&2
+		return 2
+		;;
+	esac
+
+	case "${SAM_SERVICE:-}" in
+	"") ;;
+	web)
+		port_flags=(-p "${SAM_BIND_HOST}:${WEB_HOST_PORT}:${WEB_CONTAINER_PORT}")
+		;;
+	*)
+		printf '[sam] unknown service for port mapping: %s\n' "${SAM_SERVICE}" >&2
+		return 2
+		;;
+	esac
+
+	docker_command=(
+		docker run --rm --init
+		"${tty_flags[@]}"
+		--ipc "${SAM_IPC}"
+		--user "$(id -u):$(id -g)"
+		-e HOME=/app/.devhome
+		-v "${REPO_ROOT}:/app"
+		-w /app
+		--label "sam.repo=${REPO_ROOT}"
+		--label "sam.scope=${SAM_SCOPE:-manual}"
+		--label "sam.service=${SAM_SERVICE:-}"
+		"${port_flags[@]}"
+		"${IMAGE}"
+		"$@"
+	)
+
+	log_step run "${docker_command[@]}"
+	exec "${docker_command[@]}"
+}
+
+main "$@"
