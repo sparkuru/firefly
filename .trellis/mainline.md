@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | 0 | M0 — architecture baseline | complete | The repository layout, NERV experiment, Trellis workflow, Docker wrapper, and validation path are established. This is a structural baseline, not an assertion that product features are complete. |
 | 1 | `.trellis/tasks/00-bootstrap-guidelines` | complete | The frontend guidelines are populated, checked, and committed; finish-work archives the task in this session. |
-| 2 | M1 — Astro static foundation | planned | Start only after the bootstrap task is checked, committed, and archived. |
+| 2 | `.trellis/tasks/08-12-astro-static-foundation` — M1 Astro static foundation | complete | The Astro 7 static site, content contract, four-route surface, browser evidence, and durable specs are committed; finish-work archives the task in this session. |
 | 3 | M2 — X Core semantic interface | planned | Depends on M1. |
 | 4 | M3 — Terminal interface | planned | Depends on M2. |
 | 5 | M4 — experiment pipeline | planned | Depends on the earlier product foundations and follows M3 in the approved milestone order. |
@@ -34,8 +34,10 @@
 - Completed Trellis Plus initialization: `.trellis/tasks/archive/2026-08/08-12-trellis-plus-init/`
 - Completed prerequisite: `.trellis/tasks/archive/2026-08/00-bootstrap-guidelines/` contains the checked frontend-spec bootstrap task.
 - Work commits: `6e22a7b` (frontend guidelines) and `54f778d` (guided mainline establishment).
+- Completed M1 task: `.trellis/tasks/archive/2026-08/08-12-astro-static-foundation/`.
+- M1 work commits: `e9d49d9` (Astro static foundation) and `d81e550` (development contracts and task evidence).
 - Mainline decision source: the user approved guided mode and the bootstrap-before-M1 sequence on 2026-08-12.
 
 ## Next Decision
 
-At the next Project Pulse, ask whether to create and start the M1 static-foundation task.
+At the next Project Pulse, ask whether to create and plan M2 — X Core semantic interface. Do not start later work automatically.
