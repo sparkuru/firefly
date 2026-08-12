@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Verify the implementation and profiles against the repository's frontend spec entry point and language rule."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Verify the executable wrapper, environment, error matrix, and Playwright runtime contract captured during Phase 3.3."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check that Trellis Plus adds concrete validation rules without claiming to complete the separate placeholder-guideline bootstrap task."}
+{"file":".trellis/tasks/08-12-trellis-plus-init/research/repository-evidence.md","reason":"Audit scope preservation, wrapper normalization, ignored assistant files, and no-mainline boundary against discovered facts."}
+{"file":".trellis/tasks/08-12-trellis-plus-init/research/official-playwright.md","reason":"Verify version/image matching, deterministic webServer coverage, viewports, and failure artifacts against official constraints."}

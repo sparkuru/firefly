@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Preserve the frontend spec entry-point language and append repository validation profiles without overwriting bootstrap placeholders."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Executable ./sam, dev.sh, environment, error, and browser-validation contract captured during Phase 3.3."}
+{"file":".trellis/tasks/08-12-trellis-plus-init/research/repository-evidence.md","reason":"Project-specific Trellis, UI, wrapper, validation, ignore, commit-history, and continuity evidence."}
+{"file":".trellis/tasks/08-12-trellis-plus-init/research/official-playwright.md","reason":"Official Docker, version pinning, webServer, browser-project, and failure-artifact constraints for the Playwright setup."}
