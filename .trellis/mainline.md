@@ -19,7 +19,7 @@
 | Order | Work item | State | Dependency / readiness |
 | --- | --- | --- | --- |
 | 0 | M0 — architecture baseline | complete | The repository layout, NERV experiment, Trellis workflow, Docker wrapper, and validation path are established. This is a structural baseline, not an assertion that product features are complete. |
-| 1 | `.trellis/tasks/00-bootstrap-guidelines` | active | The frontend guidelines are populated and the quality gate has passed; commit and archive remain. |
+| 1 | `.trellis/tasks/00-bootstrap-guidelines` | complete | The frontend guidelines are populated, checked, and committed; finish-work archives the task in this session. |
 | 2 | M1 — Astro static foundation | planned | Start only after the bootstrap task is checked, committed, and archived. |
 | 3 | M2 — X Core semantic interface | planned | Depends on M1. |
 | 4 | M3 — Terminal interface | planned | Depends on M2. |
@@ -32,9 +32,10 @@
 
 - Product scope and milestone order: `prd.md`
 - Completed Trellis Plus initialization: `.trellis/tasks/archive/2026-08/08-12-trellis-plus-init/`
-- Current prerequisite: `.trellis/tasks/00-bootstrap-guidelines/` has passed its documentation and Astro checks and is pending commit and archive.
+- Completed prerequisite: `.trellis/tasks/archive/2026-08/00-bootstrap-guidelines/` contains the checked frontend-spec bootstrap task.
+- Work commits: `6e22a7b` (frontend guidelines) and `54f778d` (guided mainline establishment).
 - Mainline decision source: the user approved guided mode and the bootstrap-before-M1 sequence on 2026-08-12.
 
 ## Next Decision
 
-No decision is needed while `00-bootstrap-guidelines` is active. After it is archived, ask whether to create and start the M1 static-foundation task.
+At the next Project Pulse, ask whether to create and start the M1 static-foundation task.
