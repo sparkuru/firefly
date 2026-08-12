@@ -1,0 +1,125 @@
+---
+interface Props {
+  title: string;
+  favicon?: string;
+  faviconType?: string;
+}
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const {
+  title,
+  favicon = `${basePath}/favicon.svg`,
+  faviconType = 'image/svg+xml'
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type={faviconType} href={favicon} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    background-color: #0f0f0f;
+    background-image: 
+      linear-gradient(rgba(0, 255, 0, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 0, 0.08) 1px, transparent 1px),
+      linear-gradient(rgba(255, 0, 0, 0.05) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(255, 0, 0, 0.05) 2px, transparent 2px),
+      radial-gradient(ellipse at center, rgba(30, 30, 30, 0.9) 0%, rgba(0, 0, 0, 1) 100%);
+    background-size: 30px 30px, 30px 30px, 120px 120px, 120px 120px, 100% 100%;
+    background-position: 0 0, 0 0, 0 0, 0 0, center;
+    color: #ffffff;
+    line-height: 1.6;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(0, 255, 0, 0.3),
+      rgba(0, 255, 0, 0.6),
+      rgba(0, 255, 0, 0.3),
+      transparent
+    );
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+    animation: scanline 6s linear infinite;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.3) 0px,
+        transparent 1px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.3) 3px
+      ),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    animation: flicker 0.2s infinite;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  @keyframes scanline {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh);
+      opacity: 0;
+    }
+  }
+
+  @keyframes flicker {
+    0% { opacity: 1; }
+    50% { opacity: 0.98; }
+    100% { opacity: 1; }
+  }
+</style>

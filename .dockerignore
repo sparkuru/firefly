@@ -1,0 +1,9 @@
+.git
+.private
+.devhome
+**/.astro
+**/dist
+**/node_modules
+**/*.log
+experiments/nerv/reference
+prototypes

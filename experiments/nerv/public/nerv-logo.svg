@@ -1,0 +1,40 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .fig-leaf { fill: #ffffff; }
+      .center-dot { fill: #ff0000; }
+      .nerv-text { fill: #ffffff; font-family: Arial, sans-serif; font-weight: bold; }
+    </style>
+  </defs>
+  
+  <rect width="300" height="300" fill="#1a1a1a"/>
+  
+  <g transform="translate(150, 130)">
+    <path class="fig-leaf" d="
+      M 0,-80
+      C -20,-75 -35,-60 -40,-40
+      C -45,-20 -45,0 -40,20
+      C -35,40 -20,55 0,60
+      L 0,85
+      C -25,80 -45,60 -60,30
+      C -75,0 -75,-35 -60,-65
+      C -45,-95 -20,-110 0,-115
+      Z
+      M 0,-80
+      C 20,-75 35,-60 40,-40
+      C 45,-20 45,0 40,20
+      C 35,40 20,55 0,60
+      L 0,85
+      C 25,80 45,60 60,30
+      C 75,0 75,-35 60,-65
+      C 45,-95 20,-110 0,-115
+      Z
+    "/>
+    
+    <circle class="center-dot" cx="0" cy="0" r="5"/>
+    
+    <text class="nerv-text" text-anchor="middle" x="0" y="115" style="font-size: 24px; letter-spacing: 4px;">NERV</text>
+    <text class="nerv-text" text-anchor="middle" x="0" y="135" style="font-size: 11px; letter-spacing: 1px;">GOD'S IN HIS HEAVEN</text>
+    <text class="nerv-text" text-anchor="middle" x="0" y="150" style="font-size: 11px; letter-spacing: 1px;">ALL'S RIGHT WITH THE WORLD</text>
+  </g>
+</svg>

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "nerv",
+  "title": "NERV",
+  "kind": "landing",
+  "visibility": "listed",
+  "mountPath": "/lab/nerv",
+  "entryPath": "/index.html",
+  "build": {
+    "tool": "astro",
+    "command": "npm run build",
+    "outputDir": "dist"
+  },
+  "entries": [
+    {
+      "id": "landing",
+      "title": "NERV Domain Seizure",
+      "path": "/index.html",
+      "role": "landing"
+    }
+  ],
+  "licenseFile": "license",
+  "tags": [
+    "astro",
+    "landing",
+    "fan-work"
+  ]
+}

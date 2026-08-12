@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#070b09">
+    <title>Terminal Theme Preview</title>
+    <link rel="stylesheet" href="terminal/assets/terminal.css">
+</head>
+<body data-page-kind="index">
+<main class="terminal-stage">
+    <section class="terminal-window" aria-label="Interactive blog terminal">
+        <header class="terminal-titlebar">
+            <div class="terminal-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+            <a class="terminal-title" href="./preview.html">guest@majo:~/blog</a>
+            <span class="terminal-status">SSH</span>
+        </header>
+        <div class="terminal-screen" id="terminal-screen">
+            <section class="terminal-output" id="terminal-output" aria-live="polite"></section>
+            <form class="terminal-command" id="terminal-command" autocomplete="off">
+                <label class="terminal-prompt" for="terminal-input">
+                    <span class="prompt-user">guest@majo</span><span class="prompt-separator">:</span><span class="prompt-path">~/blog</span><span class="prompt-symbol">$</span>
+                </label>
+                <input id="terminal-input" name="command" type="text" enterkeyhint="send" spellcheck="false" aria-label="Terminal command">
+            </form>
+        </div>
+    </section>
+</main>
+<script id="terminal-context" type="application/json">
+{
+    "site": {
+        "title": "黃昏茶會",
+        "description": "notes from the boundary between code and night",
+        "url": "./preview.html"
+    },
+    "terminal": {
+        "user": "guest",
+        "host": "majo",
+        "bootMessage": "Session established. Type help to inspect available commands.",
+        "aboutText": "A quiet place for notes, experiments, and field logs."
+    },
+    "page": {
+        "kind": "index",
+        "label": "",
+        "document": null
+    },
+    "files": [
+        {
+            "type": "post",
+            "slug": "hello-terminal",
+            "filename": "hello-terminal.md",
+            "title": "Hello, terminal",
+            "url": "./preview.html",
+            "date": "2026-08-11"
+        },
+        {
+            "type": "post",
+            "slug": "field-notes",
+            "filename": "field-notes.md",
+            "title": "Field notes from a quiet server",
+            "url": "./preview.html",
+            "date": "2026-07-24"
+        },
+        {
+            "type": "page",
+            "slug": "about",
+            "filename": "about.md",
+            "title": "About",
+            "url": "./preview.html",
+            "date": "2026-01-01"
+        }
+    ]
+}
+</script>
+<script src="terminal/assets/terminal.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "id": "typecho-terminal",
+  "status": "reference-only",
+  "origin": "Typecho theme prototype",
+  "intendedTarget": "apps/site/src/presentations/terminal",
+  "entry": "preview.html",
+  "constraints": [
+    "Do not ship PHP templates in the static site.",
+    "Reuse interaction behavior and visual tokens only.",
+    "Replace Typecho data access with the generated public content index."
+  ]
+}
+

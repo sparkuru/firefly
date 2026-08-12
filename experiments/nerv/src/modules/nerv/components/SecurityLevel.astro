@@ -1,0 +1,91 @@
+---
+---
+
+<div class="security-level">
+  <div class="magi-status">
+    <h3>MAGI SYSTEM STATUS</h3>
+    <div class="magi-computers">
+      <div class="magi-item melchior">
+        <span class="magi-name">MELCHIOR-1:</span>
+        <span class="status rejected">REJECTED</span>
+      </div>
+      <div class="magi-item balthasar">
+        <span class="magi-name">BALTHASAR-2:</span>
+        <span class="status rejected">REJECTED</span>
+      </div>
+      <div class="magi-item casper">
+        <span class="magi-name">CASPER-3:</span>
+        <span class="status rejected">REJECTED</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-required">
+    <p><strong>セキュリティレベル / Security Level:</strong></p>
+    <p class="level-text">MAGI SYSTEM AUTHORIZATION REQUIRED</p>
+    <p class="access-denied">アクセス拒否 / ACCESS DENIED</p>
+  </div>
+</div>
+
+<style>
+  .security-level {
+    background-color: #1a1a1a;
+    border: 2px solid #ff0000;
+    padding: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .magi-status h3 {
+    color: #ff0000;
+    text-align: center;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
+
+  .magi-computers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .magi-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background-color: #2a2a2a;
+  }
+
+  .magi-name {
+    color: #00ff00;
+    font-weight: bold;
+  }
+
+  .status.rejected {
+    color: #ff0000;
+    font-weight: bold;
+  }
+
+  .auth-required {
+    text-align: center;
+    padding-top: 1rem;
+    border-top: 1px solid #ff0000;
+  }
+
+  .level-text {
+    color: #ffcc00;
+    font-weight: bold;
+    margin: 0.5rem 0;
+    font-size: 1.1rem;
+  }
+
+  .access-denied {
+    color: #ff0000;
+    font-weight: bold;
+    font-size: 1.3rem;
+    margin-top: 1rem;
+    letter-spacing: 3px;
+  }
+</style>
+

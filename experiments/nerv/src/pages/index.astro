@@ -1,0 +1,31 @@
+---
+import Layout from '../layouts/Layout.astro';
+import NervPage from '../modules/nerv/NervPage.astro';
+---
+
+<Layout title="Domain Seized - NERV Special Agency">
+  <NervPage />
+</Layout>
+
+<script>
+  const logo = document.querySelector('.logo-container');
+  let clickCount = 0;
+
+  logo?.addEventListener('click', () => {
+    clickCount++;
+    if (clickCount >= 3) {
+      document.cookie = 'has_visited=true; path=/; max-age=31536000; SameSite=Strict';
+      const params = new URLSearchParams(window.location.search);
+      window.location.href = params.get('from') || '/';
+    }
+  });
+
+  const stripes = document.querySelectorAll<HTMLElement>('.warning-stripe');
+
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    stripes.forEach((stripe) => {
+      stripe.style.setProperty('--bg-position', `${scrollY * 0.5}px`);
+    });
+  });
+</script>

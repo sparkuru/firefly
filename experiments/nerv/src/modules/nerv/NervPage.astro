@@ -1,0 +1,273 @@
+---
+import WarningStripe from './components/WarningStripe.astro';
+import NervLogo from './components/NervLogo.astro';
+import NoticeInfo from './components/NoticeInfo.astro';
+import SecurityLevel from './components/SecurityLevel.astro';
+import ClassifiedBox from './components/ClassifiedBox.astro';
+---
+
+<WarningStripe position="top" />
+
+<main class="container">
+  <NervLogo />
+
+  <div class="card">
+    <h1 class="title">
+      NERV特務機関 緊急通告<br />
+      <span class="subtitle">NERV SPECIAL AGENCY EMERGENCY NOTICE</span>
+    </h1>
+
+    <NoticeInfo />
+
+    <div class="content">
+      <h2 class="section-title">緊急封鎖通知 / NOTICE OF DOMAIN SEIZURE</h2>
+
+      <p>
+        本ドメインは<strong>NERV特務機関 第3新東京市特別保安部</strong>により一時的に接収されました。
+      </p>
+
+      <p>
+        This domain has been temporarily seized by the <strong>NERV Special Agency,
+        Tokyo-3 Security Division</strong> in accordance with emergency protocols
+        established under the Human Instrumentality Project.
+      </p>
+
+      <h3 class="subsection-title">封鎖理由 / REASON FOR SEIZURE</h3>
+
+      <ul class="reason-list">
+        <li>使徒接近警報発令中 / Angel Attack Alert Activated</li>
+        <li>緊急保安対策実施中 / Emergency Security Measures in Effect</li>
+        <li>機密情報保護措置 / Classified Information Protection</li>
+        <li>MAGI システム承認待機 / MAGI System Authorization Pending</li>
+      </ul>
+
+      <p class="warning-text">
+        このドメインに関連するすべてのデータおよび通信は、NERV特務機関の調査対象となります。
+        本調査を妨害または阻害する試みは、さらなる措置の対象となる可能性があります。
+      </p>
+
+      <p class="warning-text">
+        All data and communications related to this domain are subject to NERV investigation.
+        Any attempt to interfere with or obstruct this operation may result in additional measures.
+      </p>
+
+      <SecurityLevel />
+
+      <ClassifiedBox />
+
+      <p class="footer-text">
+        詳細については、NERV本部またはMAGIシステム管理部門にお問い合わせください。<br />
+        For more information, please contact NERV Headquarters or MAGI System Administration.
+      </p>
+
+      <p class="disclaimer-text">
+        ※ 本页面是非官方创作 / This is an unofficial fan-made page / 与 GAINAX/khara 无关
+      </p>
+    </div>
+  </div>
+</main>
+
+<WarningStripe position="bottom" />
+
+<style>
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem 1rem;
+  }
+
+  .card {
+    background-color: rgba(42, 42, 42, 0.90);
+    background-image:
+      linear-gradient(rgba(255, 0, 0, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 15px 15px;
+    border: 3px solid #ff0000;
+    padding: 2rem;
+    box-shadow:
+      0 0 40px rgba(255, 0, 0, 0.5),
+      inset 0 0 100px rgba(0, 0, 0, 0.5);
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      135deg,
+      transparent 0%,
+      rgba(255, 0, 0, 0.05) 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  .title {
+    color: #ff0000;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: #ffcc00;
+    display: block;
+    margin-top: 0.5rem;
+  }
+
+  .content {
+    padding: 1rem 0;
+    font-size: 1.05rem;
+  }
+
+  .section-title {
+    color: #ff0000;
+    font-size: 1.5rem;
+    margin: 2rem 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #ff0000;
+    padding-bottom: 0.5rem;
+  }
+
+  .subsection-title {
+    color: #ffcc00;
+    font-size: 1.2rem;
+    margin: 1.5rem 0 1rem 0;
+    text-transform: uppercase;
+  }
+
+  .content p {
+    margin: 1rem 0;
+    line-height: 1.8;
+  }
+
+  .content strong {
+    color: #00ff00;
+  }
+
+  .reason-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 1rem 0;
+  }
+
+  .reason-list li {
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    position: relative;
+    color: #ffffff;
+  }
+
+  .reason-list li::before {
+    content: "▶";
+    position: absolute;
+    left: 0;
+    color: #ff0000;
+  }
+
+  .warning-text {
+    background-color: #1a1a1a;
+    border-left: 4px solid #ff0000;
+    padding: 1rem;
+    margin: 1.5rem 0;
+    font-weight: bold;
+    color: #ffcc00;
+  }
+
+  .footer-text {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #999;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #666;
+  }
+
+  .disclaimer-text {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #444;
+    opacity: 0.5;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      padding: 1.5rem 0.5rem 2.5rem 0.5rem;
+    }
+
+    .card {
+      padding: 1.5rem;
+    }
+
+    .title {
+      font-size: 1.5rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+    }
+
+    .content {
+      font-size: 0.95rem;
+    }
+  }
+
+  .container::before,
+  .container::after {
+    content: '';
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border-style: solid;
+    border-color: rgba(255, 0, 0, 0.3);
+    pointer-events: none;
+    z-index: 10000;
+  }
+
+  .container::before {
+    top: 20px;
+    left: 20px;
+    border-width: 2px 0 0 2px;
+  }
+
+  .container::after {
+    top: 20px;
+    right: 20px;
+    border-width: 2px 2px 0 0;
+  }
+
+  main::before,
+  main::after {
+    content: '';
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    border-style: solid;
+    border-color: rgba(255, 0, 0, 0.3);
+    pointer-events: none;
+    z-index: 10000;
+  }
+
+  main::before {
+    bottom: 20px;
+    left: 20px;
+    border-width: 0 0 2px 2px;
+  }
+
+  main::after {
+    bottom: 20px;
+    right: 20px;
+    border-width: 0 2px 2px 0;
+  }
+</style>
+

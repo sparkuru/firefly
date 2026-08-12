@@ -1,0 +1,48 @@
+---
+interface Props {
+  position?: 'top' | 'bottom';
+}
+
+const { position = 'top' } = Astro.props;
+---
+
+<div class={`warning-stripe warning-stripe-${position}`}></div>
+
+<style>
+  .warning-stripe {
+    height: 20px;
+    width: 100vw;
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    overflow: hidden;
+    --bg-position: 0;
+  }
+
+  .warning-stripe::before {
+    content: '';
+    position: absolute;
+    left: -50px;
+    right: -50px;
+    top: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      #000000,
+      #000000 25px,
+      #ff0000 25px,
+      #ff0000 50px
+    );
+    background-position: var(--bg-position);
+  }
+
+  .warning-stripe-top {
+    top: 0;
+  }
+
+  .warning-stripe-bottom {
+    bottom: 0;
+  }
+</style>
+

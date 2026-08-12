@@ -1,0 +1,51 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="404 - Not Found">
+  <main class="not-found">
+    <h1 class="code">404</h1>
+    <p class="message">Target resource not found in MAGI records.</p>
+    <p class="hint">Please verify the access code or return to the main terminal.</p>
+  </main>
+</Layout>
+
+<style>
+  .not-found {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    gap: 1rem;
+  }
+
+  .code {
+    font-size: 4rem;
+    color: #ff0000;
+    letter-spacing: 0.2em;
+  }
+
+  .message {
+    font-size: 1.25rem;
+    color: #f97316;
+  }
+
+  .hint {
+    font-size: 0.95rem;
+    color: #9ca3af;
+  }
+
+  @media (max-width: 640px) {
+    .code {
+      font-size: 3rem;
+    }
+
+    .message {
+      font-size: 1.1rem;
+    }
+  }
+</style>
+
