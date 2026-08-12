@@ -7,6 +7,8 @@ client cache, or lifecycle abstraction.
 
 - `apps/site/` emits useful static HTML and contains no client `<script>` or
   hydration directive. Its Playwright projects disable JavaScript.
+- X Core and the semantic adapter run only during Markdown build/render. The
+  emitted enhancement manifest is empty in M2 and has no browser loader.
 - `experiments/nerv/` has one route-owned inline browser script in
   `src/pages/index.astro`.
 
@@ -15,11 +17,12 @@ Keep this task-defined filename stable, but do not interpret it as evidence that
 
 ## Static Main Site
 
-Content loading, filtering, Markdown rendering, and route generation happen at
-build time. Do not add browser requests, a client router, or runtime Markdown
-parsing for data already available to Astro. A future enhancement must define its
-no-JavaScript fallback, ownership, loading/error behavior, and tests before it
-establishes a new convention.
+Content loading, filtering, X Core analysis/presentation selection, Markdown
+rendering, and route generation happen at build time. Do not add browser requests,
+a client router, runtime Markdown parsing, or an enhancement loader for data
+already available to Astro. A future non-empty enhancement implementation must
+define module ownership, safe props, load/error recovery, no-JavaScript fallback,
+and browser tests before adding client code.
 
 ## NERV Route-Owned Script
 
@@ -53,6 +56,9 @@ script becomes independently testable.
 ## Reference Files
 
 - `apps/site/src/pages/index.astro`
+- `apps/site/src/lib/render-document.ts`
+- `packages/x-core/src/pipeline.ts`
+- `presentations/semantic/src/index.ts`
 - `apps/site/playwright.config.ts`
 - `experiments/nerv/src/pages/index.astro`
 - `experiments/nerv/src/modules/nerv/components/NervLogo.astro`

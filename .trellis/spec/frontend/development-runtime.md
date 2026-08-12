@@ -5,8 +5,8 @@
 ### 1. Scope / Trigger
 
 Use this contract for dependency installation, Astro/Node commands, development
-servers, browser validation, or changes to `sam` / `dev.sh`. It applies to both
-`apps/site/` and `experiments/nerv/`.
+servers, browser validation, or changes to `sam` / `dev.sh`. It applies to X Core,
+semantic, the main site, and NERV.
 
 `./sam` is the single development-command boundary. Host Node, global Playwright,
 direct host npm, and raw Docker are not project validation paths.
@@ -19,8 +19,19 @@ direct host npm, and raw Docker are not project validation paths.
 
 ./sam npm --prefix apps/site ci
 ./sam npm --prefix apps/site run test:content
+./sam npm --prefix apps/site run test:x-core
 ./sam npm --prefix apps/site run check
 ./sam npm --prefix apps/site run build
+
+./sam npm --prefix packages/x-core ci
+./sam npm --prefix packages/x-core run check
+./sam npm --prefix packages/x-core run test
+./sam npm --prefix packages/x-core run build
+
+./sam npm --prefix presentations/semantic ci
+./sam npm --prefix presentations/semantic run check
+./sam npm --prefix presentations/semantic run test
+./sam npm --prefix presentations/semantic run build
 
 ./sam npm --prefix experiments/nerv ci
 ./sam npm --prefix experiments/nerv run check
@@ -41,7 +52,8 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
-| Package boundary | Site and NERV use separate package manifests, lockfiles, configs, and artifacts. |
+| Package boundary | X Core, semantic, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
+| M2 dependency order | Build X Core, then semantic, then clean-install/build the site so `file:` dependency copies are current. |
 | Main-site browser server | Playwright owns a foreground Astro server at `/`; set `ASTRO_DEV_BACKGROUND=0` and pass `--ignore-lock`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
 | Browser artifacts | Each package writes ignored `playwright-report/` and `test-results/` below its own root. |
@@ -64,6 +76,7 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
 | Astro 7 server auto-backgrounds under an agent | force `ASTRO_DEV_BACKGROUND=0`; use Playwright-owned foreground server |
 | stale Astro dev lock affects the site server | use `--ignore-lock`, ensure the owned process exits, and assert `.astro/dev.json` is absent afterward |
+| negative Astro build uses `/tmp` output on another filesystem | do not use it; Astro staging rename can fail with `EXDEV`; use ignored same-filesystem `apps/site/test-results/` directories and `finally` cleanup |
 
 Astro 7 agent detection can background `astro dev`, allowing Playwright's parent
 process to exit while the server and `.astro/dev.json` remain. The foreground
@@ -83,9 +96,12 @@ solve this by reusing an unmanaged server.
 ### 6. Tests Required
 
 For a package change, install from its lockfile and run its package-local checks.
-For cross-package boundary changes, check/build both packages. For browser-visible
-behavior, run the exact focused command before the full suite and record projects,
-JavaScript mode, routes/states, fixtures, results, and failure artifacts.
+For X Core/semantic/site changes, validate in dependency order and refresh the
+consumer through a clean site install before integration/browser evidence. For
+cross-package boundary changes, check/build every affected package plus NERV
+isolation. For browser-visible behavior, run the exact focused command before the
+full suite and record projects, JavaScript mode, routes/states, fixtures, results,
+and failure artifacts.
 
 For site Playwright, also assert no `.astro/dev.json` remains after the final run.
 

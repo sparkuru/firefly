@@ -28,9 +28,13 @@ routes.
 - Main site: `DocumentLayout.astro` owns `<html>`, metadata, skip link, header,
   navigation, `<main id="main-content">`, and footer. Home/post/page/404 routes
   supply page-specific semantic content through its slot.
-- Main-site post/page routes query entries in `getStaticPaths()`, call
-  `render(entry)`, and render `<Content />` inside `<article>`. They do not parse
-  Markdown or repeat collection validation.
+- Main-site post/page routes query entries in `getStaticPaths()`, call the shared
+  `renderDocument(entry)`, and pass entry/result to `SemanticDocument.astro`.
+  They do not call Astro `render()` directly, parse metadata, or repeat
+  collection/heading validation.
+- `SemanticDocument.astro` owns the article header/date, conditional outline,
+  `.prose` container, and `<Content />`. Show `On this page` only for two or more
+  body headings; its links use the exact validated X Core/Astro IDs.
 - NERV: page entries choose the document layout and feature root;
   `NervPage.astro` composes named feature-local leaf components.
 - Component boundaries follow coherent document/feature regions. Do not split
@@ -55,6 +59,9 @@ routes.
   and `<article>` where their semantics apply.
 - Main-site navigation remains keyboard reachable. Preserve the skip link and
   visible focus outline when changing the document shell.
+- Semantic wide-content wrappers use a named `role="region"`, `tabindex="0"`,
+  localized horizontal scrolling, and a visible focus outline. Do not hide
+  document overflow globally to mask a table/code defect.
 - Decorative visuals cannot be the sole carrier of page meaning.
 - Do not claim complete accessibility coverage: no automated scanner or
   assistive-technology run is configured.
@@ -63,6 +70,9 @@ routes.
 
 - Main-site route URLs depend on validated `entry.data.slug`; changes to schema,
   collection helpers, links, and `getStaticPaths()` land together.
+- X Core outline metadata, Astro `render(entry).headings`, semantic outline links,
+  and emitted heading IDs must agree exactly. `renderDocument()` is the runtime
+  drift guard.
 - NERV's `.logo-container` and `.warning-stripe` classes are queried by its route
   script; selector changes require script and browser-test review.
 - Layout-level global styling affects every route in its package, including 404.
@@ -80,7 +90,10 @@ routes.
 - `apps/site/src/pages/index.astro`
 - `apps/site/src/pages/posts/[slug].astro`
 - `apps/site/src/pages/pages/[slug].astro`
+- `apps/site/src/components/SemanticDocument.astro`
+- `apps/site/src/lib/render-document.ts`
 - `apps/site/src/styles/global.css`
+- `presentations/semantic/src/index.ts`
 - `experiments/nerv/src/layouts/Layout.astro`
 - `experiments/nerv/src/modules/nerv/NervPage.astro`
 - `experiments/nerv/src/modules/nerv/components/WarningStripe.astro`

@@ -6,8 +6,19 @@ Use the root `./sam` wrapper. Host Node, global browser tooling, and raw Docker
 are not validation contracts.
 
 ```bash
+./sam npm --prefix packages/x-core ci
+./sam npm --prefix packages/x-core run check
+./sam npm --prefix packages/x-core run test
+./sam npm --prefix packages/x-core run build
+
+./sam npm --prefix presentations/semantic ci
+./sam npm --prefix presentations/semantic run check
+./sam npm --prefix presentations/semantic run test
+./sam npm --prefix presentations/semantic run build
+
 ./sam npm --prefix apps/site ci
 ./sam npm --prefix apps/site run test:content
+./sam npm --prefix apps/site run test:x-core
 ./sam npm --prefix apps/site run check
 ./sam npm --prefix apps/site run build
 
@@ -25,8 +36,9 @@ Browser-accessible changes require the focused command followed by the full
 package suite from the single profile in `index.md`.
 
 - Main site tests run with JavaScript disabled and cover home, generated post/page
-  deep links, static 404 recovery, headings/body, visible skip-link focus, draft
-  absence, and no overflow at both viewports.
+  and fragment deep links, static 404 recovery, heading order, conditional
+  outline targets, keyboard-focusable code/table scroll regions, visible focus,
+  draft absence, and no document overflow at both viewports.
 - NERV's current browser baseline covers title, main/heading semantics, and no
   overflow. Add click/cookie/redirect or scroll assertions when those contracts
   change.
@@ -40,9 +52,14 @@ package suite from the single profile in `index.md`.
 - Collection config uses explicit external loaders and the shared strict schema.
 - Routes consume the single public projection; draft/layout/slug checks are not
   scattered across pages.
-- Static output contains no source Markdown parser, hydration directive, client
-  script, external font request, NERV import, draft text, credential, or local
-  absolute path.
+- Static output inventory is exactly four HTML routes plus one CSS asset until a
+  later route milestone changes it. It contains zero `.js`/`.mjs`/source maps and
+  no source Markdown parser, hydration directive, external font request, NERV or
+  Terminal dependency/style, draft, credential, private data, or local absolute
+  path.
+- Isolation scans use paths, manifests/dependency graphs, imports, and targeted
+  runtime/style tokens. Do not use broad text matches such as `/nerv/i` that can
+  flag prose or integrity strings.
 - Only implemented route semantics are emitted. Do not add placeholder routes to
   make a milestone appear broader.
 
@@ -70,6 +87,8 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
 - Change stays within the correct site/experiment/content boundary.
 - Direct dependency versions and app-local lockfiles remain reproducible.
 - Schema changes include shared runtime behavior and negative regression tests.
+- X Core changes include adversarial adapter/context/JSON/metadata tests and a
+  site integration using the shared schema plus the actual Astro processor.
 - Main-site routes remain thin and static; NERV selectors/base-path behavior is
   preserved when relevant.
 - Astro check/build and applicable Node/browser tests pass through `./sam`.
@@ -94,6 +113,11 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
 - `apps/site/src/lib/content.ts`
 - `apps/site/playwright.config.ts`
 - `apps/site/tests/site.spec.ts`
+- `apps/site/tests/content-build-negatives.test.mjs`
+- `apps/site/tests/x-core-integration.test.mjs`
+- `apps/site/tests/static-output.test.mjs`
+- `packages/x-core/tests/x-core.test.ts`
+- `presentations/semantic/tests/semantic.test.ts`
 - `experiments/nerv/package.json`
 - `experiments/nerv/playwright.config.ts`
 - `experiments/nerv/tests/nerv.spec.ts`

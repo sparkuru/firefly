@@ -1,0 +1,10 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Load the complete package validation and Playwright profiles before changing the frontend graph."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Preserve site/experiment isolation while creating the milestone-owned X Core and semantic presentation boundaries."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Keep Astro routes thin, preserve document-shell ownership, and implement semantic accessible composition."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Maintain the static/no-hydration main-site boundary and define no browser enhancement loader in M2."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Keep analysis and presentation selection build-time without introducing client or global state."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Extend the strict authored schema and add executable X Core/registry/diagnostic contracts without unsafe typing."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Apply static-output, accessibility, browser, isolation, and human-residual gates to the new pipeline."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Use sam-only exact lockfile installs and the approved Playwright container/runtime boundary."}
+{"file":".trellis/tasks/08-12-m2-x-core-semantic-interface/research/astro-unified-integration.md","reason":"Implement against verified Astro 7 plugin ordering, rendered metadata, and private-package integration constraints."}
+{"file":".trellis/tasks/08-12-m2-x-core-semantic-interface/research/uupm-semantic-editorial.md","reason":"Apply the owner-approved restrained editorial UI and explicitly avoid rejected UUPM defaults."}

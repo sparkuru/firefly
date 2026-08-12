@@ -1,0 +1,10 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Verify the full validation matrix and both package Playwright profiles remain accurate."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Check private-package/site/experiment dependency direction and absence of premature later-milestone work."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review thin routes, shared semantic composition, native markup, outline, focus, and responsive ownership."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Prove the main site still emits no hydration, client parser, browser request layer, or enhancement loader."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Review build-time state ownership and ensure registry/pipeline state does not leak globally or to the browser."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check strict metadata, adapter, JSON, diagnostic, and rendered-plugin contracts plus negative coverage."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Run full static, semantic, accessibility, browser, artifact, isolation, and human-review checks."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Verify wrapper-only commands, exact package installs, browser image pairing, and failure classification."}
+{"file":".trellis/tasks/08-12-m2-x-core-semantic-interface/research/astro-unified-integration.md","reason":"Validate the implementation against observed Astro plugin order and metadata bridge risks."}
+{"file":".trellis/tasks/08-12-m2-x-core-semantic-interface/research/uupm-semantic-editorial.md","reason":"Check that approved restrained editorial decisions landed and rejected brand/motion/font defaults did not."}

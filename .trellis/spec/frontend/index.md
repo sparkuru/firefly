@@ -2,15 +2,19 @@
 
 ## Scope and Evidence Baseline
 
-The repository has two intentionally isolated runnable frontend packages:
+The repository has two runnable Astro applications plus two build-time frontend
+packages:
 
-- `apps/site/`: Astro 7 main-site foundation. It loads repository-root Markdown,
-  validates metadata, and emits static article/page HTML.
+- `packages/x-core/`: private framework-neutral AST, registry, metadata, JSON,
+  and diagnostic contract.
+- `presentations/semantic/`: private semantic adapter consumed by the main site.
+- `apps/site/`: Astro 7 main site. It loads repository-root Markdown, resolves
+  X Core context, and emits semantic static article/page HTML.
 - `experiments/nerv/`: autonomous Astro 4 experiment mounted at `/lab/nerv/`.
 
-They own separate dependencies, lockfiles, Astro configs, tests, styles, and build
-artifacts. Do not synchronize their framework versions or import source between
-them. `prototypes/typecho-terminal/` remains `reference-only`.
+All four own separate manifests, lockfiles, tests, and build artifacts. The
+approved dependency direction is X Core → semantic → site; NERV imports none of
+them. The root is a command delegate, not an npm workspace.
 
 All files in this directory are written in English and cite implemented paths.
 
@@ -25,6 +29,7 @@ All files in this directory are written in English and cite implemented paths.
 | [Quality Guidelines](./quality-guidelines.md) | Schema, Astro, static-output, browser, accessibility, and isolation gates | Active |
 | [Type Safety](./type-safety.md) | Strict TypeScript and the executable content-metadata contract | Active |
 | [Development Runtime](./development-runtime.md) | Container commands, service ownership, browser versions, and failure handling | Active |
+| [X Core Contract](./x-core-contract.md) | AST pipeline, presentation registry, diagnostics, JSON metadata, and adapter boundary | Active |
 
 ### Trellis Plus: Project Validation Profile
 
@@ -33,9 +38,12 @@ its own lockfile, then run its checks:
 
 | Package | Install | Required non-browser checks |
 | --- | --- | --- |
-| Main site | `./sam npm --prefix apps/site ci` | `run test:content`, `run check`, `run build` |
+| X Core | `./sam npm --prefix packages/x-core ci` | `run check`, `run test`, `run build` |
+| Semantic adapter | `./sam npm --prefix presentations/semantic ci` | `run check`, `run test`, `run build` |
+| Main site | `./sam npm --prefix apps/site ci` | `run test:content`, `run test:x-core`, `run check`, `run build` |
 | NERV | `./sam npm --prefix experiments/nerv ci` | `run check`, `run build` |
 
+- Build/install changed M2 packages in dependency order: X Core, semantic, site.
 - A main-site content or route change must inspect emitted files, draft exclusion,
   and relevant negative content-contract behavior in addition to a successful
   build.
@@ -65,8 +73,10 @@ its own lockfile, then run its checks:
   - browser JavaScript is disabled to prove the static reading contract;
   - focused: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts`;
   - full: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e`;
-  - baseline coverage: home, generated post/page deep links, unknown-route 404,
-    headings/body, draft absence, visible skip-link focus, and no overflow.
+  - baseline coverage: home, generated post/page and fragment deep links,
+    unknown-route 404, semantic heading order, conditional outline links,
+    keyboard-focusable local code/table scrolling, draft absence, visible skip
+    and interaction focus, and no document overflow.
 - NERV:
   - config/test: `experiments/nerv/playwright.config.ts`,
     `experiments/nerv/tests/nerv.spec.ts`;
