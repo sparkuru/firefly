@@ -6,7 +6,7 @@
 
 Use this contract for dependency installation, Astro/Node commands, development
 servers, browser validation, or changes to `sam` / `dev.sh`. It applies to X Core,
-semantic, the main site, and NERV.
+semantic, Terminal, the main site, and NERV.
 
 `./sam` is the single development-command boundary. Host Node, global Playwright,
 direct host npm, and raw Docker are not project validation paths.
@@ -33,6 +33,11 @@ direct host npm, and raw Docker are not project validation paths.
 ./sam npm --prefix presentations/semantic run test
 ./sam npm --prefix presentations/semantic run build
 
+./sam npm --prefix presentations/terminal ci
+./sam npm --prefix presentations/terminal run check
+./sam npm --prefix presentations/terminal run test
+./sam npm --prefix presentations/terminal run build
+
 ./sam npm --prefix experiments/nerv ci
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
@@ -52,9 +57,9 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
-| Package boundary | X Core, semantic, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
-| M2 dependency order | Build X Core, then semantic, then clean-install/build the site so `file:` dependency copies are current. |
-| Main-site browser server | Playwright owns a foreground Astro server at `/`; set `ASTRO_DEV_BACKGROUND=0` and pass `--ignore-lock`. |
+| Package boundary | X Core, semantic, Terminal, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
+| M3 dependency order | Build X Core, semantic, and Terminal, then clean-install/build the site so local `file:` dependency copies are current. |
+| Main-site browser server | Run the site build/static scan first. Playwright owns `astro preview` of that same `dist/` at `/`; `start:e2e` must not rebuild or run `astro dev`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
 | Browser artifacts | Each package writes ignored `playwright-report/` and `test-results/` below its own root. |
 
@@ -74,36 +79,34 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
 | browser image/server/fixture cannot start | record exact unavailable error; never report pass |
 | browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
-| Astro 7 server auto-backgrounds under an agent | force `ASTRO_DEV_BACKGROUND=0`; use Playwright-owned foreground server |
-| stale Astro dev lock affects the site server | use `--ignore-lock`, ensure the owned process exits, and assert `.astro/dev.json` is absent afterward |
+| site `dist/` is missing or stale before Playwright | run the complete site build/static-output gate; do not make `start:e2e` mutate the artifact under test |
+| presentation isolation differs under `astro dev` | treat dev output as non-evidence; inspect the static build through `astro preview` |
 | negative Astro build uses `/tmp` output on another filesystem | do not use it; Astro staging rename can fail with `EXDEV`; use ignored same-filesystem `apps/site/test-results/` directories and `finally` cleanup |
 
-Astro 7 agent detection can background `astro dev`, allowing Playwright's parent
-process to exit while the server and `.astro/dev.json` remain. The foreground
-environment plus lock option is required for the site Playwright config; do not
-solve this by reusing an unmanaged server.
+Locked Astro dev graph traversal can load semantic `?url` CSS on a Terminal route
+even when the production static graph is isolated. Main-site browser validation
+therefore previews a previously checked build. Keep `reuseExistingServer: false`
+so Playwright owns and terminates that preview process.
 
 ### 5. Good / Base / Bad Cases
 
-- Good: focused site Playwright uses the matching Noble image, host IPC,
-  JavaScript-disabled projects, and a foreground lock-free Astro server.
+- Good: the site build/static scan passes, then focused Playwright uses the
+  matching Noble image, host IPC, and an owned preview of the unchanged artifact.
 - Base: site or NERV check/build uses plain `./sam`, private IPC, no published
   port, UID mapping, and repository-local HOME.
 - Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,
-  `reuseExistingServer: true`, an unmanaged background Astro process, or broad
-  command approval.
+  `astro dev`, build-inside-`start:e2e`, `reuseExistingServer: true`, an unmanaged
+  server, or broad command approval.
 
 ### 6. Tests Required
 
 For a package change, install from its lockfile and run its package-local checks.
-For X Core/semantic/site changes, validate in dependency order and refresh the
-consumer through a clean site install before integration/browser evidence. For
-cross-package boundary changes, check/build every affected package plus NERV
+For X Core/presentation/site changes, validate in dependency order and refresh
+the consumer through a clean site install before integration/browser evidence.
+For cross-package boundary changes, check/build every affected package plus NERV
 isolation. For browser-visible behavior, run the exact focused command before the
 full suite and record projects, JavaScript mode, routes/states, fixtures, results,
 and failure artifacts.
-
-For site Playwright, also assert no `.astro/dev.json` remains after the final run.
 
 When `sam` or `dev.sh` changes:
 
@@ -146,11 +149,11 @@ SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
 
 ```ts
 webServer: {
-  command: 'npm run start -- --host 0.0.0.0 --port 4321 --ignore-lock',
-  env: { ASTRO_DEV_BACKGROUND: '0' },
+  command: 'npm run start:e2e -- --host 0.0.0.0 --port 4321',
   reuseExistingServer: false
 }
 ```
 
-This preserves the wrapper boundary, package/image match, owned server lifecycle,
-and reproducible artifacts.
+With `"start:e2e": "astro preview"` and a prior successful build, this preserves
+the wrapper boundary, package/image match, immutable artifact under test, owned
+server lifecycle, and reproducible evidence.

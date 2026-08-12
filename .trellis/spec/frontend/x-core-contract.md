@@ -7,8 +7,7 @@
 Use this contract when changing Markdown analysis, document context, presentation
 selection/transformation, stable node identity, rendered metadata, enhancements,
 or the Astro bridge. X Core is a build-time boundary; it does not own content
-loading, drafts, routes, browser state, Terminal behavior, experiments, or
-deployment.
+loading, drafts, routes, browser command state, experiments, or deployment.
 
 ### 2. Signatures
 
@@ -24,7 +23,8 @@ createXCorePlugins(options: {
 
 parseXCoreMetadata(value: unknown, owner?: string): XCoreMetadata
 validateJsonValue(value: unknown, path?: string): asserts value is JsonValue
-renderDocument(entry: PublicPost | PublicPage): Promise<RenderedDocument>
+renderDocument(entry: PublicPost | PublicPage)
+type SiteRenderedDocument = Awaited<ReturnType<typeof renderDocument>>
 ```
 
 ```ts
@@ -47,8 +47,8 @@ interface PresentationAdapter {
 - Rehype assigns GitHub-compatible heading IDs, an ordered outline, deterministic
   `data-node-id` values, applies one registered adapter, validates its output, and
   writes only versioned JSON-compatible `xCore` metadata.
-- A transform cannot add/remove/change normalized headings or node identities and
-  cannot return raw HAST. Every enhancement target must exist in emitted DOM.
+- A transform cannot add/remove/change normalized headings or node identities or
+  introduce HAST `raw` nodes. Every enhancement target must exist in emitted DOM.
 - Metadata fields are exact: `version`, `presentation`, `summary`, `references`,
   `outline`, and `enhancements`. Site `renderDocument()` also requires exact
   agreement with Astro's heading metadata and sequential body headings starting
@@ -57,9 +57,15 @@ interface PresentationAdapter {
   objects with enumerable string data properties. Symbols, accessors, cycles,
   custom prototypes, sparse/decorated arrays, forbidden prototype keys, and
   unexpected metadata fields are invalid; validation must not invoke getters.
-- The production semantic adapter supports post/post and page/page contexts,
-  preserves native semantics, recursively wraps `pre`/`table` in named focusable
-  local-scroll regions, and emits an empty enhancement manifest.
+- The production semantic and Terminal adapters both support post/post and
+  page/page contexts, clone without mutating input, preserve headings/node IDs,
+  recursively wrap `pre`/`table` in presentation-owned named focusable
+  local-scroll regions, and emit empty enhancement manifests.
+- The Astro registry registers semantic first as default and Terminal second.
+  `DocumentPresentation.astro` dispatches the exact validated metadata; the
+  canonical routes and every inert Terminal-home document template pass through
+  `renderDocument()` and the selected X Core adapter at build time. The browser
+  command engine and template-cloning controller do not import or execute X Core.
 
 ### 4. Validation & Error Matrix
 
@@ -84,8 +90,9 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
 ### 5. Good / Base / Bad Cases
 
 - Good: one schema-validated Markdown document passes through the actual Astro
-  processor and the same registry; semantic and a fixture adapter produce
-  deterministic adapter-specific output without changing the Markdown.
+  processor and the same production registry; semantic, Terminal, and a fixture
+  adapter produce deterministic adapter-specific output without changing the
+  Markdown or stable identities.
 - Base: omitted presentation selects semantic, emits static native HTML and an
   empty enhancement list, and remains complete with JavaScript disabled.
 - Bad: route code calls `render(entry)` directly, asserts plugin metadata, trusts
@@ -99,14 +106,21 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   manifest target checks; adversarial JSON and exact metadata parsing.
 - `presentations/semantic`: supported/unsupported contexts, recursive wide-content
   wrapping, native semantics, stable identity preservation, empty enhancements.
+- `presentations/terminal`: the same adapter invariants plus a runtime-subpath
+  graph check proving browser code does not import X Core/HAST/Astro/adapter code.
 - `apps/site run test:x-core`: import the shared schema and run unchanged Markdown
   plus validated front matter through the actual Astro processors/one registry;
   compare semantic and fixture adapters and repeated determinism.
 - `apps/site run test:content`: schema plus isolated real negative builds for
   duplicate slug, unsupported layout, unregistered adapter, and raw HTML.
-- `apps/site run build`: validate exact static inventory and zero JS/maps/leaks.
-- Focused then full JavaScript-disabled Playwright: semantic heading/outline and
-  focusable local overflow at `1440x900` and `375x812`.
+- `apps/site run build`: validate five HTML, one semantic CSS, one home-only JS,
+  zero maps/unknown files, JavaScript-free document routes, and bidirectional
+  presentation-package/style closure. Home template bodies must be
+  `renderDocument()` output while remaining absent from JavaScript/index data.
+- Focused then full Playwright: static semantic/Terminal heading/outline and
+  focusable local overflow at `1440x900` and `375x812`; interactive projects test
+  the site-owned Terminal home controller consuming build-rendered templates,
+  never a browser X Core runtime.
 
 ### 7. Wrong vs Correct
 
@@ -121,11 +135,7 @@ registry.register(adapter).resolve(context).transform(input);
 #### Correct
 
 ```ts
-const document = await renderDocument(entry);
-const metadata = parseXCoreMetadata(
-  rendered.remarkPluginFrontmatter.xCore,
-  `${entry.collection}/${entry.id}`
-);
+const { Content, metadata } = await renderDocument(entry);
 const adapter = registry.resolve(context); // normalizes failures to XCoreError
 ```
 
@@ -140,7 +150,11 @@ executable and keep future presentations from weakening static content safety.
 - `packages/x-core/src/json.ts`
 - `packages/x-core/src/metadata.ts`
 - `presentations/semantic/src/index.ts`
+- `presentations/terminal/src/index.ts`
+- `presentations/terminal/src/runtime.ts`
 - `apps/site/astro.config.mjs`
+- `apps/site/src/components/DocumentPresentation.astro`
+- `apps/site/src/components/TerminalStreamDocument.astro`
 - `apps/site/src/lib/x-core-context.ts`
 - `apps/site/src/lib/render-document.ts`
 - `apps/site/tests/x-core-integration.test.mjs`

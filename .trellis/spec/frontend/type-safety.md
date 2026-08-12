@@ -7,6 +7,8 @@ compiler/framework versions local:
 
 - `packages/x-core/`: TypeScript `6.0.3`, framework-neutral.
 - `presentations/semantic/`: TypeScript `6.0.3`, type-level X Core dependency.
+- `presentations/terminal/`: TypeScript `6.0.3`; adapter root plus an independent
+  framework-neutral runtime export.
 - `apps/site/`: Astro `7.1.6`, TypeScript `6.0.3`.
 - `experiments/nerv/`: Astro `^4.16.18`, TypeScript `^5.9.3`.
 
@@ -112,6 +114,112 @@ const strictDate = dateInput.pipe(z.coerce.date());
 The concrete helper name may differ; the input restriction and regression tests
 are the contract.
 
+## Scenario: Terminal Index and Command Effects
+
+### 1. Scope / Trigger
+
+Use this contract when changing the home index, Terminal commands/state/effects,
+or DOM controller. It protects the build-to-browser data boundary and preserves a
+native fallback when enhancement data or behavior fails.
+
+### 2. Signatures
+
+```ts
+decodeTerminalEntries(value: unknown): readonly TerminalEntry[]
+executeCommand(options: {
+  state: TerminalState;
+  input: string;
+  entries: readonly TerminalEntry[];
+  identity?: TerminalIdentity;
+  now?: () => Date;
+}): CommandResult
+navigateHistory(
+  state: TerminalState,
+  direction: 'up' | 'down',
+  input: string
+): { readonly state: TerminalState; readonly input: string }
+completeCommand(input: string, entries: readonly TerminalEntry[]): CompletionResult
+startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
+const DEFAULT_TERMINAL_PROMPT: string
+```
+
+### 3. Contracts
+
+- `TerminalEntry` has exactly `kind`, `slug`, `filename`, `title`, `href`, and
+  `date`. Filename is `${slug}.md`; href is the canonical post/page route; date
+  is a real `YYYY-MM-DD` UTC calendar date.
+- Decode only own data descriptors from a plain dense array and exact plain/null-
+  prototype objects. Never call decorated array methods, getters, or setters.
+- Commands return readonly-typed `CommandResult` values and a closed effect union:
+  `lines`, `entries`, `document`, or `clear`. A document effect contains one
+  validated `TerminalEntry`, never Markdown, HTML, or arbitrary DOM data. The
+  engine has no DOM imports or side effects; the site controller exhaustively
+  renders effects.
+- Build output contains exactly one inert, `renderDocument()`-produced template
+  per entry. Before revealing the shell, the controller validates the exact
+  entry/template set, one top-level stream document, its non-empty title ID,
+  exact `aria-labelledby` ownership, and absence of scripts/extra top-level
+  elements.
+- `DEFAULT_TERMINAL_PROMPT` is derived from `DEFAULT_TERMINAL_IDENTITY.user` and
+  `.host`. `TerminalHome.astro` uses it for the visible prompt and accessible
+  label, and `terminal-home.ts` uses it for echoed command lines. Change identity,
+  prompt rendering, and their unit/browser assertions together.
+- Completion is `unique`, `ambiguous`, or `none`; consume Tab only for `unique`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| accessor, sparse/decorated array, custom prototype, unknown/missing field | decoder `TypeError`; property behavior is not invoked |
+| unsafe slug/text/date or noncanonical filename/href | decoder `TypeError` before revealing the shell |
+| empty command | unchanged state, null effect, empty announcement |
+| unknown command or bad operands | typed error-line effect; no throw or shell interpretation |
+| missing DOM, malformed index, duplicate/missing/unknown template, non-bijection, script, or extra top-level template node | retain recovery and hidden session; do not partially start |
+| executor/renderer/clone scoping throws after startup | hide session, restore recovery, expose one failure message, and focus one recovery target |
+
+### 5. Good / Base / Bad Cases
+
+- Good: decoded build entries plus an exact template set produce closed effects;
+  text/list effects use safe DOM creation, while document effects clone only the
+  matching trusted template and namespace clone-owned IDs/references.
+- Base: JavaScript is absent or early/late failure leaves or restores the
+  server-rendered recovery navigation.
+- Bad: asserting `dataset`, parsing HTML strings, cloning an unproven template,
+  rewriting an external fragment as clone-local, or navigating from unvalidated
+  input.
+
+### 6. Tests Required
+
+- Terminal unit tests: adapter identity, hostile descriptor non-invocation,
+  runtime-subpath purity, tokenization, every command/usage error, 50-item history,
+  and unique-only completion with lab commands absent.
+- Static-output tests: exact serialized fields, one inert template per entry,
+  exact bijection, bodies absent from JavaScript/data attributes, canonical
+  routes, one home-only script, JavaScript-free Terminal article, and
+  bidirectional package/style graph.
+- Interactive Playwright: prompt-only startup, commands/errors, history,
+  unique-only completion, IME and soft-keyboard Enter, inline `cat` with
+  unchanged URL, repeated-clone ID/fragment/ARIA scoping, clear-to-fresh-prompt,
+  latest-only announcements, and early/late recovery containment.
+
+### 7. Wrong vs Correct
+
+```ts
+// Wrong: executes a decorated method and trusts its values.
+const entries = (value as TerminalEntry[]).map((entry) => entry);
+
+// Correct: validates own data descriptors, then returns frozen clones.
+const entries = decodeTerminalEntries(value);
+
+// Wrong: parses or injects an HTML string returned by a command.
+record.innerHTML = effect.html;
+
+// Correct: clones only the prevalidated build-time template for the entry.
+const template = templates.byFilename.get(effect.entry.filename);
+if (template === undefined) throw new TypeError('Missing document template.');
+record.append(template.content.cloneNode(true));
+```
+
 ## Local Types and Narrowing
 
 - Keep one-consumer Astro props in a local `interface Props`.
@@ -119,6 +227,8 @@ are the contract.
   redefining loaded entry shapes.
 - Let clear local primitives infer; use literal unions for closed variants.
 - Type DOM elements at query boundaries and guard optional elements.
+- Keep Terminal command/effect unions exhaustive; a new variant must update the
+  pure engine, DOM renderer, announcements, and unit/browser tests together.
 - Use Astro/Playwright `defineConfig` helpers for contextual typing.
 
 ## Avoid
@@ -141,3 +251,6 @@ are the contract.
 - `apps/site/tsconfig.json`
 - `experiments/nerv/tsconfig.json`
 - `experiments/nerv/src/modules/nerv/components/WarningStripe.astro`
+- `presentations/terminal/src/runtime.ts`
+- `presentations/terminal/tests/terminal.test.ts`
+- `apps/site/src/scripts/terminal-home.ts`

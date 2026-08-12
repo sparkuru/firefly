@@ -2,10 +2,10 @@
 
 ## Current Scope
 
-The main site, X Core, semantic presentation, and NERV experiment are separately
-locked packages. Repository-root `content/` is framework-neutral input for the
-main site, not an Astro source directory. `prototypes/typecho-terminal/` is
-reference material only.
+The main site, X Core, semantic presentation, Terminal presentation, and NERV
+experiment are separately locked packages. Repository-root `content/` is
+framework-neutral input for the main site, not an Astro source directory.
+`prototypes/typecho-terminal/` is reference material only.
 
 ## Implemented Layout
 
@@ -21,22 +21,29 @@ presentations/semantic/
 ├── package.json + package-lock.json
 ├── src/index.ts                  # Pure semantic PresentationAdapter
 └── tests/semantic.test.ts
+presentations/terminal/
+├── package.json + package-lock.json
+├── src/index.ts                  # Pure Terminal PresentationAdapter
+├── src/runtime.ts                # Browser-safe index/command state machine
+└── tests/terminal.test.ts
 apps/site/
 ├── package.json                  # Astro 7 package and commands
 ├── package-lock.json             # Site-only dependency lock
-├── astro.config.mjs              # Static, paired X Core plugins, Tailwind 4
-├── playwright.config.ts          # Site-owned no-JavaScript browser projects
+├── astro.config.mjs              # Static, two adapters, route-scoped assets
+├── playwright.config.ts          # Static + interactive Chromium projects
 ├── src/
 │   ├── content.config.ts         # Explicit external glob loaders
-│   ├── components/SemanticDocument.astro
+│   ├── components/               # Dispatcher, semantic/Terminal documents/home
 │   ├── lib/
+│   │   ├── assets-inline-limit.mjs # Exact Terminal-home JS externalization
 │   │   ├── content-schema.mjs    # Runtime metadata contract
 │   │   ├── content.ts            # Public filtering and invariants
 │   │   ├── render-document.ts    # Astro/X Core metadata bridge
 │   │   └── x-core-context.ts     # App-owned DocumentContext resolver
-│   ├── layouts/DocumentLayout.astro
+│   ├── layouts/                  # Semantic and Terminal whole-page shells
 │   ├── pages/                    # Thin static route entries
-│   └── styles/global.css         # Tailwind import and site-wide tokens/rules
+│   ├── scripts/terminal-home.ts  # Home-only progressive enhancement
+│   └── styles/                   # Semantic compiled CSS + Terminal raw CSS
 └── tests/                        # Schema, negatives, integration, output, E2E
 experiments/nerv/
 ├── experiment.json               # Publication metadata/build contract
@@ -58,16 +65,23 @@ ignored. Never put authored source in them.
 - Register collections in `apps/site/src/content.config.ts` with explicit
   `glob({ base, pattern })` loaders. Validation belongs in the shared schema;
   public filtering/uniqueness/layout guards belong in `src/lib/content.ts`.
-- Keep route files thin. The home queries public content; dynamic post/page files
+- Keep route files thin. The home derives a validated, canonical Terminal index
+  from public content and calls `renderDocument()` once per public entry to emit
+  one inert keyed `TerminalStreamDocument` template. Dynamic post/page files
   implement `getStaticPaths()`, call `renderDocument(entry)`, and pass the result
-  to `SemanticDocument.astro`; `404.astro` owns recovery copy.
-- Put the document shell, metadata, skip link, navigation, main landmark, and
-  footer in `DocumentLayout.astro`.
+  to `DocumentPresentation.astro`.
+- `DocumentPresentation.astro` dispatches the validated X Core presentation to
+  `DocumentLayout` + `SemanticDocument` or `TerminalLayout` +
+  `TerminalDocument`. Routes do not select layouts independently.
+- The home alone renders `TerminalHome.astro` and imports
+  `src/scripts/terminal-home.ts`. Only that controller validates and clones the
+  inert templates; canonical Terminal documents remain JavaScript-free.
 - Keep main-site tests and Playwright configuration inside `apps/site/`.
 
-The current route surface is exactly `/`, `/posts/<slug>/`, `/pages/<slug>/`, and
-`404.html`. Do not create placeholder `timeline`, `files`, `tags`, or `lab` routes
-before their milestone supplies real semantics.
+The current output is exactly five HTML files: home, two public posts, About, and
+`404.html`. The route kinds remain `/`, `/posts/<slug>/`, `/pages/<slug>/`, and
+the static 404. Do not create placeholder `timeline`, `files`, `tags`, or `lab`
+routes before their milestone supplies real semantics.
 
 ## Experiment Boundaries
 
@@ -84,8 +98,12 @@ before their milestone supplies real semantics.
   Astro, the main site, presentations, experiments, or reference prototypes.
 - `presentations/semantic/` depends on the X Core public contract through its
   exact `file:../../packages/x-core` dependency. It does not import site source.
-- `apps/site/` consumes built X Core and semantic package entries through exact
-  `file:` dependencies. Build them before clean-installing/building the site.
+- `presentations/terminal/` depends on X Core only for the adapter entry. Its
+  exported `./runtime` subpath is side-effect-free and does not import X Core,
+  HAST, Astro, the adapter entry, or site code.
+- Semantic and Terminal do not import one another. `apps/site/` consumes built
+  X Core and both presentation package entries through exact `file:`
+  dependencies; rebuild them before clean-installing/building the site.
 - Main site and experiments do not import one another's source, CSS, assets,
   configs, or dependencies.
 - The root `package.json` delegates commands but is not an npm workspace.
@@ -105,9 +123,8 @@ before their milestone supplies real semantics.
 
 ## Avoid
 
-- Do not create future Terminal adapters, `tooling/`, or publication trees merely
-  to mirror the root PRD. Only the implemented X Core and semantic directories
-  are current runtime architecture.
+- Do not create M4 publication assemblers, public experiment indexes, lab
+  commands/routes, `tooling/`, or deployment trees merely to mirror the root PRD.
 - Do not move package-local components into a generic repository component pool.
 - Do not rely on content filenames or titles as the public slug contract.
 - Do not copy reference-only Typecho PHP/JavaScript into either runtime package.
@@ -118,8 +135,14 @@ before their milestone supplies real semantics.
 - `apps/site/src/lib/content.ts`
 - `apps/site/src/lib/render-document.ts`
 - `apps/site/src/components/SemanticDocument.astro`
+- `apps/site/src/components/DocumentPresentation.astro`
+- `apps/site/src/components/TerminalHome.astro`
+- `apps/site/src/components/TerminalStreamDocument.astro`
+- `apps/site/src/components/TerminalDocument.astro`
 - `packages/x-core/src/index.ts`
 - `presentations/semantic/src/index.ts`
+- `presentations/terminal/src/index.ts`
+- `presentations/terminal/src/runtime.ts`
 - `apps/site/src/pages/posts/[slug].astro`
 - `apps/site/src/layouts/DocumentLayout.astro`
 - `experiments/nerv/experiment.json`

@@ -1,0 +1,9 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Verify the complete frontend quality matrix, sam execution mode, and updated four-project Playwright profile."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Audit Terminal/X Core/site dependency direction, exact route inventory, prototype isolation, and absence of premature M4 publication work."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Prove only home loads client behavior and no fetch, browser Markdown, unsafe HTML insertion, client router, global key hook, or broken initialization fallback appears; the revised task design supersedes stale navigation clauses."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check copied-article metadata, safe index decoding, exhaustive commands/effects, guarded DOM access, and adversarial negative cases."}
+{"file":".trellis/spec/frontend/x-core-contract.md","reason":"Verify production Terminal registration, stable headings and node identities, exact metadata, empty enhancements, and typed failures."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Run static-output, accessibility, responsive, Playwright, formatting, isolation, and submit-ready residual-review gates against M3 deltas."}
+{"file":".trellis/tasks/08-12-m3-terminal-interface/research/terminal-architecture.md","reason":"Audit the approved shell-first template architecture, package build order, prototype exclusions, no-xterm decision, canonical recovery routes, and M4 boundary."}
+{"file":".trellis/tasks/08-12-m3-terminal-interface/research/article-edit-ledger.md","reason":"Verify every normalized article change is evidence-backed, preservation-first, and free of broad voice rewriting before submit-ready review."}
+{"file":".trellis/tasks/08-12-m3-terminal-interface/research/uupm-terminal-ui.md","reason":"Check approved contrast, keyboard, touch, responsive, reduced-motion, live-region, and local-font decisions."}

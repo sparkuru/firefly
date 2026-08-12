@@ -1,0 +1,9 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Load the frontend pre-development checklist, package topology, sam-only runtime, and current Playwright profile before changing the M2 baseline."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Preserve content, X Core, presentation, site, experiment, and reference-prototype boundaries while adding the private Terminal package."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Implement the shared whole-page presentation dispatcher, Terminal shell/document semantics, native fallback, and route-local style ownership."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Constrain the home-only runtime, guarded DOM wiring, progressive fallback, and absence of browser Markdown, unsafe HTML insertion, fetch, or client routing; the revised task design supersedes stale navigation clauses."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Apply strict content metadata, serialized-index validation, closed command/effect unions, safe DOM narrowing, and negative contracts."}
+{"file":".trellis/spec/frontend/x-core-contract.md","reason":"Register and implement the Terminal adapter without weakening HAST, stable identity, metadata, diagnostic, or registry invariants."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Preserve exact package locks, local file-dependency build order, sam commands, Astro server ownership, and browser cleanup behavior."}
+{"file":".trellis/tasks/08-12-m3-terminal-interface/research/terminal-architecture.md","reason":"Follow the evidenced package/site split, prototype exclusions, shell-first template transport revision, canonical recovery routes, and M4 lab stop gates."}
+{"file":".trellis/tasks/08-12-m3-terminal-interface/research/uupm-terminal-ui.md","reason":"Apply the approved Terminal palette, responsive, focus, touch, live-region, reduced-motion, and no-external-font direction."}

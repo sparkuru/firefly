@@ -2,19 +2,23 @@
 
 ## Scope and Evidence Baseline
 
-The repository has two runnable Astro applications plus two build-time frontend
-packages:
+The repository has two runnable Astro applications plus three build-time
+frontend packages:
 
 - `packages/x-core/`: private framework-neutral AST, registry, metadata, JSON,
   and diagnostic contract.
 - `presentations/semantic/`: private semantic adapter consumed by the main site.
+- `presentations/terminal/`: private Terminal adapter plus a framework-neutral,
+  side-effect-free browser runtime subpath.
 - `apps/site/`: Astro 7 main site. It loads repository-root Markdown, resolves
-  X Core context, and emits semantic static article/page HTML.
+  X Core context, dispatches whole-document presentations, and emits the static
+  Terminal home plus semantic/Terminal article and page HTML.
 - `experiments/nerv/`: autonomous Astro 4 experiment mounted at `/lab/nerv/`.
 
-All four own separate manifests, lockfiles, tests, and build artifacts. The
-approved dependency direction is X Core → semantic → site; NERV imports none of
-them. The root is a command delegate, not an npm workspace.
+All five own separate manifests, lockfiles, tests, and build artifacts. The
+approved dependency direction is X Core → semantic/Terminal → site; the two
+presentation packages do not import one another, and NERV imports none of them.
+The root is a command delegate, not an npm workspace.
 
 All files in this directory are written in English and cite implemented paths.
 
@@ -23,11 +27,11 @@ All files in this directory are written in English and cite implemented paths.
 | Guide | Description | Status |
 | --- | --- | --- |
 | [Directory Structure](./directory-structure.md) | Main-site, content, experiment, route, asset, and prototype boundaries | Active |
-| [Component Guidelines](./component-guidelines.md) | Astro props, layouts, semantic composition, and package-local styling | Active |
-| [Client-Side Behavior](./hook-guidelines.md) | Static site boundary, NERV route scripts, and absence of hooks/fetching | Active |
+| [Component Guidelines](./component-guidelines.md) | Astro props, whole-page presentation dispatch, and route-local styling | Active |
+| [Client-Side Behavior](./hook-guidelines.md) | Terminal-home enhancement, NERV scripts, and absence of hooks/fetching | Active |
 | [State Management](./state-management.md) | Build-time content, props, route-local browser state, and absence of a store | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Schema, Astro, static-output, browser, accessibility, and isolation gates | Active |
-| [Type Safety](./type-safety.md) | Strict TypeScript and the executable content-metadata contract | Active |
+| [Type Safety](./type-safety.md) | Strict TypeScript, content metadata, and Terminal browser-boundary contracts | Active |
 | [Development Runtime](./development-runtime.md) | Container commands, service ownership, browser versions, and failure handling | Active |
 | [X Core Contract](./x-core-contract.md) | AST pipeline, presentation registry, diagnostics, JSON metadata, and adapter boundary | Active |
 
@@ -40,10 +44,12 @@ its own lockfile, then run its checks:
 | --- | --- | --- |
 | X Core | `./sam npm --prefix packages/x-core ci` | `run check`, `run test`, `run build` |
 | Semantic adapter | `./sam npm --prefix presentations/semantic ci` | `run check`, `run test`, `run build` |
+| Terminal presentation | `./sam npm --prefix presentations/terminal ci` | `run check`, `run test`, `run build` |
 | Main site | `./sam npm --prefix apps/site ci` | `run test:content`, `run test:x-core`, `run check`, `run build` |
 | NERV | `./sam npm --prefix experiments/nerv ci` | `run check`, `run build` |
 
-- Build/install changed M2 packages in dependency order: X Core, semantic, site.
+- Build/install the M3 graph in dependency order: X Core, semantic, Terminal,
+  then site. A clean site install must follow rebuilt local `file:` packages.
 - A main-site content or route change must inspect emitted files, draft exclusion,
   and relevant negative content-contract behavior in addition to a successful
   build.
@@ -63,20 +69,30 @@ its own lockfile, then run its checks:
 
 - Execution boundary: the executable root `./sam`; no host Node, global
   Playwright, or raw-Docker test path.
-- Version pair: both packages pin `@playwright/test@1.62.0`; browser commands use
+- Version pair: the main site and NERV pin `@playwright/test@1.62.0`; browser commands use
   `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble` and `SAM_IPC=host`.
-- Projects: Chromium desktop `1440x900` and mobile `375x812`.
+- Projects: static Chromium with JavaScript disabled and interactive Chromium
+  with JavaScript enabled, each at desktop `1440x900` and mobile `375x812`;
+  the interactive mobile project also enables touch.
 - Main site:
-  - config/test: `apps/site/playwright.config.ts`, `apps/site/tests/site.spec.ts`;
-  - readiness/base: Astro on `http://127.0.0.1:4321/`;
-  - server contract: foreground `ASTRO_DEV_BACKGROUND=0` plus `--ignore-lock`;
-  - browser JavaScript is disabled to prove the static reading contract;
-  - focused: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts`;
+  - config/tests: `apps/site/playwright.config.ts`, `apps/site/tests/site.spec.ts`,
+    and `apps/site/tests/terminal.spec.ts`;
+  - build first, then let Playwright own `astro preview` at
+    `http://127.0.0.1:4321/`; do not use `astro dev` for route-style isolation;
+  - focused static: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts`;
+  - focused interactive: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/terminal.spec.ts`;
   - full: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e`;
-  - baseline coverage: home, generated post/page and fragment deep links,
-    unknown-route 404, semantic heading order, conditional outline links,
-    keyboard-focusable local code/table scrolling, draft absence, visible skip
-    and interaction focus, and no document overflow.
+  - static coverage: native home links/fallback, semantic and Terminal documents,
+    post/page/fragment deep links, 404, sequential headings, exact outline links,
+    keyboard-focusable local code/table scrolling, draft absence, visible focus,
+    and no document overflow;
+  - interactive coverage: prompt-only startup, deterministic commands/errors,
+    M4 lab-command absence, history/draft restoration, unique-only completion
+    with normal Tab escape, IME-safe and mobile soft-keyboard Enter submission,
+    inline `cat` with unchanged URL, repeated-clone ID/reference scoping,
+    clear-to-fresh-prompt behavior, validated native links, latest-only
+    announcements, reduced motion, responsive containment, and early/late
+    failure recovery.
 - NERV:
   - config/test: `experiments/nerv/playwright.config.ts`,
     `experiments/nerv/tests/nerv.spec.ts`;
