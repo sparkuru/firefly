@@ -96,3 +96,26 @@ Implemented independently locked X Core and semantic presentation packages, inte
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: Complete M3 shell-first Terminal interface
+
+**Date**: 2026-08-13
+**Task**: Complete M3 shell-first Terminal interface
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Delivered and owner-approved the M3 shell-first Terminal presentation: prompt-focused home, inline build-rendered cat documents, clear/history/completion and failure recovery, JavaScript-free canonical Terminal article, isolated semantic routes, preservation-edited Trellis article, durable frontend contracts, task evidence, and guided mainline advancement. Final gates passed across X Core, semantic, Terminal, content, Astro integration/static output, 44 Playwright cases, and unchanged NERV checks/build; lab publication remains deferred to M4.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f85fb9f` | (see git log) |
+| `696898b` | (see git log) |
+| `8bad2d1` | (see git log) |
+
+### Status
+
+[OK] **Completed**
