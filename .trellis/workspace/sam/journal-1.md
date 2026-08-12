@@ -50,3 +50,26 @@ Replaced frontend spec templates with repository-backed Astro and NERV conventio
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: Deliver M1 Astro static foundation
+
+**Date**: 2026-08-12
+**Task**: Deliver M1 Astro static foundation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added an isolated Astro 7 main site with validated repository-root Markdown, a strict shared content contract, four static route classes, JavaScript-disabled desktop/mobile Playwright coverage, NERV isolation regression, durable two-package frontend specs, and guided mainline completion for M1.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e9d49d9` | (see git log) |
+| `d81e550` | (see git log) |
+| `737dfbd` | (see git log) |
+
+### Status
+
+[OK] **Completed**
