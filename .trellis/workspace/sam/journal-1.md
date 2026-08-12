@@ -27,3 +27,26 @@ Initialized the repository's Trellis Plus workflow, completed the hako-to-sam wr
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: Bootstrap frontend guidelines and guided mainline
+
+**Date**: 2026-08-12
+**Task**: Bootstrap frontend guidelines and guided mainline
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Replaced frontend spec templates with repository-backed Astro and NERV conventions, validated the documentation against the containerized Astro check, and established the guided M0-to-M7 mainline with bootstrap completed before M1.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e22a7b` | (see git log) |
+| `54f778d` | (see git log) |
+| `d929331` | (see git log) |
+
+### Status
+
+[OK] **Completed**
