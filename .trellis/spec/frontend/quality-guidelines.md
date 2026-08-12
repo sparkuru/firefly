@@ -1,122 +1,100 @@
 # Frontend Quality Guidelines
 
-## Current Quality Gate
+## Package Quality Gates
 
-The runnable frontend is `experiments/nerv/`. Validate it through the root `./sam`
-container wrapper; host Node, globally installed browser tooling, and raw Docker are
-not the repository contract.
-
-For every frontend source change, run:
+Use the root `./sam` wrapper. Host Node, global browser tooling, and raw Docker
+are not validation contracts.
 
 ```bash
+./sam npm --prefix apps/site ci
+./sam npm --prefix apps/site run test:content
+./sam npm --prefix apps/site run check
+./sam npm --prefix apps/site run build
+
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
 ```
 
-`check` runs `astro check`. `build` runs `astro check && astro build`, preserving a
-type/content check before static output. Installation uses the lockfile:
-
-```bash
-./sam npm --prefix experiments/nerv ci
-```
-
-See `development-runtime.md` for wrapper inputs, failure handling, and script-level
-checks.
+A successful build is necessary but not sufficient. For main-site work, inspect
+the exact emitted route set, draft absence, and relevant content-invariant error
+paths. For isolation work, check/build both packages and scan for cross-imports.
 
 ## Browser Validation
 
-`experiments/nerv/tests/nerv.spec.ts` is the trusted browser-test example. It:
+Browser-accessible changes require the focused command followed by the full
+package suite from the single profile in `index.md`.
 
-- navigates relative to the configured `/lab/nerv/` base URL;
-- verifies the document title;
-- locates the semantic main landmark and level-one heading by accessible role/name;
-- asserts that document width does not exceed viewport width.
+- Main site tests run with JavaScript disabled and cover home, generated post/page
+  deep links, static 404 recovery, headings/body, visible skip-link focus, draft
+  absence, and no overflow at both viewports.
+- NERV's current browser baseline covers title, main/heading semantics, and no
+  overflow. Add click/cookie/redirect or scroll assertions when those contracts
+  change.
+- Prefer semantic role/name locators. Use CSS selectors only when the selector is
+  itself a runtime contract.
+- Preserve reports, screenshots, and traces on failure. Do not weaken assertions
+  or silently replace an unavailable run with visual smoke testing.
 
-`playwright.config.ts` runs the same test in Chromium at desktop `1440x900` and
-mobile `375x812`. Use the version-matched package/image pair:
+## Content and Static-Output Review
 
-```bash
-SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
-  ./sam npm --prefix experiments/nerv run test:e2e -- tests/nerv.spec.ts
-
-SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
-  ./sam npm --prefix experiments/nerv run test:e2e
-```
-
-Add interaction assertions when changing the logo click/cookie/redirect behavior or
-scroll-driven stripe behavior; the present test is a render-and-overflow baseline,
-not coverage for those interactions. Prefer role and accessible-name locators for
-semantic UI. Use CSS selectors only when the selector itself is the behavior
-contract, such as `.warning-stripe` in the current route script.
+- Collection config uses explicit external loaders and the shared strict schema.
+- Routes consume the single public projection; draft/layout/slug checks are not
+  scattered across pages.
+- Static output contains no source Markdown parser, hydration directive, client
+  script, external font request, NERV import, draft text, credential, or local
+  absolute path.
+- Only implemented route semantics are emitted. Do not add placeholder routes to
+  make a milestone appear broader.
 
 ## Accessibility and Responsive Baseline
 
-- Keep one visible `<main>` and a meaningful page `<h1>`; both are asserted on the
-  NERV route.
-- Preserve heading order and native document elements in feature components.
-- Keep the configured narrow-mobile project passing without document-width
-  overflow.
-- Treat keyboard/focus checks as required when a task adds keyboard-operable
-  controls. The current page has no form control or focus-flow test.
-- Do not claim automated accessibility scanning: no scanner is configured.
-- Do not claim visual-regression coverage: screenshots are failure diagnostics,
-  not approved baselines.
-
-The root `prd.md` requires an experiment reduced-motion strategy, but the current
-NERV styles still contain continuous `scanline` and `flicker` animations without a
-`prefers-reduced-motion` rule. Record that as an implementation gap when relevant;
-do not describe it as existing behavior or mark it verified.
+- Keep a visible primary heading, semantic main/article/navigation structure,
+  native links, sequential headings, and a keyboard-accessible skip path.
+- Preserve visible focus and no document-width overflow at `375x812` and
+  `1440x900`.
+- Main-site core content must remain readable with JavaScript disabled.
+- No automated accessibility scanner or visual-regression baseline is configured;
+  do not claim either.
+- NERV still lacks a `prefers-reduced-motion` implementation for its continuous
+  effects. Record that gap when relevant rather than marking it verified.
 
 ## Formatting and Source Consistency
 
-No repository ESLint/Prettier script or configuration and no `.editorconfig` are
-present. Do not report a formatter or lint pass that the project cannot run. Match
-the checked-in local style instead:
-
-- two-space indentation in Astro, TypeScript, JavaScript config, and CSS;
-- single quotes and semicolons in TypeScript / JavaScript;
-- trailing commas are not used uniformly, so preserve the surrounding file;
-- component CSS stays co-located and normal styles remain scoped.
-
-Always run `git diff --check` for whitespace errors. Do not reformat unrelated
-legacy code in `prototypes/typecho-terminal/` while working on the Astro package.
+No repository ESLint/Prettier script/config or `.editorconfig` exists. Do not
+claim a linter/formatter pass. Match local two-space Astro/JS/TS/CSS style,
+single quotes and semicolons in JS/TS, and surrounding trailing-comma style.
+Always run `git diff --check` and avoid reformatting reference-only legacy code.
 
 ## Review Checklist
 
-- The change stays inside the correct experiment/module boundary and does not turn
-  the reference-only Typecho prototype into runtime code.
-- A route remains thin, a feature root owns composition, and leaf components keep
-  their local props and styles.
-- Root-relative assets respect Astro's `/lab/nerv` base configuration.
-- Static content remains usable without new client-framework or runtime-data
-  dependencies.
-- Selector changes account for `src/pages/index.astro` DOM queries.
-- Astro check and build pass through `./sam`.
-- Browser-visible behavior has focused Playwright evidence followed by the full
-  configured run when applicable.
-- Failure artifacts are left at `experiments/nerv/playwright-report/` and
-  `experiments/nerv/test-results/`; both remain ignored.
-- Residual human review is limited to subjective visual/product judgment, real
-  devices, assistive technology, or a private deployment environment.
+- Change stays within the correct site/experiment/content boundary.
+- Direct dependency versions and app-local lockfiles remain reproducible.
+- Schema changes include shared runtime behavior and negative regression tests.
+- Main-site routes remain thin and static; NERV selectors/base-path behavior is
+  preserved when relevant.
+- Astro check/build and applicable Node/browser tests pass through `./sam`.
+- Browser evidence records package, command, routes/states, viewports, JavaScript
+  mode, fixtures, results, and artifacts on failure.
+- No deployment or publication claim is made from package-local `dist/` alone.
+- Human residuals are limited to subjective visuals, real devices, assistive
+  technology, or private deployment environments.
 
 ## Avoid
 
-- Do not use a successful build as evidence that browser behavior or responsive
-  layout passed.
-- Do not replace a failed or unavailable Playwright run with an unrecorded visual
-  smoke test.
-- Do not add snapshot baselines without a controlled review/update policy.
-- Do not bypass `./sam` with host package-manager or global Playwright commands.
-- Do not weaken semantic markup to make CSS layout easier.
-- Do not report the planned Astro 7 main-site architecture from `prd.md` as current
-  NERV implementation.
+- Do not equate a build with responsive/browser success.
+- Do not bypass `./sam`, force peer resolution, or apply destructive audit fixes.
+- Do not add screenshot baselines without a controlled review policy.
+- Do not weaken semantic markup or validation to make a check pass.
+- Do not report future PRD architecture as implemented.
 
 ## Reference Files
 
+- `apps/site/package.json`
+- `apps/site/src/lib/content-schema.mjs`
+- `apps/site/src/lib/content.ts`
+- `apps/site/playwright.config.ts`
+- `apps/site/tests/site.spec.ts`
 - `experiments/nerv/package.json`
 - `experiments/nerv/playwright.config.ts`
 - `experiments/nerv/tests/nerv.spec.ts`
-- `experiments/nerv/src/pages/index.astro`
-- `experiments/nerv/src/modules/nerv/NervPage.astro`
-- `experiments/nerv/src/modules/error/NotFoundPage.astro`
 - `.trellis/spec/frontend/development-runtime.md`

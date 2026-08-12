@@ -2,73 +2,58 @@
 
 ## Current Runtime Model
 
-This project does not use a component framework, custom hooks, a data-fetching
-library, or a client-side lifecycle abstraction. The NERV package dependencies are
-Astro, TypeScript, Astro's checker, and Playwright. A source scan finds one browser
-script: the inline `<script>` in `experiments/nerv/src/pages/index.astro`.
+There is no component framework, custom hook layer, browser data-fetching layer,
+client cache, or lifecycle abstraction.
 
-Keep this file at the task-defined path so existing Trellis manifests remain
-stable, but do not interpret its filename as evidence that `use*` hooks exist.
+- `apps/site/` emits useful static HTML and contains no client `<script>` or
+  hydration directive. Its Playwright projects disable JavaScript.
+- `experiments/nerv/` has one route-owned inline browser script in
+  `src/pages/index.astro`.
 
-## Route-Owned Script Pattern
+Keep this task-defined filename stable, but do not interpret it as evidence that
+`use*` hooks exist.
 
-The current interactive behavior belongs to the route that renders the required
-DOM:
+## Static Main Site
 
-- Query `.logo-container`, keep a route-local `clickCount`, and attach the click
-  listener only when the element exists through optional chaining.
-- After three clicks, persist the `has_visited` cookie and redirect to the `from`
-  query parameter or `/`.
-- Query all `.warning-stripe` elements with
-  `document.querySelectorAll<HTMLElement>()` and update their `--bg-position`
-  custom property from the window scroll position.
+Content loading, filtering, Markdown rendering, and route generation happen at
+build time. Do not add browser requests, a client router, or runtime Markdown
+parsing for data already available to Astro. A future enhancement must define its
+no-JavaScript fallback, ownership, loading/error behavior, and tests before it
+establishes a new convention.
 
-The script is placed after the page markup in `src/pages/index.astro`; its selectors
-are rendered by `NervLogo.astro` and `WarningStripe.astro`. Treat those selectors as
-a small cross-file contract.
+## NERV Route-Owned Script
 
-For behavior of the same size and scope, follow that boundary: keep the script in
-the owning route, use browser APIs directly, and keep mutable values inside the
-script rather than attaching them to `window`.
+NERV's route script:
 
-## Data Fetching
+- queries `.logo-container`, owns local `clickCount`, and guards the optional
+  element before attaching a click listener;
+- writes the fixed `has_visited` cookie and redirects from the `from` query value
+  after three clicks;
+- queries `.warning-stripe` elements and updates their CSS custom property from
+  `window.scrollY`.
 
-There is no runtime fetching, request cache, synchronization, loading state, or
-error-state convention in the implemented frontend. The NERV experiment builds to
-static HTML and its current interaction uses only DOM, URL, cookie, and navigation
-APIs.
+Keep behavior of this size in its owning route. Selector classes are a cross-file
+contract with `NervLogo.astro` and `WarningStripe.astro`.
 
-Do not introduce React Query, SWR, a custom `useFetch`, or a parallel client data
-model for static content. If a future milestone introduces browser data fetching,
-establish its lifecycle, error handling, and tests in that task before recording it
-as a project convention.
+## Extraction and Naming
 
-## Naming and Extraction Boundary
-
-There is no `useSomething` naming convention because there are no hooks. Existing
-TypeScript and browser-script identifiers use descriptive camelCase names such as
-`clickCount`, `scrollY`, `viewportWidth`, and `baseURL`.
-
-Do not extract the current handlers merely to satisfy a template category. The
-repository has no shared client-module pattern or evidence-backed extraction
-threshold yet. A task that introduces that boundary must document its location,
-naming, and validation alongside the implementation.
+There is no evidence-backed hook or shared client-module extraction threshold.
+Use descriptive camelCase identifiers. Extract browser code only through an
+explicit task when implemented routes genuinely share behavior or the route
+script becomes independently testable.
 
 ## Avoid
 
-- Do not add hook-shaped functions to a framework-free Astro page.
-- Do not move route state onto `window` or another implicit global.
-- Do not assume a selected element exists. The current single-element query uses
-  `logo?.addEventListener(...)`.
-- Do not change `.logo-container` or `.warning-stripe` independently of the route
-  script that queries them.
-- Do not add runtime requests for content already available at static-build time.
-- Do not use `prototypes/typecho-terminal/terminal/assets/terminal.js` as current
-  runtime architecture. Its parent prototype is explicitly `reference-only`.
+- Do not add hook-shaped functions to framework-free Astro pages.
+- Do not add runtime requests for build-time content.
+- Do not attach route-local mutable state to `window`.
+- Do not assume queried elements exist or change script-owned selectors alone.
+- Do not treat the reference Typecho terminal JavaScript as current architecture.
 
 ## Reference Files
 
-- `experiments/nerv/package.json`
+- `apps/site/src/pages/index.astro`
+- `apps/site/playwright.config.ts`
 - `experiments/nerv/src/pages/index.astro`
 - `experiments/nerv/src/modules/nerv/components/NervLogo.astro`
 - `experiments/nerv/src/modules/nerv/components/WarningStripe.astro`

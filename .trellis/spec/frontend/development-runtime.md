@@ -4,9 +4,12 @@
 
 ### 1. Scope / Trigger
 
-Use this contract whenever a task installs dependencies, runs Astro commands, starts the NERV development server, changes `sam` or `dev.sh`, or validates browser-accessible behavior.
+Use this contract for dependency installation, Astro/Node commands, development
+servers, browser validation, or changes to `sam` / `dev.sh`. It applies to both
+`apps/site/` and `experiments/nerv/`.
 
-The repository uses `./sam` as its single development-command boundary. Host Node, global Playwright, and direct package-manager commands are not the project validation contract. Raw `docker` remains an implementation detail of the wrapper and is not an agent allow target.
+`./sam` is the single development-command boundary. Host Node, global Playwright,
+direct host npm, and raw Docker are not project validation paths.
 
 ### 2. Signatures
 
@@ -14,60 +17,79 @@ The repository uses `./sam` as its single development-command boundary. Host Nod
 ./sam <command> [arguments...]
 ./dev.sh [start|up|down|stop]
 
+./sam npm --prefix apps/site ci
+./sam npm --prefix apps/site run test:content
+./sam npm --prefix apps/site run check
+./sam npm --prefix apps/site run build
+
 ./sam npm --prefix experiments/nerv ci
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
-
-SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
-  ./sam npm --prefix experiments/nerv run test:e2e -- tests/nerv.spec.ts
-
-SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
-  ./sam npm --prefix experiments/nerv run test:e2e
 ```
 
-The root `npm run test:e2e:nerv` delegates to the experiment only when the caller is already inside the pinned Playwright `./sam` environment.
+Browser signatures are recorded in the single Playwright profile in `index.md`.
+Root npm scripts are delegators and are valid only when already invoked inside
+`./sam` with the appropriate image.
 
 ### 3. Contracts
 
 | Input / boundary | Contract |
 | --- | --- |
-| `SAM_IMAGE` | Optional image override. Defaults to `node:22-alpine`. Browser tests must use `mcr.microsoft.com/playwright:v1.62.0-noble`, matching the lockfile-pinned `@playwright/test@1.62.0`. |
-| `SAM_IPC` | Optional Docker IPC mode. Unset defaults to `private`; accepted values are exactly `private` and `host`. Browser tests set `host`; ordinary commands retain `private`. An explicitly empty value is invalid. |
-| `SAM_BIND_HOST` | Optional service bind address, default `127.0.0.1`. Do not broaden it to `0.0.0.0` unless LAN access is an explicit requirement. |
-| `WEB_HOST_PORT` | Optional host port for `dev.sh`, default `4321`; change this for parallel agents. |
-| `WEB_CONTAINER_PORT` | Astro container port, default `4321`; it must match the port passed to Astro. |
-| `SAM_SCOPE` / `SAM_SERVICE` | Wrapper-internal label inputs. `dev.sh` uses scope `dev.sh` and service `web`; manual commands default to an empty service and publish no port. |
-| Repository mount | The repository is mounted at `/app` with the caller's UID/GID. Container HOME is `/app/.devhome`, which must remain ignored. |
-| Service lifecycle | `dev.sh` calls `./sam`; `down` selects containers by both `sam.repo=<absolute repo path>` and `sam.scope=dev.sh`. It never stops processes by port or a broad name match. |
-| Browser readiness | Playwright starts Astro inside its own container and waits for `http://127.0.0.1:4321/lab/nerv/`, which is also the test `baseURL`. |
-| Browser artifacts | HTML report: `experiments/nerv/playwright-report/`. Test output, failure screenshots, and retry traces: `experiments/nerv/test-results/`. Both remain ignored. |
+| `SAM_IMAGE` | Defaults to `node:22-alpine`. Browser runs use `mcr.microsoft.com/playwright:v1.62.0-noble`. |
+| `SAM_IPC` | Unset means `private`; accepted values are exactly `private` and `host`. Browser runs use `host`; explicit empty is invalid. |
+| `SAM_BIND_HOST` | Service host binding, default `127.0.0.1`; do not broaden without an explicit LAN requirement. |
+| `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
+| `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
+| Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
+| Package boundary | Site and NERV use separate package manifests, lockfiles, configs, and artifacts. |
+| Main-site browser server | Playwright owns a foreground Astro server at `/`; set `ASTRO_DEV_BACKGROUND=0` and pass `--ignore-lock`. |
+| NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
+| Browser artifacts | Each package writes ignored `playwright-report/` and `test-results/` below its own root. |
 
-`sam` must retain `docker run --rm --init`, UID/GID mapping, repository-local HOME, exact `sam.*` labels, noninteractive TTY detection, and child-command exit behavior.
+`sam` retains `docker run --rm --init`, UID/GID mapping, repository-local HOME,
+exact `sam.*` labels, TTY detection, and child exit behavior.
 
 ### 4. Validation & Error Matrix
 
 | Condition | Required behavior |
 | --- | --- |
-| `./sam` receives no command | Print usage to stderr and exit `2` before running Docker. |
-| Required host command is missing | Print the missing command and exit `127`. |
-| `SAM_IPC` is empty or not `private|host` | Print the accepted values and exit `2`; do not construct the Docker command. |
-| `SAM_SERVICE` is neither empty nor `web` | Print the unsupported service and exit `2`; do not publish a port. |
-| Wrapped command fails | Preserve its stdout/stderr and exit code through `exec`; do not reinterpret a failure as success. |
-| `dev.sh start` cannot find executable `./sam` or installed Astro | Fail before starting a service and print the exact recovery command. |
-| `dev.sh down` finds no matching container | Report that no dev containers exist and return success. |
-| Playwright dependency and image versions differ | Treat browser validation as unavailable; align the pinned package and image before rerunning. |
-| Image, browser, fixture, or service cannot start | Record the exact command/error as `playwright-unavailable`; never report a pass or replace it with a generic visual smoke test. |
-| A browser assertion fails | Preserve HTML report, screenshot, and retry trace; compare the failure with the task PRD before changing code or assertions. |
+| no wrapped command | usage to stderr; exit `2` before Docker |
+| missing host dependency | name dependency; exit `127` |
+| invalid/empty `SAM_IPC` | accepted values to stderr; exit `2` before Docker |
+| unsupported `SAM_SERVICE` | fail before publishing a port |
+| wrapped command fails | preserve output and exit code |
+| `dev.sh down` finds no labeled container | report none and succeed |
+| dependency/image Playwright versions differ | browser validation unavailable until aligned |
+| browser image/server/fixture cannot start | record exact unavailable error; never report pass |
+| browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
+| Astro 7 server auto-backgrounds under an agent | force `ASTRO_DEV_BACKGROUND=0`; use Playwright-owned foreground server |
+| stale Astro dev lock affects the site server | use `--ignore-lock`, ensure the owned process exits, and assert `.astro/dev.json` is absent afterward |
+
+Astro 7 agent detection can background `astro dev`, allowing Playwright's parent
+process to exit while the server and `.astro/dev.json` remain. The foreground
+environment plus lock option is required for the site Playwright config; do not
+solve this by reusing an unmanaged server.
 
 ### 5. Good / Base / Bad Cases
 
-- Good: run the focused NERV test with the version-matched Noble image and `SAM_IPC=host`; both desktop and narrow-mobile projects execute against repository-local static content.
-- Base: run Astro check or build with plain `./sam`; it uses `node:22-alpine`, private IPC, no published port, UID mapping, and `.devhome`.
-- Bad: run Playwright in the Alpine default image, use mismatched package/image versions, call raw Docker as the normal workflow, or broaden agent approval to `docker`, `bash`, `sh`, or npm.
+- Good: focused site Playwright uses the matching Noble image, host IPC,
+  JavaScript-disabled projects, and a foreground lock-free Astro server.
+- Base: site or NERV check/build uses plain `./sam`, private IPC, no published
+  port, UID mapping, and repository-local HOME.
+- Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,
+  `reuseExistingServer: true`, an unmanaged background Astro process, or broad
+  command approval.
 
 ### 6. Tests Required
 
-When `sam` or `dev.sh` changes, assert:
+For a package change, install from its lockfile and run its package-local checks.
+For cross-package boundary changes, check/build both packages. For browser-visible
+behavior, run the exact focused command before the full suite and record projects,
+JavaScript mode, routes/states, fixtures, results, and failure artifacts.
+
+For site Playwright, also assert no `.astro/dev.json` remains after the final run.
+
+When `sam` or `dev.sh` changes:
 
 ```bash
 bash -n sam dev.sh
@@ -77,29 +99,42 @@ shfmt -d sam dev.sh
 ./dev.sh down
 ```
 
-Also verify that empty and unsupported `SAM_IPC` values exit `2` before Docker execution, both scripts remain executable, `.devhome/` is ignored, and no stale `hako` / `HAKO_*` reference remains.
-
-For frontend changes, run Astro check and build. For browser-accessible behavior, run the focused Playwright command before the full command. Assert the changed route, states, interactions, semantic names, and relevant desktop/mobile viewports. Task check evidence must record the exact commands, projects, fixtures, result, artifact paths on failure, and residual human-only risk.
+Verify invalid IPC cases, executable modes, ignored `.devhome/`, and no stale
+`hako` / `HAKO_*` reference.
 
 ### 7. Wrong vs Correct
 
 #### Wrong
 
 ```bash
-docker run --rm node:22-alpine npm --prefix experiments/nerv run check
+docker run --rm node:22-alpine npm --prefix apps/site run check
 ./sam npx playwright test
-SAM_IPC= ./sam npm --prefix experiments/nerv run test:e2e
+SAM_IPC= ./sam npm --prefix apps/site run test:e2e
 ```
 
-These bypass the repository contract, use an image without the pinned browsers, or supply an invalid IPC boundary.
+```ts
+webServer: {
+  command: 'astro dev',
+  reuseExistingServer: true
+}
+```
 
 #### Correct
 
 ```bash
-./sam npm --prefix experiments/nerv run check
+./sam npm --prefix apps/site run check
 
 SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
-  ./sam npm --prefix experiments/nerv run test:e2e -- tests/nerv.spec.ts
+  ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts
 ```
 
-This keeps the wrapper as the approval and runtime boundary and keeps the Playwright package, browser image, IPC mode, and artifact policy reproducible.
+```ts
+webServer: {
+  command: 'npm run start -- --host 0.0.0.0 --port 4321 --ignore-lock',
+  env: { ASTRO_DEV_BACKGROUND: '0' },
+  reuseExistingServer: false
+}
+```
+
+This preserves the wrapper boundary, package/image match, owned server lifecycle,
+and reproducible artifacts.

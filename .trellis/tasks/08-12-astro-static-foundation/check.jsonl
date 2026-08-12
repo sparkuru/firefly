@@ -1,0 +1,9 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Verify complete project/frontend validation and keep a single accurate Playwright profile per package."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review full-scope Astro, accessibility, browser, artifact, and human-review evidence."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Verify sam-only execution, exact package/image match, IPC mode, failure classification, and NERV isolation."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Verify the new site/content boundary without premature future directories or cross-package imports."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review thin routes, layout ownership, semantic HTML, responsive styling, and selector/accessibility contracts."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Verify strict config, shared runtime schema, content validation, and absence of unsafe typing."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Verify M1 remains static-first and adds no store, client cache, or server-state layer."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Verify no client framework, hooks, hydration, or browser data-fetch layer was introduced."}
+{"file":".trellis/tasks/08-12-astro-static-foundation/research/astro-7-foundation.md","reason":"Check implementation claims against current official Astro/package facts and approved UUPM constraints."}

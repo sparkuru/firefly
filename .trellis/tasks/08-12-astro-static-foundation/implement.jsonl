@@ -1,0 +1,9 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Project validation and Playwright profiles; preserve NERV while extending the main-site contract."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Current experiment boundaries and rules for introducing the first real main-site package."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Astro layout/component composition, semantic markup, scoped/global styling, and accessibility baseline."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict Astro TypeScript, local types, DOM/runtime validation boundaries, and check command."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Static-first rendering and the prohibition on unnecessary client/global state."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Framework-free client boundary; M1 must not invent hooks, hydration, or runtime fetching."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Astro build/check, browser evidence, accessibility, responsive, and review expectations."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"The approved sam, Node, package isolation, Playwright image, IPC, and artifact contract."}
+{"file":".trellis/tasks/08-12-astro-static-foundation/research/astro-7-foundation.md","reason":"Current Astro 7, Content Collections, Unified, Tailwind 4, dependency compatibility, and approved UUPM evidence."}

@@ -2,107 +2,102 @@
 
 ## Current Scope
 
-The only runnable frontend package currently in the repository is the autonomous
-Astro 4 experiment at `experiments/nerv/`. The root `prd.md` describes future
-directories such as `apps/`, `packages/`, and `presentations/`; those directories
-are milestone intent, not existing organization rules.
-
-`prototypes/typecho-terminal/` is also present, but
-`prototypes/typecho-terminal/prototype.json` marks it as `reference-only`. Its PHP,
-CSS, and JavaScript may inform later interaction or visual work; they are not part
-of the static site's runtime and must not be imported into NERV.
+The main site and NERV experiment are separate static packages. Repository-root
+`content/` is framework-neutral input for the main site, not an Astro source
+directory. `prototypes/typecho-terminal/` is reference material only.
 
 ## Implemented Layout
 
 ```text
-experiments/nerv/
-├── experiment.json             # Publication metadata and build contract
-├── package.json                # Experiment-owned dependencies and commands
-├── astro.config.mjs            # Static output and /lab/nerv base path
-├── playwright.config.ts        # Browser projects and local web server
-├── public/                     # Files copied as public assets
-├── reference/                  # Design reference material, not runtime source
+content/
+├── posts/*.md                    # Post source loaded by apps/site
+└── pages/*.md                    # Page source loaded by apps/site
+apps/site/
+├── package.json                  # Astro 7 package and commands
+├── package-lock.json             # Site-only dependency lock
+├── astro.config.mjs              # Static, Unified, Tailwind 4 config
+├── playwright.config.ts          # Site-owned no-JavaScript browser projects
 ├── src/
-│   ├── env.d.ts                # Astro environment declarations
-│   ├── layouts/
-│   │   └── Layout.astro        # Document shell and intentional global styles
-│   ├── modules/
-│   │   ├── error/
-│   │   │   └── NotFoundPage.astro
-│   │   └── nerv/
-│   │       ├── NervPage.astro  # Feature composition root
-│   │       ├── NOTICE.md       # Feature-local attribution
-│   │       └── components/     # Feature-local presentational pieces
-│   └── pages/                  # Astro file routes
-│       ├── index.astro
-│       └── 404.astro
-└── tests/
-    └── nerv.spec.ts            # Route-level Playwright coverage
+│   ├── content.config.ts         # Explicit external glob loaders
+│   ├── lib/
+│   │   ├── content-schema.mjs    # Runtime metadata contract
+│   │   └── content.ts            # Public filtering and invariants
+│   ├── layouts/DocumentLayout.astro
+│   ├── pages/                    # Thin static route entries
+│   └── styles/global.css         # Tailwind import and site-wide tokens/rules
+└── tests/                        # Schema and Playwright coverage
+experiments/nerv/
+├── experiment.json               # Publication metadata/build contract
+├── package.json                  # Astro 4 package and commands
+├── package-lock.json
+├── astro.config.mjs              # Static `/lab/nerv` build
+├── src/{layouts,modules,pages}/
+└── tests/nerv.spec.ts
 ```
 
-Build output and tool state (`dist/`, `.astro/`, `playwright-report/`, and
-`test-results/`) are generated and ignored. Do not place authored source in them.
+Generated `dist/`, `.astro/`, `playwright-report/`, and `test-results/` paths are
+ignored. Never put authored source in them.
 
-## Route, Layout, and Module Boundaries
+## Main-Site Boundaries
 
-- Keep files under `src/pages/` thin. `src/pages/index.astro` composes
-  `Layout.astro` with `NervPage.astro`; `src/pages/404.astro` delegates the error
-  experience to `modules/error/NotFoundPage.astro`.
-- Put a complete page experience under `src/modules/<feature>/`. The NERV module
-  owns its page composition, feature-specific styles, attribution, and leaf
-  components.
-- Put reusable pieces inside the owning feature's `components/` directory.
-  `NervPage.astro` imports `WarningStripe.astro`, `NervLogo.astro`,
-  `NoticeInfo.astro`, `SecurityLevel.astro`, and `ClassifiedBox.astro` with local
-  relative paths.
-- Put the HTML document shell in `src/layouts/`. `Layout.astro` owns metadata,
-  favicon resolution, the default slot, and the only `style is:global` block.
-- Keep route-owned browser behavior next to its route until a real shared client
-  module exists. The current click and scroll behavior lives in the `<script>` of
-  `src/pages/index.astro`; there is no hooks or client-utilities directory.
-- Keep browser tests outside `src/`, under `tests/`, and keep the matching runtime
-  configuration at the experiment root.
+- Keep Markdown under repository-root `content/posts/` or `content/pages/`.
+  Bodies do not import Astro components, use hydration directives, or depend on
+  presentation CSS classes.
+- Register collections in `apps/site/src/content.config.ts` with explicit
+  `glob({ base, pattern })` loaders. Validation belongs in the shared schema;
+  public filtering/uniqueness/layout guards belong in `src/lib/content.ts`.
+- Keep route files thin. The home queries public content; dynamic post/page files
+  implement `getStaticPaths()` and `render(entry)`; `404.astro` owns recovery copy.
+- Put the document shell, metadata, skip link, navigation, main landmark, and
+  footer in `DocumentLayout.astro`.
+- Keep main-site tests and Playwright configuration inside `apps/site/`.
 
-## Experiment Isolation
+The current route surface is exactly `/`, `/posts/<slug>/`, `/pages/<slug>/`, and
+`404.html`. Do not create placeholder `timeline`, `files`, `tags`, or `lab` routes
+before their milestone supplies real semantics.
 
-Each `experiments/<id>/` is a self-contained static package. For NERV, the directory
-name, `experiment.json` id, Astro `base`, and publication mount all agree on
-`nerv` / `/lab/nerv`. Dependencies and build commands belong to
-`experiments/nerv/package.json`, not to source in another experiment or a future
-main-site package.
+## Experiment Boundaries
 
-Public assets belong under the experiment's `public/` directory. Code that emits a
-root-relative asset must respect Astro's configured base path, as
-`src/layouts/Layout.astro` does with `import.meta.env.BASE_URL` for the favicon.
+- Each `experiments/<id>/` is autonomous. Its directory name, manifest id,
+  mount path, base path, dependencies, commands, and output must agree.
+- NERV feature components remain under `src/modules/nerv/components/`; its pages
+  compose feature roots rather than duplicating feature markup.
+- NERV public assets stay under its `public/` and respect
+  `import.meta.env.BASE_URL` for the `/lab/nerv` mount.
+
+## Package Isolation
+
+- Main site and experiments do not import one another's source, CSS, assets,
+  configs, or dependencies.
+- The root `package.json` delegates commands but is not an npm workspace.
+- Publication consumes static artifacts/manifests in a later milestone; neither
+  package writes directly into the other's `dist/`.
+- Astro versions may differ. Do not upgrade NERV merely because the main site
+  uses Astro 7.
 
 ## Naming
 
-- Astro components and layouts use PascalCase filenames: `NervPage.astro`,
-  `WarningStripe.astro`, and `Layout.astro`.
-- Feature directories use lowercase identifiers that match the feature or
-  experiment: `modules/nerv/` and `modules/error/`.
-- Astro route filenames follow URL semantics: `index.astro` for the experiment
-  entry and `404.astro` for the not-found route.
-- Tests use a lowercase feature name with `.spec.ts`, as in `tests/nerv.spec.ts`.
-- Static asset names use lowercase kebab-case, as in `public/nerv-logo.svg`.
+- Astro components/layouts use PascalCase filenames.
+- Feature and content directories use lowercase semantic names.
+- Route filenames follow Astro URL semantics: `index.astro`, `404.astro`, and
+  `[slug].astro`.
+- Browser tests use lowercase `*.spec.ts`; Node schema tests use `*.test.mjs`.
+- Stable public routes come from validated front-matter `slug`, not titles.
 
 ## Avoid
 
-- Do not create the future `apps/`, `packages/`, `presentations/`, or `tooling/`
-  trees early just to mirror `prd.md`; create them when their milestone lands.
-- Do not move feature-only components into a generic repository-level components
-  directory. The current boundary is feature-local.
-- Do not import NERV source, styles, or dependencies into the future main site, or
-  import main-site source into NERV. Publication consumes static artifacts and
-  `experiment.json`, not cross-package source imports.
-- Do not treat `prototypes/typecho-terminal/terminal/*.php` as production frontend
-  source. Its manifest explicitly limits it to reference use.
+- Do not create future `packages/`, `presentations/`, `tooling/`, or publication
+  trees merely to mirror the root PRD.
+- Do not move package-local components into a generic repository component pool.
+- Do not rely on content filenames or titles as the public slug contract.
+- Do not copy reference-only Typecho PHP/JavaScript into either runtime package.
 
 ## Reference Files
 
-- `experiments/nerv/src/pages/index.astro`
-- `experiments/nerv/src/modules/nerv/NervPage.astro`
-- `experiments/nerv/src/modules/error/NotFoundPage.astro`
-- `experiments/nerv/src/layouts/Layout.astro`
+- `apps/site/src/content.config.ts`
+- `apps/site/src/lib/content.ts`
+- `apps/site/src/pages/posts/[slug].astro`
+- `apps/site/src/layouts/DocumentLayout.astro`
 - `experiments/nerv/experiment.json`
+- `experiments/nerv/src/modules/nerv/NervPage.astro`
 - `prototypes/typecho-terminal/prototype.json`

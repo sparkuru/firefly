@@ -2,54 +2,83 @@
 
 ## Scope and Evidence Baseline
 
-These guides describe the frontend that exists now: the autonomous Astro 4 NERV
-experiment under `experiments/nerv/`, its containerized development boundary, and
-its Playwright coverage. They do not promote the future Astro 7 main-site design in
-root `prd.md` to an implemented convention.
+The repository has two intentionally isolated runnable frontend packages:
 
-`prototypes/typecho-terminal/` is explicitly `reference-only`. Use its behavior and
-visual tokens as product research when a task requests that work; do not treat its
-PHP templates or JavaScript architecture as current production frontend code.
+- `apps/site/`: Astro 7 main-site foundation. It loads repository-root Markdown,
+  validates metadata, and emits static article/page HTML.
+- `experiments/nerv/`: autonomous Astro 4 experiment mounted at `/lab/nerv/`.
 
-All files in this directory are written in English and should continue to cite real
-repository paths when the implementation evolves.
+They own separate dependencies, lockfiles, Astro configs, tests, styles, and build
+artifacts. Do not synchronize their framework versions or import source between
+them. `prototypes/typecho-terminal/` remains `reference-only`.
+
+All files in this directory are written in English and cite implemented paths.
 
 ## Guidelines Index
 
 | Guide | Description | Status |
 | --- | --- | --- |
-| [Directory Structure](./directory-structure.md) | Autonomous experiment, route, layout, module, asset, and prototype boundaries | Active |
-| [Component Guidelines](./component-guidelines.md) | Astro component shape, local props, composition, scoped styles, and markup baseline | Active |
-| [Client-Side Behavior](./hook-guidelines.md) | Framework-free route scripts and the explicit absence of a hook/data-fetch layer | Active |
-| [State Management](./state-management.md) | Static render inputs, route-local state, URL/cookie boundaries, and absence of a store | Active |
-| [Quality Guidelines](./quality-guidelines.md) | Astro checks, browser evidence, accessibility boundary, formatting, and review | Active |
-| [Type Safety](./type-safety.md) | Strict Astro TypeScript, local prop types, DOM narrowing, and validation limits | Active |
-| [Development Runtime](./development-runtime.md) | Containerized command, service, and browser-validation contracts | Active |
+| [Directory Structure](./directory-structure.md) | Main-site, content, experiment, route, asset, and prototype boundaries | Active |
+| [Component Guidelines](./component-guidelines.md) | Astro props, layouts, semantic composition, and package-local styling | Active |
+| [Client-Side Behavior](./hook-guidelines.md) | Static site boundary, NERV route scripts, and absence of hooks/fetching | Active |
+| [State Management](./state-management.md) | Build-time content, props, route-local browser state, and absence of a store | Active |
+| [Quality Guidelines](./quality-guidelines.md) | Schema, Astro, static-output, browser, accessibility, and isolation gates | Active |
+| [Type Safety](./type-safety.md) | Strict TypeScript and the executable content-metadata contract | Active |
+| [Development Runtime](./development-runtime.md) | Container commands, service ownership, browser versions, and failure handling | Active |
 
 ### Trellis Plus: Project Validation Profile
 
-Read this profile before rediscovering validation commands. Record task-specific commands and results in the task's check evidence; keep only durable conventions here.
+Use `./sam` for all Node/npm/browser commands. Install each changed package from
+its own lockfile, then run its checks:
 
-- Install from the lockfile through the repository wrapper: `./sam npm --prefix experiments/nerv ci`.
-- Required Astro type/content validation: `./sam npm --prefix experiments/nerv run check`.
-- Required production build validation: `./sam npm --prefix experiments/nerv run build`.
-- When `sam` or `dev.sh` changes, run `bash -n sam dev.sh`, `shellcheck sam dev.sh`, and `shfmt -d sam dev.sh`, then verify `./sam node --version` and the safe no-service path `./dev.sh down`.
-- Browser-accessible behavior follows the Playwright profile below. Run focused coverage before the full browser command.
-- Deployment-only changes may additionally require `docker compose -f f1refly.yaml config`, a container build, `/healthz`, root redirect, and static-route checks. These are not substitutes for task-local Astro or Playwright validation.
-- Human-only residuals are limited to genuine subjective visual/product judgment, real-device behavior, assistive-technology assessment, or a private deployment environment. Do not request a generic smoke test after focused automation covers the acceptance criteria.
-- If a material command cannot run, record the exact command and error, classify the check as unavailable rather than passed, and name the smallest replacement CI or human evidence required.
+| Package | Install | Required non-browser checks |
+| --- | --- | --- |
+| Main site | `./sam npm --prefix apps/site ci` | `run test:content`, `run check`, `run build` |
+| NERV | `./sam npm --prefix experiments/nerv ci` | `run check`, `run build` |
+
+- A main-site content or route change must inspect emitted files, draft exclusion,
+  and relevant negative content-contract behavior in addition to a successful
+  build.
+- A package-boundary change must check/build both packages and verify no
+  cross-package source, style, config, or dependency import.
+- When `sam` or `dev.sh` changes, run `bash -n`, ShellCheck, shfmt, wrapper Node,
+  and safe teardown checks from `development-runtime.md`.
+- Deployment-only checks do not substitute for package-local Astro or Playwright
+  evidence.
+- Classify a material unavailable command as unavailable with its exact error;
+  never count it as passed.
+- Human-only residuals are subjective visual judgment, real devices, assistive
+  technology, or private deployment environments. Do not request a generic smoke
+  test after applicable automation passes.
 
 ### Trellis Plus: Playwright Validation Profile
 
-- execution mode: `docker-wrapper` through the executable root `./sam`; do not require host Node, a global Playwright install, or a raw-Docker test path.
-- setup/install and image pair: `./sam npm --prefix experiments/nerv ci` installs the lockfile-pinned `@playwright/test@1.62.0`; browser tests set `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble` and `SAM_IPC=host`, so the package and browser image stay version-matched.
-- app readiness and base URL: Playwright `webServer` runs `npm run start -- --host 0.0.0.0 --port 4321` from `experiments/nerv/`, waits for `http://127.0.0.1:4321/lab/nerv/`, and uses that URL as `baseURL`.
-- focused test command: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix experiments/nerv run test:e2e -- tests/nerv.spec.ts`.
-- full browser command: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix experiments/nerv run test:e2e`.
-- test location and config: `experiments/nerv/tests/nerv.spec.ts` and `experiments/nerv/playwright.config.ts`; root `npm run test:e2e:nerv` delegates to the experiment when already running inside `./sam` with the pinned Playwright image.
-- browser projects and viewports: `chromium-desktop` at `1440x900` and `chromium-mobile` at `375x812`.
-- fixtures and test-data boundary: repository-local static NERV content only; no credentials, external services, production data, storage state, route mocks, or mutable fixtures.
-- accessibility policy: use semantic roles, accessible heading names, visible-state assertions, and keyboard/focus assertions when changed behavior requires them. No automated accessibility scanner is configured, so do not claim scan coverage.
-- visual baseline policy: no screenshot pass/fail baselines. Screenshots are diagnostic-only because no controlled baseline-review environment is established.
-- failure artifacts: HTML report at `experiments/nerv/playwright-report/`; output, retry traces, and failure screenshots at `experiments/nerv/test-results/`. Traces are captured on the first retry, reports never auto-open, and both directories are ignored.
-- current baseline coverage: `/lab/nerv/` title, semantic main landmark and emergency-notice heading, plus absence of document-width overflow in both projects.
+- Execution boundary: the executable root `./sam`; no host Node, global
+  Playwright, or raw-Docker test path.
+- Version pair: both packages pin `@playwright/test@1.62.0`; browser commands use
+  `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble` and `SAM_IPC=host`.
+- Projects: Chromium desktop `1440x900` and mobile `375x812`.
+- Main site:
+  - config/test: `apps/site/playwright.config.ts`, `apps/site/tests/site.spec.ts`;
+  - readiness/base: Astro on `http://127.0.0.1:4321/`;
+  - server contract: foreground `ASTRO_DEV_BACKGROUND=0` plus `--ignore-lock`;
+  - browser JavaScript is disabled to prove the static reading contract;
+  - focused: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts`;
+  - full: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e`;
+  - baseline coverage: home, generated post/page deep links, unknown-route 404,
+    headings/body, draft absence, visible skip-link focus, and no overflow.
+- NERV:
+  - config/test: `experiments/nerv/playwright.config.ts`,
+    `experiments/nerv/tests/nerv.spec.ts`;
+  - readiness/base: `http://127.0.0.1:4321/lab/nerv/`;
+  - focused: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix experiments/nerv run test:e2e -- tests/nerv.spec.ts`;
+  - full: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix experiments/nerv run test:e2e`;
+  - baseline coverage: title, main/heading semantics, and no overflow.
+- Fixtures are repository-local static content. Do not add credentials, production
+  data, remote services, storage state, or mutable mocks without a new contract.
+- Prefer roles, accessible names, and visible-state assertions. No automated
+  accessibility scanner or approved screenshot baseline exists; screenshots are
+  diagnostic-only.
+- Failure reports/traces/screenshots stay in each package's ignored
+  `playwright-report/` and `test-results/` directories. Reports never auto-open,
+  screenshots are failure-only, and traces start on first retry.
