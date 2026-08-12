@@ -1,7 +1,9 @@
 ---
-import { render, type CollectionEntry } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import SemanticDocument from '../../components/SemanticDocument.astro';
 import DocumentLayout from '../../layouts/DocumentLayout.astro';
 import { getPublicPages } from '../../lib/content';
+import { renderDocument } from '../../lib/render-document';
 
 export async function getStaticPaths() {
   const pages = await getPublicPages();
@@ -17,17 +19,9 @@ interface Props {
 }
 
 const { entry } = Astro.props;
-const { Content } = await render(entry);
+const document = await renderDocument(entry);
 ---
 
 <DocumentLayout title={entry.data.title} description={entry.data.description}>
-  <article>
-    <header class="article-header">
-      <p class="eyebrow">Page</p>
-      <h1>{entry.data.title}</h1>
-    </header>
-    <div class="prose">
-      <Content />
-    </div>
-  </article>
+  <SemanticDocument entry={entry} document={document} />
 </DocumentLayout>

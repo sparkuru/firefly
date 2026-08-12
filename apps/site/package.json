@@ -7,14 +7,17 @@
     "dev": "astro dev",
     "start": "astro dev",
     "check": "astro check",
-    "build": "astro check && astro build",
-    "test:content": "node --test tests/content-schema.test.mjs",
+    "build": "astro check && astro build && node --test tests/static-output.test.mjs",
+    "test:content": "node --test --test-concurrency=1 tests/content-schema.test.mjs tests/content-build-negatives.test.mjs",
+    "test:x-core": "node --test tests/x-core-integration.test.mjs",
     "test:e2e": "playwright test",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.2.2",
+    "@f1refly/presentation-semantic": "file:../../presentations/semantic",
+    "@f1refly/x-core": "file:../../packages/x-core",
     "astro": "7.1.6"
   },
   "devDependencies": {

@@ -10,6 +10,10 @@ const alias = requiredText.regex(
   'Alias must be an absolute path without whitespace, a query, or a fragment'
 );
 const date = z.union([z.date(), requiredText]).pipe(z.coerce.date());
+const presentation = requiredText.regex(
+  /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u,
+  'Presentation must be a lowercase kebab-case adapter ID'
+);
 
 const sharedMetadata = {
   title: requiredText,
@@ -19,7 +23,7 @@ const sharedMetadata = {
   description: requiredText,
   tags: z.array(requiredText).optional(),
   draft: z.boolean(),
-  presentation: z.literal('semantic').optional(),
+  presentation: presentation.optional(),
   aliases: z.array(alias).optional()
 };
 

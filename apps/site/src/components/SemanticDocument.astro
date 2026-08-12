@@ -1,0 +1,56 @@
+---
+import type { PublicDocument } from '../lib/render-document';
+import type { renderDocument } from '../lib/render-document';
+
+type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
+
+interface Props {
+  entry: PublicDocument;
+  document: RenderedDocument;
+}
+
+const { entry, document } = Astro.props;
+const { Content, metadata } = document;
+const showOutline = metadata.outline.length >= 2;
+const kind = entry.collection === 'posts' ? 'Post' : 'Page';
+---
+
+<article class="semantic-document">
+  <header class="article-header">
+    <p class="eyebrow">{kind}</p>
+    <h1>{entry.data.title}</h1>
+    {
+      entry.collection === 'posts' && (
+        <p class="content-meta">
+          <time datetime={entry.data.date.toISOString()}>
+            {entry.data.date.toLocaleDateString('en', {
+              dateStyle: 'long',
+              timeZone: 'UTC'
+            })}
+          </time>
+        </p>
+      )
+    }
+  </header>
+
+  {
+    showOutline && (
+      <nav class="document-outline" aria-labelledby="document-outline-title">
+        <p id="document-outline-title" class="document-outline-title">
+          On this page
+        </p>
+        <ol>
+          {metadata.outline.map((item) => (
+            <li data-depth={item.depth}>
+              <a href={`#${item.id}`}>{item.text}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )
+  }
+
+  <div class="prose">
+    <Content />
+  </div>
+</article>

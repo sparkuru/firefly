@@ -1,0 +1,39 @@
+{
+  "name": "@f1refly/x-core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "npm run build --silent && node --test dist/tests/*.test.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "github-slugger": "2.0.0",
+    "mdast-util-to-string": "4.0.0",
+    "unist-util-visit": "5.1.0"
+  },
+  "devDependencies": {
+    "@types/hast": "3.0.5",
+    "@types/mdast": "4.0.4",
+    "@types/node": "24.3.0",
+    "rehype-stringify": "10.0.1",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "typescript": "6.0.3",
+    "unified": "11.0.5",
+    "vfile": "6.0.3"
+  }
+}

@@ -47,7 +47,7 @@ a:hover {
   color: var(--link-active);
 }
 
-a:focus-visible {
+:where(a, [tabindex]):focus-visible {
   border-radius: 0.125rem;
   outline: 0.1875rem solid var(--focus);
   outline-offset: 0.1875rem;
@@ -133,6 +133,8 @@ a:focus-visible {
 }
 
 .content-column,
+.semantic-document,
+.document-outline,
 .prose {
   max-width: 70ch;
 }
@@ -156,7 +158,7 @@ h3 {
 h1 {
   max-width: 24ch;
   margin: 0.4rem 0 1rem;
-  font-size: clamp(2.1rem, 7vw, 4.5rem);
+  font-size: clamp(2rem, 6vw, 3.75rem);
   letter-spacing: -0.035em;
 }
 
@@ -218,11 +220,42 @@ blockquote {
   border-bottom: 1px solid var(--border);
 }
 
+.semantic-document,
+.prose {
+  min-width: 0;
+}
+
+.document-outline {
+  margin-top: 1.5rem;
+  padding-block: 1rem;
+  border-block: 1px solid var(--border);
+}
+
+.document-outline-title {
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.document-outline ol {
+  display: grid;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.document-outline li[data-depth='3'] {
+  margin-left: 1rem;
+}
+
 .prose {
   padding-top: 1rem;
 }
 
-.prose :is(a, code) {
+.prose a {
   overflow-wrap: anywhere;
 }
 
@@ -233,10 +266,50 @@ blockquote {
   color: var(--text-muted);
 }
 
-.prose pre {
+.wide-content {
   max-width: 100%;
-  padding: 1rem;
+  margin-block: 0 1.25rem;
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: #ecece8;
+  overscroll-behavior-inline: contain;
+}
+
+.wide-content pre {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 1rem;
+  overflow-wrap: normal;
+}
+
+.wide-content code {
+  white-space: pre;
+}
+
+.wide-content table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-raised);
+}
+
+.wide-content :is(th, td) {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.wide-content th {
+  background: #ecece8;
+  font-weight: 700;
+}
+
+.wide-content:focus {
+  outline: 0.1875rem solid var(--focus);
+  outline-offset: 0.1875rem;
   background: #ecece8;
 }
 

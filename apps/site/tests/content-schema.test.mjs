@@ -46,7 +46,7 @@ test('invalid slug is rejected', () => {
   );
 });
 
-test('unknown layouts and presentations are rejected', () => {
+test('unknown layouts and malformed presentations are rejected', () => {
   assert.equal(
     postSchema.safeParse({ ...validPost, layout: 'page' }).success,
     false
@@ -55,9 +55,18 @@ test('unknown layouts and presentations are rejected', () => {
     pageSchema.safeParse({ ...validPage, layout: 'post' }).success,
     false
   );
+  for (const presentation of ['Semantic', 'two words', '-invalid', 'invalid-']) {
+    assert.equal(
+      postSchema.safeParse({ ...validPost, presentation }).success,
+      false
+    );
+  }
+});
+
+test('syntactically valid adapter IDs reach registry validation', () => {
   assert.equal(
-    postSchema.safeParse({ ...validPost, presentation: 'terminal' }).success,
-    false
+    postSchema.safeParse({ ...validPost, presentation: 'unregistered' }).success,
+    true
   );
 });
 
