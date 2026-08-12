@@ -1,5 +1,5 @@
 ---
-import '../styles/global.css';
+import semanticStylesheetUrl from '../styles/global.css?url';
 
 interface Props {
   title: string;
@@ -16,6 +16,7 @@ const documentTitle = title === 'f1refly' ? title : `${title} | f1refly`;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <link rel="stylesheet" href={semanticStylesheetUrl} />
     <title>{documentTitle}</title>
   </head>
   <body>

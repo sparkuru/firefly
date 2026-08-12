@@ -1,0 +1,68 @@
+---
+import type { PublicDocument } from '../lib/render-document';
+import type { renderDocument } from '../lib/render-document';
+
+type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
+
+interface Props {
+  entry: PublicDocument;
+  document: RenderedDocument;
+}
+
+const { entry, document } = Astro.props;
+const { Content, metadata } = document;
+const showOutline = metadata.outline.length >= 2;
+const kind = entry.collection === 'posts' ? 'post' : 'page';
+---
+
+<article class="terminal-document">
+  <nav class="terminal-document-nav" aria-label="Document path">
+    <span class="terminal-prompt">guest@f1refly:~/blog$</span>
+    <a href="/">cd /</a>
+    <span aria-hidden="true"> / </span>
+    <span>{kind}/{entry.data.slug}.md</span>
+  </nav>
+  <header class="terminal-document-header">
+    <p class="terminal-path">{kind} / {entry.data.slug}.md</p>
+    <h1>{entry.data.title}</h1>
+    {
+      entry.collection === 'posts' && (
+        <p class="terminal-meta">
+          published{' '}
+          <time datetime={entry.data.date.toISOString()}>
+            {entry.data.date.toLocaleDateString('en', {
+              dateStyle: 'long',
+              timeZone: 'UTC'
+            })}
+          </time>
+          {entry.data.updated && (
+            <>
+              {' · updated '}
+              <time datetime={entry.data.updated.toISOString()}>
+                {entry.data.updated.toLocaleDateString('en', {
+                  dateStyle: 'long',
+                  timeZone: 'UTC'
+                })}
+              </time>
+            </>
+          )}
+        </p>
+      )
+    }
+  </header>
+
+  {
+    showOutline && (
+      <nav class="terminal-outline" aria-labelledby="terminal-outline-title">
+        <p id="terminal-outline-title" class="terminal-prompt">On this page</p>
+        <ol>
+          {metadata.outline.map((item) => (
+            <li data-depth={item.depth}><a href={`#${item.id}`}>{item.text}</a></li>
+          ))}
+        </ol>
+      </nav>
+    )
+  }
+
+  <div class="terminal-prose"><Content /></div>
+</article>

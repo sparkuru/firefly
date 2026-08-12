@@ -1,0 +1,32 @@
+{
+  "name": "@f1refly/presentation-terminal",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/src/runtime.d.ts",
+      "import": "./dist/src/runtime.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "npm run build --silent && node --test dist/tests/*.test.js",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@f1refly/x-core": "file:../../packages/x-core",
+    "@types/hast": "3.0.5",
+    "@types/node": "24.3.0",
+    "typescript": "6.0.3"
+  }
+}

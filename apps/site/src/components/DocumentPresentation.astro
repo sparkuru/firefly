@@ -1,0 +1,33 @@
+---
+import type { PublicDocument } from '../lib/render-document';
+import type { renderDocument } from '../lib/render-document';
+import SemanticDocument from './SemanticDocument.astro';
+import TerminalDocument from './TerminalDocument.astro';
+import DocumentLayout from '../layouts/DocumentLayout.astro';
+import TerminalLayout from '../layouts/TerminalLayout.astro';
+
+type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
+
+interface Props {
+  entry: PublicDocument;
+  document: RenderedDocument;
+}
+
+const { entry, document } = Astro.props;
+const presentation = document.metadata.presentation;
+if (presentation !== 'semantic' && presentation !== 'terminal') {
+  throw new Error(`Unsupported site presentation "${presentation}".`);
+}
+---
+
+{
+  presentation === 'semantic' ? (
+    <DocumentLayout title={entry.data.title} description={entry.data.description}>
+      <SemanticDocument entry={entry} document={document} />
+    </DocumentLayout>
+  ) : (
+    <TerminalLayout title={entry.data.title} description={entry.data.description} path={`~/${entry.collection}/${entry.data.slug}.md`}>
+      <TerminalDocument entry={entry} document={document} />
+    </TerminalLayout>
+  )
+}

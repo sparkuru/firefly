@@ -78,7 +78,7 @@ This content must never be published.
 title: Unsupported layout fixture
 slug: x-core-negative-layout
 date: 2026-08-12
-description: Must fail the M2 semantic context boundary.
+description: Must fail the current public route and presentation context boundary.
 draft: false
 layout: timeline
 presentation: semantic

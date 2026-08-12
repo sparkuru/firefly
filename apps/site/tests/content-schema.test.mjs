@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
 
@@ -82,4 +83,21 @@ test('unknown front matter is rejected', () => {
     postSchema.safeParse({ ...validPost, unsupported: true }).success,
     false
   );
+});
+
+test('the real Terminal article keeps strict metadata and representative Markdown', async () => {
+  const article = await readFile(
+    new URL('../../../content/posts/llm-workflow-with-trellis.md', import.meta.url),
+    'utf8'
+  );
+  assert.match(article, /^---\ntitle: llm workflow with trellis\nslug: llm-workflow-with-trellis\ndate: 2026-05-28\nupdated: 2026-07-03/mu);
+  assert.match(article, /draft: false\nlayout: post\npresentation: terminal/u);
+  assert.equal((article.match(/^# /gmu) ?? []).length, 0);
+  assert.match(article, /^## install$/mu);
+  assert.match(article, /^### Phase 1 — Plan$/mu);
+  assert.match(article, /^\| Spec 系统/mu);
+  assert.match(article, /^> trellis 的工作流/mu);
+  assert.match(article, /^```mermaid\nflowchart TD/mu);
+  assert.match(article, /\[Trellis repository\]\(https:\/\/github\.com\/mindfold-ai\/Trellis\.git\)/u);
+  assert.doesNotMatch(article, /trellis-spec-bootstarp/u);
 });

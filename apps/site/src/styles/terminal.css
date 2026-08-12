@@ -1,0 +1,523 @@
+.terminal-root {
+  --terminal-background: #050806;
+  --terminal-panel: #080d0a;
+  --terminal-panel-soft: #0d1510;
+  --terminal-foreground: #d6e7db;
+  --terminal-muted: #91a99a;
+  --terminal-accent: #63f59a;
+  --terminal-warning: #ffd166;
+  --terminal-danger: #ff8090;
+  --terminal-border: #2e4937;
+  min-width: 20rem;
+  min-height: 100%;
+  color-scheme: dark;
+  background: var(--terminal-background);
+  color: var(--terminal-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+.terminal-root *,
+.terminal-root *::before,
+.terminal-root *::after {
+  box-sizing: border-box;
+}
+
+.terminal-body {
+  min-height: 100dvh;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.terminal-shell {
+  width: min(calc(100% - 2rem), 78rem);
+  min-height: calc(100dvh - 2rem);
+  margin: 1rem auto;
+  border: 1px solid var(--terminal-border);
+  background: var(--terminal-panel);
+  box-shadow: 0 1.25rem 4rem rgb(0 0 0 / 35%);
+}
+
+.terminal-shell--home {
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.terminal-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--terminal-border);
+  background: var(--terminal-panel-soft);
+  color: var(--terminal-muted);
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+}
+
+.terminal-main {
+  min-width: 0;
+  padding: clamp(1.25rem, 4vw, 3rem);
+}
+
+.terminal-main--home {
+  display: grid;
+  min-height: 100dvh;
+  align-items: center;
+  padding: clamp(1.25rem, 5vw, 4rem);
+}
+
+.terminal-skip {
+  position: fixed;
+  z-index: 20;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  transform: translateY(-180%);
+  background: var(--terminal-foreground);
+  color: var(--terminal-background);
+  font-weight: 700;
+}
+
+.terminal-skip:focus {
+  transform: translateY(0);
+}
+
+.terminal-root :where(a, input, [tabindex]):focus-visible {
+  border-radius: 0.125rem;
+  outline: 3px solid var(--terminal-accent);
+  outline-offset: 3px;
+}
+
+.terminal-root a {
+  color: var(--terminal-accent);
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.18em;
+}
+
+.terminal-root a:hover {
+  color: var(--terminal-warning);
+}
+
+.terminal-path,
+.terminal-meta,
+.terminal-stream-meta {
+  color: var(--terminal-muted);
+}
+
+.terminal-prompt {
+  color: var(--terminal-accent);
+  font-weight: 700;
+}
+
+.terminal-status-label {
+  color: var(--terminal-danger);
+  font-weight: 700;
+}
+
+.terminal-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.terminal-home {
+  width: min(100%, 78ch);
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.terminal-recovery {
+  max-width: 70ch;
+}
+
+.terminal-recovery h2 {
+  margin-block: 0.4rem 0.75rem;
+  color: var(--terminal-foreground);
+  font-size: clamp(1.45rem, 4vw, 2rem);
+}
+
+.terminal-index {
+  margin-top: 2rem;
+}
+
+.terminal-group + .terminal-group {
+  margin-top: 1.75rem;
+}
+
+.terminal-group h3 {
+  margin-block: 0 0.5rem;
+  color: var(--terminal-accent);
+  font-size: 1.1rem;
+}
+
+.terminal-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.terminal-entry {
+  min-width: 0;
+}
+
+.terminal-entry time {
+  display: block;
+  color: var(--terminal-muted);
+  font-size: 0.875rem;
+}
+
+.terminal-failure {
+  margin-block: 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--terminal-danger);
+}
+
+.terminal-failure[hidden],
+.terminal-session[hidden],
+.terminal-recovery[hidden] {
+  display: none;
+}
+
+.terminal-session {
+  min-width: 0;
+}
+
+.terminal-transcript {
+  min-width: 0;
+}
+
+.terminal-record {
+  min-width: 0;
+  margin-block: 0 1.5rem;
+}
+
+.terminal-record[data-tone='error'] {
+  color: var(--terminal-foreground);
+}
+
+.terminal-record p,
+.terminal-record ul {
+  margin-block: 0.25rem;
+}
+
+.terminal-record ul {
+  padding-left: 1.4rem;
+}
+
+.terminal-command-line {
+  color: var(--terminal-foreground);
+}
+
+.terminal-command-form {
+  min-width: 0;
+  margin: 0;
+}
+
+.terminal-command-row {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.65rem;
+  box-shadow: inset 0 -1px var(--terminal-border);
+}
+
+.terminal-command-row:focus-within {
+  box-shadow: inset 0 -2px var(--terminal-accent);
+}
+
+.terminal-command-row > .terminal-prompt {
+  flex: none;
+  white-space: nowrap;
+}
+
+.terminal-command-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--terminal-foreground);
+  font: inherit;
+  font-size: max(1rem, 16px);
+  caret-color: var(--terminal-accent);
+}
+
+.terminal-command-input:focus-visible {
+  outline: 0;
+}
+
+.terminal-completion {
+  margin: 0.35rem 0 0;
+  color: var(--terminal-warning);
+}
+
+.terminal-completion:empty {
+  display: none;
+}
+
+.terminal-stream-document {
+  max-width: 76ch;
+  margin-block: 1.5rem 0;
+  padding-block: 1.25rem 0.25rem;
+  border-top: 1px solid var(--terminal-border);
+}
+
+.terminal-stream-header {
+  margin-bottom: 1.5rem;
+}
+
+.terminal-stream-header h2 {
+  max-width: 34ch;
+  margin-block: 0.2rem 0.4rem;
+  color: var(--terminal-foreground);
+  font-size: clamp(1.45rem, 4vw, 2.1rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.terminal-stream-meta,
+.terminal-stream-permalink {
+  font-size: 0.875rem;
+}
+
+.terminal-stream-prose {
+  min-width: 0;
+}
+
+.terminal-stream-prose :where(h2, h3, h4) {
+  max-width: 38ch;
+  margin-block: 1.8rem 0.7rem;
+  color: var(--terminal-accent);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.terminal-stream-prose h2 {
+  font-size: clamp(1.25rem, 3vw, 1.55rem);
+}
+
+.terminal-stream-prose h3 {
+  font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+}
+
+.terminal-stream-prose h4 {
+  color: var(--terminal-foreground);
+  font-size: 1.05rem;
+}
+
+.terminal-stream-prose :where(p, ul, ol, blockquote) {
+  margin-block: 0 1.15rem;
+}
+
+.terminal-stream-prose blockquote {
+  margin-inline: 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--terminal-warning);
+  color: var(--terminal-muted);
+}
+
+.terminal-stream-prose code:not(pre code) {
+  padding: 0.1rem 0.25rem;
+  background: var(--terminal-panel-soft);
+  color: var(--terminal-warning);
+}
+
+.terminal-stream-footer {
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.terminal-stream-footer a {
+  color: var(--terminal-muted);
+}
+
+.terminal-document {
+  max-width: 78ch;
+}
+
+.terminal-document-header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+.terminal-document-nav,
+.terminal-outline {
+  margin-block: 1.25rem;
+  padding-block: 1rem;
+  border-block: 1px solid var(--terminal-border);
+}
+
+.terminal-document-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+}
+
+.terminal-document h1,
+.terminal-document h2,
+.terminal-document h3,
+.terminal-document h4 {
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.terminal-document h1 {
+  max-width: 28ch;
+  margin: 0.35rem 0 1rem;
+  font-size: clamp(2rem, 6vw, 4rem);
+  letter-spacing: -0.035em;
+}
+
+.terminal-document h2 {
+  margin-block: 1.75rem 0.75rem;
+  color: var(--terminal-accent);
+  font-size: clamp(1.3rem, 3vw, 1.7rem);
+}
+
+.terminal-outline ol {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.terminal-outline li[data-depth='3'] {
+  margin-left: 1rem;
+}
+
+.terminal-outline li[data-depth='4'] {
+  margin-left: 2rem;
+}
+
+.terminal-prose {
+  min-width: 0;
+  padding-top: 0.75rem;
+}
+
+.terminal-prose :where(p, ul, ol, blockquote) {
+  margin-block: 0 1.25rem;
+}
+
+.terminal-prose blockquote {
+  margin-inline: 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--terminal-warning);
+  color: var(--terminal-muted);
+}
+
+.terminal-prose code:not(pre code) {
+  padding: 0.1rem 0.25rem;
+  background: var(--terminal-panel-soft);
+  color: var(--terminal-warning);
+}
+
+.terminal-wide,
+.terminal-stream-prose .wide-content {
+  max-width: 100%;
+  margin-block: 0 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--terminal-border);
+  background: var(--terminal-background);
+  overscroll-behavior-inline: contain;
+}
+
+.terminal-wide pre,
+.terminal-stream-prose .wide-content pre {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 1rem;
+  overflow-wrap: normal;
+}
+
+.terminal-wide code,
+.terminal-stream-prose .wide-content code {
+  white-space: pre;
+}
+
+.terminal-wide table,
+.terminal-stream-prose .wide-content table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.terminal-wide :is(th, td),
+.terminal-stream-prose .wide-content :is(th, td) {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--terminal-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.terminal-wide th,
+.terminal-stream-prose .wide-content th {
+  background: var(--terminal-panel-soft);
+}
+
+@media (max-width: 40rem) {
+  .terminal-shell:not(.terminal-shell--home) {
+    width: 100%;
+    min-height: 100dvh;
+    margin: 0;
+    border-width: 0;
+    box-shadow: none;
+  }
+
+  .terminal-titlebar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .terminal-titlebar span:last-child {
+    align-self: flex-end;
+    text-align: right;
+  }
+
+  .terminal-main:not(.terminal-main--home) {
+    padding: 1rem;
+  }
+
+  .terminal-main--home {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+
+  .terminal-command-row {
+    gap: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-root *,
+  .terminal-root *::before,
+  .terminal-root *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

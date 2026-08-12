@@ -1,7 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
-import SemanticDocument from '../../components/SemanticDocument.astro';
-import DocumentLayout from '../../layouts/DocumentLayout.astro';
+import DocumentPresentation from '../../components/DocumentPresentation.astro';
 import { getPublicPosts } from '../../lib/content';
 import { renderDocument } from '../../lib/render-document';
 
@@ -22,6 +21,4 @@ const { entry } = Astro.props;
 const document = await renderDocument(entry);
 ---
 
-<DocumentLayout title={entry.data.title} description={entry.data.description}>
-  <SemanticDocument entry={entry} document={document} />
-</DocumentLayout>
+<DocumentPresentation entry={entry} document={document} />

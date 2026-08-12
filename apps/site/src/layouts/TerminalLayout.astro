@@ -1,0 +1,44 @@
+---
+import terminalCss from '../styles/terminal.css?raw';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  home?: boolean;
+}
+
+const { title, description, path, home = false } = Astro.props;
+const documentTitle = title === 'f1refly' ? title : `${title} | f1refly`;
+---
+
+<!doctype html>
+<html lang="en" class="terminal-root">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{documentTitle}</title>
+    <style is:inline set:html={terminalCss}></style>
+  </head>
+  <body class:list={['terminal-body', { 'terminal-body--home': home }]}>
+    <a class="terminal-skip" href="#main-content">Skip to main content</a>
+    <div class:list={['terminal-shell', { 'terminal-shell--home': home }]}>
+      {
+        !home && (
+          <div class="terminal-titlebar" aria-hidden="true">
+            <span>f1refly / content terminal</span>
+            <span>{path}</span>
+          </div>
+        )
+      }
+      <main
+        id="main-content"
+        class:list={['terminal-main', { 'terminal-main--home': home }]}
+        tabindex="-1"
+      >
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

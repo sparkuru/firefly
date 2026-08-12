@@ -1,0 +1,39 @@
+---
+import type { TerminalEntry } from '@f1refly/presentation-terminal/runtime';
+import type { PublicDocument, renderDocument } from '../lib/render-document';
+
+type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
+
+interface Props {
+  entry: PublicDocument;
+  terminalEntry: TerminalEntry;
+  document: RenderedDocument;
+}
+
+const { entry, terminalEntry, document } = Astro.props;
+const { Content } = document;
+const titleId = `terminal-stream-${terminalEntry.slug}-title`;
+const kind = entry.collection === 'posts' ? 'post' : 'page';
+---
+
+<article
+  class="terminal-stream-document"
+  data-terminal-stream-document
+  aria-labelledby={titleId}
+>
+  <header class="terminal-stream-header">
+    <p class="terminal-stream-meta">
+      {kind}
+      <span aria-hidden="true"> · </span>
+      <time datetime={entry.data.date.toISOString()}>{terminalEntry.date}</time>
+    </p>
+    <h2 id={titleId} data-terminal-stream-title tabindex="-1">
+      {entry.data.title}
+    </h2>
+    <a class="terminal-stream-permalink" href={terminalEntry.href}>permalink</a>
+  </header>
+  <div class="terminal-stream-prose"><Content /></div>
+  <footer class="terminal-stream-footer">
+    <a href="#terminal-command" data-terminal-return>Return to prompt</a>
+  </footer>
+</article>

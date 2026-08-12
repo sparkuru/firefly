@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import { semanticPresentation } from '@f1refly/presentation-semantic';
+import { terminalPresentation } from '@f1refly/presentation-terminal';
 import {
   createXCorePlugins,
   parseXCoreMetadata,
@@ -38,7 +39,11 @@ function contextResolver(file) {
   };
 }
 
-async function createProcessor(registry = new PresentationRegistry().register(semanticPresentation)) {
+async function createProcessor(
+  registry = new PresentationRegistry()
+    .register(semanticPresentation)
+    .register(terminalPresentation)
+) {
   const plugins = createXCorePlugins({ registry, resolveContext: contextResolver });
 
   return createMarkdownProcessor({
@@ -126,6 +131,25 @@ test('the same schema-validated Markdown selects deterministic semantic and fixt
   assert.deepEqual(semanticMetadata.outline, fixtureMetadata.outline);
   assert.equal(semanticMetadata.presentation, 'semantic');
   assert.equal(fixtureMetadata.presentation, 'fixture');
+});
+
+test('the production registry selects both real semantic and Terminal presentations', async () => {
+  const processor = await createProcessor();
+  const markdown = '## Wide content\n\n| Name | Value |\n| --- | --- |\n| adapter | selected |';
+  const semantic = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/semantic.md'),
+    frontmatter: { ...validFrontmatter, slug: 'semantic', presentation: 'semantic' }
+  });
+  const terminal = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/terminal.md'),
+    frontmatter: { ...validFrontmatter, slug: 'terminal', presentation: 'terminal' }
+  });
+  assert.match(semantic.code, /data-wide-content="table"/u);
+  assert.doesNotMatch(semantic.code, /data-terminal-wide/u);
+  assert.match(terminal.code, /data-terminal-wide="table"/u);
+  assert.doesNotMatch(terminal.code, /data-wide-content/u);
+  assert.equal(parseXCoreMetadata(semantic.metadata.frontmatter.xCore).presentation, 'semantic');
+  assert.equal(parseXCoreMetadata(terminal.metadata.frontmatter.xCore).presentation, 'terminal');
 });
 
 test('Astro surfaces unknown adapters with owning document context', async () => {

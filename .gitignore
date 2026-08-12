@@ -8,6 +8,7 @@ apps/site/playwright-report/
 apps/site/test-results/
 packages/x-core/dist/
 presentations/semantic/dist/
+presentations/terminal/dist/
 .private/
 .DS_Store
 *.log

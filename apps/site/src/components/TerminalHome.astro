@@ -1,0 +1,172 @@
+---
+import {
+  DEFAULT_TERMINAL_PROMPT,
+  type TerminalEntry
+} from '@f1refly/presentation-terminal/runtime';
+import type { PublicDocument, renderDocument } from '../lib/render-document';
+import TerminalStreamDocument from './TerminalStreamDocument.astro';
+
+type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
+
+interface HomeDocument {
+  entry: PublicDocument;
+  terminalEntry: TerminalEntry;
+  document: RenderedDocument;
+}
+
+interface Props {
+  documents: readonly HomeDocument[];
+}
+
+const { documents } = Astro.props;
+const posts = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'post');
+const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'page');
+---
+
+<section class="terminal-home" data-terminal-home>
+  <h1 class="terminal-visually-hidden">f1refly content terminal</h1>
+
+  <section
+    class="terminal-recovery"
+    data-terminal-fallback
+    aria-labelledby="terminal-recovery-heading"
+  >
+    <p class="terminal-path"><span class="terminal-prompt">{DEFAULT_TERMINAL_PROMPT}</span> ls</p>
+    <h2 id="terminal-recovery-heading" tabindex="-1">Browse public documents</h2>
+    <p>
+      The interactive shell is optional. These native links remain available
+      without JavaScript and return if the shell cannot continue.
+    </p>
+    <p class="terminal-failure" data-terminal-failure hidden>
+      <span class="terminal-status-label">Interactive error:</span>
+      The command shell is unavailable. Use the document links below.
+    </p>
+
+    <nav class="terminal-index" aria-label="Public document index">
+      <section class="terminal-group" aria-labelledby="terminal-posts-heading">
+        <h3 id="terminal-posts-heading">posts/</h3>
+        {
+          posts.length === 0 ? (
+            <p class="terminal-meta">No public posts.</p>
+          ) : (
+            <ul class="terminal-list">
+              {posts.map(({ terminalEntry }) => (
+                <li
+                  class="terminal-entry"
+                  data-terminal-entry
+                  data-terminal-entry-kind={terminalEntry.kind}
+                  data-terminal-entry-slug={terminalEntry.slug}
+                  data-terminal-entry-filename={terminalEntry.filename}
+                  data-terminal-entry-title={terminalEntry.title}
+                  data-terminal-entry-href={terminalEntry.href}
+                  data-terminal-entry-date={terminalEntry.date}
+                >
+                  <a href={terminalEntry.href}>{terminalEntry.filename}</a>
+                  <span> — {terminalEntry.title}</span>
+                  <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+
+      <section class="terminal-group" aria-labelledby="terminal-pages-heading">
+        <h3 id="terminal-pages-heading">pages/</h3>
+        {
+          pages.length === 0 ? (
+            <p class="terminal-meta">No public pages.</p>
+          ) : (
+            <ul class="terminal-list">
+              {pages.map(({ terminalEntry }) => (
+                <li
+                  class="terminal-entry"
+                  data-terminal-entry
+                  data-terminal-entry-kind={terminalEntry.kind}
+                  data-terminal-entry-slug={terminalEntry.slug}
+                  data-terminal-entry-filename={terminalEntry.filename}
+                  data-terminal-entry-title={terminalEntry.title}
+                  data-terminal-entry-href={terminalEntry.href}
+                  data-terminal-entry-date={terminalEntry.date}
+                >
+                  <a href={terminalEntry.href}>{terminalEntry.filename}</a>
+                  <span> — {terminalEntry.title}</span>
+                  <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+    </nav>
+  </section>
+
+  {
+    documents.map(({ entry, terminalEntry, document }) => (
+      <template
+        data-terminal-template
+        data-terminal-template-filename={terminalEntry.filename}
+      >
+        <TerminalStreamDocument
+          entry={entry}
+          terminalEntry={terminalEntry}
+          document={document}
+        />
+      </template>
+    ))
+  }
+
+  <section
+    class="terminal-session"
+    data-terminal-session
+    aria-label="Terminal command session"
+    hidden
+  >
+    <div id="terminal-transcript" class="terminal-transcript" data-terminal-transcript></div>
+    <form class="terminal-command-form" data-terminal-form>
+      <label class="terminal-visually-hidden" for="terminal-command">
+        Command for {DEFAULT_TERMINAL_PROMPT}
+      </label>
+      <p id="terminal-command-help" class="terminal-visually-hidden">
+        Type help for commands. Use Arrow keys for history. Tab completes only
+        a unique match; otherwise it leaves the command input.
+      </p>
+      <div class="terminal-command-row">
+        <span class="terminal-prompt" aria-hidden="true">{DEFAULT_TERMINAL_PROMPT}</span>
+        <input
+          class="terminal-command-input"
+          id="terminal-command"
+          name="command"
+          type="text"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="send"
+          aria-controls="terminal-transcript"
+          aria-describedby="terminal-command-help terminal-completion"
+        />
+      </div>
+      <p
+        id="terminal-completion"
+        class="terminal-completion"
+        data-terminal-completion
+      ></p>
+    </form>
+    <p
+      class="terminal-visually-hidden"
+      data-terminal-announcer
+      aria-live="polite"
+      aria-atomic="true"
+    ></p>
+  </section>
+</section>
+
+<script>
+  import { startTerminalHome } from '../scripts/terminal-home';
+
+  const root = document.querySelector<HTMLElement>('[data-terminal-home]');
+  if (root !== null) {
+    startTerminalHome(root);
+  }
+</script>
