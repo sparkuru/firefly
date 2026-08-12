@@ -1,43 +1,30 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
+## Scope and Evidence Baseline
 
----
+These guides describe the frontend that exists now: the autonomous Astro 4 NERV
+experiment under `experiments/nerv/`, its containerized development boundary, and
+its Playwright coverage. They do not promote the future Astro 7 main-site design in
+root `prd.md` to an implemented convention.
 
-## Overview
+`prototypes/typecho-terminal/` is explicitly `reference-only`. Use its behavior and
+visual tokens as product research when a task requests that work; do not treat its
+PHP templates or JavaScript architecture as current production frontend code.
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
-
----
+All files in this directory are written in English and should continue to cite real
+repository paths when the implementation evolves.
 
 ## Guidelines Index
 
 | Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| --- | --- | --- |
+| [Directory Structure](./directory-structure.md) | Autonomous experiment, route, layout, module, asset, and prototype boundaries | Active |
+| [Component Guidelines](./component-guidelines.md) | Astro component shape, local props, composition, scoped styles, and markup baseline | Active |
+| [Client-Side Behavior](./hook-guidelines.md) | Framework-free route scripts and the explicit absence of a hook/data-fetch layer | Active |
+| [State Management](./state-management.md) | Static render inputs, route-local state, URL/cookie boundaries, and absence of a store | Active |
+| [Quality Guidelines](./quality-guidelines.md) | Astro checks, browser evidence, accessibility boundary, formatting, and review | Active |
+| [Type Safety](./type-safety.md) | Strict Astro TypeScript, local prop types, DOM narrowing, and validation limits | Active |
 | [Development Runtime](./development-runtime.md) | Containerized command, service, and browser-validation contracts | Active |
-
----
-
-## How to Fill These Guidelines
-
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
 
 ### Trellis Plus: Project Validation Profile
 
