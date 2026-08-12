@@ -4,6 +4,8 @@ dist/
 .devhome/
 experiments/nerv/playwright-report/
 experiments/nerv/test-results/
+apps/site/playwright-report/
+apps/site/test-results/
 .private/
 .DS_Store
 *.log

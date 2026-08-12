@@ -1,0 +1,50 @@
+---
+import DocumentLayout from '../layouts/DocumentLayout.astro';
+import { getPublicContent } from '../lib/content';
+
+const { posts, pages } = await getPublicContent();
+---
+
+<DocumentLayout
+  title="f1refly"
+  description="A readable static foundation for posts and pages."
+>
+  <div class="content-column">
+    <p class="eyebrow">Astro static foundation</p>
+    <h1>Content that works before anything else does.</h1>
+    <p class="lede">
+      Markdown is validated, rendered to semantic HTML, and published as direct,
+      durable routes without browser-side JavaScript.
+    </p>
+  </div>
+
+  <div class="content-groups">
+    <section aria-labelledby="posts-heading">
+      <h2 id="posts-heading">Posts</h2>
+      <ul class="content-list">
+        {
+          posts.map((post) => (
+            <li>
+              <a href={`/posts/${post.data.slug}/`}>{post.data.title}</a>
+              <p>{post.data.description}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section aria-labelledby="pages-heading">
+      <h2 id="pages-heading">Pages</h2>
+      <ul class="content-list">
+        {
+          pages.map((page) => (
+            <li>
+              <a href={`/pages/${page.data.slug}/`}>{page.data.title}</a>
+              <p>{page.data.description}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</DocumentLayout>
