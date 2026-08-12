@@ -73,3 +73,26 @@ Added an isolated Astro 7 main site with validated repository-root Markdown, a s
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: Deliver M2 X Core semantic interface
+
+**Date**: 2026-08-12
+**Task**: Deliver M2 X Core semantic interface
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented independently locked X Core and semantic presentation packages, integrated strict build-time Astro metadata and diagnostics into the restrained no-JavaScript site, hardened adversarial JSON/adapter/negative-build boundaries through independent review, synchronized durable frontend specs, and advanced the guided mainline to the M3 decision.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7084f7f` | (see git log) |
+| `c099952` | (see git log) |
+| `6d09f82` | (see git log) |
+
+### Status
+
+[OK] **Completed**
