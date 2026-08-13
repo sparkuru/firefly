@@ -9,6 +9,12 @@ export interface TerminalEntry {
   readonly date: string;
 }
 
+export interface TerminalExperiment {
+  readonly id: string;
+  readonly title: string;
+  readonly href: `/lab/${string}/`;
+}
+
 export interface TerminalIdentity {
   readonly user: string;
   readonly host: string;
@@ -35,6 +41,8 @@ export type TerminalEffect =
       readonly entries: readonly TerminalEntry[];
       readonly label: string;
     }
+  | { readonly kind: 'experiments'; readonly experiments: readonly TerminalExperiment[] }
+  | { readonly kind: 'navigation'; readonly experiment: TerminalExperiment }
   | { readonly kind: 'document'; readonly entry: TerminalEntry }
   | { readonly kind: 'clear' };
 
@@ -56,6 +64,7 @@ export type CompletionResult =
 export const TERMINAL_COMMANDS = Object.freeze([
   'help',
   'ls',
+  'open',
   'cat',
   'about',
   'pwd',
@@ -219,6 +228,73 @@ export function decodeTerminalEntries(value: unknown): readonly TerminalEntry[] 
   return Object.freeze(entries);
 }
 
+function decodeExperiment(value: unknown, index: number): TerminalExperiment {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
+  ) {
+    throw new TypeError(`Terminal experiment ${index} must be a plain object.`);
+  }
+  const descriptors = ownDataDescriptors(value);
+  const expected = ['id', 'title', 'href'];
+  const keys = [...descriptors.keys()];
+  if (
+    keys.some((key) => typeof key !== 'string' || !expected.includes(key)) ||
+    expected.some((key) => !descriptors.has(key)) ||
+    keys.length !== expected.length
+  ) {
+    throw new TypeError(`Terminal experiment ${index} contains unknown or missing fields.`);
+  }
+  const id = requireSafeText(readDataField(descriptors, 'id'), 'id');
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(id)) {
+    throw new TypeError(`Terminal experiment ${index} has an unsafe id.`);
+  }
+  const href = requireSafeText(readDataField(descriptors, 'href'), 'href');
+  if (href !== `/lab/${id}/`) {
+    throw new TypeError(`Terminal experiment ${index} has a non-canonical href.`);
+  }
+  return Object.freeze({
+    id,
+    title: requireSafeText(readDataField(descriptors, 'title'), 'title'),
+    href: href as `/lab/${string}/`
+  });
+}
+
+export function decodeTerminalExperiments(value: unknown): readonly TerminalExperiment[] {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) {
+    throw new TypeError('Terminal experiment index must be a plain array.');
+  }
+  const descriptors = ownDataDescriptors(value);
+  const length = readDataField(descriptors, 'length');
+  if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
+    throw new TypeError('Terminal experiment index has an invalid length.');
+  }
+  const allowedKeys = new Set(['length']);
+  const experiments: TerminalExperiment[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const key = String(index);
+    allowedKeys.add(key);
+    if (!descriptors.has(key)) {
+      throw new TypeError('Terminal experiment index must be dense.');
+    }
+    experiments.push(decodeExperiment(readDataField(descriptors, key), index));
+  }
+  if ([...descriptors.keys()].some((key) => typeof key !== 'string' || !allowedKeys.has(key))) {
+    throw new TypeError('Terminal experiment index contains unexpected properties.');
+  }
+  const ids = new Set<string>();
+  const hrefs = new Set<string>();
+  for (const experiment of experiments) {
+    if (ids.has(experiment.id) || hrefs.has(experiment.href)) {
+      throw new TypeError('Terminal experiment index contains duplicate IDs or hrefs.');
+    }
+    ids.add(experiment.id);
+    hrefs.add(experiment.href);
+  }
+  return Object.freeze(experiments);
+}
+
 export function tokenizeCommand(input: string): TokenizeResult {
   const tokens: string[] = [];
   let token = '';
@@ -273,6 +349,12 @@ function usage(message: string): TerminalEffect {
   return lines('error', message);
 }
 
+function normalizeDocumentOperand(operand: string): string {
+  return operand.startsWith('./') && !operand.slice(2).includes('/')
+    ? operand.slice(2)
+    : operand;
+}
+
 function withSubmission(state: TerminalState, input: string): TerminalState {
   const history = [...state.history, input].slice(-50);
   return Object.freeze({
@@ -293,6 +375,7 @@ export function executeCommand(options: {
   readonly state: TerminalState;
   readonly input: string;
   readonly entries: readonly TerminalEntry[];
+  readonly experiments?: readonly TerminalExperiment[];
   readonly identity?: TerminalIdentity;
   readonly now?: () => Date;
 }): CommandResult {
@@ -302,6 +385,7 @@ export function executeCommand(options: {
   }
 
   const state = withSubmission(options.state, input);
+  const experiments = options.experiments ?? Object.freeze([]);
   const identity = options.identity ?? DEFAULT_TERMINAL_IDENTITY;
   const tokenized = tokenizeCommand(input);
   if (!tokenized.ok) {
@@ -316,8 +400,9 @@ export function executeCommand(options: {
         ? lines(
             'normal',
             'help — show this command list',
-            'ls [posts|pages] — list public documents',
-            'cat <slug>.md — render a public document',
+            'ls [posts|pages|lab] — list public documents or experiments',
+            'open lab/<id> — open a listed experiment',
+            'cat [./]<slug>.md — render a public document',
             'about — describe this site',
             'pwd — print the current path',
             'whoami — print the current user',
@@ -329,11 +414,13 @@ export function executeCommand(options: {
       break;
     case 'ls': {
       if (operands[0] === 'lab') {
-        effect = unknownCommand(input);
+        effect = operands.length === 1
+          ? { kind: 'experiments', experiments: Object.freeze([...experiments]) }
+          : usage('Usage: ls [posts|pages|lab]');
         break;
       }
       if (operands.length > 1 || (operands[0] !== undefined && operands[0] !== 'posts' && operands[0] !== 'pages')) {
-        effect = usage('Usage: ls [posts|pages]');
+        effect = usage('Usage: ls [posts|pages|lab]');
         break;
       }
       const kind = operands[0] === 'posts' ? 'post' : operands[0] === 'pages' ? 'page' : null;
@@ -341,14 +428,28 @@ export function executeCommand(options: {
       effect = { kind: 'entries', entries: Object.freeze([...entries]), label: operands[0] ?? 'all documents' };
       break;
     }
-    case 'cat': {
-      if (operands.length !== 1) {
-        effect = usage('Usage: cat <slug>.md');
+    case 'open': {
+      if (operands.length !== 1 || !operands[0]?.startsWith('lab/')) {
+        effect = usage('Usage: open lab/<id>');
         break;
       }
-      const entry = options.entries.find((candidate) => candidate.filename === operands[0]);
+      const id = operands[0].slice('lab/'.length);
+      const experiment = experiments.find((candidate) => candidate.id === id);
+      effect = experiment === undefined
+        ? lines('error', `No listed experiment named "${operands[0]}". Try "ls lab".`)
+        : { kind: 'navigation', experiment };
+      break;
+    }
+    case 'cat': {
+      if (operands.length !== 1) {
+        effect = usage('Usage: cat [./]<slug>.md');
+        break;
+      }
+      const operand = operands[0] ?? '';
+      const filename = normalizeDocumentOperand(operand);
+      const entry = options.entries.find((candidate) => candidate.filename === filename);
       effect = entry === undefined
-        ? lines('error', `No public document named "${operands[0]}". Try "ls".`)
+        ? lines('error', `No public document named "${operand}". Try "ls".`)
         : { kind: 'document', entry };
       break;
     }
@@ -378,8 +479,12 @@ export function executeCommand(options: {
 
   const announcement = effect.kind === 'document'
     ? `Rendered ${effect.entry.title}.`
+    : effect.kind === 'navigation'
+      ? `Opening ${effect.experiment.title}.`
     : effect.kind === 'clear'
       ? 'Command transcript cleared.'
+      : effect.kind === 'experiments'
+        ? `${effect.experiments.length} experiments listed.`
       : effect.kind === 'entries'
         ? `${effect.entries.length} ${effect.label} listed.`
         : effect.lines.at(-1) ?? '';
@@ -430,18 +535,40 @@ function completeFrom(prefix: string, candidates: readonly string[], render: (ca
     : { kind: 'none', candidates: Object.freeze([]) };
 }
 
-export function completeCommand(input: string, entries: readonly TerminalEntry[]): CompletionResult {
+export function completeCommand(
+  input: string,
+  entries: readonly TerminalEntry[],
+  experiments: readonly TerminalExperiment[] = Object.freeze([])
+): CompletionResult {
   if (!input.includes(' ')) {
     return completeFrom(input, TERMINAL_COMMANDS, (candidate) => `${candidate} `);
   }
-  const match = /^(ls|cat)\s+([^\s]*)$/u.exec(input);
+  const match = /^(ls|cat|open)\s+([^\s]*)$/u.exec(input);
   if (match === null) {
     return { kind: 'none', candidates: Object.freeze([]) };
   }
   const command = match[1];
   const prefix = match[2] ?? '';
   if (command === 'ls') {
-    return completeFrom(prefix, ['posts', 'pages'], (candidate) => `ls ${candidate}`);
+    return completeFrom(prefix, ['posts', 'pages', 'lab'], (candidate) => `ls ${candidate}`);
+  }
+  if (command === 'open') {
+    return completeFrom(
+      prefix,
+      experiments.map((experiment) => `lab/${experiment.id}`),
+      (candidate) => `open ${candidate}`
+    );
+  }
+  if (prefix.startsWith('./')) {
+    const filenamePrefix = prefix.slice(2);
+    if (filenamePrefix.includes('/')) {
+      return { kind: 'none', candidates: Object.freeze([]) };
+    }
+    return completeFrom(
+      filenamePrefix,
+      entries.map((entry) => entry.filename),
+      (candidate) => `cat ./${candidate}`
+    );
   }
   return completeFrom(prefix, entries.map((entry) => entry.filename), (candidate) => `cat ${candidate}`);
 }

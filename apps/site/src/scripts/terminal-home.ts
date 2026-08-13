@@ -3,10 +3,12 @@ import {
   completeCommand,
   createTerminalState,
   decodeTerminalEntries,
+  decodeTerminalExperiments,
   executeCommand,
   navigateHistory,
   type TerminalEffect,
   type TerminalEntry,
+  type TerminalExperiment,
   type TerminalState
 } from '@f1refly/presentation-terminal/runtime';
 
@@ -33,7 +35,56 @@ interface RenderContext {
 
 interface RenderResult {
   readonly focusTarget: HTMLElement | null;
+  readonly navigationHref?: `/lab/${string}/`;
 }
+
+const protectedTypingTargetSelector = [
+  'a',
+  'button',
+  'input',
+  'textarea',
+  'select',
+  'option',
+  'summary',
+  'label',
+  'audio[controls]',
+  'video[controls]',
+  '[contenteditable]:not([contenteditable="false"])',
+  '[role="button"]',
+  '[role="checkbox"]',
+  '[role="link"]',
+  '[role="textbox"]',
+  '[role="searchbox"]',
+  '[role="combobox"]',
+  '[role="gridcell"]',
+  '[role="columnheader"]',
+  '[role="rowheader"]',
+  '[role="listbox"]',
+  '[role="menuitem"]',
+  '[role="menuitemcheckbox"]',
+  '[role="menuitemradio"]',
+  '[role="option"]',
+  '[role="radio"]',
+  '[role="scrollbar"]',
+  '[role="separator"]',
+  '[role="slider"]',
+  '[role="spinbutton"]',
+  '[role="switch"]',
+  '[role="tab"]',
+  '[role="treeitem"]',
+  '[role="application"]',
+  '[role="grid"]',
+  '[role="menu"]',
+  '[role="radiogroup"]',
+  '[role="tablist"]',
+  '[role="toolbar"]',
+  '[role="tree"]',
+  '[role="treegrid"]',
+  '.terminal-wide',
+  '.wide-content',
+  '[data-terminal-wide]',
+  '[data-wide-content]'
+].join(',');
 
 export interface TerminalControllerSeams {
   readonly execute?: typeof executeCommand;
@@ -84,6 +135,19 @@ function readEntries(root: HTMLElement): readonly TerminalEntry[] {
     });
   }
   return decodeTerminalEntries(raw);
+}
+
+function readExperiments(root: HTMLElement): readonly TerminalExperiment[] {
+  const elements = root.querySelectorAll<HTMLElement>('[data-terminal-experiment]');
+  const raw: unknown[] = [];
+  for (const element of elements) {
+    raw.push({
+      id: element.dataset.terminalExperimentId,
+      title: element.dataset.terminalExperimentTitle,
+      href: element.dataset.terminalExperimentHref
+    });
+  }
+  return decodeTerminalExperiments(raw);
 }
 
 function readTemplates(
@@ -232,6 +296,30 @@ function renderEffect(
       record.append(list);
       return { focusTarget: null };
     }
+    case 'experiments': {
+      if (effect.experiments.length === 0) {
+        appendTextLine(record, 'No listed experiments.');
+        return { focusTarget: null };
+      }
+      const list = document.createElement('ul');
+      for (const experiment of effect.experiments) {
+        const item = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = experiment.href;
+        link.textContent = `${experiment.id}/`;
+        item.append(link, document.createTextNode(` — ${experiment.title}`));
+        list.append(item);
+      }
+      record.append(list);
+      return { focusTarget: null };
+    }
+    case 'navigation': {
+      const link = document.createElement('a');
+      link.href = effect.experiment.href;
+      link.textContent = `Open ${effect.experiment.title}`;
+      record.append(link);
+      return { focusTarget: null, navigationHref: effect.experiment.href };
+    }
     case 'document': {
       const template = context.templates.byFilename.get(effect.entry.filename);
       if (template === undefined) {
@@ -276,16 +364,55 @@ function showFatalFailure(nodes: TerminalNodes): void {
   nodes.fallbackHeading.focus();
 }
 
+function settleViewport(target: HTMLElement, block: ScrollLogicalPosition): void {
+  const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth';
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ behavior, block, inline: 'nearest' });
+}
+
+function isEligibleTypingTarget(event: KeyboardEvent): boolean {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    event.ctrlKey ||
+    event.altKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    event.key === ' ' ||
+    [...event.key].length !== 1 ||
+    /[\p{C}\s]/u.test(event.key)
+  ) {
+    return false;
+  }
+  const target = event.target;
+  if (target instanceof Element && target.closest(protectedTypingTargetSelector) !== null) {
+    return false;
+  }
+  const selection = window.getSelection();
+  return selection === null || selection.isCollapsed;
+}
+
+function insertAtPromptSelection(input: HTMLInputElement, value: string): void {
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  input.focus({ preventScroll: true });
+  input.setRangeText(value, start, end, 'end');
+}
+
 export function startTerminalHome(
   root: HTMLElement,
   seams: TerminalControllerSeams = {}
 ): void {
   let nodes: TerminalNodes;
   let entries: readonly TerminalEntry[];
+  let experiments: readonly TerminalExperiment[];
   let templates: TerminalTemplates;
   try {
     nodes = readNodes(root);
     entries = readEntries(root);
+    experiments = readExperiments(root);
     templates = readTemplates(root, entries);
   } catch {
     return;
@@ -309,7 +436,7 @@ export function startTerminalHome(
   const submit = (): void => {
     try {
       const command = nodes.input.value;
-      const result = execute({ state, input: command, entries });
+      const result = execute({ state, input: command, entries, experiments });
       state = result.state;
       nodes.completion.textContent = '';
       if (result.effect === null) {
@@ -319,7 +446,7 @@ export function startTerminalHome(
         nodes.transcript.replaceChildren();
         nodes.input.value = '';
         nodes.announcer.textContent = result.announcement;
-        nodes.input.focus();
+        settleViewport(nodes.input, 'center');
         return;
       }
 
@@ -334,10 +461,14 @@ export function startTerminalHome(
       nodes.transcript.append(record);
       nodes.input.value = '';
       nodes.announcer.textContent = result.announcement;
+      if (rendered.navigationHref !== undefined) {
+        window.location.assign(rendered.navigationHref);
+        return;
+      }
       if (rendered.focusTarget === null) {
-        nodes.input.focus();
+        settleViewport(nodes.input, 'center');
       } else {
-        rendered.focusTarget.focus();
+        settleViewport(rendered.focusTarget, 'start');
       }
     } catch {
       fail();
@@ -350,10 +481,10 @@ export function startTerminalHome(
       submit();
     }
   });
-  nodes.input.addEventListener('compositionstart', () => {
+  document.addEventListener('compositionstart', () => {
     composing = true;
   });
-  nodes.input.addEventListener('compositionend', () => {
+  document.addEventListener('compositionend', () => {
     composing = false;
   });
   nodes.input.addEventListener('keydown', (event) => {
@@ -379,7 +510,7 @@ export function startTerminalHome(
       !event.metaKey &&
       !event.altKey
     ) {
-      const completion = completeCommand(nodes.input.value, entries);
+      const completion = completeCommand(nodes.input.value, entries, experiments);
       if (completion.kind === 'unique') {
         event.preventDefault();
         nodes.input.value = completion.value;
@@ -390,6 +521,16 @@ export function startTerminalHome(
         nodes.completion.textContent = '';
       }
     }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (failed || composing || !isEligibleTypingTarget(event)) {
+      return;
+    }
+    event.preventDefault();
+    insertAtPromptSelection(nodes.input, event.key);
+    nodes.completion.textContent = '';
+    settleViewport(nodes.input, 'center');
   });
 
   nodes.fallback.hidden = true;

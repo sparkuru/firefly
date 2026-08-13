@@ -59,6 +59,7 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'llm-workflow-with-trellis.md' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'about.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: /Command for guest@f1refly \$/u })).toHaveCount(0);
   await expect(page.locator('template[data-terminal-template]')).toHaveCount(3);
@@ -73,6 +74,21 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
     'none'
   );
 
+  await expectNoHorizontalOverflow(page);
+});
+
+test('lab index is a JavaScript-free semantic catalog with native navigation', async ({ page }) => {
+  await page.goto('/lab/');
+
+  const main = page.getByRole('main');
+  await expect(main.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();
+  await expect(main.getByRole('heading', { level: 2, name: 'NERV' })).toBeVisible();
+  await expect(main.locator('.content-meta')).toHaveText('landing · astro · fan-work');
+  await expect(main.getByRole('link', { name: 'Open NERV' })).toHaveAttribute('href', '/lab/nerv/');
+  await expect(page.locator('script')).toHaveCount(0);
+
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
   await expectNoHorizontalOverflow(page);
 });
 

@@ -2,6 +2,15 @@
   "name": "f1refly",
   "private": true,
   "scripts": {
+    "install:validator": "npm --prefix tooling/validate-experiments ci",
+    "check:validator": "npm --prefix tooling/validate-experiments run check",
+    "test:validator": "npm --prefix tooling/validate-experiments run test",
+    "build:validator": "npm --prefix tooling/validate-experiments run build",
+    "validate:experiments": "npm --prefix tooling/validate-experiments run validate -- --root ../..",
+    "install:assembler": "npm --prefix tooling/assemble-publication ci",
+    "check:assembler": "npm --prefix tooling/assemble-publication run check",
+    "test:assembler": "npm --prefix tooling/assemble-publication run test",
+    "build:assembler": "npm --prefix tooling/assemble-publication run build",
     "install:x-core": "npm --prefix packages/x-core ci",
     "check:x-core": "npm --prefix packages/x-core run check",
     "test:x-core": "npm --prefix packages/x-core run test",
@@ -29,8 +38,17 @@
     "check:m3": "npm run check:x-core && npm run check:semantic && npm run check:terminal && npm run check:site",
     "test:m3": "npm run test:x-core && npm run test:semantic && npm run test:terminal && npm run test:content:site && npm run test:x-core:site",
     "dev:nerv": "npm --prefix experiments/nerv run dev",
+    "install:nerv": "npm --prefix experiments/nerv ci",
     "check:nerv": "npm --prefix experiments/nerv run check",
     "build:nerv": "npm --prefix experiments/nerv run build",
-    "test:e2e:nerv": "npm --prefix experiments/nerv run test:e2e"
+    "test:e2e:nerv": "npm --prefix experiments/nerv run test:e2e",
+    "build:experiments": "npm --prefix tooling/assemble-publication run build:experiments -- --root ../..",
+    "assemble:publication": "npm --prefix tooling/assemble-publication run assemble -- --root ../..",
+    "test:e2e:publication": "npm --prefix tooling/assemble-publication run test:e2e",
+    "install:m4": "npm run install:validator && npm run install:x-core && npm run install:semantic && npm run install:terminal && npm run install:assembler && npm run install:site && npm run install:nerv",
+    "build:m4": "npm run build:validator && npm run validate:experiments && npm run build:x-core && npm run build:semantic && npm run build:terminal && npm run build:assembler && npm run build:site && npm run build:experiments && npm run assemble:publication",
+    "check:m4": "npm run check:validator && npm run check:x-core && npm run check:semantic && npm run check:terminal && npm run check:assembler && npm run check:site && npm run check:nerv",
+    "test:m4": "npm run test:validator && npm run test:x-core && npm run test:semantic && npm run test:terminal && npm run test:assembler && npm run test:content:site && npm run test:x-core:site",
+    "publication:m4": "npm run install:m4 && npm run build:m4"
   }
 }

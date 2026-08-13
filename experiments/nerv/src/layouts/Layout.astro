@@ -122,4 +122,15 @@ const {
     50% { opacity: 0.98; }
     100% { opacity: 1; }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::before,
+    body::after {
+      animation: none;
+    }
+
+    .warning-stripe::before {
+      background-position: 0;
+    }
+  }
 </style>

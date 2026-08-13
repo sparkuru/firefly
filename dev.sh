@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# dev.sh - Start and stop the NERV Astro development server through ./sam.
+# dev.sh - Build and serve the assembled M4 publication through ./sam.
 #
-# Service: http://${SAM_BIND_HOST:-127.0.0.1}:${WEB_HOST_PORT:-4321}/lab/nerv/
+# Service: http://${SAM_BIND_HOST:-127.0.0.1}:${WEB_HOST_PORT:-4321}/
 # Requires Docker, ./sam, and dependencies installed with:
-#   ./sam npm --prefix experiments/nerv ci
+#   ./sam npm run install:m4
 set -Eeuo pipefail
 
 SCRIPT_NAME=$(basename "$0")
@@ -68,10 +68,25 @@ cleanup() {
 }
 
 ensure_dev_dependencies() {
-	[[ -x "${REPO_ROOT}/experiments/nerv/node_modules/.bin/astro" ]] && return 0
+	local -a required_binaries=(
+		"tooling/validate-experiments/node_modules/.bin/tsc"
+		"packages/x-core/node_modules/.bin/tsc"
+		"presentations/semantic/node_modules/.bin/tsc"
+		"presentations/terminal/node_modules/.bin/tsc"
+		"tooling/assemble-publication/node_modules/.bin/tsc"
+		"apps/site/node_modules/.bin/astro"
+		"experiments/nerv/node_modules/.bin/astro"
+	)
+	local binary
 
-	printf '[dev.sh] dependencies are missing; run: ./sam npm --prefix experiments/nerv ci\n' >&2
-	return 1
+	for binary in "${required_binaries[@]}"; do
+		if [[ ! -x "${REPO_ROOT}/${binary}" ]]; then
+			printf '[dev.sh] dependencies are missing; run: ./sam npm run install:m4\n' >&2
+			return 1
+		fi
+	done
+
+	return 0
 }
 
 run_service() {
@@ -103,11 +118,13 @@ start_services() {
 	trap cleanup INT TERM EXIT
 	down_services quiet
 
-	printf '[dev.sh] NERV: http://%s:%s/lab/nerv/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
+	printf '[dev.sh] building the M4 publication\n' >&2
+	SAM_SCOPE=dev.sh ./sam npm run build:m4
+
+	printf '[dev.sh] publication: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
 	run_service web \
-		./sam npm --prefix experiments/nerv run start -- \
-		--host 0.0.0.0 \
-		--port "${WEB_CONTAINER_PORT}"
+		./sam env PUBLICATION_PORT="${WEB_CONTAINER_PORT}" \
+		npm --prefix tooling/assemble-publication run start:e2e
 
 	wait "${service_pids[0]}" || status=$?
 	trap - INT TERM EXIT

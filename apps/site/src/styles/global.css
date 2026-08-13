@@ -214,6 +214,25 @@ blockquote {
   color: var(--text-muted);
 }
 
+.experiment-list {
+  margin-top: 3rem;
+}
+
+.experiment-list h2 {
+  margin: 0 0 0.5rem;
+}
+
+.experiment-list .content-meta {
+  margin-bottom: 0.5rem;
+}
+
+.empty-state {
+  margin-top: 3rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
 .article-header {
   max-width: 70ch;
   padding-bottom: 1.5rem;

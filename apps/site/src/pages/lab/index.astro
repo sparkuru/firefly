@@ -1,0 +1,44 @@
+---
+import DocumentLayout from '../../layouts/DocumentLayout.astro';
+import { getPublicExperiments } from '../../lib/experiments';
+
+const experiments = await getPublicExperiments();
+---
+
+<DocumentLayout
+  title="Experiments"
+  description="Autonomous static experiments published beside the f1refly site."
+>
+  <section class="content-column" aria-labelledby="lab-title">
+    <p class="eyebrow">Lab index</p>
+    <h1 id="lab-title">Experiments</h1>
+    <p class="lede">
+      Independent static projects with their own visual language, build, and
+      mounted route.
+    </p>
+    {
+      experiments.length === 0 ? (
+        <div class="empty-state">
+          <p>No listed experiments are available.</p>
+          <p><a href="/">Return home</a></p>
+        </div>
+      ) : (
+        <ul class="content-list experiment-list">
+          {experiments.map((experiment) => (
+            <li>
+              <h2>{experiment.title}</h2>
+              <p class="content-meta">
+                {[experiment.kind, ...experiment.tags]
+                  .filter((value, index, values) => values.indexOf(value) === index)
+                  .join(' · ')}
+              </p>
+              <p>
+                <a href={experiment.entryHref}>Open {experiment.title}</a>
+              </p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </section>
+</DocumentLayout>

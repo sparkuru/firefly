@@ -1,11 +1,16 @@
 ---
-import { decodeTerminalEntries } from '@f1refly/presentation-terminal/runtime';
+import {
+  decodeTerminalEntries,
+  decodeTerminalExperiments
+} from '@f1refly/presentation-terminal/runtime';
 import TerminalHome from '../components/TerminalHome.astro';
 import TerminalLayout from '../layouts/TerminalLayout.astro';
 import { getPublicContent } from '../lib/content';
+import { getPublicExperiments } from '../lib/experiments';
 import { renderDocument } from '../lib/render-document';
 
 const { posts, pages } = await getPublicContent();
+const publicExperiments = await getPublicExperiments();
 const publicDocuments = [...posts, ...pages];
 const entries = decodeTerminalEntries([
   ...posts.map((entry) => ({
@@ -25,6 +30,13 @@ const entries = decodeTerminalEntries([
     date: entry.data.date.toISOString().slice(0, 10)
   }))
 ]);
+const experiments = decodeTerminalExperiments(
+  publicExperiments.map((experiment) => ({
+    id: experiment.id,
+    title: experiment.title,
+    href: experiment.href
+  }))
+);
 const documents = await Promise.all(
   publicDocuments.map(async (entry, index) => {
     const terminalEntry = entries[index];
@@ -46,5 +58,5 @@ const documents = await Promise.all(
   path="~/blog"
   home
 >
-  <TerminalHome documents={documents} />
+  <TerminalHome documents={documents} experiments={experiments} />
 </TerminalLayout>

@@ -1,7 +1,8 @@
 ---
 import {
   DEFAULT_TERMINAL_PROMPT,
-  type TerminalEntry
+  type TerminalEntry,
+  type TerminalExperiment
 } from '@f1refly/presentation-terminal/runtime';
 import type { PublicDocument, renderDocument } from '../lib/render-document';
 import TerminalStreamDocument from './TerminalStreamDocument.astro';
@@ -16,9 +17,10 @@ interface HomeDocument {
 
 interface Props {
   documents: readonly HomeDocument[];
+  experiments: readonly TerminalExperiment[];
 }
 
-const { documents } = Astro.props;
+const { documents, experiments } = Astro.props;
 const posts = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'post');
 const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'page');
 ---
@@ -92,6 +94,30 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
                   <a href={terminalEntry.href}>{terminalEntry.filename}</a>
                   <span> — {terminalEntry.title}</span>
                   <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+
+      <section class="terminal-group" aria-labelledby="terminal-lab-heading">
+        <h3 id="terminal-lab-heading">lab/</h3>
+        {
+          experiments.length === 0 ? (
+            <p class="terminal-meta">No listed experiments.</p>
+          ) : (
+            <ul class="terminal-list">
+              {experiments.map((experiment) => (
+                <li
+                  class="terminal-entry"
+                  data-terminal-experiment
+                  data-terminal-experiment-id={experiment.id}
+                  data-terminal-experiment-title={experiment.title}
+                  data-terminal-experiment-href={experiment.href}
+                >
+                  <a href={experiment.href}>{experiment.id}/</a>
+                  <span> — {experiment.title}</span>
                 </li>
               ))}
             </ul>

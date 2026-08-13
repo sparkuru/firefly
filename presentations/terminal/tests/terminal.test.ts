@@ -10,6 +10,7 @@ import {
   completeCommand,
   createTerminalState,
   decodeTerminalEntries,
+  decodeTerminalExperiments,
   executeCommand,
   navigateHistory,
   tokenizeCommand,
@@ -30,6 +31,10 @@ const rawEntries = [
   { kind: 'page', slug: 'about', filename: 'about.md', title: 'About', href: '/pages/about/', date: '2026-02-01' }
 ] as const;
 const entries = decodeTerminalEntries(rawEntries);
+const experiments = decodeTerminalExperiments([
+  { id: 'nerv', title: 'NERV', href: '/lab/nerv/' },
+  { id: 'quiet-lab', title: 'Quiet Lab', href: '/lab/quiet-lab/' }
+]);
 
 test('default prompt stays derived from the default identity', () => {
   assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest@f1refly $');
@@ -44,6 +49,7 @@ function run(command: string, state = createTerminalState()) {
     state,
     input: command,
     entries,
+    experiments,
     identity: DEFAULT_TERMINAL_IDENTITY,
     now: () => new Date('2026-08-12T04:05:06.000Z')
   });
@@ -122,6 +128,25 @@ test('strict index decoder clones valid entries and rejects malformed structures
   assert.equal(invoked, false);
 });
 
+test('strict experiment decoder clones exact canonical listed destinations', () => {
+  assert.equal(Object.isFrozen(experiments), true);
+  assert.equal(Object.isFrozen(experiments[0]), true);
+  assert.throws(() => decodeTerminalExperiments([{ id: 'nerv', title: 'NERV', href: '/lab/other/' }]), /canonical/u);
+  assert.throws(() => decodeTerminalExperiments([{ id: 'nerv', title: 'NERV', href: '/lab/nerv/', extra: true }]), /unknown/u);
+  assert.throws(() => decodeTerminalExperiments([
+    { id: 'nerv', title: 'NERV', href: '/lab/nerv/' },
+    { id: 'nerv', title: 'Again', href: '/lab/nerv/' }
+  ]), /duplicate/u);
+  const sparse = new Array(1);
+  assert.throws(() => decodeTerminalExperiments(sparse), /dense/u);
+  let invoked = false;
+  const accessor = Object.defineProperty({}, 'id', {
+    get() { invoked = true; return 'nerv'; }
+  });
+  assert.throws(() => decodeTerminalExperiments([accessor]), /data properties/u);
+  assert.equal(invoked, false);
+});
+
 test('runtime subpath stays side-effect-free and independent from adapter dependencies', async () => {
   const runtime = await readFile(new URL('../src/runtime.js', import.meta.url), 'utf8');
   const declarations = await readFile(new URL('../src/runtime.d.ts', import.meta.url), 'utf8');
@@ -138,11 +163,13 @@ test('tokenizer accepts balanced quotes and rejects unbalanced input without she
   assert.equal(tokenizeCommand(`cat 'alpha.md`).ok, false);
 });
 
-test('every M3 command has deterministic output and strict usage errors', () => {
+test('every command has deterministic output and strict usage errors', () => {
   const help = JSON.stringify(run('help').effect);
-  assert.match(help, /cat <slug>\.md/u);
+  assert.match(help, /cat \[\.\/\]<slug>\.md/u);
   assert.match(help, /clear — clear the screen/u);
-  assert.doesNotMatch(help, /dynamic transcript|ls lab|open lab/u);
+  assert.doesNotMatch(help, /dynamic transcript/u);
+  assert.match(help, /ls \[posts\|pages\|lab\]/u);
+  assert.match(help, /open lab\/<id>/u);
   assert.equal(run('ls').effect?.kind, 'entries');
   const posts = run('ls posts').effect;
   const pages = run('ls pages').effect;
@@ -152,20 +179,35 @@ test('every M3 command has deterministic output and strict usage errors', () => 
   assert.equal(document.effect?.kind, 'document');
   assert.deepEqual(document.effect?.kind === 'document' ? document.effect.entry : null, entries[0]);
   assert.equal(document.announcement, 'Rendered Alpha.');
+  const relativeDocument = run('cat ./alpha.md');
+  assert.equal(relativeDocument.effect?.kind, 'document');
+  assert.deepEqual(
+    relativeDocument.effect?.kind === 'document' ? relativeDocument.effect.entry : null,
+    entries[0]
+  );
   assert.match(JSON.stringify(run('cat missing.md').effect), /No public document/u);
+  for (const operand of ['../alpha.md', './nested/alpha.md', '/alpha.md', 'https://example.com/alpha.md']) {
+    assert.match(JSON.stringify(run(`cat ${operand}`).effect), /No public document/u, operand);
+  }
   assert.match(JSON.stringify(run('about').effect), /static garden/u);
   assert.match(JSON.stringify(run('pwd').effect), /~\/blog/u);
   assert.match(JSON.stringify(run('whoami').effect), /guest/u);
   assert.match(JSON.stringify(run('date').effect), /2026-08-12 04:05:06 UTC/u);
   assert.match(JSON.stringify(run('history').effect), /1  history/u);
   assert.equal(run('clear').effect?.kind, 'clear');
-  for (const command of ['help extra', 'ls posts extra', 'cat', 'cat alpha.md extra', 'about extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
+  for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'open', 'open other', 'open lab/nerv extra', 'about extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
     assert.match(JSON.stringify(run(command).effect), /Usage:/u, command);
   }
   assert.match(JSON.stringify(run('wat').effect), /Unknown command: wat/u);
-  const lab = JSON.stringify(run('ls lab').effect);
-  assert.match(lab, /Unknown command/u);
-  assert.match(JSON.stringify(run('open lab\/nerv').effect), /Unknown command/u);
+  const lab = run('ls lab');
+  assert.equal(lab.effect?.kind, 'experiments');
+  assert.deepEqual(lab.effect?.kind === 'experiments' ? lab.effect.experiments : [], experiments);
+  assert.equal(lab.announcement, '2 experiments listed.');
+  const navigation = run('open lab/nerv');
+  assert.equal(navigation.effect?.kind, 'navigation');
+  assert.deepEqual(navigation.effect?.kind === 'navigation' ? navigation.effect.experiment : null, experiments[0]);
+  assert.equal(navigation.announcement, 'Opening NERV.');
+  assert.match(JSON.stringify(run('open lab/unlisted').effect), /No listed experiment/u);
 });
 
 test('history keeps 50 submissions and Arrow navigation preserves the draft', () => {
@@ -185,13 +227,18 @@ test('history keeps 50 submissions and Arrow navigation preserves the draft', ()
   assert.equal(navigation.state.historyCursor, null);
 });
 
-test('completion consumes only unique contextual matches and omits lab commands', () => {
-  assert.deepEqual(completeCommand('hel', entries), { kind: 'unique', value: 'help ', candidates: ['help'] });
-  assert.equal(completeCommand('l', entries).kind, 'unique');
-  assert.equal(completeCommand('', entries).kind, 'ambiguous');
-  assert.equal(completeCommand('ls p', entries).kind, 'ambiguous');
-  assert.deepEqual(completeCommand('cat alp', entries), { kind: 'unique', value: 'cat alpha.md', candidates: ['alpha.md'] });
-  assert.equal(completeCommand('cat missing', entries).kind, 'none');
-  assert.equal(completeCommand('open lab', entries).kind, 'none');
-  assert.doesNotMatch(JSON.stringify(completeCommand('', entries)), /lab|open/u);
+test('completion consumes only unique contextual document and lab matches', () => {
+  assert.deepEqual(completeCommand('hel', entries, experiments), { kind: 'unique', value: 'help ', candidates: ['help'] });
+  assert.equal(completeCommand('l', entries, experiments).kind, 'unique');
+  assert.equal(completeCommand('', entries, experiments).kind, 'ambiguous');
+  assert.equal(completeCommand('ls p', entries, experiments).kind, 'ambiguous');
+  assert.deepEqual(completeCommand('ls l', entries, experiments), { kind: 'unique', value: 'ls lab', candidates: ['lab'] });
+  assert.deepEqual(completeCommand('cat alp', entries, experiments), { kind: 'unique', value: 'cat alpha.md', candidates: ['alpha.md'] });
+  assert.deepEqual(completeCommand('cat ./alp', entries, experiments), { kind: 'unique', value: 'cat ./alpha.md', candidates: ['alpha.md'] });
+  assert.equal(completeCommand('cat missing', entries, experiments).kind, 'none');
+  for (const input of ['cat ../alp', 'cat ./nested/alp', 'cat /alp', 'cat https://example.com/alp']) {
+    assert.equal(completeCommand(input, entries, experiments).kind, 'none', input);
+  }
+  assert.deepEqual(completeCommand('open lab/n', entries, experiments), { kind: 'unique', value: 'open lab/nerv', candidates: ['lab/nerv'] });
+  assert.equal(completeCommand('open lab/', entries, experiments).kind, 'ambiguous');
 });

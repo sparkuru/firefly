@@ -1,20 +1,51 @@
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Regular-v2.304.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Medium-v2.304.woff2') format('woff2');
+}
+
+.terminal-root[data-terminal-theme='phosphor'] {
+  --terminal-color-scheme: dark;
+  --terminal-color-canvas: #050806;
+  --terminal-color-surface: #080d0a;
+  --terminal-color-surface-subtle: #0d1510;
+  --terminal-color-text: #d6e7db;
+  --terminal-color-muted: #91a99a;
+  --terminal-color-command: #63f59a;
+  --terminal-color-link: #7bf7a8;
+  --terminal-color-warning: #ffd166;
+  --terminal-color-error: #ff8090;
+  --terminal-color-border: #2e4937;
+  --terminal-color-focus: #9affbd;
+  --terminal-color-shadow: rgb(0 0 0 / 35%);
+  --terminal-font-family: 'JetBrains Mono', 'Noto Sans Mono CJK SC',
+    'Sarasa Mono SC', 'Microsoft YaHei UI', ui-monospace, monospace;
+  --terminal-font-size: 1rem;
+  --terminal-line-height: 1.65;
+  --terminal-measure: 78ch;
+  --terminal-measure-recovery: 70ch;
+  --terminal-measure-stream: 76ch;
+  --terminal-space-record: 1.5rem;
+  --terminal-space-prompt-settlement: min(35vh, 18rem);
+}
+
 .terminal-root {
-  --terminal-background: #050806;
-  --terminal-panel: #080d0a;
-  --terminal-panel-soft: #0d1510;
-  --terminal-foreground: #d6e7db;
-  --terminal-muted: #91a99a;
-  --terminal-accent: #63f59a;
-  --terminal-warning: #ffd166;
-  --terminal-danger: #ff8090;
-  --terminal-border: #2e4937;
   min-width: 20rem;
   min-height: 100%;
-  color-scheme: dark;
-  background: var(--terminal-background);
-  color: var(--terminal-foreground);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    'Liberation Mono', 'Courier New', monospace;
+  color-scheme: var(--terminal-color-scheme);
+  background: var(--terminal-color-canvas);
+  color: var(--terminal-color-text);
+  font-family: var(--terminal-font-family);
 }
 
 .terminal-root *,
@@ -27,17 +58,17 @@
   min-height: 100dvh;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 1rem;
-  line-height: 1.65;
+  font-size: var(--terminal-font-size);
+  line-height: var(--terminal-line-height);
 }
 
 .terminal-shell {
   width: min(calc(100% - 2rem), 78rem);
   min-height: calc(100dvh - 2rem);
   margin: 1rem auto;
-  border: 1px solid var(--terminal-border);
-  background: var(--terminal-panel);
-  box-shadow: 0 1.25rem 4rem rgb(0 0 0 / 35%);
+  border: 1px solid var(--terminal-color-border);
+  background: var(--terminal-color-surface);
+  box-shadow: 0 1.25rem 4rem var(--terminal-color-shadow);
 }
 
 .terminal-shell--home {
@@ -55,9 +86,9 @@
   justify-content: space-between;
   min-height: 2.75rem;
   padding: 0.65rem 1rem;
-  border-bottom: 1px solid var(--terminal-border);
-  background: var(--terminal-panel-soft);
-  color: var(--terminal-muted);
+  border-bottom: 1px solid var(--terminal-color-border);
+  background: var(--terminal-color-surface-subtle);
+  color: var(--terminal-color-muted);
   font-size: 0.875rem;
   letter-spacing: 0.04em;
 }
@@ -81,9 +112,9 @@
   left: 0.75rem;
   padding: 0.65rem 0.85rem;
   transform: translateY(-180%);
-  background: var(--terminal-foreground);
-  color: var(--terminal-background);
-  font-weight: 700;
+  background: var(--terminal-color-text);
+  color: var(--terminal-color-canvas);
+  font-weight: 500;
 }
 
 .terminal-skip:focus {
@@ -92,34 +123,34 @@
 
 .terminal-root :where(a, input, [tabindex]):focus-visible {
   border-radius: 0.125rem;
-  outline: 3px solid var(--terminal-accent);
+  outline: 3px solid var(--terminal-color-focus);
   outline-offset: 3px;
 }
 
 .terminal-root a {
-  color: var(--terminal-accent);
+  color: var(--terminal-color-link);
   text-decoration-thickness: 0.1em;
   text-underline-offset: 0.18em;
 }
 
 .terminal-root a:hover {
-  color: var(--terminal-warning);
+  color: var(--terminal-color-warning);
 }
 
 .terminal-path,
 .terminal-meta,
 .terminal-stream-meta {
-  color: var(--terminal-muted);
+  color: var(--terminal-color-muted);
 }
 
 .terminal-prompt {
-  color: var(--terminal-accent);
-  font-weight: 700;
+  color: var(--terminal-color-command);
+  font-weight: 500;
 }
 
 .terminal-status-label {
-  color: var(--terminal-danger);
-  font-weight: 700;
+  color: var(--terminal-color-error);
+  font-weight: 500;
 }
 
 .terminal-visually-hidden {
@@ -136,18 +167,19 @@
 }
 
 .terminal-home {
-  width: min(100%, 78ch);
+  width: min(100%, var(--terminal-measure));
   min-width: 0;
   margin-inline: auto;
 }
 
 .terminal-recovery {
-  max-width: 70ch;
+  max-width: var(--terminal-measure-recovery);
 }
 
 .terminal-recovery h2 {
   margin-block: 0.4rem 0.75rem;
-  color: var(--terminal-foreground);
+  color: var(--terminal-color-text);
+  font-weight: 500;
   font-size: clamp(1.45rem, 4vw, 2rem);
 }
 
@@ -161,7 +193,8 @@
 
 .terminal-group h3 {
   margin-block: 0 0.5rem;
-  color: var(--terminal-accent);
+  color: var(--terminal-color-command);
+  font-weight: 500;
   font-size: 1.1rem;
 }
 
@@ -178,14 +211,14 @@
 
 .terminal-entry time {
   display: block;
-  color: var(--terminal-muted);
+  color: var(--terminal-color-muted);
   font-size: 0.875rem;
 }
 
 .terminal-failure {
   margin-block: 1.25rem;
   padding-left: 0.75rem;
-  border-left: 3px solid var(--terminal-danger);
+  border-left: 3px solid var(--terminal-color-error);
 }
 
 .terminal-failure[hidden],
@@ -204,11 +237,11 @@
 
 .terminal-record {
   min-width: 0;
-  margin-block: 0 1.5rem;
+  margin-block: 0 var(--terminal-space-record);
 }
 
 .terminal-record[data-tone='error'] {
-  color: var(--terminal-foreground);
+  color: var(--terminal-color-text);
 }
 
 .terminal-record p,
@@ -221,12 +254,16 @@
 }
 
 .terminal-command-line {
-  color: var(--terminal-foreground);
+  color: var(--terminal-color-text);
 }
 
 .terminal-command-form {
   min-width: 0;
   margin: 0;
+}
+
+.terminal-transcript:not(:empty) + .terminal-command-form {
+  padding-bottom: var(--terminal-space-prompt-settlement);
 }
 
 .terminal-command-row {
@@ -235,11 +272,11 @@
   min-height: 44px;
   align-items: center;
   gap: 0.65rem;
-  box-shadow: inset 0 -1px var(--terminal-border);
+  box-shadow: inset 0 -1px var(--terminal-color-border);
 }
 
 .terminal-command-row:focus-within {
-  box-shadow: inset 0 -2px var(--terminal-accent);
+  box-shadow: inset 0 -2px var(--terminal-color-focus);
 }
 
 .terminal-command-row > .terminal-prompt {
@@ -256,10 +293,11 @@
   border-radius: 0;
   outline: 0;
   background: transparent;
-  color: var(--terminal-foreground);
+  color: var(--terminal-color-text);
   font: inherit;
   font-size: max(1rem, 16px);
-  caret-color: var(--terminal-accent);
+  caret-color: var(--terminal-color-command);
+  scroll-margin-block: 25vh;
 }
 
 .terminal-command-input:focus-visible {
@@ -268,7 +306,7 @@
 
 .terminal-completion {
   margin: 0.35rem 0 0;
-  color: var(--terminal-warning);
+  color: var(--terminal-color-warning);
 }
 
 .terminal-completion:empty {
@@ -276,10 +314,10 @@
 }
 
 .terminal-stream-document {
-  max-width: 76ch;
+  max-width: var(--terminal-measure-stream);
   margin-block: 1.5rem 0;
   padding-block: 1.25rem 0.25rem;
-  border-top: 1px solid var(--terminal-border);
+  border-top: 1px solid var(--terminal-color-border);
 }
 
 .terminal-stream-header {
@@ -289,10 +327,12 @@
 .terminal-stream-header h2 {
   max-width: 34ch;
   margin-block: 0.2rem 0.4rem;
-  color: var(--terminal-foreground);
+  color: var(--terminal-color-text);
+  font-weight: 500;
   font-size: clamp(1.45rem, 4vw, 2.1rem);
   line-height: 1.2;
   text-wrap: balance;
+  scroll-margin-block-start: 2rem;
 }
 
 .terminal-stream-meta,
@@ -307,7 +347,8 @@
 .terminal-stream-prose :where(h2, h3, h4) {
   max-width: 38ch;
   margin-block: 1.8rem 0.7rem;
-  color: var(--terminal-accent);
+  color: var(--terminal-color-command);
+  font-weight: 500;
   line-height: 1.25;
   text-wrap: balance;
 }
@@ -321,7 +362,7 @@
 }
 
 .terminal-stream-prose h4 {
-  color: var(--terminal-foreground);
+  color: var(--terminal-color-text);
   font-size: 1.05rem;
 }
 
@@ -332,14 +373,14 @@
 .terminal-stream-prose blockquote {
   margin-inline: 0;
   padding-left: 1rem;
-  border-left: 3px solid var(--terminal-warning);
-  color: var(--terminal-muted);
+  border-left: 3px solid var(--terminal-color-warning);
+  color: var(--terminal-color-muted);
 }
 
 .terminal-stream-prose code:not(pre code) {
   padding: 0.1rem 0.25rem;
-  background: var(--terminal-panel-soft);
-  color: var(--terminal-warning);
+  background: var(--terminal-color-surface-subtle);
+  color: var(--terminal-color-warning);
 }
 
 .terminal-stream-footer {
@@ -348,23 +389,23 @@
 }
 
 .terminal-stream-footer a {
-  color: var(--terminal-muted);
+  color: var(--terminal-color-muted);
 }
 
 .terminal-document {
-  max-width: 78ch;
+  max-width: var(--terminal-measure);
 }
 
 .terminal-document-header {
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--terminal-border);
+  border-bottom: 1px solid var(--terminal-color-border);
 }
 
 .terminal-document-nav,
 .terminal-outline {
   margin-block: 1.25rem;
   padding-block: 1rem;
-  border-block: 1px solid var(--terminal-border);
+  border-block: 1px solid var(--terminal-color-border);
 }
 
 .terminal-document-nav {
@@ -378,6 +419,7 @@
 .terminal-document h3,
 .terminal-document h4 {
   line-height: 1.2;
+  font-weight: 500;
   text-wrap: balance;
 }
 
@@ -390,7 +432,7 @@
 
 .terminal-document h2 {
   margin-block: 1.75rem 0.75rem;
-  color: var(--terminal-accent);
+  color: var(--terminal-color-command);
   font-size: clamp(1.3rem, 3vw, 1.7rem);
 }
 
@@ -421,14 +463,14 @@
 .terminal-prose blockquote {
   margin-inline: 0;
   padding-left: 1rem;
-  border-left: 3px solid var(--terminal-warning);
-  color: var(--terminal-muted);
+  border-left: 3px solid var(--terminal-color-warning);
+  color: var(--terminal-color-muted);
 }
 
 .terminal-prose code:not(pre code) {
   padding: 0.1rem 0.25rem;
-  background: var(--terminal-panel-soft);
-  color: var(--terminal-warning);
+  background: var(--terminal-color-surface-subtle);
+  color: var(--terminal-color-warning);
 }
 
 .terminal-wide,
@@ -436,8 +478,8 @@
   max-width: 100%;
   margin-block: 0 1.25rem;
   overflow-x: auto;
-  border: 1px solid var(--terminal-border);
-  background: var(--terminal-background);
+  border: 1px solid var(--terminal-color-border);
+  background: var(--terminal-color-canvas);
   overscroll-behavior-inline: contain;
 }
 
@@ -465,14 +507,14 @@
 .terminal-wide :is(th, td),
 .terminal-stream-prose .wide-content :is(th, td) {
   padding: 0.65rem 0.8rem;
-  border: 1px solid var(--terminal-border);
+  border: 1px solid var(--terminal-color-border);
   text-align: left;
   white-space: nowrap;
 }
 
 .terminal-wide th,
 .terminal-stream-prose .wide-content th {
-  background: var(--terminal-panel-soft);
+  background: var(--terminal-color-surface-subtle);
 }
 
 @media (max-width: 40rem) {

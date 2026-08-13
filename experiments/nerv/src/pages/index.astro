@@ -21,11 +21,16 @@ import NervPage from '../modules/nerv/NervPage.astro';
   });
 
   const stripes = document.querySelectorAll<HTMLElement>('.warning-stripe');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  window.addEventListener('scroll', () => {
-    const scrollY = window.scrollY;
+  const updateStripePosition = () => {
+    const position = reducedMotion.matches ? 0 : window.scrollY * 0.5;
     stripes.forEach((stripe) => {
-      stripe.style.setProperty('--bg-position', `${scrollY * 0.5}px`);
+      stripe.style.setProperty('--bg-position', `${position}px`);
     });
-  });
+  };
+
+  window.addEventListener('scroll', updateStripePosition, { passive: true });
+  reducedMotion.addEventListener('change', updateStripePosition);
+  updateStripePosition();
 </script>

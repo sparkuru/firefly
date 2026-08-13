@@ -3,6 +3,8 @@
 .devhome
 **/.astro
 **/dist
+artifacts
+dist
 **/node_modules
 **/*.log
 experiments/nerv/reference

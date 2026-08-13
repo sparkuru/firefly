@@ -3,15 +3,15 @@
 # The host needs Docker only; the repository is mounted at /app with uid mapping.
 #
 # Usage:
-#   ./sam npm --prefix experiments/nerv ci
-#   ./sam npm run check:nerv
-#   ./sam npm run build:nerv
+#   ./sam npm run install:m4
+#   ./sam npm run check:m4
+#   ./sam npm run build:m4
 #   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
 #     ./sam npm --prefix experiments/nerv run test:e2e
 #   WEB_HOST_PORT=4322 ./dev.sh
 #
-# Ports: the NERV Astro service maps container 4321 to host 4321 by default.
-# Change WEB_HOST_PORT for parallel agents; WEB_CONTAINER_PORT must match Astro's port.
+# Ports: the assembled publication maps container 4321 to host 4321 by default.
+# Change WEB_HOST_PORT for parallel agents; WEB_CONTAINER_PORT must match the publication server port.
 # Service commands must bind to 0.0.0.0 to be reachable from the host.
 set -Eeuo pipefail
 

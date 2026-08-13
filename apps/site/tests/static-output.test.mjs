@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -33,6 +34,7 @@ test('static build emits only the implemented route surface', async () => {
   assert.deepEqual(htmlFiles, [
     '404.html',
     'index.html',
+    'lab/index.html',
     'pages/about/index.html',
     'posts/hello-static-foundation/index.html',
     'posts/llm-workflow-with-trellis/index.html'
@@ -41,10 +43,12 @@ test('static build emits only the implemented route surface', async () => {
   assert.equal(scripts.length, 1);
   assert.match(scripts[0], /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u);
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 1);
-  assert.deepEqual(
-    files.filter((file) => !/\.(?:css|html|js)$/u.test(file)),
-    []
-  );
+  assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
+    'fonts/JetBrainsMono-Medium-v2.304.woff2',
+    'fonts/JetBrainsMono-Regular-v2.304.woff2',
+    'licenses/JetBrainsMono-OFL-1.1.txt',
+    'licenses/JetBrainsMono-PROVENANCE.txt'
+  ]);
   assert.equal(files.some((file) => file.endsWith('.map')), false);
 });
 
@@ -60,7 +64,7 @@ test('only the exact generated Terminal home script bypasses asset inlining', ()
 
 test('static artifacts preserve runtime safety and dependency isolation', async () => {
   const files = await listFiles(distRoot);
-  const textFiles = files.filter((file) => /\.(?:css|html|js|json|txt)$/u.test(file));
+  const textFiles = files.filter((file) => /\.(?:css|html|js|json)$/u.test(file));
   const artifacts = (
     await Promise.all(
       textFiles.map(async (file) => `${file}\n${await readFile(path.join(distRoot, file), 'utf8')}`)
@@ -70,7 +74,6 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
     /astro-island/iu,
     /client:(?:load|idle|visible|only)/iu,
     /fonts\.(?:googleapis|gstatic)\.com/iu,
-    /@font-face/iu,
     /@import\s+(?:url\()?\s*["']?https?:/iu,
     /url\(\s*["']?https?:/iu,
     /hidden draft/iu,
@@ -79,7 +82,6 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
     /AKIA[0-9A-Z]{16}/u,
     /gh[oprsu]_[A-Za-z0-9]{36,}/u,
     /(?:^|[\s"'./_-])xterm(?:[\s"'./_-]|$)/imu,
-    /\/lab\/nerv\//iu,
     /logo-container/iu,
     /warning-stripe/iu,
     /remark-parse/iu,
@@ -155,31 +157,101 @@ test('route closures isolate semantic CSS, Terminal styles, and home JavaScript'
 
   const routes = {
     home: await readFile(path.join(distRoot, 'index.html'), 'utf8'),
+    lab: await readFile(path.join(distRoot, 'lab/index.html'), 'utf8'),
     notFound: await readFile(path.join(distRoot, '404.html'), 'utf8'),
     about: await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8'),
     semantic: await readFile(path.join(distRoot, 'posts/hello-static-foundation/index.html'), 'utf8'),
     terminal: await readFile(path.join(distRoot, 'posts/llm-workflow-with-trellis/index.html'), 'utf8')
   };
-  const semanticRoutes = [routes.notFound, routes.about, routes.semantic];
+  const semanticRoutes = [routes.notFound, routes.about, routes.semantic, routes.lab];
 
   assert.match(routes.home, /data-terminal-home/u);
-  assert.match(routes.home, /--terminal-background/u);
+  assert.match(routes.home, /data-terminal-experiment-id="nerv"/u);
+  assert.match(routes.home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
+  assert.match(routes.home, /data-terminal-theme="phosphor"/u);
+  assert.match(routes.home, /--terminal-color-canvas/u);
+  assert.match(routes.home, /font-family:\s*'JetBrains Mono'/u);
+  assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Regular-v2\.304\.woff2'\)/u);
   assert.match(routes.home, new RegExp(`src="/${script.replaceAll('.', '\\.')}`));
   assert.doesNotMatch(routes.home, new RegExp(stylesheet.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, /class="terminal-titlebar"/u);
   assert.match(routes.terminal, /data-terminal-wide/u);
-  assert.match(routes.terminal, /--terminal-background/u);
+  assert.match(routes.terminal, /data-terminal-theme="phosphor"/u);
+  assert.match(routes.terminal, /--terminal-color-canvas/u);
   assert.match(routes.terminal, /class="terminal-titlebar"/u);
   assert.doesNotMatch(routes.terminal, /<script\b/iu);
   assert.doesNotMatch(routes.terminal, new RegExp(stylesheet.replaceAll('.', '\\.')));
+  assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
+  assert.match(routes.lab, /href="\/lab\/nerv\/"/u);
+  assert.doesNotMatch(routes.lab, /<script\b|logo-container|warning-stripe/iu);
 
   for (const html of semanticRoutes) {
     assert.match(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-(?:home|entry|wide)/u);
-    assert.doesNotMatch(html, /--terminal-background/u);
+    assert.doesNotMatch(html, /--terminal-color-canvas/u);
     assert.doesNotMatch(html, /<script\b/iu);
     assert.doesNotMatch(html, new RegExp(script.replaceAll('.', '\\.')));
   }
+});
+
+test('official JetBrains Mono assets retain pinned license and provenance', async () => {
+  const expectedHashes = new Map([
+    ['fonts/JetBrainsMono-Regular-v2.304.woff2', 'a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2'],
+    ['fonts/JetBrainsMono-Medium-v2.304.woff2', '086c48dfbea9ddaff1320f7e09399b8e2924e88ce67453721255db3bdbb5a353']
+  ]);
+  for (const [file, expected] of expectedHashes) {
+    const contents = await readFile(path.join(distRoot, file));
+    assert.equal(createHash('sha256').update(contents).digest('hex'), expected);
+  }
+
+  const license = await readFile(path.join(distRoot, 'licenses/JetBrainsMono-OFL-1.1.txt'), 'utf8');
+  const provenance = await readFile(path.join(distRoot, 'licenses/JetBrainsMono-PROVENANCE.txt'), 'utf8');
+  assert.equal(
+    createHash('sha256').update(license).digest('hex'),
+    '30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad'
+  );
+  assert.match(license, /SIL OPEN FONT LICENSE Version 1\.1 - 26 February 2007/u);
+  assert.match(provenance, /Release: v2\.304/u);
+  assert.match(provenance, /Release commit: cd5227b/u);
+  for (const expected of expectedHashes.values()) {
+    assert.match(provenance, new RegExp(expected, 'u'));
+  }
+});
+
+test('Terminal components consume the root semantic theme contract', async () => {
+  const css = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
+  const theme = /\.terminal-root\[data-terminal-theme='phosphor'\]\s*\{[\s\S]*?\n\}/u.exec(css);
+  assert.ok(theme);
+
+  const componentCss = css.replace(theme[0], '');
+  const semanticTokens = [
+    '--terminal-color-scheme',
+    '--terminal-color-canvas',
+    '--terminal-color-surface',
+    '--terminal-color-surface-subtle',
+    '--terminal-color-text',
+    '--terminal-color-muted',
+    '--terminal-color-command',
+    '--terminal-color-link',
+    '--terminal-color-warning',
+    '--terminal-color-error',
+    '--terminal-color-border',
+    '--terminal-color-focus',
+    '--terminal-color-shadow',
+    '--terminal-font-family',
+    '--terminal-font-size',
+    '--terminal-line-height',
+    '--terminal-measure',
+    '--terminal-measure-recovery',
+    '--terminal-measure-stream',
+    '--terminal-space-record',
+    '--terminal-space-prompt-settlement'
+  ];
+  for (const token of semanticTokens) {
+    assert.match(theme[0], new RegExp(`${token}:`, 'u'));
+    assert.match(componentCss, new RegExp(`var\\(${token}\\)`, 'u'));
+  }
+  assert.doesNotMatch(componentCss, /#[0-9a-f]{3,8}\b|(?:rgb|hsl)a?\(/iu);
 });
 
 test('home emits an exact safe entry/template map with inert build-rendered bodies', async () => {
@@ -193,6 +265,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /data-terminal-entry-href="\/posts\/llm-workflow-with-trellis\/"/u);
   assert.match(home, /data-terminal-entry-date="2026-05-28"/u);
   assert.doesNotMatch(home, /data-terminal-entry-(?:description|body|draft|source|presentation)/u);
+  assert.match(home, /data-terminal-experiment-id="nerv"/u);
+  assert.match(home, /data-terminal-experiment-title="NERV"/u);
+  assert.match(home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
+  assert.doesNotMatch(home, /data-terminal-experiment-(?:build|command|output|license|manifest|tags|kind)/u);
   const entryFilenames = [...home.matchAll(/data-terminal-entry-filename="([^"]+)"/gu)].map((match) => match[1]);
   const templateFilenames = [...home.matchAll(/data-terminal-template-filename="([^"]+)"/gu)].map((match) => match[1]);
   assert.deepEqual(templateFilenames, entryFilenames);
@@ -218,6 +294,20 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /<h1>llm workflow with trellis<\/h1>/u);
   assert.match(terminalArticle, /data-language="mermaid"/u);
   assert.doesNotMatch(terminalArticle, /<form\b|id="terminal-command"/iu);
+});
+
+test('ordinary routes contain no Experiment runtime or asset edge', async () => {
+  const ordinaryRoutes = [
+    '404.html',
+    'pages/about/index.html',
+    'posts/hello-static-foundation/index.html',
+    'posts/llm-workflow-with-trellis/index.html'
+  ];
+  for (const route of ordinaryRoutes) {
+    const html = await readFile(path.join(distRoot, route), 'utf8');
+    assert.doesNotMatch(html, /\/lab\/nerv\/(?:_astro\/|favicon|nerv-logo)|logo-container|warning-stripe/iu);
+    assert.doesNotMatch(html, /rel=["'](?:preload|prefetch)["'][^>]*\/lab\/nerv\//iu);
+  }
 });
 
 test('home controller avoids browser content loading, parsing, and unsafe insertion APIs', async () => {

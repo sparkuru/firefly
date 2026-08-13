@@ -10,6 +10,19 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(width.scroll).toBeLessThanOrEqual(width.client);
 }
 
+async function expectInViewport(
+  locator: ReturnType<Page['locator']>,
+  minTopRatio = 0,
+  maxTopRatio = 1
+) {
+  await expect.poll(async () => locator.evaluate((element, ratios) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top >= window.innerHeight * ratios.min &&
+      rect.top <= window.innerHeight * ratios.max &&
+      rect.bottom <= window.innerHeight;
+  }, { min: minTopRatio, max: maxTopRatio })).toBe(true);
+}
+
 async function submit(page: Page, command: string) {
   const input = page.getByRole('textbox', { name: promptName });
   await input.fill(command);
@@ -37,17 +50,16 @@ test('successful startup reveals only the shell stream and prompt', async ({ pag
   await expectNoHorizontalOverflow(page);
 });
 
-test('commands render continuous typed results, lab errors, and latest announcements', async ({ page }) => {
+test('commands render continuous typed results, lab discovery, and latest announcements', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
   const transcript = page.locator('[data-terminal-transcript]');
   const announcer = page.locator('[data-terminal-announcer]');
 
   await submit(page, 'help');
-  await expect(page.getByText('ls [posts|pages] — list public documents')).toBeVisible();
+  await expect(page.getByText('ls [posts|pages|lab] — list public documents or experiments')).toBeVisible();
+  await expect(transcript.getByText('open lab/<id> — open a listed experiment')).toBeVisible();
   await expect(transcript.getByText('clear — clear the screen')).toBeVisible();
-  await expect(transcript).not.toContainText('ls lab');
-  await expect(transcript).not.toContainText('open lab');
   await expect(input).toBeFocused();
 
   await submit(page, 'ls posts');
@@ -56,11 +68,19 @@ test('commands render continuous typed results, lab errors, and latest announcem
   await expect(announcer).toHaveText('2 posts listed.');
 
   await submit(page, 'ls lab');
-  await expect(transcript).toContainText('Unknown command: ls lab');
-  await submit(page, 'open lab/nerv');
-  await expect(transcript).toContainText('Unknown command: open lab/nerv');
+  await expect(transcript.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
+  await expect(transcript).toContainText('NERV');
+  await expect(announcer).toHaveText('1 experiments listed.');
+  await submit(page, 'open lab/unlisted');
+  await expect(transcript).toContainText('No listed experiment named "lab/unlisted"');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
   await expect(input).toBeFocused();
+});
+
+test('open navigates only to the validated listed experiment destination', async ({ page }) => {
+  await page.goto('/');
+  await submit(page, 'open lab/nerv');
+  await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
 });
 
 test('history preserves a draft and clear returns a fresh prompt with history intact', async ({ page }) => {
@@ -115,6 +135,23 @@ test('completion consumes only unique matches and otherwise preserves Tab traver
   await input.fill('cat llm-w');
   await input.press('Tab');
   await expect(input).toHaveValue('cat llm-workflow-with-trellis.md');
+
+  await input.fill('cat ./llm-w');
+  await input.press('Tab');
+  await expect(input).toHaveValue('cat ./llm-workflow-with-trellis.md');
+  await expect(input).toBeFocused();
+
+  for (const unsafe of ['cat ../llm-w', 'cat ./nested/llm-w', 'cat /llm-w', 'cat https://example.com/llm-w']) {
+    await input.fill(unsafe);
+    await input.press('Tab');
+    await expect(input).toHaveValue(unsafe);
+    await expect(input).not.toBeFocused();
+    await input.focus();
+  }
+
+  await input.fill('open lab/n');
+  await input.press('Tab');
+  await expect(input).toHaveValue('open lab/nerv');
 });
 
 test('IME composition leaves Enter, Arrow history, and Tab key events unintercepted', async ({ page }) => {
@@ -149,6 +186,136 @@ test('native Enter submission works at desktop and mobile viewport contracts', a
   await submit(page, 'about');
   await expect(page.locator('[data-terminal-transcript]')).toContainText('A static garden');
   await expect(page.getByRole('textbox', { name: promptName })).toBeFocused();
+});
+
+test('short output settles the active prompt and document output settles its reading start', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  for (let index = 0; index < 12; index += 1) {
+    await submit(page, 'help');
+  }
+  await expect(input).toBeFocused();
+  await expectInViewport(input, 0.25, 0.8);
+
+  await submit(page, 'cat ./llm-workflow-with-trellis.md');
+  const title = page
+    .locator('[data-terminal-stream-document]')
+    .last()
+    .getByRole('heading', { level: 2, name: 'llm workflow with trellis' });
+  await expect(title).toBeFocused();
+  await expectInViewport(title, 0, 0.35);
+});
+
+test('eligible printable typing returns to the prompt while protected interactions stay native', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  await submit(page, 'cat llm-workflow-with-trellis.md');
+  const streamedDocument = page.locator('[data-terminal-stream-document]').last();
+  const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm workflow with trellis' });
+  await expect(title).toBeFocused();
+
+  await page.keyboard.press('x');
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue('x');
+
+  for (const key of ['Space', 'Tab', 'Enter', 'Escape', 'ArrowDown', 'Control+k', 'Meta+k', 'Shift+x']) {
+    await input.fill('safe');
+    await title.focus();
+    await page.keyboard.press(key);
+    await expect(input).toHaveValue('safe');
+  }
+
+  const link = streamedDocument.getByRole('link', { name: 'permalink' });
+  await input.fill('link-safe');
+  await link.focus();
+  await page.keyboard.press('q');
+  await expect(link).toBeFocused();
+  await expect(input).toHaveValue('link-safe');
+
+  const wide = streamedDocument.getByRole('region', { name: /^Code content:/u }).first();
+  await wide.focus();
+  await page.keyboard.press('z');
+  await expect(wide).toBeFocused();
+  await expect(input).toHaveValue('link-safe');
+
+  await streamedDocument.evaluate((document) => {
+    const control = document.ownerDocument.createElement('div');
+    control.dataset.testAriaControl = '';
+    control.setAttribute('role', 'checkbox');
+    control.setAttribute('aria-label', 'Test ARIA control');
+    control.setAttribute('aria-checked', 'false');
+    control.tabIndex = 0;
+    document.append(control);
+  });
+  const ariaControl = streamedDocument.getByRole('checkbox', { name: 'Test ARIA control' });
+  await ariaControl.focus();
+  await page.keyboard.press('c');
+  await expect(ariaControl).toBeFocused();
+  await expect(input).toHaveValue('link-safe');
+
+  await title.focus();
+  await page.evaluate(() => {
+    const paragraph = document.querySelector<HTMLElement>('.terminal-stream-prose p');
+    const selection = window.getSelection();
+    if (paragraph === null || selection === null || paragraph.firstChild === null) {
+      throw new Error('Missing selection fixture.');
+    }
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await page.keyboard.press('r');
+  await expect(input).toHaveValue('link-safe');
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+
+  const compositionDispatch = await title.evaluate((element) => {
+    element.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    const result = element.dispatchEvent(new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      isComposing: true,
+      key: '文'
+    }));
+    element.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+    return result;
+  });
+  expect(compositionDispatch).toBe(true);
+  await expect(input).toHaveValue('link-safe');
+});
+
+test('phosphor theme and official JetBrains Mono assets stay same-origin', async ({ page }) => {
+  const externalRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin !== 'http://127.0.0.1:4321') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'phosphor');
+  const styles = await page.locator('.terminal-root').evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      canvas: computed.getPropertyValue('--terminal-color-canvas').trim(),
+      command: computed.getPropertyValue('--terminal-color-command').trim(),
+      family: computed.fontFamily
+    };
+  });
+  expect(styles.canvas).not.toBe('');
+  expect(styles.command).not.toBe('');
+  expect(styles.family).toContain('JetBrains Mono');
+  const loadedFaces = await page.evaluate(async () => {
+    const regular = await document.fonts.load('400 16px "JetBrains Mono"');
+    const medium = await document.fonts.load('500 16px "JetBrains Mono"');
+    return { regular: regular.length, medium: medium.length };
+  });
+  expect(loadedFaces.regular).toBeGreaterThan(0);
+  expect(loadedFaces.medium).toBeGreaterThan(0);
+  expect(externalRequests).toEqual([]);
+  expect((await page.request.get('/fonts/JetBrainsMono-Regular-v2.304.woff2')).status()).toBe(200);
+  expect((await page.request.get('/fonts/JetBrainsMono-Medium-v2.304.woff2')).status()).toBe(200);
+  expect((await page.request.get('/licenses/JetBrainsMono-OFL-1.1.txt')).status()).toBe(200);
+  expect((await page.request.get('/licenses/JetBrainsMono-PROVENANCE.txt')).status()).toBe(200);
 });
 
 test('cat appends trusted inline documents without navigation and scopes repeated IDs', async ({ page }) => {
@@ -342,7 +509,7 @@ test('a template title not owned by its article prevents startup', async ({ page
       const article = template?.content.querySelector<HTMLElement>(
         '[data-terminal-stream-document]'
       );
-      if (article !== null) {
+      if (article !== null && article !== undefined) {
         article.setAttribute('aria-labelledby', 'external-title');
         observer.disconnect();
       }
@@ -416,6 +583,15 @@ test('reduced motion and responsive checkpoints preserve full-page containment',
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
   expect(await input.evaluate((element) => getComputedStyle(element).animationDuration)).toBe('1e-06s');
+  await submit(page, 'help');
+  await expect(input).toBeFocused();
+  const reducedPromptGeometry = await input.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, height: window.innerHeight };
+  });
+  expect(reducedPromptGeometry.top).toBeGreaterThanOrEqual(reducedPromptGeometry.height * 0.25);
+  expect(reducedPromptGeometry.top).toBeLessThanOrEqual(reducedPromptGeometry.height * 0.8);
+  expect(reducedPromptGeometry.bottom).toBeLessThanOrEqual(reducedPromptGeometry.height);
   for (const width of [768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await expectNoHorizontalOverflow(page);

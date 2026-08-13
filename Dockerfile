@@ -1,19 +1,32 @@
 FROM node:22-alpine AS builder
 
-WORKDIR /app/experiments/nerv
+WORKDIR /app
 
-COPY experiments/nerv/package*.json ./
-RUN npm ci --ignore-scripts
+COPY . .
 
-COPY experiments/nerv/ ./
-RUN npm run build
+RUN npm --prefix tooling/validate-experiments ci --ignore-scripts \
+    && npm --prefix tooling/validate-experiments run build \
+    && npm --prefix tooling/validate-experiments run validate -- --root /app \
+    && npm --prefix packages/x-core ci --ignore-scripts \
+    && npm --prefix packages/x-core run build \
+    && npm --prefix presentations/semantic ci --ignore-scripts \
+    && npm --prefix presentations/semantic run build \
+    && npm --prefix presentations/terminal ci --ignore-scripts \
+    && npm --prefix presentations/terminal run build \
+    && npm --prefix tooling/assemble-publication ci --ignore-scripts \
+    && npm --prefix tooling/assemble-publication run build \
+    && npm --prefix apps/site ci --ignore-scripts \
+    && npm --prefix apps/site run build \
+    && npm --prefix experiments/nerv ci --ignore-scripts \
+    && npm --prefix tooling/assemble-publication run build:experiments -- --root /app \
+    && npm --prefix tooling/assemble-publication run assemble -- --root /app
 
 FROM nginx:1.28-alpine AS runtime
 
-RUN rm /etc/nginx/conf.d/default.conf
+RUN rm /etc/nginx/conf.d/default.conf /usr/share/nginx/html/50x.html
 
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder --chown=nginx:nginx /app/experiments/nerv/dist/ /usr/share/nginx/html/lab/nerv/
+COPY --from=builder --chown=nginx:nginx /app/dist/ /usr/share/nginx/html/
 
 USER nginx
 

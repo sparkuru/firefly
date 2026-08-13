@@ -1,0 +1,25 @@
+JetBrains Mono webfont provenance
+
+Upstream project: JetBrains Mono
+Release: v2.304
+Release commit: cd5227b
+Release page: https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304
+License: SIL Open Font License 1.1
+License source: https://raw.githubusercontent.com/JetBrains/JetBrainsMono/v2.304/OFL.txt
+Published license: /licenses/JetBrainsMono-OFL-1.1.txt
+
+Official tagged assets:
+
+fonts/webfonts/JetBrainsMono-Regular.woff2
+Source: https://raw.githubusercontent.com/JetBrains/JetBrainsMono/v2.304/fonts/webfonts/JetBrainsMono-Regular.woff2
+Published path: /fonts/JetBrainsMono-Regular-v2.304.woff2
+SHA-256: a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2
+
+fonts/webfonts/JetBrainsMono-Medium.woff2
+Source: https://raw.githubusercontent.com/JetBrains/JetBrainsMono/v2.304/fonts/webfonts/JetBrainsMono-Medium.woff2
+Published path: /fonts/JetBrainsMono-Medium-v2.304.woff2
+SHA-256: 086c48dfbea9ddaff1320f7e09399b8e2924e88ce67453721255db3bdbb5a353
+
+The v2.304 tag contains static WOFF2 webfonts and variable TTF sources, but no
+tagged variable WOFF2. The unmodified tagged Regular and Medium webfonts are
+published directly so the release does not build or substitute a derivative.

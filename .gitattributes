@@ -7,3 +7,6 @@
 # picking either side (task state lives in task.json, not index.md). See
 # .trellis/spec/cli/backend/directory-structure.md for details.
 .trellis/workspace/*/journal-*.md merge=union
+
+# Preserve the byte-identical tagged upstream OFL, including its original space.
+apps/site/public/licenses/JetBrainsMono-OFL-1.1.txt -whitespace
