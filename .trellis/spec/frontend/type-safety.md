@@ -43,7 +43,8 @@ exercise. Do not create a test-only schema.
 | Field | Contract |
 | --- | --- |
 | `title`, `description` | required, trimmed, non-empty strings |
-| `slug` | required single URL segment; no whitespace, slash, query, or fragment marker |
+| post `slug` | optional legacy assertion; when present equals the filename stem |
+| page `slug` | required canonical safe URL segment; NFC, non-hidden, no whitespace, slash, percent, backslash, query, fragment, control, or dot segment |
 | `date` | required valid `Date` or non-empty string coercible to a valid date |
 | `updated` | optional same input boundary; cannot precede `date` |
 | `tags` | optional array of trimmed non-empty strings |
@@ -51,11 +52,12 @@ exercise. Do not create a test-only schema.
 | post `layout` | exactly `post` |
 | page `layout` | schema accepts `page`, `timeline`, `files`; current public projection accepts only `page` |
 | `presentation` | optional lowercase kebab-case adapter ID; omission resolves to `semantic`; registry membership is a build-time X Core check |
-| `aliases` | optional absolute paths without whitespace/query/fragment |
+| `aliases` | optional canonical absolute trailing-slash directory routes; every segment passes the safe route-segment gate |
+| `access` | optional exact public/private-owner union; omission defaults public; private requires a safe subject owner |
 | unknown keys | rejected by strict schemas |
 
-Public entries across both collections must have globally unique `slug` values.
-Drafts never enter the public projection.
+Canonical document/directory/alias routes must be unique under the shared
+Unicode/case collision key. Drafts never enter any identity projection.
 
 ### 4. Validation & Error Matrix
 
@@ -64,10 +66,11 @@ Drafts never enter the public projection.
 | malformed/empty date string | schema failure |
 | date input is `null`, boolean, or number | schema failure before coercion |
 | `updated < date` | schema failure at `updated` |
-| invalid slug/alias | schema failure |
+| invalid/non-NFC/hidden/percent slug or alias | schema failure |
+| private without owner, public with owner, or malformed subject | schema failure |
 | unknown layout, malformed presentation ID, or unknown key | schema/public-projection failure |
 | valid but unregistered presentation ID | X Core build failure naming document and requested adapter |
-| duplicate public slug | build failure naming both owners |
+| duplicate/colliding canonical path, directory, or alias | build failure naming both owners |
 | draft entry | valid input but excluded from links/routes/output |
 | public `timeline`/`files` before its route exists | build failure naming the current route/layout boundary |
 
@@ -77,8 +80,8 @@ non-empty string, then pipe to date coercion.
 
 ### 5. Good / Base / Bad Cases
 
-- Good: valid framework-neutral Markdown with an explicit stable slug becomes a
-  typed collection entry and independent static route.
+- Good: valid framework-neutral post Markdown gains identity from its safe staged
+  relative path; a page uses its explicit stable slug; both become typed routes.
 - Base: a valid draft parses but is absent from the public projection.
 - Bad: using raw `z.coerce.date()`, deriving a route from title/filename, or
   filtering drafts independently in each page.
@@ -90,8 +93,9 @@ non-empty string, then pipe to date coercion.
   cases.
 - `./sam npm --prefix apps/site run check` and `run build`: collection and route
   integration.
-- Negative builds when changing public invariants: duplicate slug, unsupported
-  public layout, unregistered adapter, and raw HTML must fail with actionable
+- Negative builds when changing public invariants: duplicate/colliding route,
+  unsupported public layout, unregistered adapter, private leakage, and raw HTML
+  must fail with actionable
   owner/details. Use ignored same-filesystem `apps/site/test-results/` output and
   `finally` cleanup so failed Astro staging cannot damage normal `dist/`.
 - Inspect `apps/site/dist/` to assert the public routes exist and drafts do not.
@@ -114,19 +118,22 @@ const strictDate = dateInput.pipe(z.coerce.date());
 The concrete helper name may differ; the input restriction and regression tests
 are the contract.
 
-## Scenario: Terminal Index and Command Effects
+## Scenario: Terminal Index, Registry, and Effects
 
 ### 1. Scope / Trigger
 
-Use this contract when changing the home index, Terminal commands/state/effects,
-or DOM controller. It protects the build-to-browser data boundary and preserves a
-native fallback when enhancement data or behavior fails.
+Use this contract when changing the Terminal browser index, command definitions,
+aliases, state/effects, completion, or DOM controller. The runtime remains pure;
+native recovery remains available when enhancement validation fails.
 
 ### 2. Signatures
 
 ```ts
 decodeTerminalEntries(value: unknown): readonly TerminalEntry[]
 decodeTerminalExperiments(value: unknown): readonly TerminalExperiment[]
+createTerminalCommandRegistry(
+  definitions: readonly TerminalCommandDefinition[]
+): TerminalCommandRegistry
 executeCommand(options: {
   state: TerminalState;
   input: string;
@@ -134,140 +141,96 @@ executeCommand(options: {
   experiments?: readonly TerminalExperiment[];
   identity?: TerminalIdentity;
   now?: () => Date;
+  registry?: TerminalCommandRegistry;
 }): CommandResult
-navigateHistory(
-  state: TerminalState,
-  direction: 'up' | 'down',
-  input: string
-): { readonly state: TerminalState; readonly input: string }
 completeCommand(
   input: string,
   entries: readonly TerminalEntry[],
-  experiments?: readonly TerminalExperiment[]
+  experiments?: readonly TerminalExperiment[],
+  registry?: TerminalCommandRegistry
 ): CompletionResult
 startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
-const DEFAULT_TERMINAL_PROMPT: string
 ```
 
 ### 3. Contracts
 
-- `TerminalEntry` has exactly `kind`, `slug`, `filename`, `title`, `href`, and
-  `date`. Filename is `${slug}.md`; href is the canonical post/page route; date
-  is a real `YYYY-MM-DD` UTC calendar date.
-- `TerminalExperiment` has exactly `id`, `title`, and canonical `/lab/<id>/`
-  `href`; IDs and hrefs are unique. Raw manifest/build/default-entry data is not
-  accepted at this browser boundary.
-- Decode only own data descriptors from a plain dense array and exact plain/null-
-  prototype objects. Never call decorated array methods, getters, or setters.
-- Commands return readonly-typed `CommandResult` values and a closed effect union:
-  `lines`, document `entries`, `experiments`, `navigation`, `document`, or
-  `clear`. A document effect contains one
-  validated `TerminalEntry`, never Markdown, HTML, or arbitrary DOM data. The
-  engine has no DOM imports or side effects; the site controller exhaustively
-  renders effects.
-- A navigation effect contains one decoded listed Experiment. The controller
-  uses its canonical href directly; raw `open` input never becomes a URL.
-- Build output contains exactly one inert, `renderDocument()`-produced template
-  per entry. Before revealing the shell, the controller validates the exact
-  entry/template set, one top-level stream document, its non-empty title ID,
-  exact `aria-labelledby` ownership, and absence of scripts/extra top-level
-  elements.
-- `DEFAULT_TERMINAL_PROMPT` is derived from `DEFAULT_TERMINAL_IDENTITY.user` and
-  `.host`. `TerminalHome.astro` uses it for the visible prompt and accessible
-  label, and `terminal-home.ts` uses it for echoed command lines. Change identity,
-  prompt rendering, and their unit/browser assertions together.
-- Completion is `unique`, `ambiguous`, or `none`; consume Tab only for `unique`.
-- `cat` operands accept either `<slug>.md` or one exact optional
-  `./<slug>.md`. Normalization removes only that prefix. Completion preserves the
-  user's optional prefix and never widens into a filesystem path resolver.
-- Document-level typing is eligible only for an unmodified, non-Space printable
-  key outside protected native/ARIA controls, editables, links, and local-scroll
-  regions, with no selection or IME composition. The controller inserts through
-  the prompt's selection API, then focuses it; it does not synthesize a command.
-- Viewport settlement targets the fresh prompt for short output and the cloned
-  title for document output. Motion behavior is derived from
-  `prefers-reduced-motion`, not a caller-controlled command field.
+- `TerminalEntry` contains exactly `kind`, `virtualPath`, `relativePath`,
+  `filename`, `title`, `href`, and `date`; href is derived from the canonical
+  `.md` virtual path. `TerminalExperiment` remains exact `{ id, title, href }`.
+- Decoders inspect only own data descriptors in plain dense arrays and exact
+  plain/null-prototype objects. They reject accessors, unknown fields, hidden/
+  traversal/percent/backslash/non-NFC paths, route drift, and Unicode/case-folded
+  duplicates without invoking user behavior.
+- Registry definitions own canonical name, aliases, summary, usage, execution,
+  and optional completion. Creation validates safe unique tokens, safe metadata,
+  callable handlers, clones/freeze records, and supplies the active definition
+  list to `help`, execution, and completion.
+- Effects are closed: `lines`, `entries`, `experiments`, `navigation`,
+  `document`, `document-navigation`, `tree`, and `clear`. Navigation effects
+  contain decoded records; raw input never becomes a URL.
+- `cat`/`vim` share the virtual resolver/completer from
+  `content-workspace-contract.md`. Safe zero-result paths use a distinct
+  `no-match` result that owns Tab; safe ambiguity marks ownership explicitly;
+  other ambiguity and unsafe input remain native.
+  Template validation/cloning and global typing retain the existing
+  descriptor, fallback, focus, ID scoping, IME, ARIA, and reduced-motion gates.
 
 ### 4. Validation & Error Matrix
 
 | Condition | Required result |
 | --- | --- |
-| accessor, sparse/decorated array, custom prototype, unknown/missing field | decoder `TypeError`; property behavior is not invoked |
-| unsafe slug/text/date or noncanonical filename/href | decoder `TypeError` before revealing the shell |
+| accessor, sparse/decorated array, custom prototype, unknown field | decoder `TypeError`; behavior not invoked |
+| unsafe/noncanonical/fold-colliding path or href | decoder `TypeError` before shell reveal |
+| unsafe/colliding command or alias, bad metadata/handler | registry `TypeError` at creation |
 | empty command | unchanged state, null effect, empty announcement |
-| unknown command or bad operands | typed error-line effect; no throw or shell interpretation |
-| `cat ./<slug>.md` | normalize the exact optional prefix, then resolve the closed document entry |
-| nested path, traversal, absolute path, or URL-like `cat` operand/completion | typed usage/not-found result or no completion; never resolve a path or consume Tab |
-| modified/Space/control key, selection, IME, link/control/editable/scroll region, or ARIA widget | preserve native focus and behavior; do not insert into the prompt |
-| missing DOM, malformed index, duplicate/missing/unknown template, non-bijection, script, or extra top-level template node | retain recovery and hidden session; do not partially start |
-| executor/renderer/clone scoping throws after startup | hide session, restore recovery, expose one failure message, and focus one recovery target |
+| unknown command or bad operand | error-line effect; no throw/shell interpretation |
+| hostile/unknown-root `cat` or `vim` path | not-found/usage or no completion; no navigation/native Tab capture |
+| safe ambiguous `cat`/`vim` path | `ambiguous` with `ownsTab: true`; retain focus and prefixed candidates |
+| safe zero-result `cat`/`vim` path | exhaustive `no-match` with `ownsTab: true`; retain exact input/focus and status |
+| non-path command ambiguity | `ambiguous` with `ownsTab: false`; preserve native traversal |
+| malformed template or controller exception | retain/restore recovery and hide partial session |
 
 ### 5. Good / Base / Bad Cases
 
-- Good: decoded build entries plus an exact template set produce closed effects;
-  text/list effects use safe DOM creation, while document effects clone only the
-  matching trusted template and namespace clone-owned IDs/references.
-- Base: JavaScript is absent or early/late failure leaves or restores the
-  server-rendered recovery navigation.
-- Good: `cat ./hello.md` resolves the same validated entry as `cat hello.md`, and
-  `cat ./hel<Tab>` completes to the prefixed canonical filename.
-- Bad: asserting `dataset`, parsing HTML strings, cloning an unproven template,
-  rewriting an external fragment as clone-local, resolving `cat` through a
-  filesystem/URL API, navigating from unvalidated input, or cancelling all
-  document keydown events.
+- Good: a custom test definition and alias appear in active-registry help,
+  execute through either token, and complete without changing a central switch.
+- Good: `cat ./characters/nahida.md` and virtual absolute form resolve the same
+  decoded entry; `vim` returns that entry's canonical href.
+- Base: absent JavaScript or validation failure leaves native recovery links.
+- Bad: assert datasets, invoke getters, register behavior in parallel switches,
+  parse HTML strings, resolve host paths, or concatenate operands into URLs.
 
 ### 6. Tests Required
 
-- Terminal unit tests: adapter identity, hostile document/Experiment descriptor
-  non-invocation, runtime-subpath purity, tokenization, every command/usage error,
-  50-item history, manifest-backed lab list/navigation, and unique-only document/
-  lab completion, exact optional-`./` execution/completion, and traversal/nested/
-  absolute/URL rejection.
-- Static-output tests: exact serialized fields, one inert template per entry,
-  exact bijection, bodies absent from JavaScript/data attributes, canonical
-  routes, one home-only script, JavaScript-free Terminal article, and
-  bidirectional package/style graph.
-- Interactive Playwright: prompt-only startup, commands/errors, history,
-  unique-only completion including exact `./`, normal Tab escape, IME and
-  soft-keyboard Enter, inline `cat` with
-  unchanged URL, repeated-clone ID/fragment/ARIA scoping, clear-to-fresh-prompt,
-  latest-only announcements, prompt/document viewport settlement, reduced
-  motion, safe global printable typing, protected native/ARIA widgets and local
-  scroll regions, and early/late recovery containment.
+- Unit: hostile descriptors, registry validation/custom alias/help/execution/
+  completion, all commands/effects, tree variants, history, nested/absolute
+  cat/vim completion, and hostile path rejection.
+- Static output: exact serialized fields/template bijection, canonical nested
+  routes, bodies absent from index/JS, home-only command asset, document-only
+  reader asset, and package/style graph closure.
+- Playwright: prompt/history/IME/Tab/recovery/global typing, tree/cat/vim,
+  canonical navigation, clone scoping, settlement, reduced motion, and protected
+  native/ARIA/local-scroll behavior at both viewports.
 
 ### 7. Wrong vs Correct
 
 ```ts
-// Wrong: executes a decorated method and trusts its values.
-const entries = (value as TerminalEntry[]).map((entry) => entry);
+// Wrong: trust raw values and construct a route from an operand.
+const entry = (value as TerminalEntry[])[0];
+window.location.assign(`/posts/${operand}/`);
 
-// Correct: validates own data descriptors, then returns frozen clones.
+// Correct: decode records, resolve through the registry, then use the closed effect.
 const entries = decodeTerminalEntries(value);
-
-// Wrong: parses or injects an HTML string returned by a command.
-record.innerHTML = effect.html;
-
-// Correct: clones only the prevalidated build-time template for the entry.
-const template = templates.byFilename.get(effect.entry.filename);
-if (template === undefined) throw new TypeError('Missing document template.');
-record.append(template.content.cloneNode(true));
-
-// Wrong: broad shell emulation steals native keyboard behavior.
-document.addEventListener('keydown', (event) => {
-  event.preventDefault();
-  input.value += event.key;
-});
-
-// Correct: only an explicitly eligible printable key returns to the prompt.
-if (isEligibleTypingTarget(event)) {
-  input.setRangeText(event.key, input.selectionStart ?? 0, input.selectionEnd ?? 0, 'end');
-  input.focus({ preventScroll: true });
+const result = executeCommand({ state, input, entries, registry });
+if (result.effect?.kind === 'document-navigation') {
+  window.location.assign(result.effect.entry.href);
 }
 ```
 
 ## Local Types and Narrowing
 
-Experiment manifest and publication types live in
+Workspace, access, canonical-path, registry, and reader contracts are detailed
+in `content-workspace-contract.md`. Experiment manifest and publication types live in
 `@f1refly/validate-experiments`, not in Astro routes or the assembler. Raw JSON
 must pass the exact descriptor-safe decoder before narrowing; downstream code
 accepts frozen `ExperimentManifest` / `PublicExperiment` values. Terminal narrows
@@ -313,5 +276,7 @@ executing an Experiment-owned path. The full executable matrix is in
 - `tooling/validate-experiments/src/index.ts`
 - `tooling/assemble-publication/src/index.ts`
 - `.trellis/spec/frontend/publication-contract.md`
+- `.trellis/spec/frontend/content-workspace-contract.md`
 - `presentations/terminal/tests/terminal.test.ts`
 - `apps/site/src/scripts/terminal-home.ts`
+- `apps/site/src/scripts/terminal-reader.ts`

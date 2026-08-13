@@ -5,14 +5,17 @@
 There is no component framework, custom hook layer, browser data-fetching layer,
 client cache, or lifecycle abstraction.
 
-- `apps/site/` emits useful static HTML for every route. Only the Terminal home
-  references a client module; `/lab/`, Terminal articles, semantic documents,
-  About, and 404 are JavaScript-free. No hydration directive exists.
+- `apps/site/` emits useful static HTML for every route. The Terminal home owns
+  one command controller; canonical Terminal documents own one read-only reader
+  controller. Directory indexes, `/lab/`, semantic documents, About, and 404 are
+  JavaScript-free. No hydration directive exists.
 - X Core and both adapters run only during Markdown build/render. Their emitted
   enhancement manifests are empty and have no generic browser loader.
 - `@f1refly/presentation-terminal/runtime` (the package's `./runtime` export) is
   a pure, side-effect-free command/index module.
-  `apps/site/src/scripts/terminal-home.ts` alone owns DOM wiring.
+  `apps/site/src/scripts/terminal-home.ts` owns command DOM wiring.
+- `apps/site/src/scripts/terminal-reader.ts` is a separate route-local controller
+  for already-rendered Terminal documents; it does not import the command engine.
 - `experiments/nerv/` has one route-owned inline browser script in
   `src/pages/index.astro`.
 
@@ -25,21 +28,26 @@ Content loading, filtering, Experiment catalog projection, X Core analysis/
 presentation selection, Markdown rendering, index assembly, and route generation
 happen at build time. The home
 emits exactly one inert keyed, `renderDocument()`-produced template per public
-entry. It serializes only canonical `kind`, `slug`, `filename`, `title`, `href`,
-and UTC calendar-date fields on server-rendered recovery entries. Browser startup
+entry. It serializes only canonical `kind`, `virtualPath`, `relativePath`,
+`filename`, `title`, `href`, and UTC calendar-date fields. Browser startup
 strictly decodes those fields and proves an exact entry/template bijection. A
 separate strict index contains only canonical `{ id, title, href }` listed
 Experiment records. It never fetches content or receives Markdown/HTML strings,
 raw manifests, build commands, filesystem paths, or unlisted metadata.
 
-The command engine recognizes exactly `help`, `ls [posts|pages|lab]`,
-`open lab/<id>`, `cat [./]<slug>.md`, `about`, `pwd`, `whoami`, `date`, `history`,
-and `clear`. `ls lab` returns a closed Experiment-list effect. `open lab/<id>`
+The default immutable registry recognizes `help`, `ls`, `open`, `cat`, `vim`,
+`tree`, `about`, `pwd`, `whoami`, `date`, `history`, and `clear`. Each definition
+owns aliases, help/usage, execution, and optional completion. The shipped
+registry has no surprise aliases; tests prove a custom definition and alias.
+`ls lab` returns a closed Experiment-list effect. `open lab/<id>`
 returns a navigation effect only for an exact decoded listed ID; the controller
 navigates to that validated canonical mount and never constructs a destination
-from raw command input. `cat` accepts one exact optional `./` prefix, normalizes
-it before matching, and rejects deeper paths, traversal, absolute paths, and
-URLs. A valid `cat` returns a closed `document` effect. The controller clones only
+from raw command input. `cat`/`vim` resolve nested paths through the same virtual
+filesystem: relative operands are under posts, one exact `./` is optional, and
+virtual absolute operands begin only `/posts/` or `/pages/`. Hidden/dot/
+traversal/percent/backslash/URL/non-NFC inputs do not resolve. A valid `cat`
+returns `document`; `vim` returns `document-navigation` with the validated entry.
+The controller clones only
 the matching validated `HTMLTemplateElement.content`, scopes clone-owned IDs and
 ID references, appends it inline, and leaves `/` unchanged. Canonical
 destinations remain native recovery/permalink/output links; the controller does
@@ -50,17 +58,23 @@ not programmatically navigate for `cat`.
   template validation.
 - Render text with `textContent`, `createTextNode`, and native `<a>` elements;
   never use `innerHTML` for content or command output.
-- Preserve the latest pre-history draft, cap submissions at 50, consume Tab only
-  for unique completion, preserve the optional `./` spelling in that completion,
-  and leave Enter/Arrow/Tab unintercepted during IME composition. Unsafe or
-  path-like completion candidates must leave Tab native.
+- Preserve the latest pre-history draft and cap submissions at 50. Safe
+  `cat`/`vim` paths own Tab for unique, ambiguous, and zero-result completion.
+  Ambiguity keeps prompt focus and preserves `./` or `/`; zero-result completion
+  keeps exact input/focus and shows `No matches.`. Other command ambiguity,
+  unsafe/control/non-NFC paths, modified Tab, and IME-composed Tab remain native.
+- Exact unmodified prompt `Ctrl+C` cancels current input/completion and history
+  traversal draft without submitting, clearing prior transcript/history, or
+  stealing composition and Alt/Meta/Shift variants.
 - Submit through desktop or mobile soft-keyboard Enter using the single-input
   native form. `clear` removes every visible transcript/document/completion
   result while preserving bounded history, inert templates, recovery data, and a
   fresh prompt. Announce only the latest brief result via the polite atomic node.
-- After short output, focus the fresh prompt and settle it into the viewport;
-  after a document effect, focus and settle its title at the reading start.
-  Scrolling is smooth normally and immediate under `prefers-reduced-motion`.
+- After non-document output, focus the fresh prompt but settle from the current
+  record start so long help is not top-clipped; keep the prompt visible when the
+  viewport can contain both. After a document effect, focus and settle its title
+  at the reading start. Scrolling is smooth normally and immediate under
+  `prefers-reduced-motion`.
 - An unmodified, non-Space printable key pressed elsewhere in the document may
   return focus to the prompt and insert at its current selection. Never take over
   modified keys, Space, navigation/control keys, IME composition, an active text
@@ -69,6 +83,20 @@ not programmatically navigate for `cat`.
 - If command execution, rendering, or clone scoping throws after startup, hide
   the whole session, restore recovery, expose one explicit failure message, and
   focus one recovery target.
+
+## Terminal Document Reader
+
+The reader enhances semantic Terminal document HTML with local normal, visual,
+search, and command modes. It recognizes only `j/k/g/G`, `/?`, `n/N`, `v`,
+Escape, and `:q`; movement targets semantic reading units, visual mode owns a
+real boundary-checked Range, and `:q` assigns `/`. Search/command use labeled
+native inputs. Generated unit IDs avoid all existing IDs.
+
+The reader must ignore IME, modifiers, native controls, links, editables, media,
+standard ARIA widgets/containers, local-scroll regions, and user-owned
+selections. It must not clear a selection merely because it once created a Range.
+Motion is immediate under reduced-motion preference. No state persists or
+crosses routes.
 
 Do not add browser requests, a client router, runtime Markdown parsing, or an
 enhancement loader for data already available to Astro. A future non-empty X Core
@@ -108,7 +136,8 @@ the Astro component.
 - Do not attach route-local mutable state to `window`.
 - Do not assume queried elements exist or change script-owned selectors alone.
 - Do not execute commands through a shell, `eval`, dynamic import, or URL input.
-- Do not load the Terminal home controller on an article/page route.
+- Do not load the Terminal home controller on a document route or the reader on
+  home/directory/semantic/lab routes.
 - Do not implement shell-like global typing by cancelling every document
   keydown; accessibility controls and browser/assistive-technology shortcuts
   retain native ownership.
@@ -121,6 +150,7 @@ the Astro component.
 - `apps/site/src/pages/lab/index.astro`
 - `apps/site/src/components/TerminalHome.astro`
 - `apps/site/src/scripts/terminal-home.ts`
+- `apps/site/src/scripts/terminal-reader.ts`
 - `presentations/terminal/src/runtime.ts`
 - `presentations/terminal/tests/terminal.test.ts`
 - `apps/site/src/lib/render-document.ts`

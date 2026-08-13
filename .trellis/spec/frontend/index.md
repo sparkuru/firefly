@@ -10,9 +10,10 @@ packages, and two publication tooling packages:
 - `presentations/semantic/`: private semantic adapter consumed by the main site.
 - `presentations/terminal/`: private Terminal adapter plus a framework-neutral,
   side-effect-free browser runtime subpath.
-- `apps/site/`: Astro 7 main site. It loads repository-root Markdown, resolves
-  X Core context, dispatches whole-document presentations, and emits the static
-  Terminal home plus semantic/Terminal article and page HTML.
+- `apps/site/`: Astro 7 main site. It safely materializes a configurable nested
+  posts workspace, guest-projects canonical content, resolves X Core context,
+  dispatches whole-document presentations, and emits Terminal home/document,
+  semantic, and directory HTML.
 - `experiments/nerv/`: autonomous Astro 4 experiment mounted at `/lab/nerv/`.
 - `tooling/validate-experiments/`: strict repository-controlled manifest decoder,
   deterministic discovery, and safe public-catalog projection.
@@ -41,6 +42,7 @@ All files in this directory are written in English and cite implemented paths.
 | [Development Runtime](./development-runtime.md) | Container commands, service ownership, browser versions, and failure handling | Active |
 | [X Core Contract](./x-core-contract.md) | AST pipeline, presentation registry, diagnostics, JSON metadata, and adapter boundary | Active |
 | [Experiment Publication Contract](./publication-contract.md) | Manifest/catalog signatures, build trust, safe artifacts, coordinated promotion, lab/Terminal/Nginx behavior | Active |
+| [Content Workspace Contract](./content-workspace-contract.md) | Configured Markdown root, authored symlinks, guest projection, virtual paths, command registry, nested routes, and Vim reader | Active |
 
 ### Trellis Plus: Project Validation Profile
 
@@ -57,7 +59,8 @@ its own lockfile, then run its checks:
 | Main site | `./sam npm --prefix apps/site ci` | `run test:content`, `run test:x-core`, `run check`, `run build` |
 | NERV | `./sam npm --prefix experiments/nerv ci` | `run check`, `run build` |
 
-- For M4, build the validator and validate every manifest before the M3 graph,
+- For M5, materialize the configured content workspace before every site
+  collection command. Build the validator and validate every manifest before the M3 graph,
   assembler/site, declared Experiment builds, and assembly. A clean site install
   follows rebuilt local `file:` packages, including the validator.
 - A main-site content or route change must inspect emitted files, draft exclusion,
@@ -86,11 +89,12 @@ its own lockfile, then run its checks:
   the interactive mobile project also enables touch.
 - Main site:
   - config/tests: `apps/site/playwright.config.ts`, `apps/site/tests/site.spec.ts`,
-    and `apps/site/tests/terminal.spec.ts`;
+    `apps/site/tests/terminal.spec.ts`, and `apps/site/tests/reader.spec.ts`;
   - build first, then let Playwright own `astro preview` at
     `http://127.0.0.1:4321/`; do not use `astro dev` for route-style isolation;
   - focused static: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts`;
   - focused interactive: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/terminal.spec.ts`;
+  - focused reader: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/reader.spec.ts`;
   - full: `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e`;
   - static coverage: native home links/fallback, semantic and Terminal documents,
     post/page/fragment deep links, 404, sequential headings, exact outline links,
@@ -98,11 +102,14 @@ its own lockfile, then run its checks:
     and no document overflow;
   - interactive coverage: prompt-only startup, deterministic commands/errors,
     manifest-backed `ls lab` / `open lab/<id>`, history/draft restoration,
-    unique-only completion with exact optional `./` and normal/unsafe Tab escape,
-    IME-safe and mobile soft-keyboard Enter submission, inline `cat` with unchanged
-    URL, prompt/document viewport settlement, safe printable typing with native/
+    safe unique/ambiguous path completion with prefix preservation and normal/
+    unsafe/list Tab escape, prompt Ctrl+C cancellation, IME-safe and mobile
+    soft-keyboard Enter submission, inline `cat` with unchanged URL,
+    record-start/document viewport settlement, safe printable typing with native/
     ARIA widget and local-scroll exclusions, actual 400/500 font loading,
-    repeated-clone ID/reference scoping,
+    repeated-clone ID/reference scoping, nested tree/cat/vim paths, canonical
+    document/directory routes, breadcrumb navigation, and the read-only Vim
+    reader's movement/search/selection/exit/native-key boundaries,
     clear-to-fresh-prompt behavior, validated native links, latest-only
     announcements, reduced motion, responsive containment, and early/late
     failure recovery.

@@ -28,8 +28,8 @@ routes.
 - Main site whole-document composition is explicit. `DocumentLayout.astro` owns
   the semantic shell; `TerminalLayout.astro` owns the Terminal shell. Each owns
   `<html>`, metadata, skip link, and `<main id="main-content">` for its route.
-- Main-site post/page routes query entries in `getStaticPaths()`, call the shared
-  `renderDocument(entry)`, and pass entry/result to
+- Main-site post/page routes consume the shared canonical model in
+  `getStaticPaths()`, call `renderDocument(entry)`, and pass canonical/result to
   `DocumentPresentation.astro`. The dispatcher accepts only `semantic` or
   `terminal` metadata and composes the matching layout/document pair. Routes do
   not call Astro `render()` directly, parse metadata, or repeat presentation,
@@ -37,9 +37,11 @@ routes.
 - `SemanticDocument.astro` owns the article header/date, conditional outline,
   `.prose` container, and `<Content />`. Show `On this page` only for two or more
   body headings; its links use the exact validated X Core/Astro IDs.
-- `TerminalDocument.astro` owns the Terminal path prompt, article metadata,
-  conditional outline, `.terminal-prose`, and `<Content />`. It is a complete
-  native document and must not import the home command runtime.
+- `TerminalDocument.astro` owns the linked root/parent breadcrumb, underlined but
+  unlinked current `.md` filename, article metadata, conditional outline, `.terminal-prose`,
+  reader status/forms, and `<Content />`. It imports only the bounded
+  `terminal-reader.ts` controller, never the home command runtime. The document
+  remains complete when that module does not run.
 - `TerminalHome.astro` owns the server-rendered recovery navigation, one inert
   build-rendered document template per public entry, the hidden-until-ready shell
   session, continuous transcript/prompt, completion hint, and announcer.
@@ -54,6 +56,9 @@ routes.
   inside each home template. It receives output already produced by the same
   `renderDocument()` and registered adapter path as the canonical route; it does
   not import a layout, stylesheet, or browser runtime.
+- `ContentDirectoryIndex.astro` owns JavaScript-free immediate-child directory
+  and document navigation. `/posts/`, nested post directories, and `/pages/`
+  pass only canonical guest-projected directory props.
 - NERV: page entries choose the document layout and feature root;
   `NervPage.astro` composes named feature-local leaf components.
 - Component boundaries follow coherent document/feature regions. Do not split
@@ -114,14 +119,21 @@ routes.
 - Standard native controls and ARIA widgets retain their keyboard behavior even
   inside the enhanced Terminal session. Page-level shell typing must exclude
   them, editable/selected content, links, and local-scroll regions.
+- The Terminal reader region is one focusable named region with active-unit and
+  status feedback; its search/command forms are labeled native inputs. It does
+  not put every reading unit in the Tab order. Breadcrumb parents are native
+  links; the current filename is underlined but remains unlinked
+  `aria-current="page"` text.
 - Decorative visuals cannot be the sole carrier of page meaning.
 - Do not claim complete accessibility coverage: no automated scanner or
   assistive-technology run is configured.
 
 ## Cross-File Contracts
 
-- Main-site route URLs depend on validated `entry.data.slug`; changes to schema,
-  collection helpers, links, and `getStaticPaths()` land together.
+- Main-site route URLs depend on `CanonicalDocument`: staged relative path for
+  posts and validated slug for pages. Changes to materialization, schema,
+  canonical helpers, links, Terminal entries, and `getStaticPaths()` land
+  together.
 - X Core outline metadata, Astro `render(entry).headings`, semantic outline links,
   and emitted heading IDs must agree exactly. `renderDocument()` is the runtime
   drift guard.
@@ -129,7 +141,8 @@ routes.
   script; selector changes require script and browser-test review.
 - Layout/style ownership is a bidirectional artifact contract: semantic routes
   reference only semantic CSS; Terminal routes contain only Terminal styles;
-  the one home script is referenced only by `/`.
+  the Terminal home script is referenced only by `/`, and the reader script only
+  by canonical Terminal documents.
 
 ## Avoid
 
@@ -146,7 +159,10 @@ routes.
 - `apps/site/src/pages/index.astro`
 - `apps/site/src/pages/lab/index.astro`
 - `apps/site/src/lib/experiments.ts`
-- `apps/site/src/pages/posts/[slug].astro`
+- `apps/site/src/pages/posts/[...path].astro`
+- `apps/site/src/pages/posts/index.astro`
+- `apps/site/src/pages/pages/index.astro`
+- `apps/site/src/components/ContentDirectoryIndex.astro`
 - `apps/site/src/pages/pages/[slug].astro`
 - `apps/site/src/components/SemanticDocument.astro`
 - `apps/site/src/components/DocumentPresentation.astro`
@@ -155,6 +171,7 @@ routes.
 - `apps/site/src/components/TerminalStreamDocument.astro`
 - `apps/site/src/layouts/TerminalLayout.astro`
 - `apps/site/src/styles/terminal.css`
+- `apps/site/src/scripts/terminal-reader.ts`
 - `apps/site/src/lib/render-document.ts`
 - `apps/site/src/styles/global.css`
 - `presentations/semantic/src/index.ts`

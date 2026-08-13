@@ -56,7 +56,11 @@ WEB_HOST_PORT=4322 ./dev.sh down
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
 
-./sam npm run publication:m4
+./sam npm run check:m5
+./sam npm run test:m5
+./sam npm run build:m5
+./sam npm run publication:m5
+./package-runtime.sh
 ```
 
 Browser signatures are recorded in the single Playwright profile in `index.md`.
@@ -72,11 +76,14 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `SAM_BIND_HOST` | Service host binding, default `127.0.0.1`; do not broaden without an explicit LAN requirement. |
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
+| `F1REFLY_CONTENT_ROOT` | Optional absolute readable posts workspace; defaults to `<repo>/content/posts`. `sam` resolves and passes it into the container. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
-| Root development entry | `dev.sh start` validates all M4 dependency binaries, builds a fresh complete M4 publication, then serves the unchanged assembled root `dist/` at `/`, including `/lab/` and `/lab/nerv/`. It is a restart-to-refresh publication snapshot, not a hot-reload server. |
+| Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
+| Root development entry | `dev.sh start` validates M5 dependency binaries, materializes the configured workspace, builds a fresh complete M5 publication, then serves unchanged root `dist/` at `/`, including nested content, `/lab/`, and NERV. It is restart-to-refresh, not hot reload. |
 | Package-local development | `npm run dev:nerv` is the autonomous NERV hot-development entry at `/lab/nerv/`; it must not be presented as the root publication because its Astro base does not own `/` or `/lab/`. |
 | Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
-| M4 dependency order | Build validator and validate all manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiment builds, and fresh assembly. Clean-install local `file:` consumers after producers are rebuilt. |
+| M5 dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
+| Runtime packaging | `package-runtime.sh` runs the M5 build, requires exact manifest/release equality, creates a minimal context containing only Dockerfile/Nginx/release, then probes the non-root read-only image and tears down its exact labeled container. |
 | Main-site browser server | Run the site build/static scan first. Playwright owns `astro preview` of that same `dist/` at `/`; `start:e2e` must not rebuild or run `astro dev`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
 | Publication browser server | Build/assemble first; assembler Playwright owns a static server for unchanged root `dist/`. |
@@ -90,12 +97,13 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | Condition | Required behavior |
 | --- | --- |
 | no wrapped command | usage to stderr; exit `2` before Docker |
+| invalid/broad/unreadable content root or broken/cyclic/special link target | fail before Docker; do not broaden mounts |
 | missing host dependency | name dependency; exit `127` |
 | invalid/empty `SAM_IPC` | accepted values to stderr; exit `2` before Docker |
 | unsupported `SAM_SERVICE` | fail before publishing a port |
 | wrapped command fails | preserve output and exit code |
 | `dev.sh down` finds no labeled container | report none and succeed |
-| a required M4 package binary is missing | fail before building and name `./sam npm run install:m4` as the recovery command |
+| a required M5 package binary is missing | fail before building and name the locked install delegate as recovery |
 | root publication build fails | preserve the wrapped failure, do not start the web service, and allow exact `sam.scope=dev.sh` cleanup |
 | a developer expects source hot reload from `dev.sh` | restart `dev.sh` to rebuild the immutable snapshot, or use the explicit package-local development command when only that package is in scope |
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
@@ -104,6 +112,7 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | site `dist/` is missing or stale before Playwright | run the complete site build/static-output gate; do not make `start:e2e` mutate the artifact under test |
 | manifest validation fails | stop before every product build; do not run a direct NERV/Docker build shortcut |
 | publication candidate validation/promotion fails | preserve prior `artifacts/` and `dist/`, clean only current contained candidates, and report the exact phase |
+| runtime manifest, release, or image inventory differs | fail packaging; do not report/deploy the image |
 | presentation isolation differs under `astro dev` | treat dev output as non-evidence; inspect the static build through `astro preview` |
 | negative Astro build uses `/tmp` output on another filesystem | do not use it; Astro staging rename can fail with `EXDEV`; use ignored same-filesystem `apps/site/test-results/` directories and `finally` cleanup |
 
@@ -116,7 +125,8 @@ so Playwright owns and terminates that preview process.
 
 - Good: the site build/static scan passes, then focused Playwright uses the
   matching Noble image, host IPC, and an owned preview of the unchanged artifact.
-- Good: `WEB_HOST_PORT=4322 ./dev.sh` rebuilds the M4 release and the same
+- Good: `F1REFLY_CONTENT_ROOT=/absolute/notebook WEB_HOST_PORT=4322 ./dev.sh`
+  uses exact read-only content mounts, rebuilds the M5 release, and the same
   loopback origin returns `200` for `/`, `/lab/`, and `/lab/nerv/`; the matching
   `down` command stops only the exact repository/scope containers.
 - Base: site or NERV check/build uses plain `./sam`, private IPC, no published
@@ -126,7 +136,9 @@ so Playwright owns and terminates that preview process.
   server, or broad command approval.
 - Bad: root `dev.sh` launches only NERV's package-local Astro server. The
   `/lab/nerv` base may work, but `/` and `/lab/` are outside that application and
-  cannot satisfy the M4 publication contract.
+  cannot satisfy the root publication contract.
+- Bad: mounting `$HOME`, `/`, or a broad ancestor so an authored link happens to
+  resolve, or building a runtime image from a stale/unmanifested site `dist/`.
 
 ### 6. Tests Required
 
@@ -138,12 +150,12 @@ isolation. For browser-visible behavior, run the exact focused command before th
 full suite and record projects, JavaScript mode, routes/states, fixtures, results,
 and failure artifacts.
 
-When `sam` or `dev.sh` changes:
+When `sam`, `dev.sh`, or runtime packaging changes:
 
 ```bash
-bash -n sam dev.sh
-shellcheck sam dev.sh
-shfmt -d sam dev.sh
+bash -n sam dev.sh package-runtime.sh
+shellcheck sam dev.sh package-runtime.sh
+shfmt -d sam dev.sh package-runtime.sh
 ./sam node --version
 WEB_HOST_PORT=4322 ./dev.sh
 # From another shell: assert 200 and expected titles/links at /, /lab/, /lab/nerv/.
@@ -155,6 +167,10 @@ Verify invalid IPC cases, executable modes, ignored `.devhome/`, and no stale
 `hako` / `HAKO_*` reference. For the root development entry, also verify the
 exact `sam.repo`, `sam.scope=dev.sh`, and `sam.service=web` labels, loopback-only
 port mapping, closed port after teardown, and zero matching containers.
+For workspace changes, also prove chained file/directory mounts are read-only,
+broad/broken/FIFO inputs fail, the generated stage has zero symlinks, and host
+paths/private sentinels do not enter output. For packaging, compare the manifest,
+release, and image inventories exactly before route/header probes.
 
 ### 7. Wrong vs Correct
 
@@ -179,6 +195,7 @@ webServer: {
 ```bash
 ./sam npm --prefix apps/site run check
 WEB_HOST_PORT=4322 ./dev.sh
+./package-runtime.sh
 
 SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
   ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts

@@ -121,6 +121,41 @@ After implementation:
 - [ ] Checked that derived state points back to the source event identifier
       (`seq`, `id`, `version`) instead of inventing a second cursor
 
+## Browser Ownership and Visual Token Boundaries
+
+Typed state, DOM text, browser default behavior, and rendered geometry are four
+different layers. A correct union or `textContent` assertion does not prove focus
+ownership or visible spacing.
+
+When a keyboard interaction conditionally overrides native behavior:
+
+- [ ] Partition every semantic result, including success, ambiguity, safe empty,
+      unsafe input, modifiers, and composition; do not collapse safe empty and
+      unsafe/native cases into one `none` state.
+- [ ] Make ownership explicit in the result contract and handle it exhaustively
+      in the DOM controller.
+- [ ] Assert focus and `defaultPrevented` behavior in a real browser, not only the
+      pure completion value.
+- [ ] Cover desktop and mobile because native Tab destinations and soft-keyboard
+      behavior differ.
+
+When exact separators or whitespace are part of an approved UI:
+
+- [ ] Do not rely on leading/trailing text whitespace inside flex/grid children;
+      whitespace may collapse even when normalized text looks correct.
+- [ ] Represent separators and non-collapsible gaps explicitly in markup/CSS.
+- [ ] Assert semantic text/order and native link/current-item roles separately
+      from rendered geometry.
+- [ ] Measure the gap elements themselves so valid responsive wrapping does not
+      create false failures.
+
+**Real-world example**: Terminal path completion initially retained focus for
+unique and ambiguous results but let a syntactically safe zero-match result fall
+through to native Tab. Separately, breadcrumb `textContent` contained spaces but
+inline-flex layout visually rendered `posts/characters`. Distinct `no-match`
+ownership plus explicit `1ch` gap elements and browser geometry assertions fixed
+the complete cross-layer contract.
+
 ---
 
 ## Cross-Platform Template Consistency

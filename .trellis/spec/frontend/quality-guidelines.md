@@ -42,7 +42,10 @@ are not validation contracts.
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
 
-./sam npm run publication:m4
+./sam npm run check:m5
+./sam npm run test:m5
+./sam npm run build:m5
+./package-runtime.sh
 ```
 
 A successful build is necessary but not sufficient. For main-site work, inspect
@@ -58,14 +61,19 @@ package suite from the single profile in `index.md`.
 - Build the main site before Playwright; its server previews the already checked
   `dist/`. Do not use `astro dev` to prove semantic/Terminal style isolation.
 - Static projects disable JavaScript and cover native home fallback, semantic and
-  Terminal documents, `/lab/`, post/page/fragment deep links, static 404 recovery, heading
+  Terminal documents, canonical post/page directory indexes and breadcrumbs,
+  `/lab/`, nested/fragment deep links, static 404 recovery, heading
   order and outline targets, focusable code/table regions, visible focus, draft
   absence, and no document overflow at both viewports.
-- Interactive projects enable JavaScript only for Terminal home coverage:
+- Interactive projects enable JavaScript for Terminal home and Terminal-document
+  reader coverage:
   prompt-only startup, commands/errors, manifest-backed lab listing/navigation, history/draft
-  restoration, exact optional-`./` completion and normal/unsafe Tab escape,
+  restoration, safe unique/ambiguous/zero-result path completion with retained focus and
+  normal/unsafe/list Tab escape, prompt `Ctrl+C` cancellation,
   IME-safe and mobile soft-keyboard Enter, inline `cat` with unchanged URL,
-  prompt/document viewport settlement, safe printable typing with native/ARIA
+  record-start/document viewport settlement, executable list operands, nested
+  tree/cat/vim, Vim movement/search/
+  visual Range/`:q`, safe printable typing with native/ARIA
   widget and local-scroll exclusions, repeated-clone
   ID/reference scoping, clear-to-fresh-prompt behavior, validated native links,
   latest-only announcements, early/late recovery, reduced motion, and responsive
@@ -84,15 +92,16 @@ package suite from the single profile in `index.md`.
 
 ## Content and Static-Output Review
 
-- Collection config uses explicit external loaders and the shared strict schema.
-- Routes consume the single public projection; draft/layout/slug checks are not
+- Posts consume only the fresh ordinary-file materialized stage; pages use their
+  repository loader. Both use the shared strict schema.
+- Routes consume the guest canonical projection; draft/access/layout/path checks are not
   scattered across pages.
-- Until an approved content/route milestone changes it, site output inventory is
-  exactly six HTML routes, one semantic CSS asset, and one external
-  Terminal-home JS asset, with zero maps or unknown files. Only
-  home references the script; the Terminal article has no script/form; only
-  semantic/About/lab/404 routes link semantic CSS; only Terminal home/article contain
-  Terminal styles.
+- The default M5 site inventory is exactly ten HTML routes, one semantic CSS,
+  one Terminal-home JS, and one Terminal-document reader JS, with zero maps or
+  unknown files. Only home references the command script; only canonical
+  Terminal documents reference the reader; directory indexes remain script-free.
+  Semantic/About/lab/404/directory routes link semantic CSS; Terminal home/
+  documents contain Terminal styles.
 - The exact home script predicate returns `false` only for Astro's generated
   `TerminalHome...js` filename after POSIX/Windows separator normalization and
   returns Vite's `undefined` default for every other or non-string input.
@@ -100,6 +109,10 @@ package suite from the single profile in `index.md`.
   rendered through production `renderDocument()`. Template keys exactly match
   decoded entries; document bodies occur only inside those templates and never
   in JavaScript, JSON, or entry `data-*` metadata.
+- Output contains only the frozen guest projection. Private/draft titles, bodies,
+  owners, paths, completion entries, templates, routes, and private-only
+  directories are absent, as are `F1REFLY_CONTENT_ROOT` and resolved host paths.
+  Generated, assembled, and runtime trees contain zero symlinks.
 - `/lab/` and Terminal recovery consume one frozen listed catalog projection.
   Site entry links use validated default entries; Terminal links use canonical
   mounts. Neither surface imports, requests, or preloads Experiment assets.
@@ -155,15 +168,22 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
 - X Core changes include adversarial adapter/context/JSON/metadata tests and a
   site integration using the shared schema plus the actual Astro processor.
 - Terminal changes include strict descriptor-only index decoding, pure runtime
-  graph checks, closed command/effect tests, exact entry/template bijection,
+  graph checks, immutable registry/alias validation, closed command/effect tests,
+  shared tree/path resolution, exact entry/template bijection,
   trusted cloning without HTML-string APIs, repeated-clone ID/fragment/ARIA
   scoping, clear preservation of history/recovery data, prompt-only startup,
-  exact optional-`./` behavior, safe global typing exclusions, prompt/document
-  settlement with reduced motion, semantic root-theme purity, pinned font/license
-  integrity, fatal recovery restoration, and proof that semantic/Terminal
+  path Tab ownership and prefix preservation, prompt Ctrl+C cancellation, safe
+  global typing exclusions, record/document settlement with reduced motion,
+  semantic root-theme purity, pinned font/license
+  integrity, reader key/Range/native-ownership boundaries, fatal recovery
+  restoration, and proof that semantic/Terminal
   packages and route assets remain bidirectionally isolated.
 - Main-site routes remain thin and static; NERV selectors/base-path behavior is
   preserved when relevant.
+- Workspace changes include exact read-only chained mounts, broad/special/broken
+  rejection, deterministic/race-safe materialization and rollback, Unicode/case/
+  route collisions, guest-only projection, external-workspace build, and default
+  output restoration. See `content-workspace-contract.md`.
 - Astro check/build and applicable Node/browser tests pass through `./sam`.
 - Browser evidence records package, command, routes/states, viewports, JavaScript
   mode, fixtures, results, and artifacts on failure.
@@ -204,3 +224,4 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
 - `tooling/assemble-publication/tests/publication.spec.ts`
 - `.trellis/spec/frontend/publication-contract.md`
 - `.trellis/spec/frontend/development-runtime.md`
+- `.trellis/spec/frontend/content-workspace-contract.md`

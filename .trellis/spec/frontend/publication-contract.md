@@ -6,7 +6,9 @@
 
 Use this contract whenever an Experiment manifest, public Experiment catalog,
 Experiment build, staged artifact, root release, `/lab/` surface, or publication
-container changes. The boundary is repository-controlled static publication:
+container changes. Workspace ingestion and guest route generation are defined in
+`content-workspace-contract.md`; publication accepts only their ordinary static
+output. The boundary is repository-controlled static publication:
 remote manifests, browser-supplied commands, runtime plugins, and live deployment
 switches are not supported.
 
@@ -88,6 +90,9 @@ assemble-publication [--root <repository-root>] [--build-experiments]
 ./sam npm run build:experiments
 ./sam npm run assemble:publication
 ./sam npm run publication:m4
+./sam npm run build:m5
+./sam npm run publication:m5
+./package-runtime.sh
 ```
 
 `publication:m4` clean-installs every owned lockfile and invokes `build:m4`.
@@ -155,6 +160,10 @@ commands, and only then assembles the release.
 
 #### Site, Terminal, and runtime
 
+- Site build first materializes the configured Markdown workspace and publishes
+  only the guest canonical projection. Root assembly accepts no source workspace,
+  host path, private sentinel, or symlink; nested directory/document HTML and the
+  route-owned reader asset are ordinary validated site artifacts.
 - `apps/site/src/lib/experiments.ts` loads the public catalog at build time from
   the validator. `/lab/` uses `entryHref`; Terminal uses the canonical `href`.
 - The site `/lab/` index and Terminal recovery are useful without JavaScript and
@@ -166,9 +175,14 @@ commands, and only then assembles the release.
   from raw command input.
 - NERV remains autonomous at `/lab/nerv/`. Reduced motion disables scanline,
   flicker, and scroll-driven stripe movement while preserving static content.
+- `package-runtime.sh` requires exact equality between
+  `artifacts/publication.json`, root `dist/`, and image runtime inventory before
+  route probes. Its temporary Docker context contains only Dockerfile, Nginx
+  config, and the validated release; no repository/workspace source enters it.
 - The runtime container copies only root `dist/` into non-root Nginx. It serves
   the site at `/`, the catalog at `/lab/`, NERV at `/lab/nerv/`, distinct site
-  and NERV 404s, `/healthz`, security headers, and immutable hashed NERV assets.
+  and NERV 404s, `/healthz`, security headers, and immutable hashed site/NERV
+  assets plus the two pinned versioned fonts. HTML is not immutable.
 
 ### 4. Validation & Error Matrix
 
@@ -186,6 +200,7 @@ commands, and only then assembles the release.
 | JavaScript disabled or Terminal startup fails | native document and lab recovery links remain available |
 | reduced motion requested in NERV | continuous CSS and scroll-driven decorative motion freeze |
 | missing main-site vs NERV route | owning static 404 is served; ownership does not leak |
+| manifest/release/image inventory mismatch or private/source sentinel | runtime packaging fails before success claim |
 
 ### 5. Good / Base / Bad Cases
 
@@ -206,20 +221,23 @@ commands, and only then assembles the release.
   deterministic listed/unlisted discovery; root/directory realpath escapes.
 - Assembler Node tests: unsafe node/source/map/name/content/reference rejection;
   output/license symlinked-parent escapes; file/directory case collisions;
-  deterministic 18-file clean assembly, including the two pinned Terminal fonts,
+  deterministic 23-file M5 clean assembly, including nested routes, two
+  route-owned site scripts, semantic/NERV styles, the two pinned Terminal fonts,
   complete OFL, and provenance record; stale-file exclusion; coordinated prior-
   target preservation and rollback.
 - Terminal unit tests: exact Experiment decoder, lab commands/usage/errors,
   completion, frozen effects, and canonical href-only navigation.
-- Site static/Playwright: exactly six site HTML routes; JavaScript-free `/lab/`;
-  no Experiment asset edge on ordinary pages; lab recovery; `ls lab` and
-  `open lab/nerv`; all existing M3 recovery/content behavior.
+- Site static/Playwright: exactly ten default site HTML routes; JavaScript-free
+  directory indexes and `/lab/`; reader JS only on Terminal documents; no
+  Experiment asset edge on ordinary pages; lab recovery; nested tree/cat/vim;
+  all existing recovery/content behavior.
 - NERV and publication Playwright: mounted assets, entry, distinct 404, native
   return, desktop/mobile overflow, and reduced motion. Serve the already built
   artifact; do not substitute `astro dev` for publication evidence.
-- Container: build the production-shaped image, probe health/site/lab/NERV,
-  redirects, distinct 404s, cache/security headers, non-root UID, exact release-
-  only inventory, then tear down the exact service.
+- Container: build the runtime-only image from the minimal release context,
+  compare exact 23-file manifest/release/image inventories, probe health/site/
+  nested content/lab/NERV, redirects, distinct 404s, reader/font cache and
+  security headers, non-root/read-only confinement, then tear down exact labels.
 
 ### 7. Wrong vs Correct
 
@@ -263,3 +281,5 @@ apps/site/dist + experiments/nerv/dist -> dist
 - `experiments/nerv/src/pages/index.astro`
 - `Dockerfile`
 - `nginx.conf`
+- `package-runtime.sh`
+- `.trellis/spec/frontend/content-workspace-contract.md`

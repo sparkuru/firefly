@@ -39,9 +39,10 @@ interface PresentationAdapter {
 ### 3. Contracts
 
 - Adapter IDs are normalized lowercase kebab-case; omission selects `semantic`.
-- `DocumentContext` contains document ID, optional repository-relative source,
-  route, collection, slug, layout, and selected presentation. The app resolves
-  it from validated Astro front matter.
+- `DocumentContext` contains document ID, optional safe virtual source, canonical
+  route, collection, filename-stem slug, layout, and selected presentation. The
+  app resolves it from the guest-projected `CanonicalDocument`; no host workspace
+  path enters context or diagnostics.
 - Remark rejects authored raw HTML, derives the first substantive prose summary,
   and classifies link/resource references as fragment/internal/relative/external.
 - Rehype assigns GitHub-compatible heading IDs, an ordered outline, deterministic
@@ -111,11 +112,13 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
 - `apps/site run test:x-core`: import the shared schema and run unchanged Markdown
   plus validated front matter through the actual Astro processors/one registry;
   compare semantic and fixture adapters and repeated determinism.
-- `apps/site run test:content`: schema plus isolated real negative builds for
-  duplicate slug, unsupported layout, unregistered adapter, and raw HTML.
-- `apps/site run build`: validate six HTML, one semantic CSS, one home-only JS,
-  zero maps/unknown files, JavaScript-free document routes, and bidirectional
-  presentation-package/style closure. Home template bodies must be
+- `apps/site run test:content`: schema/materializer/access plus isolated real
+  negative builds for route/path collision, unsupported layout, unregistered
+  adapter, private leakage, and raw HTML.
+- `apps/site run build`: validate ten default site HTML, one semantic CSS, one
+  home command JS, one Terminal-document reader JS, zero maps/unknown files,
+  JavaScript-free semantic/directory routes, and bidirectional presentation-
+  package/style closure. Home template bodies must be
   `renderDocument()` output while remaining absent from JavaScript/index data.
 - Focused then full Playwright: static semantic/Terminal heading/outline and
   focusable local overflow at `1440x900` and `375x812`; interactive projects test

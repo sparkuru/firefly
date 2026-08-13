@@ -12,8 +12,8 @@ material only.
 
 ```text
 content/
-├── posts/*.md                    # Post source loaded by apps/site
-└── pages/*.md                    # Page source loaded by apps/site
+├── posts/**/*.md                 # Default nested posts workspace
+└── pages/*.md                    # Repository-local pages collection
 packages/x-core/
 ├── package.json + package-lock.json
 ├── src/                          # Contracts, pipeline, registry, metadata
@@ -35,19 +35,25 @@ apps/site/
 ├── public/
 │   ├── fonts/                    # Pinned same-origin Terminal WOFF2 assets
 │   └── licenses/                 # Published font license + provenance/hashes
+├── scripts/
+│   └── materialize-content.mjs   # Safe workspace/link scanner and transaction
+├── .generated-content/posts/     # Ignored ordinary-file stage consumed by Astro
 ├── src/
-│   ├── content.config.ts         # Explicit external glob loaders
+│   ├── content.config.ts         # Generated posts + repository pages loaders
 │   ├── components/               # Dispatcher, semantic/Terminal documents/home
 │   ├── lib/
 │   │   ├── assets-inline-limit.mjs # Exact Terminal-home JS externalization
 │   │   ├── content-schema.mjs    # Runtime metadata contract
-│   │   ├── content.ts            # Public filtering and invariants
+│   │   ├── content-access.mjs    # Pure guest/user/admin projection
+│   │   ├── content.ts            # Canonical paths/tree/routes/breadcrumbs
 │   │   ├── experiments.ts        # Build-only validated public catalog
 │   │   ├── render-document.ts    # Astro/X Core metadata bridge
 │   │   └── x-core-context.ts     # App-owned DocumentContext resolver
 │   ├── layouts/                  # Semantic and Terminal whole-page shells
-│   ├── pages/                    # Thin static route entries
-│   ├── scripts/terminal-home.ts  # Home-only progressive enhancement
+│   ├── pages/                    # Thin nested document/directory route entries
+│   ├── scripts/
+│   │   ├── terminal-home.ts      # Home command progressive enhancement
+│   │   └── terminal-reader.ts    # Terminal-document-only Vim reader
 │   └── styles/                   # Semantic compiled CSS + Terminal raw CSS
 └── tests/                        # Schema, negatives, integration, output, E2E
 experiments/nerv/
@@ -68,6 +74,7 @@ tooling/assemble-publication/
 └── tests/{assembler.test,publication.spec}.ts
 artifacts/                          # Ignored staged evidence after success
 dist/                               # Ignored complete assembled release
+package-runtime.sh                  # Runtime-only image/inventory/probe delegate
 ```
 
 Generated `dist/`, `.astro/`, `playwright-report/`, and `test-results/` paths are
@@ -75,12 +82,15 @@ ignored. Never put authored source in them.
 
 ## Main-Site Boundaries
 
-- Keep Markdown under repository-root `content/posts/` or `content/pages/`.
+- Keep page Markdown under repository-root `content/pages/`. Posts come from the
+  absolute `F1REFLY_CONTENT_ROOT` workspace, defaulting to `content/posts/`.
   Bodies do not import Astro components, use hydration directives, or depend on
-  presentation CSS classes.
-- Register collections in `apps/site/src/content.config.ts` with explicit
-  `glob({ base, pattern })` loaders. Validation belongs in the shared schema;
-  public filtering/uniqueness/layout guards belong in `src/lib/content.ts`.
+  presentation CSS classes. See `content-workspace-contract.md` for link/mount
+  and virtual-path safety.
+- The scanner dereferences validated authored links into ignored
+  `.generated-content/posts/`; Astro loads only that ordinary-file stage. Schema
+  validation, access projection, and canonical route/tree invariants stay in
+  their shared helpers rather than routes.
 - Keep route files thin. The home derives a validated, canonical Terminal index
   from public content and calls `renderDocument()` once per public entry to emit
   one inert keyed `TerminalStreamDocument` template. Dynamic post/page files
@@ -89,9 +99,10 @@ ignored. Never put authored source in them.
 - `DocumentPresentation.astro` dispatches the validated X Core presentation to
   `DocumentLayout` + `SemanticDocument` or `TerminalLayout` +
   `TerminalDocument`. Routes do not select layouts independently.
-- The home alone renders `TerminalHome.astro` and imports
-  `src/scripts/terminal-home.ts`. Only that controller validates and clones the
-  inert templates; canonical Terminal documents remain JavaScript-free.
+- The home renders `TerminalHome.astro` and imports `terminal-home.ts`; only that
+  controller validates and clones inert templates. Terminal document routes
+  alone import `terminal-reader.ts` as progressive enhancement. Their semantic
+  content and breadcrumb remain complete without JavaScript.
 - Keep main-site tests and Playwright configuration inside `apps/site/`.
 - Keep vendored public fonts under `apps/site/public/fonts/` and their complete
   license/provenance evidence under `apps/site/public/licenses/`. Provenance
@@ -102,9 +113,10 @@ ignored. Never put authored source in them.
   time. `/lab/` uses default-entry `entryHref`; Terminal uses canonical mount
   `href`. Neither route imports or preloads Experiment source/assets.
 
-The current site output is exactly six HTML files: home, two public posts, About,
-`/lab/`, and `404.html`. The route kinds remain `/`, `/posts/<slug>/`,
-`/pages/<slug>/`, `/lab/`, and the static 404. Do not create placeholder
+The default M5 site output is exactly ten HTML files: home, three public posts,
+`/posts/`, `/posts/characters/`, About, `/pages/`, `/lab/`, and `404.html`.
+Post documents and directory indexes preserve nested virtual paths; pages remain
+`/pages/<slug>/` in this milestone. Do not create placeholder
 `timeline`, `files`, or `tags` routes before their milestone supplies real
 semantics.
 
@@ -161,17 +173,21 @@ semantics.
 
 - Astro components/layouts use PascalCase filenames.
 - Feature and content directories use lowercase semantic names.
-- Route filenames follow Astro URL semantics: `index.astro`, `404.astro`, and
-  `[slug].astro`.
+- Route filenames follow Astro URL semantics: `index.astro`, `404.astro`,
+  `[slug].astro`, and the posts catch-all `[...path].astro` that consumes only
+  prevalidated canonical route props.
 - Browser tests use lowercase `*.spec.ts`; Node schema tests use `*.test.mjs`.
-- Stable public routes come from validated front-matter `slug`, not titles.
+- Post routes come from validated workspace-relative Markdown paths; optional
+  legacy post `slug` only asserts the filename stem. Page routes retain their
+  validated front-matter slug. Titles never determine routes.
 
 ## Avoid
 
 - Do not bypass the M4 validator/assembler with ad hoc manifest casts, direct
   Experiment imports, NERV-specific copy commands, or writes into root `dist/`.
 - Do not move package-local components into a generic repository component pool.
-- Do not rely on content filenames or titles as the public slug contract.
+- Do not bypass the canonical document model by separately decoding collection
+  IDs, raw catch-all parameters, command operands, aliases, or host paths.
 - Do not copy reference-only Typecho PHP/JavaScript into either runtime package.
 
 ## Reference Files
@@ -188,7 +204,13 @@ semantics.
 - `presentations/semantic/src/index.ts`
 - `presentations/terminal/src/index.ts`
 - `presentations/terminal/src/runtime.ts`
-- `apps/site/src/pages/posts/[slug].astro`
+- `apps/site/scripts/materialize-content.mjs`
+- `apps/site/src/lib/content-access.mjs`
+- `apps/site/src/pages/posts/[...path].astro`
+- `apps/site/src/pages/posts/index.astro`
+- `apps/site/src/pages/pages/index.astro`
+- `apps/site/src/components/ContentDirectoryIndex.astro`
+- `apps/site/src/scripts/terminal-reader.ts`
 - `apps/site/src/layouts/DocumentLayout.astro`
 - `experiments/nerv/experiment.json`
 - `tooling/validate-experiments/src/index.ts`

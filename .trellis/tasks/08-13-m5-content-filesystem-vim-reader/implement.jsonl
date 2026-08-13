@@ -1,0 +1,12 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Validation profile and affected package/browser boundaries."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Strict metadata, canonical document, Terminal decoder, and command effect contracts."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Guest projection and route-local Terminal/reader state ownership."}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "Progressive enhancement, keyboard ownership, completion, and no-fetch boundaries."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Astro route/layout, breadcrumb, directory, reader, styling, and accessibility ownership."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Content workspace, generated stage, route, package, and artifact boundaries."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Negative content, browser, accessibility, inventory, and publication gates."}
+{"file": ".trellis/spec/frontend/development-runtime.md", "reason": "sam mounts, dev lifecycle, Playwright, container, and teardown contracts."}
+{"file": ".trellis/spec/frontend/x-core-contract.md", "reason": "Canonical path/context changes must preserve X Core metadata and adapter invariants."}
+{"file": ".trellis/spec/frontend/publication-contract.md", "reason": "Safe tree/reference, assembly, Nginx, exact inventory, and no-symlink output rules."}
+{"file": ".trellis/tasks/08-13-m5-content-filesystem-vim-reader/research/technical-feasibility.md", "reason": "Approved technical feasibility, architecture constraints, risks, and validation implications."}
+{"file": ".trellis/tasks/08-13-m5-content-filesystem-vim-reader/research/ui-ux-pro-max.md", "reason": "Approved UI/UX decisions for breadcrumbs and bounded Vim reader."}

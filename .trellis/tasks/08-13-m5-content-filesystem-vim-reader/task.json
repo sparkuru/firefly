@@ -1,0 +1,31 @@
+{
+  "id": "m5-content-filesystem-vim-reader",
+  "name": "m5-content-filesystem-vim-reader",
+  "title": "M5 content filesystem and Vim reader",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": "content-workspace,terminal-runtime,site-routes,reader-ui,container-runtime",
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-08-13",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "dependency": ".trellis/tasks/08-13-m4-experiment-pipeline must be committed and archived first",
+    "milestone": "M5 prelude",
+    "planning_approved": "2026-08-13 owner approved final PRD/design/implementation plan including vim command and workspace-relative paths",
+    "implementation_checked": "2026-08-13 independent full-scope review plus owner-reported Terminal and breadcrumb follow-ups fixed all confirmed findings; submit-ready owner review pending"
+  }
+}

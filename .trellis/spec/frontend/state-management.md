@@ -7,17 +7,19 @@ server-state layer, event bus, or state-management dependency.
 
 | Category | Implemented example | Owner |
 | --- | --- | --- |
-| Authored state | Markdown body/front matter under `content/` | Source file, validated at build time |
-| Public derived state | Filtered/sorted posts/pages in `apps/site/src/lib/content.ts` | Main-site build helper |
+| Authored state | Posts workspace plus repository page Markdown | Source file, validated at build time |
+| Generated input | Dereferenced ordinary Markdown under `.generated-content/posts` | Transactional materializer |
+| Public derived state | Guest-projected canonical documents/tree/routes | Main-site build helpers |
 | Experiment discovery | Frozen manifests and listed public catalog from `experiments/*/experiment.json` | Validator at build time |
 | Per-document transform state | Summary, references, outline, node IDs, selected adapter | X Core VFile pipeline |
 | Render metadata | Versioned JSON-compatible `xCore` payload | Astro `remarkPluginFrontmatter` |
 | Render input | Layout titles/descriptions and component variants | Receiving Astro component |
-| Terminal public index | Canonical safe fields derived from `getPublicContent()` | Home build, then strict runtime decoder |
+| Terminal public index | Canonical virtual-path fields derived from guest content | Home build, then strict runtime decoder |
 | Terminal Experiment index | Canonical `{ id, title, href }` from the listed public catalog | Home build, then strict runtime decoder |
 | Terminal document templates | One inert `renderDocument()` fragment per public entry, keyed by filename | Home build; exact bijection validated before startup |
 | Terminal command state | Last 50 submissions, cursor, restored draft | Home controller using pure runtime transitions |
 | Terminal output | Closed text/document/experiment/navigation/clear effects | DOM controller renderer |
+| Reader state | Local mode, active unit, owned Range, query/matches | Terminal document controller |
 | Ephemeral interaction | NERV `clickCount` | NERV route script |
 | Browser-derived value | NERV `window.scrollY` to stripe CSS property | Scroll listener |
 | URL/persistence | NERV `from` parameter and `has_visited` cookie | Redirect boundary |
@@ -25,10 +27,11 @@ server-state layer, event bus, or state-management dependency.
 ## Build-Time Content State
 
 The main site's collection store is a build input, not a browser store.
-`getPublicContent()` is the single public projection: it removes drafts, rejects
-unsupported public page layouts, asserts globally unique public slugs, and sorts
-entries deterministically. Home and dynamic routes consume that projection rather
-than reimplementing filters.
+`getCanonicalContent()` is the single production projection: it consumes the
+fresh materialized posts stage, applies frozen guest access after drafts, rejects
+unsupported page layouts and route/path/alias collisions, and builds deterministic
+documents and directories. Home and routes consume it rather than reimplementing
+filters.
 
 Do not cache or mirror this content in browser JavaScript. Changes to source
 Markdown become a new immutable static build.
@@ -47,13 +50,14 @@ enhancements. Parallel builds must remain isolated and deterministic.
 
 The Terminal index is a build-derived view of the same public projection used by
 routes. It is not a second content store. The serialized browser boundary contains
-only `kind`, canonical slug/filename/href, title, and `YYYY-MM-DD` date; it excludes
-body, description, draft, source path, and presentation metadata.
+only `kind`, canonical virtual/relative path, filename/href, title, and
+`YYYY-MM-DD` date; it excludes body, description, draft, source path, access, and
+presentation metadata.
 
 `decodeTerminalEntries()` accepts only a plain dense array of exact plain data
 objects. It inspects property descriptors without invoking accessors or decorated
-array methods, clones and freezes entries, and rejects unknown fields, duplicate
-slugs/filenames, unsafe text, noncanonical routes, and invalid calendar dates.
+array methods, clones and freezes entries, and rejects unknown fields, folded
+path/href collisions, unsafe path/text, noncanonical routes, and invalid dates.
 
 Experiment discovery is a second build-time source, not a client registry.
 `apps/site/src/lib/experiments.ts` loads the validator's frozen `listed` catalog.
@@ -74,7 +78,12 @@ template, assigns a monotonically increasing clone scope, rewrites IDs and only
 the references whose target belongs to that clone, then appends the DOM. `clear`
 removes visible output/completion state but preserves history, recovery links,
 and inert templates. Route changes occur only through validated native links or
-a closed navigation effect containing one decoded listed Experiment.
+a closed navigation/document-navigation effect containing one decoded record.
+
+The reader owns route-local ephemeral state only. Its selection is owned only
+while the live Range boundaries match its stored clone exactly; user replacement
+turns it into native state. Search highlights, modes, and active-unit IDs are not
+serialized or persisted.
 
 ## Global and Server State
 
@@ -115,14 +124,17 @@ Change the route script and browser acceptance coverage together.
 ## Reference Files
 
 - `apps/site/src/lib/content.ts`
+- `apps/site/src/lib/content-access.mjs`
+- `apps/site/scripts/materialize-content.mjs`
 - `apps/site/src/lib/experiments.ts`
 - `tooling/validate-experiments/src/index.ts`
 - `apps/site/src/pages/index.astro`
-- `apps/site/src/pages/posts/[slug].astro`
+- `apps/site/src/pages/posts/[...path].astro`
 - `apps/site/src/lib/render-document.ts`
 - `packages/x-core/src/pipeline.ts`
 - `presentations/terminal/src/runtime.ts`
 - `apps/site/src/components/TerminalHome.astro`
 - `apps/site/src/scripts/terminal-home.ts`
+- `apps/site/src/scripts/terminal-reader.ts`
 - `experiments/nerv/src/pages/index.astro`
 - `prototypes/typecho-terminal/prototype.json`
