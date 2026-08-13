@@ -5,8 +5,9 @@
 ### 1. Scope / Trigger
 
 Use this contract for dependency installation, Astro/Node commands, development
-servers, browser validation, or changes to `sam` / `dev.sh`. It applies to X Core,
-semantic, Terminal, the main site, and NERV.
+servers, browser validation, publication tooling, or changes to `sam` / `dev.sh`.
+It applies to the validator, X Core, semantic, Terminal, assembler, main site,
+and NERV.
 
 `./sam` is the single development-command boundary. Host Node, global Playwright,
 direct host npm, and raw Docker are not project validation paths.
@@ -17,11 +18,24 @@ direct host npm, and raw Docker are not project validation paths.
 ./sam <command> [arguments...]
 ./dev.sh [start|up|down|stop]
 
+WEB_HOST_PORT=4322 ./dev.sh
+WEB_HOST_PORT=4322 ./dev.sh down
+
 ./sam npm --prefix apps/site ci
 ./sam npm --prefix apps/site run test:content
 ./sam npm --prefix apps/site run test:x-core
 ./sam npm --prefix apps/site run check
 ./sam npm --prefix apps/site run build
+
+./sam npm --prefix tooling/validate-experiments ci
+./sam npm --prefix tooling/validate-experiments run check
+./sam npm --prefix tooling/validate-experiments run test
+./sam npm --prefix tooling/validate-experiments run validate -- --root ../..
+
+./sam npm --prefix tooling/assemble-publication ci
+./sam npm --prefix tooling/assemble-publication run check
+./sam npm --prefix tooling/assemble-publication run test
+./sam npm --prefix tooling/assemble-publication run build
 
 ./sam npm --prefix packages/x-core ci
 ./sam npm --prefix packages/x-core run check
@@ -41,6 +55,8 @@ direct host npm, and raw Docker are not project validation paths.
 ./sam npm --prefix experiments/nerv ci
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
+
+./sam npm run publication:m4
 ```
 
 Browser signatures are recorded in the single Playwright profile in `index.md`.
@@ -57,10 +73,13 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
-| Package boundary | X Core, semantic, Terminal, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
-| M3 dependency order | Build X Core, semantic, and Terminal, then clean-install/build the site so local `file:` dependency copies are current. |
+| Root development entry | `dev.sh start` validates all M4 dependency binaries, builds a fresh complete M4 publication, then serves the unchanged assembled root `dist/` at `/`, including `/lab/` and `/lab/nerv/`. It is a restart-to-refresh publication snapshot, not a hot-reload server. |
+| Package-local development | `npm run dev:nerv` is the autonomous NERV hot-development entry at `/lab/nerv/`; it must not be presented as the root publication because its Astro base does not own `/` or `/lab/`. |
+| Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
+| M4 dependency order | Build validator and validate all manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiment builds, and fresh assembly. Clean-install local `file:` consumers after producers are rebuilt. |
 | Main-site browser server | Run the site build/static scan first. Playwright owns `astro preview` of that same `dist/` at `/`; `start:e2e` must not rebuild or run `astro dev`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
+| Publication browser server | Build/assemble first; assembler Playwright owns a static server for unchanged root `dist/`. |
 | Browser artifacts | Each package writes ignored `playwright-report/` and `test-results/` below its own root. |
 
 `sam` retains `docker run --rm --init`, UID/GID mapping, repository-local HOME,
@@ -76,10 +95,15 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | unsupported `SAM_SERVICE` | fail before publishing a port |
 | wrapped command fails | preserve output and exit code |
 | `dev.sh down` finds no labeled container | report none and succeed |
+| a required M4 package binary is missing | fail before building and name `./sam npm run install:m4` as the recovery command |
+| root publication build fails | preserve the wrapped failure, do not start the web service, and allow exact `sam.scope=dev.sh` cleanup |
+| a developer expects source hot reload from `dev.sh` | restart `dev.sh` to rebuild the immutable snapshot, or use the explicit package-local development command when only that package is in scope |
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
 | browser image/server/fixture cannot start | record exact unavailable error; never report pass |
 | browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
 | site `dist/` is missing or stale before Playwright | run the complete site build/static-output gate; do not make `start:e2e` mutate the artifact under test |
+| manifest validation fails | stop before every product build; do not run a direct NERV/Docker build shortcut |
+| publication candidate validation/promotion fails | preserve prior `artifacts/` and `dist/`, clean only current contained candidates, and report the exact phase |
 | presentation isolation differs under `astro dev` | treat dev output as non-evidence; inspect the static build through `astro preview` |
 | negative Astro build uses `/tmp` output on another filesystem | do not use it; Astro staging rename can fail with `EXDEV`; use ignored same-filesystem `apps/site/test-results/` directories and `finally` cleanup |
 
@@ -92,11 +116,17 @@ so Playwright owns and terminates that preview process.
 
 - Good: the site build/static scan passes, then focused Playwright uses the
   matching Noble image, host IPC, and an owned preview of the unchanged artifact.
+- Good: `WEB_HOST_PORT=4322 ./dev.sh` rebuilds the M4 release and the same
+  loopback origin returns `200` for `/`, `/lab/`, and `/lab/nerv/`; the matching
+  `down` command stops only the exact repository/scope containers.
 - Base: site or NERV check/build uses plain `./sam`, private IPC, no published
   port, UID mapping, and repository-local HOME.
 - Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,
   `astro dev`, build-inside-`start:e2e`, `reuseExistingServer: true`, an unmanaged
   server, or broad command approval.
+- Bad: root `dev.sh` launches only NERV's package-local Astro server. The
+  `/lab/nerv` base may work, but `/` and `/lab/` are outside that application and
+  cannot satisfy the M4 publication contract.
 
 ### 6. Tests Required
 
@@ -115,11 +145,16 @@ bash -n sam dev.sh
 shellcheck sam dev.sh
 shfmt -d sam dev.sh
 ./sam node --version
+WEB_HOST_PORT=4322 ./dev.sh
+# From another shell: assert 200 and expected titles/links at /, /lab/, /lab/nerv/.
+WEB_HOST_PORT=4322 ./dev.sh down
 ./dev.sh down
 ```
 
 Verify invalid IPC cases, executable modes, ignored `.devhome/`, and no stale
-`hako` / `HAKO_*` reference.
+`hako` / `HAKO_*` reference. For the root development entry, also verify the
+exact `sam.repo`, `sam.scope=dev.sh`, and `sam.service=web` labels, loopback-only
+port mapping, closed port after teardown, and zero matching containers.
 
 ### 7. Wrong vs Correct
 
@@ -129,6 +164,7 @@ Verify invalid IPC cases, executable modes, ignored `.devhome/`, and no stale
 docker run --rm node:22-alpine npm --prefix apps/site run check
 ./sam npx playwright test
 SAM_IPC= ./sam npm --prefix apps/site run test:e2e
+WEB_HOST_PORT=4322 ./sam npm --prefix experiments/nerv run start -- --host 0.0.0.0 --port 4321
 ```
 
 ```ts
@@ -142,6 +178,7 @@ webServer: {
 
 ```bash
 ./sam npm --prefix apps/site run check
+WEB_HOST_PORT=4322 ./dev.sh
 
 SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
   ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts

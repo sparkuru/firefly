@@ -46,6 +46,10 @@ routes.
   Recovery remains visible before startup, without JavaScript, and after early or
   fatal failure. Only after required-node, index, and exact entry/template
   validation may the controller hide recovery and reveal the prompt-first session.
+- `pages/lab/index.astro` is a thin JavaScript-free semantic catalog. It loads the
+  frozen listed projection through `lib/experiments.ts`, uses validated default-
+  entry links, renders an explicit empty state, and imports no Experiment asset,
+  component, style, package, preview, or client behavior.
 - `TerminalStreamDocument.astro` owns the compact script-free article fragment
   inside each home template. It receives output already produced by the same
   `renderDocument()` and registered adapter path as the canonical route; it does
@@ -64,6 +68,16 @@ routes.
   Terminal home/article routes. Terminal CSS must be final plain CSS: no Tailwind
   directives, external imports, or unresolved asset URLs. Keep every selector
   under the Terminal namespace.
+- `TerminalLayout.astro` selects the Terminal theme through one root
+  `data-terminal-theme` value. Theme selectors own semantic color, typography,
+  measure, spacing, shadow, and `color-scheme` tokens; component selectors
+  consume those tokens instead of hard-coding theme values. A future theme may
+  add one root token block without changing component rules. M4 ships no picker
+  or persistence contract.
+- Terminal typography uses the self-hosted, unmodified JetBrains Mono v2.304
+  Regular/Medium WOFF2 assets with `font-display: swap` and CJK/system monospace
+  fallbacks. The layout may preload only the same-origin Regular face; it must
+  not add a runtime font CDN or cross-origin dependency.
 - Astro dev traverses the shared dispatcher CSS graph differently from a static
   build. Judge presentation-style isolation from built output via `astro preview`,
   not from `astro dev`.
@@ -86,6 +100,9 @@ routes.
   document, or command-output states. The enhanced home may hide recovery only
   after complete startup validation. Preserve the skip link and visible focus in
   every state.
+- The lab catalog keeps one visible H1, sequential headings, native list/link
+  semantics, readable measure, visible focus, and a native home path. It remains
+  useful at `375×812` without JavaScript or document-level overflow.
 - Semantic wide-content wrappers use a named `role="region"`, `tabindex="0"`,
   localized horizontal scrolling, and a visible focus outline. Do not hide
   document overflow globally to mask a table/code defect.
@@ -94,6 +111,9 @@ routes.
   uses a visually hidden label, native implicit form submission, and
   `enterkeyhint="send"`; no visible submit/Run control is rendered. Results use a
   separate polite atomic announcer rather than a growing live transcript.
+- Standard native controls and ARIA widgets retain their keyboard behavior even
+  inside the enhanced Terminal session. Page-level shell typing must exclude
+  them, editable/selected content, links, and local-scroll regions.
 - Decorative visuals cannot be the sole carrier of page meaning.
 - Do not claim complete accessibility coverage: no automated scanner or
   assistive-technology run is configured.
@@ -124,6 +144,8 @@ routes.
 
 - `apps/site/src/layouts/DocumentLayout.astro`
 - `apps/site/src/pages/index.astro`
+- `apps/site/src/pages/lab/index.astro`
+- `apps/site/src/lib/experiments.ts`
 - `apps/site/src/pages/posts/[slug].astro`
 - `apps/site/src/pages/pages/[slug].astro`
 - `apps/site/src/components/SemanticDocument.astro`

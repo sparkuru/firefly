@@ -2,10 +2,11 @@
 
 ## Current Scope
 
-The main site, X Core, semantic presentation, Terminal presentation, and NERV
-experiment are separately locked packages. Repository-root `content/` is
-framework-neutral input for the main site, not an Astro source directory.
-`prototypes/typecho-terminal/` is reference material only.
+The main site, X Core, semantic presentation, Terminal presentation, NERV
+experiment, manifest validator, and publication assembler are separately locked
+packages. Repository-root `content/` is framework-neutral input for the main
+site, not an Astro source directory. `prototypes/typecho-terminal/` is reference
+material only.
 
 ## Implemented Layout
 
@@ -31,6 +32,9 @@ apps/site/
 ├── package-lock.json             # Site-only dependency lock
 ├── astro.config.mjs              # Static, two adapters, route-scoped assets
 ├── playwright.config.ts          # Static + interactive Chromium projects
+├── public/
+│   ├── fonts/                    # Pinned same-origin Terminal WOFF2 assets
+│   └── licenses/                 # Published font license + provenance/hashes
 ├── src/
 │   ├── content.config.ts         # Explicit external glob loaders
 │   ├── components/               # Dispatcher, semantic/Terminal documents/home
@@ -38,6 +42,7 @@ apps/site/
 │   │   ├── assets-inline-limit.mjs # Exact Terminal-home JS externalization
 │   │   ├── content-schema.mjs    # Runtime metadata contract
 │   │   ├── content.ts            # Public filtering and invariants
+│   │   ├── experiments.ts        # Build-only validated public catalog
 │   │   ├── render-document.ts    # Astro/X Core metadata bridge
 │   │   └── x-core-context.ts     # App-owned DocumentContext resolver
 │   ├── layouts/                  # Semantic and Terminal whole-page shells
@@ -52,6 +57,17 @@ experiments/nerv/
 ├── astro.config.mjs              # Static `/lab/nerv` build
 ├── src/{layouts,modules,pages}/
 └── tests/nerv.spec.ts
+tooling/validate-experiments/
+├── package.json + package-lock.json
+├── src/{index,cli}.ts             # Strict manifest/catalog contract
+└── tests/validator.test.ts
+tooling/assemble-publication/
+├── package.json + package-lock.json
+├── src/                           # Build, validation, staging, transaction, server
+├── playwright.config.ts
+└── tests/{assembler.test,publication.spec}.ts
+artifacts/                          # Ignored staged evidence after success
+dist/                               # Ignored complete assembled release
 ```
 
 Generated `dist/`, `.astro/`, `playwright-report/`, and `test-results/` paths are
@@ -77,11 +93,20 @@ ignored. Never put authored source in them.
   `src/scripts/terminal-home.ts`. Only that controller validates and clones the
   inert templates; canonical Terminal documents remain JavaScript-free.
 - Keep main-site tests and Playwright configuration inside `apps/site/`.
+- Keep vendored public fonts under `apps/site/public/fonts/` and their complete
+  license/provenance evidence under `apps/site/public/licenses/`. Provenance
+  names the immutable upstream tag/commit, exact source and published paths, and
+  SHA-256 digests. Do not replace tagged assets with an unrecorded package,
+  convenience download, or locally generated derivative.
+- `src/lib/experiments.ts` loads the validator's frozen listed catalog at build
+  time. `/lab/` uses default-entry `entryHref`; Terminal uses canonical mount
+  `href`. Neither route imports or preloads Experiment source/assets.
 
-The current output is exactly five HTML files: home, two public posts, About, and
-`404.html`. The route kinds remain `/`, `/posts/<slug>/`, `/pages/<slug>/`, and
-the static 404. Do not create placeholder `timeline`, `files`, `tags`, or `lab`
-routes before their milestone supplies real semantics.
+The current site output is exactly six HTML files: home, two public posts, About,
+`/lab/`, and `404.html`. The route kinds remain `/`, `/posts/<slug>/`,
+`/pages/<slug>/`, `/lab/`, and the static 404. Do not create placeholder
+`timeline`, `files`, or `tags` routes before their milestone supplies real
+semantics.
 
 ## Experiment Boundaries
 
@@ -91,6 +116,23 @@ routes before their milestone supplies real semantics.
   compose feature roots rather than duplicating feature markup.
 - NERV public assets stay under its `public/` and respect
   `import.meta.env.BASE_URL` for the `/lab/nerv` mount.
+- Every Experiment is discovered only through its strict source-controlled
+  `experiment.json`. Builds remain package-local; publication copies validated
+  output under the exact mount and preserves declared license evidence.
+
+## Publication Boundaries
+
+- `tooling/validate-experiments/` owns manifest parsing, exact schema/path/
+  ownership checks, deterministic discovery, and public projection. It imports
+  no application, adapter, or Experiment source.
+- `tooling/assemble-publication/` depends only on the validator. It invokes
+  already validated repository-controlled build commands, copies safe trees,
+  validates a fresh candidate, and promotes `artifacts/` plus `dist/` together.
+- Package-local `dist/` paths are build inputs, never the public release. Root
+  `artifacts/` and `dist/` are generated ignored outputs, never authored source.
+- The assembler never rewrites Experiment HTML, combines bundles, follows
+  symlinks, or treats package-local success as publication success. See
+  `publication-contract.md` for the executable path and rollback contract.
 
 ## Package Isolation
 
@@ -106,9 +148,12 @@ routes before their milestone supplies real semantics.
   dependencies; rebuild them before clean-installing/building the site.
 - Main site and experiments do not import one another's source, CSS, assets,
   configs, or dependencies.
+- The site and assembler consume the validator as an exact local dependency.
+  The assembler may execute/copy an Experiment only after discovery; Experiments
+  never import either tooling package.
 - The root `package.json` delegates commands but is not an npm workspace.
-- Publication consumes static artifacts/manifests in a later milestone; neither
-  package writes directly into the other's `dist/`.
+- Publication consumes static artifacts/manifests only through the M4 tooling;
+  no package writes directly into another package's or the root release `dist/`.
 - Astro versions may differ. Do not upgrade NERV merely because the main site
   uses Astro 7.
 
@@ -123,8 +168,8 @@ routes before their milestone supplies real semantics.
 
 ## Avoid
 
-- Do not create M4 publication assemblers, public experiment indexes, lab
-  commands/routes, `tooling/`, or deployment trees merely to mirror the root PRD.
+- Do not bypass the M4 validator/assembler with ad hoc manifest casts, direct
+  Experiment imports, NERV-specific copy commands, or writes into root `dist/`.
 - Do not move package-local components into a generic repository component pool.
 - Do not rely on content filenames or titles as the public slug contract.
 - Do not copy reference-only Typecho PHP/JavaScript into either runtime package.
@@ -146,5 +191,9 @@ routes before their milestone supplies real semantics.
 - `apps/site/src/pages/posts/[slug].astro`
 - `apps/site/src/layouts/DocumentLayout.astro`
 - `experiments/nerv/experiment.json`
+- `tooling/validate-experiments/src/index.ts`
+- `tooling/assemble-publication/src/index.ts`
+- `apps/site/src/lib/experiments.ts`
+- `apps/site/src/pages/lab/index.astro`
 - `experiments/nerv/src/modules/nerv/NervPage.astro`
 - `prototypes/typecho-terminal/prototype.json`

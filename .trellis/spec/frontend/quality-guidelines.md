@@ -6,6 +6,12 @@ Use the root `./sam` wrapper. Host Node, global browser tooling, and raw Docker
 are not validation contracts.
 
 ```bash
+./sam npm --prefix tooling/validate-experiments ci
+./sam npm --prefix tooling/validate-experiments run check
+./sam npm --prefix tooling/validate-experiments run test
+./sam npm --prefix tooling/validate-experiments run build
+./sam npm --prefix tooling/validate-experiments run validate -- --root ../..
+
 ./sam npm --prefix packages/x-core ci
 ./sam npm --prefix packages/x-core run check
 ./sam npm --prefix packages/x-core run test
@@ -21,6 +27,11 @@ are not validation contracts.
 ./sam npm --prefix presentations/terminal run test
 ./sam npm --prefix presentations/terminal run build
 
+./sam npm --prefix tooling/assemble-publication ci
+./sam npm --prefix tooling/assemble-publication run check
+./sam npm --prefix tooling/assemble-publication run test
+./sam npm --prefix tooling/assemble-publication run build
+
 ./sam npm --prefix apps/site ci
 ./sam npm --prefix apps/site run test:content
 ./sam npm --prefix apps/site run test:x-core
@@ -30,6 +41,8 @@ are not validation contracts.
 ./sam npm --prefix experiments/nerv ci
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
+
+./sam npm run publication:m4
 ```
 
 A successful build is necessary but not sufficient. For main-site work, inspect
@@ -45,19 +58,25 @@ package suite from the single profile in `index.md`.
 - Build the main site before Playwright; its server previews the already checked
   `dist/`. Do not use `astro dev` to prove semantic/Terminal style isolation.
 - Static projects disable JavaScript and cover native home fallback, semantic and
-  Terminal documents, post/page/fragment deep links, static 404 recovery, heading
+  Terminal documents, `/lab/`, post/page/fragment deep links, static 404 recovery, heading
   order and outline targets, focusable code/table regions, visible focus, draft
   absence, and no document overflow at both viewports.
 - Interactive projects enable JavaScript only for Terminal home coverage:
-  prompt-only startup, commands/errors and absent lab commands, history/draft
-  restoration, unique-only completion and normal Tab escape, IME-safe and mobile
-  soft-keyboard Enter, inline `cat` with unchanged URL, repeated-clone
+  prompt-only startup, commands/errors, manifest-backed lab listing/navigation, history/draft
+  restoration, exact optional-`./` completion and normal/unsafe Tab escape,
+  IME-safe and mobile soft-keyboard Enter, inline `cat` with unchanged URL,
+  prompt/document viewport settlement, safe printable typing with native/ARIA
+  widget and local-scroll exclusions, repeated-clone
   ID/reference scoping, clear-to-fresh-prompt behavior, validated native links,
   latest-only announcements, early/late recovery, reduced motion, and responsive
   checks at `375`, `768`, `1024`, and `1440` widths.
-- NERV's current browser baseline covers title, main/heading semantics, and no
-  overflow. Add click/cookie/redirect or scroll assertions when those contracts
-  change.
+- NERV coverage includes title, main/heading semantics, mounted favicon/logo,
+  three-click cookie/return, independent 404, reduced CSS/scroll motion, and no
+  overflow at both viewports.
+- Publication Playwright serves the already assembled root release and covers
+  site-to-NERV navigation, mounted assets, distinct 404 ownership, native return,
+  reduced motion, and containment. It complements rather than replaces both
+  application-local suites.
 - Prefer semantic role/name locators. Use CSS selectors only when the selector is
   itself a runtime contract.
 - Preserve reports, screenshots, and traces on failure. Do not weaken assertions
@@ -68,11 +87,11 @@ package suite from the single profile in `index.md`.
 - Collection config uses explicit external loaders and the shared strict schema.
 - Routes consume the single public projection; draft/layout/slug checks are not
   scattered across pages.
-- Until an approved content/route milestone changes it, static output inventory
-  is exactly five HTML routes, one semantic CSS asset, and one external
+- Until an approved content/route milestone changes it, site output inventory is
+  exactly six HTML routes, one semantic CSS asset, and one external
   Terminal-home JS asset, with zero maps or unknown files. Only
   home references the script; the Terminal article has no script/form; only
-  semantic/About/404 routes link semantic CSS; only Terminal home/article contain
+  semantic/About/lab/404 routes link semantic CSS; only Terminal home/article contain
   Terminal styles.
 - The exact home script predicate returns `false` only for Astro's generated
   `TerminalHome...js` filename after POSIX/Windows separator normalization and
@@ -81,9 +100,15 @@ package suite from the single profile in `index.md`.
   rendered through production `renderDocument()`. Template keys exactly match
   decoded entries; document bodies occur only inside those templates and never
   in JavaScript, JSON, or entry `data-*` metadata.
+- `/lab/` and Terminal recovery consume one frozen listed catalog projection.
+  Site entry links use validated default entries; Terminal links use canonical
+  mounts. Neither surface imports, requests, or preloads Experiment assets.
 - Output contains no source Markdown parser, hydration directive, external font
   request, NERV/xterm/prototype dependency/style, draft, credential, private data,
-  or local absolute path.
+  or local absolute path. It contains exact same-origin JetBrains Mono v2.304
+  Regular/Medium WOFF2 files plus the complete tagged OFL and provenance record;
+  static tests pin all upstream bytes with SHA-256, and browser tests prove both
+  weights load through `document.fonts` without a remote request.
 - Isolation scans use paths, manifests/dependency graphs, imports, and targeted
   runtime/style tokens. Do not use broad text matches such as `/nerv/i` that can
   flag prose or integrity strings.
@@ -102,10 +127,15 @@ package suite from the single profile in `index.md`.
   submission plus `enterkeyhint="send"`, and has no visible Run control. Wide
   code/table regions own local overflow, a programmatic name, keyboard focus, and
   visible focus state.
+- Terminal global typing must preserve modified keys, Space, control/navigation
+  keys, selection, IME, links, native controls, editable regions, keyboard-scroll
+  regions, and standard ARIA widgets. Browser regressions cover both configured
+  viewports; a blanket document-keydown cancellation is a release blocker.
 - No automated accessibility scanner or visual-regression baseline is configured;
   do not claim either.
-- NERV still lacks a `prefers-reduced-motion` implementation for its continuous
-  effects. Record that gap when relevant rather than marking it verified.
+- NERV disables scanline/flicker animations and resets scroll-driven stripe
+  decoration under `prefers-reduced-motion: reduce`; verify both CSS and runtime
+  values rather than inferring compliance from the media query's presence.
 
 ## Formatting and Source Consistency
 
@@ -119,20 +149,28 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
 - Change stays within the correct site/experiment/content boundary.
 - Direct dependency versions and app-local lockfiles remain reproducible.
 - Schema changes include shared runtime behavior and negative regression tests.
+- Manifest/publication changes follow `publication-contract.md`: exact decoding,
+  lexical plus realpath containment, safe trees/references, coordinated rollback,
+  declared build commands, deterministic inventory, and container probes.
 - X Core changes include adversarial adapter/context/JSON/metadata tests and a
   site integration using the shared schema plus the actual Astro processor.
 - Terminal changes include strict descriptor-only index decoding, pure runtime
   graph checks, closed command/effect tests, exact entry/template bijection,
   trusted cloning without HTML-string APIs, repeated-clone ID/fragment/ARIA
   scoping, clear preservation of history/recovery data, prompt-only startup,
-  fatal recovery restoration, and proof that semantic/Terminal packages and
-  route assets remain bidirectionally isolated.
+  exact optional-`./` behavior, safe global typing exclusions, prompt/document
+  settlement with reduced motion, semantic root-theme purity, pinned font/license
+  integrity, fatal recovery restoration, and proof that semantic/Terminal
+  packages and route assets remain bidirectionally isolated.
 - Main-site routes remain thin and static; NERV selectors/base-path behavior is
   preserved when relevant.
 - Astro check/build and applicable Node/browser tests pass through `./sam`.
 - Browser evidence records package, command, routes/states, viewports, JavaScript
   mode, fixtures, results, and artifacts on failure.
 - No deployment or publication claim is made from package-local `dist/` alone.
+- A publication claim requires the assembled root `dist/` checks and, when
+  packaging changes, production-shaped non-root Nginx route/header/404/cache and
+  teardown evidence.
 - Human residuals are limited to subjective visuals, real devices, assistive
   technology, or private deployment environments.
 
@@ -161,4 +199,8 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
 - `experiments/nerv/package.json`
 - `experiments/nerv/playwright.config.ts`
 - `experiments/nerv/tests/nerv.spec.ts`
+- `tooling/validate-experiments/tests/validator.test.ts`
+- `tooling/assemble-publication/tests/assembler.test.ts`
+- `tooling/assemble-publication/tests/publication.spec.ts`
+- `.trellis/spec/frontend/publication-contract.md`
 - `.trellis/spec/frontend/development-runtime.md`

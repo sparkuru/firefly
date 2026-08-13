@@ -113,7 +113,7 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   compare semantic and fixture adapters and repeated determinism.
 - `apps/site run test:content`: schema plus isolated real negative builds for
   duplicate slug, unsupported layout, unregistered adapter, and raw HTML.
-- `apps/site run build`: validate five HTML, one semantic CSS, one home-only JS,
+- `apps/site run build`: validate six HTML, one semantic CSS, one home-only JS,
   zero maps/unknown files, JavaScript-free document routes, and bidirectional
   presentation-package/style closure. Home template bodies must be
   `renderDocument()` output while remaining absent from JavaScript/index data.

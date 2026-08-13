@@ -9,13 +9,15 @@ server-state layer, event bus, or state-management dependency.
 | --- | --- | --- |
 | Authored state | Markdown body/front matter under `content/` | Source file, validated at build time |
 | Public derived state | Filtered/sorted posts/pages in `apps/site/src/lib/content.ts` | Main-site build helper |
+| Experiment discovery | Frozen manifests and listed public catalog from `experiments/*/experiment.json` | Validator at build time |
 | Per-document transform state | Summary, references, outline, node IDs, selected adapter | X Core VFile pipeline |
 | Render metadata | Versioned JSON-compatible `xCore` payload | Astro `remarkPluginFrontmatter` |
 | Render input | Layout titles/descriptions and component variants | Receiving Astro component |
 | Terminal public index | Canonical safe fields derived from `getPublicContent()` | Home build, then strict runtime decoder |
+| Terminal Experiment index | Canonical `{ id, title, href }` from the listed public catalog | Home build, then strict runtime decoder |
 | Terminal document templates | One inert `renderDocument()` fragment per public entry, keyed by filename | Home build; exact bijection validated before startup |
 | Terminal command state | Last 50 submissions, cursor, restored draft | Home controller using pure runtime transitions |
-| Terminal output | Closed `lines` / `entries` / `document` / `clear` effect | DOM controller renderer |
+| Terminal output | Closed text/document/experiment/navigation/clear effects | DOM controller renderer |
 | Ephemeral interaction | NERV `clickCount` | NERV route script |
 | Browser-derived value | NERV `window.scrollY` to stripe CSS property | Scroll listener |
 | URL/persistence | NERV `from` parameter and `has_visited` cookie | Redirect boundary |
@@ -53,6 +55,14 @@ objects. It inspects property descriptors without invoking accessors or decorate
 array methods, clones and freezes entries, and rejects unknown fields, duplicate
 slugs/filenames, unsafe text, noncanonical routes, and invalid calendar dates.
 
+Experiment discovery is a second build-time source, not a client registry.
+`apps/site/src/lib/experiments.ts` loads the validator's frozen `listed` catalog.
+`/lab/` uses its validated `entryHref`; Terminal receives only canonical
+`{ id, title, href }` records and `decodeTerminalExperiments()` repeats the exact
+plain-data, descriptor, cloning, freezing, canonical-route, and uniqueness gate.
+Raw manifests, unlisted entries, build commands, tags, filesystem paths, and
+Experiment output never cross into the browser.
+
 The browser controller owns one route-local `TerminalState`. Empty submissions do
 not mutate it; non-empty submissions retain only the latest 50 commands. Arrow
 history preserves the draft entered before traversal. Completion and execution
@@ -63,7 +73,8 @@ For a `document` effect, the controller selects only the validated matching
 template, assigns a monotonically increasing clone scope, rewrites IDs and only
 the references whose target belongs to that clone, then appends the DOM. `clear`
 removes visible output/completion state but preserves history, recovery links,
-and inert templates. Route changes occur only through validated native links.
+and inert templates. Route changes occur only through validated native links or
+a closed navigation effect containing one decoded listed Experiment.
 
 ## Global and Server State
 
@@ -97,11 +108,15 @@ Change the route script and browser acceptance coverage together.
   the Terminal home index, JavaScript, JSON, or `data-*`. Build-rendered body HTML
   is permitted only inside the inert per-entry templates.
 - Do not mutate decoded entries/effects or attach Terminal state to `window`.
+- Do not mirror the public Experiment catalog in a store, fetch it at runtime, or
+  construct an Experiment URL from command input.
 - Do not infer production state architecture from reference-only PHP/JavaScript.
 
 ## Reference Files
 
 - `apps/site/src/lib/content.ts`
+- `apps/site/src/lib/experiments.ts`
+- `tooling/validate-experiments/src/index.ts`
 - `apps/site/src/pages/index.astro`
 - `apps/site/src/pages/posts/[slug].astro`
 - `apps/site/src/lib/render-document.ts`
