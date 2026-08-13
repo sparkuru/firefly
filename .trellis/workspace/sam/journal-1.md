@@ -119,3 +119,25 @@ Delivered and owner-approved the M3 shell-first Terminal presentation: prompt-fo
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: M4 experiment publication and Terminal refinement
+
+**Date**: 2026-08-13
+**Task**: M4 experiment publication and Terminal refinement
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Delivered and owner-approved the manifest-driven Experiment validator/assembler, static lab and Terminal integration, isolated NERV publication, production-shaped Docker/Nginx runtime, assembled dev service, safe Terminal interaction, semantic theme tokens, and pinned OFL JetBrains Mono fonts. Independent checks fixed path containment, coordinated rollback, build-order, artifact scanning, ARIA keyboard ownership, and theme purity; the final release is deterministic at 18 files. Planned the next M5 content-workspace/Vim-reader prelude separately without starting it.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9da459e` | (see git log) |
+| `d739493` | (see git log) |
+
+### Status
+
+[OK] **Completed**
