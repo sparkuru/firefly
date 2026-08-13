@@ -141,3 +141,25 @@ Delivered and owner-approved the manifest-driven Experiment validator/assembler,
 ### Status
 
 [OK] **Completed**
+
+
+## Session 7: M5 content filesystem and Vim reader
+
+**Date**: 2026-08-13
+**Task**: M5 content filesystem and Vim reader
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and independently verified configurable nested Markdown workspaces with safe authored symlinks, guest projection, canonical routes, extensible Terminal commands, robust completion/focus behavior, exact breadcrumb geometry, a read-only Vim reader, deterministic publication, and runtime-only Nginx packaging.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `58ab2d9` | (see git log) |
+| `4433b6a` | (see git log) |
+
+### Status
+
+[OK] **Completed**
