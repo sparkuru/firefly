@@ -5,7 +5,7 @@ import {
 } from '@f1refly/x-core';
 
 interface AuthoredDocumentMetadata {
-  readonly slug: string;
+  readonly slug?: string;
   readonly layout: DocumentContext['layout'];
   readonly presentation?: string;
 }
@@ -38,7 +38,7 @@ function getFrontmatter(
   const { slug, layout, presentation } = astro.frontmatter;
 
   if (
-    typeof slug !== 'string' ||
+    (slug !== undefined && typeof slug !== 'string') ||
     !isDocumentLayout(layout) ||
     (presentation !== undefined && typeof presentation !== 'string')
   ) {
@@ -49,38 +49,51 @@ function getFrontmatter(
   }
 
   return {
-    slug,
+    ...(slug ? { slug } : {}),
     layout,
     ...(presentation ? { presentation } : {})
   };
 }
 
-function repositorySourcePath(filePath: string | undefined): string | undefined {
+function postRelativePath(filePath: string | undefined): string | undefined {
   if (!filePath) {
     return undefined;
   }
 
   const normalized = filePath.replaceAll('\\', '/');
-  const contentIndex = normalized.lastIndexOf('/content/');
+  const stageMarker = '/.generated-content/posts/';
+  const contentIndex = normalized.lastIndexOf(stageMarker);
 
   if (contentIndex === -1) {
     return undefined;
   }
 
-  return normalized.slice(contentIndex + 1);
+  return normalized.slice(contentIndex + stageMarker.length);
 }
 
 export const resolveDocumentContext: DocumentContextResolver = (file) => {
   const metadata = getFrontmatter(file.data);
   const collection = metadata.layout === 'post' ? 'posts' : 'pages';
-  const sourcePath = repositorySourcePath(file.path);
+  const relativePostPath = collection === 'posts' ? postRelativePath(file.path) : undefined;
+  const slug = collection === 'posts'
+    ? relativePostPath?.split('/').at(-1)?.replace(/\.md$/u, '')
+    : metadata.slug;
+  if (slug === undefined) {
+    throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
+  }
+  const relativeRoute = collection === 'posts'
+    ? relativePostPath?.replace(/\.md$/u, '')
+    : slug;
+  if (relativeRoute === undefined) {
+    throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
+  }
 
   return {
-    documentId: `${collection}/${metadata.slug}`,
-    ...(sourcePath ? { sourcePath } : {}),
-    route: `/${collection}/${metadata.slug}/`,
+    documentId: `${collection}/${relativePostPath ?? `${slug}.md`}`,
+    sourcePath: `${collection}/${relativePostPath ?? `${slug}.md`}`,
+    route: `/${collection}/${relativeRoute}/`,
     collection,
-    slug: metadata.slug,
+    slug,
     layout: metadata.layout,
     presentation: metadata.presentation ?? 'semantic'
   };

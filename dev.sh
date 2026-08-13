@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dev.sh - Build and serve the assembled M4 publication through ./sam.
+# dev.sh - Build and serve the assembled publication through ./sam.
 #
 # Service: http://${SAM_BIND_HOST:-127.0.0.1}:${WEB_HOST_PORT:-4321}/
 # Requires Docker, ./sam, and dependencies installed with:
@@ -118,8 +118,8 @@ start_services() {
 	trap cleanup INT TERM EXIT
 	down_services quiet
 
-	printf '[dev.sh] building the M4 publication\n' >&2
-	SAM_SCOPE=dev.sh ./sam npm run build:m4
+	printf '[dev.sh] building the M5 publication\n' >&2
+	SAM_SCOPE=dev.sh ./sam npm run build:m5
 
 	printf '[dev.sh] publication: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
 	run_service web \

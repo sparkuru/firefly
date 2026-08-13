@@ -36,12 +36,17 @@ test('static build emits only the implemented route surface', async () => {
     'index.html',
     'lab/index.html',
     'pages/about/index.html',
+    'pages/index.html',
+    'posts/characters/index.html',
+    'posts/characters/nahida/index.html',
     'posts/hello-static-foundation/index.html',
+    'posts/index.html',
     'posts/llm-workflow-with-trellis/index.html'
   ]);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
-  assert.equal(scripts.length, 1);
-  assert.match(scripts[0], /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u);
+  assert.equal(scripts.length, 2);
+  assert.ok(scripts.some((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)));
+  assert.ok(scripts.some((file) => /^_astro\/TerminalDocument\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)));
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 1);
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
@@ -78,6 +83,8 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
     /url\(\s*["']?https?:/iu,
     /hidden draft/iu,
     /this should remain private/iu,
+    /PRIVATE_(?:TITLE|BODY)_M5_7f2a/u,
+    /private-owner|owner-fixture|hidden-draft/iu,
     /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u,
     /AKIA[0-9A-Z]{16}/u,
     /gh[oprsu]_[A-Za-z0-9]{36,}/u,
@@ -150,9 +157,11 @@ test('semantic and Terminal presentation packages remain bidirectionally isolate
 
 test('route closures isolate semantic CSS, Terminal styles, and home JavaScript', async () => {
   const files = await listFiles(distRoot);
-  const script = files.find((file) => file.endsWith('.js'));
+  const homeScript = files.find((file) => /TerminalHome.*\.js$/u.test(file));
+  const readerScript = files.find((file) => /TerminalDocument.*\.js$/u.test(file));
   const stylesheet = files.find((file) => file.endsWith('.css'));
-  assert.ok(script);
+  assert.ok(homeScript);
+  assert.ok(readerScript);
   assert.ok(stylesheet);
 
   const routes = {
@@ -172,14 +181,16 @@ test('route closures isolate semantic CSS, Terminal styles, and home JavaScript'
   assert.match(routes.home, /--terminal-color-canvas/u);
   assert.match(routes.home, /font-family:\s*'JetBrains Mono'/u);
   assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Regular-v2\.304\.woff2'\)/u);
-  assert.match(routes.home, new RegExp(`src="/${script.replaceAll('.', '\\.')}`));
+  assert.match(routes.home, new RegExp(`src="/${homeScript.replaceAll('.', '\\.')}`));
+  assert.doesNotMatch(routes.home, new RegExp(readerScript.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, new RegExp(stylesheet.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, /class="terminal-titlebar"/u);
   assert.match(routes.terminal, /data-terminal-wide/u);
   assert.match(routes.terminal, /data-terminal-theme="phosphor"/u);
   assert.match(routes.terminal, /--terminal-color-canvas/u);
   assert.match(routes.terminal, /class="terminal-titlebar"/u);
-  assert.doesNotMatch(routes.terminal, /<script\b/iu);
+  assert.match(routes.terminal, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
+  assert.doesNotMatch(routes.terminal, new RegExp(homeScript.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.terminal, new RegExp(stylesheet.replaceAll('.', '\\.')));
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/nerv\/"/u);
@@ -190,7 +201,8 @@ test('route closures isolate semantic CSS, Terminal styles, and home JavaScript'
     assert.doesNotMatch(html, /data-terminal-(?:home|entry|wide)/u);
     assert.doesNotMatch(html, /--terminal-color-canvas/u);
     assert.doesNotMatch(html, /<script\b/iu);
-    assert.doesNotMatch(html, new RegExp(script.replaceAll('.', '\\.')));
+    assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
+    assert.doesNotMatch(html, new RegExp(readerScript.replaceAll('.', '\\.')));
   }
 });
 
@@ -256,11 +268,12 @@ test('Terminal components consume the root semantic theme contract', async () =>
 
 test('home emits an exact safe entry/template map with inert build-rendered bodies', async () => {
   const files = await listFiles(distRoot);
-  const scriptPath = files.find((file) => file.endsWith('.js'));
+  const scriptPath = files.find((file) => /TerminalHome.*\.js$/u.test(file));
   assert.ok(scriptPath);
   const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
   const terminalArticle = await readFile(path.join(distRoot, 'posts/llm-workflow-with-trellis/index.html'), 'utf8');
+  const nestedArticle = await readFile(path.join(distRoot, 'posts/characters/nahida/index.html'), 'utf8');
   assert.match(home, /data-terminal-entry-filename="llm-workflow-with-trellis\.md"/u);
   assert.match(home, /data-terminal-entry-href="\/posts\/llm-workflow-with-trellis\/"/u);
   assert.match(home, /data-terminal-entry-date="2026-05-28"/u);
@@ -269,16 +282,17 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /data-terminal-experiment-title="NERV"/u);
   assert.match(home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
   assert.doesNotMatch(home, /data-terminal-experiment-(?:build|command|output|license|manifest|tags|kind)/u);
-  const entryFilenames = [...home.matchAll(/data-terminal-entry-filename="([^"]+)"/gu)].map((match) => match[1]);
-  const templateFilenames = [...home.matchAll(/data-terminal-template-filename="([^"]+)"/gu)].map((match) => match[1]);
-  assert.deepEqual(templateFilenames, entryFilenames);
-  assert.deepEqual(templateFilenames, [
-    'hello-static-foundation.md',
-    'llm-workflow-with-trellis.md',
-    'about.md'
+  const entryPaths = [...home.matchAll(/data-terminal-entry-virtual-path="([^"]+)"/gu)].map((match) => match[1]);
+  const templatePaths = [...home.matchAll(/data-terminal-template-path="([^"]+)"/gu)].map((match) => match[1]);
+  assert.deepEqual([...templatePaths].sort(), [...entryPaths].sort());
+  assert.deepEqual(templatePaths, [
+    'pages/about.md',
+    'posts/characters/nahida.md',
+    'posts/hello-static-foundation.md',
+    'posts/llm-workflow-with-trellis.md'
   ]);
   const templateBodies = [...home.matchAll(/<template\b[^>]*data-terminal-template[^>]*>([\s\S]*?)<\/template>/gu)].map((match) => match[1] ?? '');
-  assert.equal(templateBodies.length, 3);
+  assert.equal(templateBodies.length, 4);
   assert.match(templateBodies.join('\n'), /No browser-side parser/u);
   assert.match(templateBodies.join('\n'), /data-language="mermaid"/u);
   assert.match(templateBodies.join('\n'), /Future presentations can change how the site looks/u);
@@ -293,7 +307,13 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.doesNotMatch(home, /<button\b/iu);
   assert.match(terminalArticle, /<h1>llm workflow with trellis<\/h1>/u);
   assert.match(terminalArticle, /data-language="mermaid"/u);
-  assert.doesNotMatch(terminalArticle, /<form\b|id="terminal-command"/iu);
+  assert.match(terminalArticle, /data-terminal-reader-region/u);
+  assert.match(terminalArticle, /data-reader-search-form/u);
+  assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
+  assert.match(nestedArticle, /guest@f1refly:~\/blog \$/u);
+  assert.ok(nestedArticle.includes('<li data-breadcrumb-token="root"><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span><a href="/">/</a></li><li data-breadcrumb-token="posts"><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span><a href="/posts/">posts</a>'));
+  assert.match(nestedArticle, /data-breadcrumb-token="current"><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;<\/span><span class="terminal-breadcrumb-separator" aria-hidden="true">\/<\/span><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;<\/span><span class="terminal-document-current" aria-current="page">nahida\.md<\/span>/u);
+  assert.doesNotMatch(nestedArticle, />cd\s|\/ \/posts|<a[^>]*>nahida\.md<\/a>/u);
 });
 
 test('ordinary routes contain no Experiment runtime or asset edge', async () => {
@@ -312,7 +332,7 @@ test('ordinary routes contain no Experiment runtime or asset edge', async () => 
 
 test('home controller avoids browser content loading, parsing, and unsafe insertion APIs', async () => {
   const files = await listFiles(distRoot);
-  const scriptPath = files.find((file) => file.endsWith('.js'));
+  const scriptPath = files.find((file) => /TerminalHome.*\.js$/u.test(file));
   assert.ok(scriptPath);
   const builtScript = await readFile(path.join(distRoot, scriptPath), 'utf8');
   const sourceScript = await readFile(path.join(sourceRoot, 'scripts/terminal-home.ts'), 'utf8');

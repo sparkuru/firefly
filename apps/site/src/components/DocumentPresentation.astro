@@ -1,5 +1,5 @@
 ---
-import type { PublicDocument } from '../lib/render-document';
+import type { CanonicalDocument } from '../lib/content';
 import type { renderDocument } from '../lib/render-document';
 import SemanticDocument from './SemanticDocument.astro';
 import TerminalDocument from './TerminalDocument.astro';
@@ -9,11 +9,12 @@ import TerminalLayout from '../layouts/TerminalLayout.astro';
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface Props {
-  entry: PublicDocument;
+  canonical: CanonicalDocument;
   document: RenderedDocument;
 }
 
-const { entry, document } = Astro.props;
+const { canonical, document } = Astro.props;
+const { entry } = canonical;
 const presentation = document.metadata.presentation;
 if (presentation !== 'semantic' && presentation !== 'terminal') {
   throw new Error(`Unsupported site presentation "${presentation}".`);
@@ -26,8 +27,8 @@ if (presentation !== 'semantic' && presentation !== 'terminal') {
       <SemanticDocument entry={entry} document={document} />
     </DocumentLayout>
   ) : (
-    <TerminalLayout title={entry.data.title} description={entry.data.description} path={`~/${entry.collection}/${entry.data.slug}.md`}>
-      <TerminalDocument entry={entry} document={document} />
+    <TerminalLayout title={entry.data.title} description={entry.data.description} path={`~/${canonical.virtualPath}`}>
+      <TerminalDocument canonical={canonical} document={document} />
     </TerminalLayout>
   )
 }

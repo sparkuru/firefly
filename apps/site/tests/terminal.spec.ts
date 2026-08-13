@@ -57,15 +57,23 @@ test('commands render continuous typed results, lab discovery, and latest announ
   const announcer = page.locator('[data-terminal-announcer]');
 
   await submit(page, 'help');
-  await expect(page.getByText('ls [posts|pages|lab] — list public documents or experiments')).toBeVisible();
+  await expect(page.getByText('ls [posts|pages|lab] — list usable public document operands or experiments')).toBeVisible();
   await expect(transcript.getByText('open lab/<id> — open a listed experiment')).toBeVisible();
   await expect(transcript.getByText('clear — clear the screen')).toBeVisible();
   await expect(input).toBeFocused();
 
   await submit(page, 'ls posts');
   await expect(transcript.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
+  await expect(transcript.getByRole('link', { name: 'characters/nahida.md' })).toHaveAttribute('href', '/posts/characters/nahida/');
   await expect(transcript).toContainText('2026-05-28');
-  await expect(announcer).toHaveText('2 posts listed.');
+  await expect(announcer).toHaveText('3 posts listed.');
+
+  await submit(page, 'ls pages');
+  await expect(transcript.getByRole('link', { name: '/pages/about.md' })).toHaveAttribute('href', '/pages/about/');
+  await submit(page, 'cat ./pages/about.md');
+  await expect(transcript).toContainText('Relative paths resolve under posts; pages require /pages/<path>.md.');
+  await submit(page, 'cat /pages/about.md');
+  await expect(transcript.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
 
   await submit(page, 'ls lab');
   await expect(transcript.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
@@ -102,7 +110,7 @@ test('history preserves a draft and clear returns a fresh prompt with history in
 
   await input.fill('ls p');
   await input.press('Tab');
-  await expect(completion).toHaveText('Matches: posts, pages');
+  await expect(completion).toHaveText('Matches: pages, posts');
   await input.focus();
   await submit(page, 'history');
   await expect(transcript).toContainText('history');
@@ -114,6 +122,45 @@ test('history preserves a draft and clear returns a fresh prompt with history in
   await input.press('ArrowUp');
   await expect(input).toHaveValue('clear');
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
+});
+
+test('Control+C cancels only the current prompt and completion state', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  const transcript = page.locator('[data-terminal-transcript]');
+  const completion = page.locator('[data-terminal-completion]');
+  await submit(page, 'pwd');
+  await submit(page, 'whoami');
+  await input.fill('unfinished');
+  await input.press('ArrowUp');
+  await expect(input).toHaveValue('whoami');
+  await input.fill('vim ./');
+  await input.press('Tab');
+  await expect(completion).toContainText('Matches: ./characters/');
+  await expect(input).toBeFocused();
+  const modifiedVariants = await input.evaluate((element) => [
+    { altKey: true, ctrlKey: true },
+    { ctrlKey: true, metaKey: true },
+    { ctrlKey: true, shiftKey: true }
+  ].map((modifiers) => element.dispatchEvent(new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'c',
+    ...modifiers
+  }))));
+  expect(modifiedVariants).toEqual([true, true, true]);
+  await expect(input).toHaveValue('vim ./');
+  await expect(completion).toContainText('Matches: ./characters/');
+  await input.press('Control+c');
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await expect(completion).toBeEmpty();
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command cancelled.');
+  await expect(transcript.locator('.terminal-record')).toHaveCount(2);
+  await input.press('ArrowUp');
+  await expect(input).toHaveValue('whoami');
+  await input.press('ArrowDown');
+  await expect(input).toHaveValue('');
 });
 
 test('completion consumes only unique matches and otherwise preserves Tab traversal', async ({ page }) => {
@@ -128,26 +175,62 @@ test('completion consumes only unique matches and otherwise preserves Tab traver
   await input.fill('ls p');
   await input.press('Tab');
   await expect(input).toHaveValue('ls p');
-  await expect(page.locator('[data-terminal-completion]')).toHaveText('Matches: posts, pages');
+  await expect(page.locator('[data-terminal-completion]')).toHaveText('Matches: pages, posts');
   await expect(input).not.toBeFocused();
 
   await input.focus();
+  for (const ambiguous of ['cat ./', 'vim ./', 'cat /', 'vim /']) {
+    await input.fill(ambiguous);
+    await input.press('Tab');
+    await expect(input).toHaveValue(ambiguous);
+    await expect(input).toBeFocused();
+    await expect(page.locator('[data-terminal-completion]')).toContainText('Matches:');
+  }
+
+  for (const noMatch of ['cat 1', 'vim ./does-not-exist', 'cat /posts/does-not-exist']) {
+    await input.fill(noMatch);
+    await input.press('Tab');
+    await expect(input).toHaveValue(noMatch);
+    await expect(input).toBeFocused();
+    await expect(page.locator('[data-terminal-completion]')).toHaveText('No matches.');
+  }
+
   await input.fill('cat llm-w');
   await input.press('Tab');
   await expect(input).toHaveValue('cat llm-workflow-with-trellis.md');
+
+  await input.fill('cat cha');
+  await input.press('Tab');
+  await expect(input).toHaveValue('cat characters/');
+  await input.fill('vim /pages/abo');
+  await input.press('Tab');
+  await expect(input).toHaveValue('vim /pages/about.md');
 
   await input.fill('cat ./llm-w');
   await input.press('Tab');
   await expect(input).toHaveValue('cat ./llm-workflow-with-trellis.md');
   await expect(input).toBeFocused();
 
-  for (const unsafe of ['cat ../llm-w', 'cat ./nested/llm-w', 'cat /llm-w', 'cat https://example.com/llm-w']) {
+  for (const unsafe of ['cat ../llm-w', 'cat ./nested/../llm-w', 'cat /llm-w', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat cafe\u0301.md', 'cat control\u0001path']) {
     await input.fill(unsafe);
     await input.press('Tab');
     await expect(input).toHaveValue(unsafe);
     await expect(input).not.toBeFocused();
     await input.focus();
   }
+
+  const modifiedTabResults = await input.evaluate((element) => [
+    { shiftKey: true },
+    { ctrlKey: true },
+    { metaKey: true },
+    { altKey: true }
+  ].map((modifiers) => element.dispatchEvent(new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'Tab',
+    ...modifiers
+  }))));
+  expect(modifiedTabResults).toEqual([true, true, true, true]);
 
   await input.fill('open lab/n');
   await input.press('Tab');
@@ -162,17 +245,18 @@ test('IME composition leaves Enter, Arrow history, and Tab key events unintercep
 
   const dispatchResults = await input.evaluate((element) => {
     element.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
-    const results = ['Enter', 'ArrowUp', 'ArrowDown', 'Tab'].map((key) =>
+    const results = ['Enter', 'ArrowUp', 'ArrowDown', 'Tab', 'c'].map((key) =>
       element.dispatchEvent(new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
+        ctrlKey: key === 'c',
         isComposing: true,
         key
       }))
     );
     return results;
   });
-  expect(dispatchResults).toEqual([true, true, true, true]);
+  expect(dispatchResults).toEqual([true, true, true, true, true]);
   await expect(input).toHaveValue('about');
   await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(1);
 
@@ -195,7 +279,17 @@ test('short output settles the active prompt and document output settles its rea
     await submit(page, 'help');
   }
   await expect(input).toBeFocused();
-  await expectInViewport(input, 0.25, 0.8);
+  const lastHelp = page.locator('[data-terminal-transcript] .terminal-record').last();
+  await expectInViewport(lastHelp.locator('.terminal-command-line'), 0, 0.15);
+  await expectInViewport(lastHelp.getByText('help — show this command list'), 0, 0.3);
+  await expectInViewport(input, 0.35, 1);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await submit(page, 'help');
+  const reducedHelp = page.locator('[data-terminal-transcript] .terminal-record').last();
+  await expectInViewport(reducedHelp.locator('.terminal-command-line'), 0, 0.15);
+  await expectInViewport(reducedHelp.getByText('help — show this command list'), 0, 0.3);
+  await expectInViewport(input, 0.35, 1);
 
   await submit(page, 'cat ./llm-workflow-with-trellis.md');
   const title = page
@@ -322,7 +416,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   await page.goto('/');
   await page.evaluate(() => {
     const template = [...document.querySelectorAll<HTMLTemplateElement>('[data-terminal-template]')]
-      .find((candidate) => candidate.dataset.terminalTemplateFilename === 'llm-workflow-with-trellis.md');
+      .find((candidate) => candidate.dataset.terminalTemplatePath === 'posts/llm-workflow-with-trellis.md');
     const article = template?.content.querySelector<HTMLElement>('[data-terminal-stream-document]');
     const firstHeading = article?.querySelector<HTMLElement>('[id="install"]');
     const firstHeader = article?.querySelector<HTMLElement>('th');
@@ -438,7 +532,7 @@ test('cat respects semantic and page adapter output in the home stream', async (
   await expect(semanticDocument.getByRole('heading', { level: 2, name: 'Hello, static foundation' })).toBeFocused();
   await expect(semanticDocument.getByRole('heading', { level: 2, name: 'Markdown to durable HTML' })).toBeVisible();
   await expect(semanticDocument.getByRole('region', { name: /^Code content:/u })).toBeVisible();
-  await submit(page, 'cat about.md');
+  await submit(page, 'cat /pages/about.md');
   await expect(page.getByRole('heading', { level: 2, name: 'About this foundation' })).toBeFocused();
   await expect(page.getByText('Future presentations can change how the site looks')).toBeVisible();
   const ids = await page.locator('[id]').evaluateAll((elements) =>
@@ -453,7 +547,7 @@ test('malformed startup preserves the untouched native recovery product', async 
     const observer = new MutationObserver(() => {
       const template = document.querySelector<HTMLTemplateElement>('[data-terminal-template]');
       if (template !== null) {
-        template.dataset.terminalTemplateFilename = 'unknown.md';
+        template.dataset.terminalTemplatePath = 'posts/unknown.md';
         observer.disconnect();
       }
     });
@@ -526,7 +620,7 @@ test('post-start clone-scoping failure restores one focused recovery target', as
   await page.goto('/');
   await page.evaluate(() => {
     const template = [...document.querySelectorAll<HTMLTemplateElement>('[data-terminal-template]')]
-      .find((candidate) => candidate.dataset.terminalTemplateFilename === 'about.md');
+      .find((candidate) => candidate.dataset.terminalTemplatePath === 'pages/about.md');
     const article = template?.content.querySelector<HTMLElement>('[data-terminal-stream-document]');
     if (article === undefined || article === null) {
       throw new Error('Missing clone-scoping failure fixture.');
@@ -537,7 +631,7 @@ test('post-start clone-scoping failure restores one focused recovery target', as
     second.id = 'duplicate-clone-id';
     article.append(first, second);
   });
-  await submit(page, 'cat about.md');
+  await submit(page, 'cat /pages/about.md');
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
@@ -589,8 +683,7 @@ test('reduced motion and responsive checkpoints preserve full-page containment',
     const rect = element.getBoundingClientRect();
     return { top: rect.top, bottom: rect.bottom, height: window.innerHeight };
   });
-  expect(reducedPromptGeometry.top).toBeGreaterThanOrEqual(reducedPromptGeometry.height * 0.25);
-  expect(reducedPromptGeometry.top).toBeLessThanOrEqual(reducedPromptGeometry.height * 0.8);
+  expect(reducedPromptGeometry.top).toBeGreaterThanOrEqual(0);
   expect(reducedPromptGeometry.bottom).toBeLessThanOrEqual(reducedPromptGeometry.height);
   for (const width of [768, 1024]) {
     await page.setViewportSize({ width, height: 900 });

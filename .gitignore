@@ -7,6 +7,7 @@ experiments/nerv/playwright-report/
 experiments/nerv/test-results/
 apps/site/playwright-report/
 apps/site/test-results/
+apps/site/.generated-content/
 tooling/assemble-publication/playwright-report/
 tooling/assemble-publication/test-results/
 packages/x-core/dist/

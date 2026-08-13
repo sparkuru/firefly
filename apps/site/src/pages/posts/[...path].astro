@@ -1,0 +1,32 @@
+---
+import DocumentPresentation from '../../components/DocumentPresentation.astro';
+import ContentDirectoryIndex from '../../components/ContentDirectoryIndex.astro';
+import TerminalLayout from '../../layouts/TerminalLayout.astro';
+import { getCanonicalContent, type CanonicalDocument, type ContentDirectory } from '../../lib/content';
+import { renderDocument } from '../../lib/render-document';
+
+type RouteProps =
+  | { kind: 'document'; canonical: CanonicalDocument }
+  | { kind: 'directory'; directory: ContentDirectory };
+
+export async function getStaticPaths() {
+  const content = await getCanonicalContent();
+  return [
+    ...content.posts.map((canonical) => ({ params: { path: canonical.relativePath.slice(0, -3) }, props: { kind: 'document' as const, canonical } })),
+    ...content.directories
+      .filter(({ virtualPath }) => virtualPath.startsWith('posts/') )
+      .map((directory) => ({ params: { path: directory.virtualPath.slice('posts/'.length) }, props: { kind: 'directory' as const, directory } }))
+  ];
+}
+
+const props = Astro.props as RouteProps;
+const rendered = props.kind === 'document' ? await renderDocument(props.canonical.entry) : null;
+---
+
+{props.kind === 'document' && rendered ? (
+  <DocumentPresentation canonical={props.canonical} document={rendered} />
+) : props.kind === 'directory' ? (
+  <TerminalLayout title={props.directory.name} description={`Public directory ${props.directory.virtualPath}.`} path={`~/${props.directory.virtualPath}`}>
+    <ContentDirectoryIndex directory={props.directory} />
+  </TerminalLayout>
+) : null}

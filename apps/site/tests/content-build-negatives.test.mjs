@@ -44,7 +44,7 @@ async function expectNegativeBuild({ collection, filename, source, patterns }) {
 }
 
 test('negative builds preserve public invariants and X Core diagnostics', async (context) => {
-  await context.test('duplicate public slugs name both owners', async () => {
+  await context.test('aliases cannot collide with canonical document routes', async () => {
     await expectNegativeBuild({
       collection: 'pages',
       filename: 'x-core-negative-duplicate.md',
@@ -52,10 +52,12 @@ test('negative builds preserve public invariants and X Core diagnostics', async 
 title: Duplicate fixture
 slug: hello-static-foundation
 date: 2026-08-12
-description: Must fail the global public slug invariant.
+description: Must fail the route reservation invariant.
 draft: false
 layout: page
 presentation: semantic
+aliases:
+  - /posts/hello-static-foundation/
 ---
 
 ## Duplicate fixture
@@ -63,9 +65,9 @@ presentation: semantic
 This content must never be published.
 `,
       patterns: [
-        /Duplicate public slug "hello-static-foundation"/u,
-        /posts\/hello-static-foundation/u,
-        /pages\/hello-static-foundation/u
+        /Route collision/u,
+        /document posts\/hello-static-foundation\.md/u,
+        /alias for pages\/hello-static-foundation\.md/u
       ]
     });
   });
@@ -141,7 +143,7 @@ presentation: semantic
       patterns: [
         /XCORE_RAW_HTML/u,
         /posts\/x-core-negative-raw-html/u,
-        /content\/posts\/x-core-negative-raw-html\.md/u
+        /posts\/x-core-negative-raw-html\.md/u
       ]
     });
   });

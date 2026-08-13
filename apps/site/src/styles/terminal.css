@@ -27,6 +27,7 @@
   --terminal-color-error: #ff8090;
   --terminal-color-border: #2e4937;
   --terminal-color-focus: #9affbd;
+  --terminal-color-highlight: rgb(255 209 102 / 28%);
   --terminal-color-shadow: rgb(0 0 0 / 35%);
   --terminal-font-family: 'JetBrains Mono', 'Noto Sans Mono CJK SC',
     'Sarasa Mono SC', 'Microsoft YaHei UI', ui-monospace, monospace;
@@ -411,7 +412,115 @@
 .terminal-document-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 0.5rem;
+  gap: 0.15rem 0;
+}
+
+.terminal-document-nav ol {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-document-nav li {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.terminal-breadcrumb-gap {
+  display: inline-block;
+  flex: 0 0 1ch;
+  width: 1ch;
+}
+
+.terminal-breadcrumb-separator {
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.terminal-document-nav a,
+.terminal-document-current,
+.terminal-directory a,
+.terminal-directory-list a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.terminal-directory,
+.terminal-reader-status {
+  max-width: var(--terminal-measure);
+}
+
+.terminal-directory-list {
+  padding-left: var(--terminal-space-record);
+}
+
+.terminal-directory-list [data-kind='directory'] {
+  color: var(--terminal-color-command);
+}
+
+.terminal-tree {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal-reader-status {
+  margin-top: calc(var(--terminal-space-record) * 2);
+  border-top: 1px solid var(--terminal-color-border);
+  padding-top: var(--terminal-space-record);
+  color: var(--terminal-color-muted);
+}
+
+.terminal-reader-status > p:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--terminal-space-record);
+  color: var(--terminal-color-command);
+}
+
+.terminal-reader-status form:not([hidden]) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 44px;
+}
+
+.terminal-reader-status label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.terminal-reader-status input {
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--terminal-color-text);
+  font: inherit;
+}
+
+.terminal-reader-status input:focus-visible,
+.terminal-prose:focus-visible,
+[data-reader-active] {
+  outline: 2px solid var(--terminal-color-focus);
+  outline-offset: 4px;
+}
+
+[data-reader-unit] {
+  scroll-margin-block: 25vh;
+}
+
+::highlight(terminal-reader-search) {
+  background-color: var(--terminal-color-highlight);
+  color: var(--terminal-color-text);
 }
 
 .terminal-document h1,

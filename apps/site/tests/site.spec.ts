@@ -62,7 +62,8 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: /Command for guest@f1refly \$/u })).toHaveCount(0);
-  await expect(page.locator('template[data-terminal-template]')).toHaveCount(3);
+  await expect(page.getByRole('link', { name: 'characters/nahida.md' })).toBeVisible();
+  await expect(page.locator('template[data-terminal-template]')).toHaveCount(4);
   await expect(page.locator('.terminal-titlebar')).toHaveCount(0);
   await expect(page.getByText('Hidden draft')).toHaveCount(0);
 
@@ -150,7 +151,7 @@ test('post deep link renders Markdown as semantic HTML', async ({ page }) => {
   await expectNoHorizontalOverflow(page);
 });
 
-test('Terminal article remains a complete JavaScript-free document', async ({ page }) => {
+test('Terminal article remains complete and exposes a linked canonical breadcrumb', async ({ page }) => {
   await page.goto('/posts/llm-workflow-with-trellis/');
 
   const article = page.getByRole('article');
@@ -171,8 +172,60 @@ test('Terminal article remains a complete JavaScript-free document', async ({ pa
   await codeRegion.focus();
   await expect(codeRegion).toBeFocused();
   expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  const breadcrumb = page.getByRole('navigation', { name: 'Document path' });
+  await expect(breadcrumb.getByRole('link', { name: '/' })).toHaveAttribute('href', '/');
+  await expect(breadcrumb.getByRole('link', { name: 'posts' })).toHaveAttribute('href', '/posts/');
+  await expect(breadcrumb.getByText('llm-workflow-with-trellis.md')).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('textbox')).toHaveCount(0);
   await expectHeadingLevels(page, [1, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
+  await expectNoHorizontalOverflow(page);
+});
+
+test('nested post and directory indexes use canonical native links', async ({ page }) => {
+  await page.goto('/posts/characters/');
+  await expect(page.getByRole('heading', { level: 1, name: 'posts/characters/' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'nahida.md' })).toHaveAttribute('href', '/posts/characters/nahida/');
+  await expect(page.locator('script')).toHaveCount(0);
+
+  await page.goto('/posts/characters/nahida/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Notes on Nahida' })).toBeVisible();
+  const breadcrumb = page.getByRole('navigation', { name: 'Document path' });
+  expect((await breadcrumb.textContent())?.replace(/\s+/gu, ' ').trim()).toBe(
+    'guest@f1refly:~/blog $ / posts / characters / nahida.md'
+  );
+  await expect(breadcrumb).not.toContainText('cd');
+  await expect(breadcrumb).not.toContainText('/ /posts');
+  const rootLink = breadcrumb.getByRole('link', { name: '/', exact: true });
+  const postsLink = breadcrumb.getByRole('link', { name: 'posts', exact: true });
+  const charactersLink = breadcrumb.getByRole('link', { name: 'characters', exact: true });
+  await expect(rootLink).toHaveAttribute('href', '/');
+  await expect(postsLink).toHaveAttribute('href', '/posts/');
+  await expect(charactersLink).toHaveAttribute('href', '/posts/characters/');
+  await expect(rootLink).toHaveCSS('text-decoration-line', 'underline');
+  await expect(postsLink).toHaveCSS('text-decoration-line', 'underline');
+  await expect(charactersLink).toHaveCSS('text-decoration-line', 'underline');
+  await rootLink.focus();
+  await expect(rootLink).toBeFocused();
+  expect(await rootLink.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
+  const current = breadcrumb.getByText('nahida.md', { exact: true });
+  await expect(current).toHaveAttribute('aria-current', 'page');
+  await expect(current).toHaveCSS('text-decoration-line', 'underline');
+  await expect(breadcrumb.getByRole('link', { name: 'nahida.md', exact: true })).toHaveCount(0);
+  await expect(breadcrumb.getByRole('listitem')).toHaveCount(4);
+  expect(await breadcrumb.getByRole('link').evaluateAll((links) => links.map((link) => ({
+    href: link.getAttribute('href'),
+    text: link.textContent
+  })))).toEqual([
+    { href: '/', text: '/' },
+    { href: '/posts/', text: 'posts' },
+    { href: '/posts/characters/', text: 'characters' }
+  ]);
+  const gapWidths = await breadcrumb.locator('.terminal-breadcrumb-gap').evaluateAll(
+    (gaps) => gaps.map((gap) => gap.getBoundingClientRect().width)
+  );
+  expect(gapWidths).toHaveLength(6);
+  for (const width of gapWidths) expect(width).toBeGreaterThan(0);
+  await expect(breadcrumb.locator('.terminal-breadcrumb-separator')).toHaveCount(2);
   await expectNoHorizontalOverflow(page);
 });
 

@@ -12,6 +12,17 @@ test('assembled release preserves cross-application navigation and mounted 404 o
   await expect(provenance.text()).resolves.toContain(
     'a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2'
   );
+  await page.goto('/posts/characters/');
+  await expect(page.getByRole('link', { name: 'nahida.md' })).toHaveAttribute(
+    'href',
+    '/posts/characters/nahida/'
+  );
+  await page.goto('/posts/characters/nahida/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Notes on Nahida' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Document path' })).toContainText('nahida.md');
+  const readerScript = await page.locator('script[src*="TerminalDocument"]').getAttribute('src');
+  expect(readerScript).toMatch(/^\/_astro\/TerminalDocument[^/]+\.js$/u);
+  expect((await page.request.get(readerScript!)).status()).toBe(200);
   await page.goto('/lab/');
   await expect(page.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();
   const nerv = page.getByRole('link', { name: /Open NERV/u });

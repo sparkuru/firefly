@@ -21,12 +21,11 @@ RUN npm --prefix tooling/validate-experiments ci --ignore-scripts \
     && npm --prefix tooling/assemble-publication run build:experiments -- --root /app \
     && npm --prefix tooling/assemble-publication run assemble -- --root /app
 
-FROM nginx:1.28-alpine AS runtime
+FROM nginx:1.28-alpine AS runtime-base
 
 RUN rm /etc/nginx/conf.d/default.conf /usr/share/nginx/html/50x.html
 
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder --chown=nginx:nginx /app/dist/ /usr/share/nginx/html/
 
 USER nginx
 
@@ -36,3 +35,11 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --quiet --spider --tries=1 http://127.0.0.1:8080/healthz || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
+
+FROM runtime-base AS runtime
+
+COPY --from=builder --chown=nginx:nginx /app/dist/ /usr/share/nginx/html/
+
+FROM runtime-base AS runtime-publication
+
+COPY --chown=nginx:nginx dist/ /usr/share/nginx/html/

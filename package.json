@@ -49,6 +49,11 @@
     "build:m4": "npm run build:validator && npm run validate:experiments && npm run build:x-core && npm run build:semantic && npm run build:terminal && npm run build:assembler && npm run build:site && npm run build:experiments && npm run assemble:publication",
     "check:m4": "npm run check:validator && npm run check:x-core && npm run check:semantic && npm run check:terminal && npm run check:assembler && npm run check:site && npm run check:nerv",
     "test:m4": "npm run test:validator && npm run test:x-core && npm run test:semantic && npm run test:terminal && npm run test:assembler && npm run test:content:site && npm run test:x-core:site",
-    "publication:m4": "npm run install:m4 && npm run build:m4"
+    "publication:m4": "npm run install:m4 && npm run build:m4",
+    "build:m5": "npm run build:m4",
+    "check:m5": "npm run check:m4",
+    "test:m5": "npm run test:m4",
+    "publication:m5": "npm run install:m4 && npm run build:m5",
+    "package:runtime:m5": "./package-runtime.sh"
   }
 }

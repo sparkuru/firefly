@@ -1,10 +1,12 @@
 import {
   DEFAULT_TERMINAL_PROMPT,
+  cancelCommandInput,
   completeCommand,
   createTerminalState,
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
+  formatDocumentOperand,
   navigateHistory,
   type TerminalEffect,
   type TerminalEntry,
@@ -25,7 +27,7 @@ interface TerminalNodes {
 }
 
 interface TerminalTemplates {
-  readonly byFilename: ReadonlyMap<string, HTMLTemplateElement>;
+  readonly byPath: ReadonlyMap<string, HTMLTemplateElement>;
 }
 
 interface RenderContext {
@@ -35,7 +37,7 @@ interface RenderContext {
 
 interface RenderResult {
   readonly focusTarget: HTMLElement | null;
-  readonly navigationHref?: `/lab/${string}/`;
+  readonly navigationHref?: string;
 }
 
 const protectedTypingTargetSelector = [
@@ -127,7 +129,8 @@ function readEntries(root: HTMLElement): readonly TerminalEntry[] {
   for (const element of elements) {
     raw.push({
       kind: element.dataset.terminalEntryKind,
-      slug: element.dataset.terminalEntrySlug,
+      virtualPath: element.dataset.terminalEntryVirtualPath,
+      relativePath: element.dataset.terminalEntryRelativePath,
       filename: element.dataset.terminalEntryFilename,
       title: element.dataset.terminalEntryTitle,
       href: element.dataset.terminalEntryHref,
@@ -154,14 +157,14 @@ function readTemplates(
   root: HTMLElement,
   entries: readonly TerminalEntry[]
 ): TerminalTemplates {
-  const expected = new Set<string>(entries.map((entry) => entry.filename));
-  const byFilename = new Map<string, HTMLTemplateElement>();
+  const expected = new Set<string>(entries.map((entry) => entry.virtualPath));
+  const byPath = new Map<string, HTMLTemplateElement>();
 
   for (const template of root.querySelectorAll<HTMLTemplateElement>('[data-terminal-template]')) {
     if (!(template instanceof HTMLTemplateElement)) {
       throw new TypeError('Terminal document templates must use native template elements.');
     }
-    const filename = template.getAttribute('data-terminal-template-filename');
+    const virtualPath = template.getAttribute('data-terminal-template-path');
     const streamDocument = template.content.children.length === 1
       ? template.content.firstElementChild
       : null;
@@ -170,9 +173,9 @@ function readTemplates(
       : [];
     const streamTitle = streamTitles.length === 1 ? streamTitles[0] : null;
     if (
-      filename === null ||
-      !expected.has(filename) ||
-      byFilename.has(filename) ||
+      virtualPath === null ||
+      !expected.has(virtualPath) ||
+      byPath.has(virtualPath) ||
       !(streamDocument instanceof HTMLElement) ||
       !streamDocument.matches('[data-terminal-stream-document]') ||
       template.content.querySelectorAll('[data-terminal-stream-document]').length !== 1 ||
@@ -183,13 +186,13 @@ function readTemplates(
     ) {
       throw new TypeError('Terminal document templates must exactly match the public index.');
     }
-    byFilename.set(filename, template);
+    byPath.set(virtualPath, template);
   }
 
-  if (byFilename.size !== expected.size) {
+  if (byPath.size !== expected.size) {
     throw new TypeError('Terminal document templates must exactly match the public index.');
   }
-  return { byFilename };
+  return { byPath };
 }
 
 function appendTextLine(parent: HTMLElement, value: string): void {
@@ -289,7 +292,7 @@ function renderEffect(
         const item = document.createElement('li');
         const link = document.createElement('a');
         link.href = entry.href;
-        link.textContent = entry.filename;
+        link.textContent = formatDocumentOperand(entry);
         item.append(link, document.createTextNode(` — ${entry.date} — ${entry.title}`));
         list.append(item);
       }
@@ -320,8 +323,15 @@ function renderEffect(
       record.append(link);
       return { focusTarget: null, navigationHref: effect.experiment.href };
     }
+    case 'document-navigation': {
+      const link = document.createElement('a');
+      link.href = effect.entry.href;
+      link.textContent = `Open ${effect.entry.title} in the reader`;
+      record.append(link);
+      return { focusTarget: null, navigationHref: effect.entry.href };
+    }
     case 'document': {
-      const template = context.templates.byFilename.get(effect.entry.filename);
+      const template = context.templates.byPath.get(effect.entry.virtualPath);
       if (template === undefined) {
         throw new TypeError(`Missing Terminal template for ${effect.entry.filename}.`);
       }
@@ -337,6 +347,13 @@ function renderEffect(
       );
       record.append(fragment);
       return { focusTarget: title };
+    }
+    case 'tree': {
+      const pre = document.createElement('pre');
+      pre.className = 'terminal-tree';
+      pre.textContent = [effect.root, ...effect.lines].join('\n');
+      record.append(pre);
+      return { focusTarget: null };
     }
     case 'clear':
       return { focusTarget: null };
@@ -370,6 +387,19 @@ function settleViewport(target: HTMLElement, block: ScrollLogicalPosition): void
     : 'smooth';
   target.focus({ preventScroll: true });
   target.scrollIntoView({ behavior, block, inline: 'nearest' });
+}
+
+function settleCommandOutput(record: HTMLElement, input: HTMLInputElement): void {
+  const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth';
+  input.focus({ preventScroll: true });
+  const margin = Math.min(24, window.innerHeight * 0.05);
+  window.scrollBy({
+    behavior,
+    left: 0,
+    top: record.getBoundingClientRect().top - margin
+  });
 }
 
 function isEligibleTypingTarget(event: KeyboardEvent): boolean {
@@ -466,7 +496,7 @@ export function startTerminalHome(
         return;
       }
       if (rendered.focusTarget === null) {
-        settleViewport(nodes.input, 'center');
+        settleCommandOutput(record, nodes.input);
       } else {
         settleViewport(rendered.focusTarget, 'start');
       }
@@ -491,6 +521,21 @@ export function startTerminalHome(
     if (composing || event.isComposing) {
       return;
     }
+    if (
+      event.key.toLocaleLowerCase('en-US') === 'c' &&
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      state = cancelCommandInput(state);
+      nodes.input.value = '';
+      nodes.completion.textContent = '';
+      nodes.announcer.textContent = 'Command cancelled.';
+      settleViewport(nodes.input, 'center');
+      return;
+    }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault();
       const navigation = navigateHistory(
@@ -511,16 +556,34 @@ export function startTerminalHome(
       !event.altKey
     ) {
       const completion = completeCommand(nodes.input.value, entries, experiments);
-      if (completion.kind === 'unique') {
-        event.preventDefault();
-        nodes.input.value = completion.value;
-        nodes.completion.textContent = '';
-      } else if (completion.kind === 'ambiguous') {
-        nodes.completion.textContent = `Matches: ${completion.candidates.join(', ')}`;
-      } else {
-        nodes.completion.textContent = '';
+      switch (completion.kind) {
+        case 'unique':
+          event.preventDefault();
+          nodes.input.value = completion.value;
+          nodes.completion.textContent = '';
+          break;
+        case 'ambiguous':
+          if (completion.ownsTab) {
+            event.preventDefault();
+          }
+          nodes.completion.textContent = `Matches: ${completion.candidates.join(', ')}`;
+          break;
+        case 'no-match':
+          event.preventDefault();
+          nodes.completion.textContent = 'No matches.';
+          break;
+        case 'none':
+          nodes.completion.textContent = '';
+          break;
+        default: {
+          const exhaustive: never = completion;
+          throw new TypeError(`Unsupported completion result: ${String(exhaustive)}`);
+        }
       }
     }
+  });
+  nodes.input.addEventListener('input', () => {
+    nodes.completion.textContent = '';
   });
 
   document.addEventListener('keydown', (event) => {

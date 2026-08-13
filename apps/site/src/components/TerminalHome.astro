@@ -57,13 +57,14 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
                   class="terminal-entry"
                   data-terminal-entry
                   data-terminal-entry-kind={terminalEntry.kind}
-                  data-terminal-entry-slug={terminalEntry.slug}
+                  data-terminal-entry-virtual-path={terminalEntry.virtualPath}
+                  data-terminal-entry-relative-path={terminalEntry.relativePath}
                   data-terminal-entry-filename={terminalEntry.filename}
                   data-terminal-entry-title={terminalEntry.title}
                   data-terminal-entry-href={terminalEntry.href}
                   data-terminal-entry-date={terminalEntry.date}
                 >
-                  <a href={terminalEntry.href}>{terminalEntry.filename}</a>
+                  <a href={terminalEntry.href}>{terminalEntry.relativePath}</a>
                   <span> — {terminalEntry.title}</span>
                   <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
                 </li>
@@ -85,7 +86,8 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
                   class="terminal-entry"
                   data-terminal-entry
                   data-terminal-entry-kind={terminalEntry.kind}
-                  data-terminal-entry-slug={terminalEntry.slug}
+                  data-terminal-entry-virtual-path={terminalEntry.virtualPath}
+                  data-terminal-entry-relative-path={terminalEntry.relativePath}
                   data-terminal-entry-filename={terminalEntry.filename}
                   data-terminal-entry-title={terminalEntry.title}
                   data-terminal-entry-href={terminalEntry.href}
@@ -131,7 +133,7 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
     documents.map(({ entry, terminalEntry, document }) => (
       <template
         data-terminal-template
-        data-terminal-template-filename={terminalEntry.filename}
+        data-terminal-template-path={terminalEntry.virtualPath}
       >
         <TerminalStreamDocument
           entry={entry}
@@ -154,8 +156,9 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
         Command for {DEFAULT_TERMINAL_PROMPT}
       </label>
       <p id="terminal-command-help" class="terminal-visually-hidden">
-        Type help for commands. Use Arrow keys for history. Tab completes only
-        a unique match; otherwise it leaves the command input.
+        Type help for commands. Use Arrow keys for history. Control+C cancels
+        the current command. Tab completes a unique match; safe cat and vim path
+        candidates keep focus when ambiguous, while other Tab presses stay native.
       </p>
       <div class="terminal-command-row">
         <span class="terminal-prompt" aria-hidden="true">{DEFAULT_TERMINAL_PROMPT}</span>

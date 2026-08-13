@@ -32,6 +32,21 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(post.date instanceof Date);
   assert.ok(post.updated instanceof Date);
   assert.ok(page.date instanceof Date);
+  assert.deepEqual(post.access, { visibility: 'public' });
+  assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
+});
+
+test('access metadata is an exact public or private-owner union', () => {
+  assert.equal(postSchema.safeParse({ ...validPost, access: { visibility: 'public' } }).success, true);
+  assert.equal(postSchema.safeParse({ ...validPost, access: { visibility: 'private', owner: 'owner-1' } }).success, true);
+  for (const access of [
+    { visibility: 'public', owner: 'owner-1' },
+    { visibility: 'private' },
+    { visibility: 'private', owner: '../owner' },
+    { visibility: 'unknown' }
+  ]) {
+    assert.equal(postSchema.safeParse({ ...validPost, access }).success, false);
+  }
 });
 
 test('invalid date values are rejected', () => {
@@ -41,10 +56,16 @@ test('invalid date values are rejected', () => {
 });
 
 test('invalid slug is rejected', () => {
-  assert.equal(
-    postSchema.safeParse({ ...validPost, slug: 'nested/post' }).success,
-    false
-  );
+  for (const slug of ['nested/post', '.hidden', '..', 'encoded%2fpath', 'back\\slash', 'not normalized e\u0301']) {
+    assert.equal(postSchema.safeParse({ ...validPost, slug }).success, false, slug);
+  }
+});
+
+test('aliases require canonical safe directory routes', () => {
+  assert.equal(postSchema.safeParse({ ...validPost, aliases: ['/archive/2026/'] }).success, true);
+  for (const alias of ['relative/', '//double/', '/missing-trailing', '/nested//path/', '/./path/', '/../path/', '/.hidden/', '/encoded%2fpath/', '/back\\slash/']) {
+    assert.equal(postSchema.safeParse({ ...validPost, aliases: [alias] }).success, false, alias);
+  }
 });
 
 test('unknown layouts and malformed presentations are rejected', () => {

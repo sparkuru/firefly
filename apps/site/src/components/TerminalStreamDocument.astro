@@ -12,7 +12,7 @@ interface Props {
 
 const { entry, terminalEntry, document } = Astro.props;
 const { Content } = document;
-const titleId = `terminal-stream-${terminalEntry.slug}-title`;
+const titleId = `terminal-stream-${terminalEntry.virtualPath.replaceAll('/', '-')}-title`;
 const kind = entry.collection === 'posts' ? 'post' : 'page';
 ---
 

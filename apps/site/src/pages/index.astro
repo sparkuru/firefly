@@ -5,31 +5,21 @@ import {
 } from '@f1refly/presentation-terminal/runtime';
 import TerminalHome from '../components/TerminalHome.astro';
 import TerminalLayout from '../layouts/TerminalLayout.astro';
-import { getPublicContent } from '../lib/content';
+import { getCanonicalContent } from '../lib/content';
 import { getPublicExperiments } from '../lib/experiments';
 import { renderDocument } from '../lib/render-document';
 
-const { posts, pages } = await getPublicContent();
+const { documents: canonicalDocuments } = await getCanonicalContent();
 const publicExperiments = await getPublicExperiments();
-const publicDocuments = [...posts, ...pages];
-const entries = decodeTerminalEntries([
-  ...posts.map((entry) => ({
-    kind: 'post',
-    slug: entry.data.slug,
-    filename: `${entry.data.slug}.md`,
-    title: entry.data.title,
-    href: `/posts/${entry.data.slug}/`,
-    date: entry.data.date.toISOString().slice(0, 10)
-  })),
-  ...pages.map((entry) => ({
-    kind: 'page',
-    slug: entry.data.slug,
-    filename: `${entry.data.slug}.md`,
-    title: entry.data.title,
-    href: `/pages/${entry.data.slug}/`,
-    date: entry.data.date.toISOString().slice(0, 10)
-  }))
-]);
+const entries = decodeTerminalEntries(canonicalDocuments.map((canonical) => ({
+  kind: canonical.collection === 'posts' ? 'post' : 'page',
+  virtualPath: canonical.virtualPath,
+  relativePath: canonical.relativePath,
+  filename: canonical.filename,
+  title: canonical.entry.data.title,
+  href: canonical.href,
+  date: canonical.entry.data.date.toISOString().slice(0, 10)
+})));
 const experiments = decodeTerminalExperiments(
   publicExperiments.map((experiment) => ({
     id: experiment.id,
@@ -38,15 +28,15 @@ const experiments = decodeTerminalExperiments(
   }))
 );
 const documents = await Promise.all(
-  publicDocuments.map(async (entry, index) => {
+  canonicalDocuments.map(async (canonical, index) => {
     const terminalEntry = entries[index];
     if (terminalEntry === undefined) {
-      throw new Error(`Missing Terminal index entry for ${entry.collection}/${entry.id}.`);
+      throw new Error(`Missing Terminal index entry for ${canonical.virtualPath}.`);
     }
     return {
-      entry,
+      entry: canonical.entry,
       terminalEntry,
-      document: await renderDocument(entry)
+      document: await renderDocument(canonical.entry)
     };
   })
 );
@@ -55,7 +45,7 @@ const documents = await Promise.all(
 <TerminalLayout
   title="f1refly"
   description="A static garden for notes, experiments, and durable web writing."
-  path="~/blog"
+  path="~/blog/posts"
   home
 >
   <TerminalHome documents={documents} experiments={experiments} />

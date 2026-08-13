@@ -1,0 +1,12 @@
+---
+import ContentDirectoryIndex from '../../components/ContentDirectoryIndex.astro';
+import TerminalLayout from '../../layouts/TerminalLayout.astro';
+import { getCanonicalContent } from '../../lib/content';
+
+const directory = (await getCanonicalContent()).directories.find(({ virtualPath }) => virtualPath === 'pages');
+if (directory === undefined) throw new Error('Missing public pages directory.');
+---
+
+<TerminalLayout title="pages" description="Public standalone pages." path="~/blog/pages">
+  <ContentDirectoryIndex directory={directory} />
+</TerminalLayout>

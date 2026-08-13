@@ -1,0 +1,32 @@
+---
+import type { ContentDirectory } from '../lib/content';
+
+interface Props {
+  directory: ContentDirectory;
+}
+
+const { directory } = Astro.props;
+const parentHref = directory.virtualPath.includes('/')
+  ? `/${directory.virtualPath.split('/').slice(0, -1).join('/')}/`
+  : '/';
+---
+
+<section class="terminal-directory">
+  <nav aria-label="Directory navigation"><a href="/">~/blog</a><span aria-hidden="true"> / </span><a href={parentHref}>..</a></nav>
+  <p class="terminal-prompt">guest@f1refly:~/blog$ tree /{directory.virtualPath}</p>
+  <h1>{directory.virtualPath}/</h1>
+  {
+    directory.children.length === 0 ? (
+      <p class="terminal-meta">No public documents.</p>
+    ) : (
+      <ul class="terminal-directory-list">
+        {directory.children.map((child) => (
+          <li data-kind={child.kind}>
+            <a href={child.href}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
+            {child.kind === 'file' && <span> — {child.document.entry.data.title}</span>}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>

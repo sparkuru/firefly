@@ -4,16 +4,19 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
+    "prepare:content": "node scripts/materialize-content.mjs",
+    "dev": "npm run prepare:content && astro dev",
+    "start": "npm run prepare:content && astro dev",
     "start:e2e": "astro preview",
-    "check": "astro check",
-    "build": "astro check && astro build && node --test tests/static-output.test.mjs",
-    "test:content": "node --test --test-concurrency=1 tests/content-schema.test.mjs tests/content-build-negatives.test.mjs",
+    "check": "npm run prepare:content && astro check",
+    "build": "npm run prepare:content && astro check && astro build && node --test tests/static-output.test.mjs",
+    "build:workspace": "npm run prepare:content && astro check && astro build",
+    "test:content": "node --test --test-concurrency=1 tests/content-access.test.mjs tests/content-materializer.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs",
     "test:x-core": "node --test tests/x-core-integration.test.mjs",
     "test:e2e": "playwright test",
+    "review:m5": "playwright test --config playwright.review.config.ts",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "npm run prepare:content && astro"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.2.2",

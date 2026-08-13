@@ -1,24 +1,23 @@
 ---
-import type { CollectionEntry } from 'astro:content';
 import DocumentPresentation from '../../components/DocumentPresentation.astro';
-import { getPublicPages } from '../../lib/content';
+import { getCanonicalContent, type CanonicalDocument } from '../../lib/content';
 import { renderDocument } from '../../lib/render-document';
 
 export async function getStaticPaths() {
-  const pages = await getPublicPages();
+  const pages = (await getCanonicalContent()).pages;
 
-  return pages.map((entry) => ({
-    params: { slug: entry.data.slug },
-    props: { entry }
+  return pages.map((canonical) => ({
+    params: { slug: canonical.relativePath.slice(0, -3) },
+    props: { canonical }
   }));
 }
 
 interface Props {
-  entry: CollectionEntry<'pages'>;
+  canonical: CanonicalDocument;
 }
 
-const { entry } = Astro.props;
-const document = await renderDocument(entry);
+const { canonical } = Astro.props;
+const document = await renderDocument(canonical.entry);
 ---
 
-<DocumentPresentation entry={entry} document={document} />
+<DocumentPresentation canonical={canonical} document={document} />

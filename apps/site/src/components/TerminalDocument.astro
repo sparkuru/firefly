@@ -1,29 +1,46 @@
 ---
-import type { PublicDocument } from '../lib/render-document';
+import type { CanonicalDocument } from '../lib/content';
 import type { renderDocument } from '../lib/render-document';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface Props {
-  entry: PublicDocument;
+  canonical: CanonicalDocument;
   document: RenderedDocument;
 }
 
-const { entry, document } = Astro.props;
+const { canonical, document } = Astro.props;
+const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
-const kind = entry.collection === 'posts' ? 'post' : 'page';
 ---
 
-<article class="terminal-document">
+<article class="terminal-document" data-terminal-reader>
   <nav class="terminal-document-nav" aria-label="Document path">
-    <span class="terminal-prompt">guest@f1refly:~/blog$</span>
-    <a href="/">cd /</a>
-    <span aria-hidden="true"> / </span>
-    <span>{kind}/{entry.data.slug}.md</span>
+    <span class="terminal-prompt">guest@f1refly:~/blog $</span>
+    <ol>
+      {canonical.breadcrumbs.map((item, index) => (
+        <li data-breadcrumb-token={index === 0 ? 'root' : item.label}>
+          <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
+          {index > 1 && (
+            <>
+              <span class="terminal-breadcrumb-separator" aria-hidden="true">/</span>
+              <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
+            </>
+          )}
+          <a href={item.href}>{item.label}</a>
+        </li>
+      ))}
+      <li data-breadcrumb-token="current">
+        <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
+        <span class="terminal-breadcrumb-separator" aria-hidden="true">/</span>
+        <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
+        <span class="terminal-document-current" aria-current="page">{canonical.filename}</span>
+      </li>
+    </ol>
   </nav>
   <header class="terminal-document-header">
-    <p class="terminal-path">{kind} / {entry.data.slug}.md</p>
+    <p class="terminal-path">{canonical.virtualPath}</p>
     <h1>{entry.data.title}</h1>
     {
       entry.collection === 'posts' && (
@@ -64,5 +81,30 @@ const kind = entry.collection === 'posts' ? 'post' : 'page';
     )
   }
 
-  <div class="terminal-prose"><Content /></div>
+  <div
+    class="terminal-prose"
+    data-terminal-reader-region
+    tabindex="0"
+    role="region"
+    aria-label={`Read-only Vim reader for ${entry.data.title}`}
+  ><Content /></div>
+  <section class="terminal-reader-status" data-terminal-reader-status aria-label="Reader status">
+    <p><span data-reader-mode>-- NORMAL --</span><span data-reader-position>1/1</span></p>
+    <form data-reader-search-form hidden>
+      <label for="terminal-reader-search">Search document</label>
+      <span data-reader-search-prefix>/</span><input id="terminal-reader-search" type="search" autocomplete="off" />
+    </form>
+    <form data-reader-command-form hidden>
+      <label for="terminal-reader-command">Reader command</label>
+      <span aria-hidden="true">:</span><input id="terminal-reader-command" type="text" autocomplete="off" />
+    </form>
+    <p data-reader-message>j/k move · /? search · v select · :q exit</p>
+    <p class="terminal-visually-hidden" data-reader-announcer aria-live="polite" aria-atomic="true"></p>
+  </section>
 </article>
+
+<script>
+  import { startTerminalReader } from '../scripts/terminal-reader';
+  const reader = document.querySelector<HTMLElement>('[data-terminal-reader]');
+  if (reader !== null) startTerminalReader(reader);
+</script>

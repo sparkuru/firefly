@@ -1,0 +1,12 @@
+---
+import ContentDirectoryIndex from '../../components/ContentDirectoryIndex.astro';
+import TerminalLayout from '../../layouts/TerminalLayout.astro';
+import { getCanonicalContent } from '../../lib/content';
+
+const directory = (await getCanonicalContent()).directories.find(({ virtualPath }) => virtualPath === 'posts');
+if (directory === undefined) throw new Error('Missing public posts directory.');
+---
+
+<TerminalLayout title="posts" description="Public post directories and documents." path="~/blog/posts">
+  <ContentDirectoryIndex directory={directory} />
+</TerminalLayout>

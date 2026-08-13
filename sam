@@ -27,6 +27,8 @@ WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
 
 readonly IMAGE SAM_IPC REPO_ROOT DEVHOME
 
+content_mounts=()
+
 usage() {
 	printf 'Usage: %s <command> [arguments...]\n' "$(basename "$0")" >&2
 }
@@ -54,6 +56,115 @@ require_command() {
 	}
 }
 
+is_broad_mount_path() {
+	local candidate=$1
+	local relative=${candidate#/}
+
+	[[ "${candidate}" == / || "${relative}" != */* ]] && return 0
+	[[ "${REPO_ROOT}/" == "${candidate}/"* ]]
+}
+
+validate_mount_path() {
+	local candidate=$1
+
+	[[ "${candidate}" != *$'\n'* && "${candidate}" != *$'\r'* && "${candidate}" != *,* ]] || {
+		printf '[sam] content mount path contains unsupported characters\n' >&2
+		return 2
+	}
+	if is_broad_mount_path "${candidate}"; then
+		printf '[sam] content links cannot mount a broad system, home, or repository ancestor\n' >&2
+		return 2
+	fi
+	return 0
+}
+
+discover_content_mounts() {
+	local configured_root=${F1REFLY_CONTENT_ROOT:-${REPO_ROOT}/content/posts}
+	local content_root
+	local current_directory
+	local link_path
+	local next_path
+	local raw_target
+	local target_path
+	local -a directory_queue=()
+	local queue_index=0
+	local -A mounted_paths=()
+	local -A scanned_directories=()
+	local -A link_chain=()
+
+	for dependency in find readlink realpath; do
+		require_command "${dependency}"
+	done
+	[[ "${configured_root}" == /* ]] || {
+		printf '[sam] F1REFLY_CONTENT_ROOT must be an absolute directory path\n' >&2
+		return 2
+	}
+	validate_mount_path "${configured_root}"
+	content_root=$(readlink -f -- "${configured_root}") || {
+		printf '[sam] F1REFLY_CONTENT_ROOT cannot be resolved\n' >&2
+		return 2
+	}
+	validate_mount_path "${content_root}"
+	[[ -d "${content_root}" && -r "${content_root}" ]] || {
+		printf '[sam] F1REFLY_CONTENT_ROOT must name a readable directory\n' >&2
+		return 2
+	}
+
+	content_mounts+=(--mount "type=bind,src=${content_root},dst=${content_root},readonly")
+	mounted_paths["${content_root}"]=1
+	directory_queue+=("${content_root}")
+
+	while ((queue_index < ${#directory_queue[@]})); do
+		current_directory=${directory_queue[queue_index]}
+		queue_index=$((queue_index + 1))
+		[[ -z "${scanned_directories[${current_directory}]:-}" ]] || continue
+		scanned_directories["${current_directory}"]=1
+
+		while IFS= read -r -d '' link_path; do
+			target_path=${link_path}
+			link_chain=()
+			while [[ -L "${target_path}" ]]; do
+				[[ -z "${link_chain[${target_path}]:-}" ]] || {
+					printf '[sam] cyclic content symlink below the configured workspace\n' >&2
+					return 2
+				}
+				link_chain["${target_path}"]=1
+				raw_target=$(readlink -- "${target_path}") || {
+					printf '[sam] unreadable content symlink below the configured workspace\n' >&2
+					return 2
+				}
+				if [[ "${raw_target}" == /* ]]; then
+					next_path=$(realpath -ms -- "${raw_target}")
+				else
+					next_path=$(realpath -ms -- "$(dirname -- "${target_path}")/${raw_target}")
+				fi
+				validate_mount_path "${next_path}"
+				[[ -e "${next_path}" || -L "${next_path}" ]] || {
+					printf '[sam] broken content symlink below the configured workspace\n' >&2
+					return 2
+				}
+				if [[ -z "${mounted_paths[${next_path}]:-}" ]]; then
+					content_mounts+=(--mount "type=bind,src=${next_path},dst=${next_path},readonly")
+					mounted_paths["${next_path}"]=1
+				fi
+				target_path=${next_path}
+			done
+			[[ -f "${target_path}" || -d "${target_path}" ]] || {
+				printf '[sam] content symlink target must be a regular file or directory\n' >&2
+				return 2
+			}
+			if [[ -d "${target_path}" && "${link_path}/" == "${target_path}/"* ]]; then
+				printf '[sam] cyclic content directory link below the configured workspace\n' >&2
+				return 2
+			fi
+			[[ -d "${target_path}" ]] && directory_queue+=("${target_path}")
+		done < <(find "${current_directory}" -type l -print0)
+	done
+
+	F1REFLY_CONTENT_ROOT=${content_root}
+	export F1REFLY_CONTENT_ROOT
+}
+
 run_step() {
 	local label=$1
 	shift
@@ -75,6 +186,7 @@ main() {
 	require_command docker
 	require_command id
 	require_command mkdir
+	discover_content_mounts
 	run_step internal mkdir -p -- "${DEVHOME}"
 
 	[[ -t 0 ]] && tty_flags+=(-i)
@@ -105,7 +217,9 @@ main() {
 		--ipc "${SAM_IPC}"
 		--user "$(id -u):$(id -g)"
 		-e HOME=/app/.devhome
+		-e "F1REFLY_CONTENT_ROOT=${F1REFLY_CONTENT_ROOT}"
 		-v "${REPO_ROOT}:/app"
+		"${content_mounts[@]}"
 		-w /app
 		--label "sam.repo=${REPO_ROOT}"
 		--label "sam.scope=${SAM_SCOPE:-manual}"
