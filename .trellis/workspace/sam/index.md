@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
-- **Last Active**: 2026-08-13
+- **Total Sessions**: 8
+- **Last Active**: 2026-08-14
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~165 | Active |
+| `journal-1.md` | ~187 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-08-14 | M5 full content migration | `3e36dad`, `04746a6` | `anti-entropy-loss-syndrome` |
 | 7 | 2026-08-13 | M5 content filesystem and Vim reader | `58ab2d9`, `4433b6a` | `anti-entropy-loss-syndrome` |
 | 6 | 2026-08-13 | M4 experiment publication and Terminal refinement | `9da459e`, `d739493` | `anti-entropy-loss-syndrome` |
 | 5 | 2026-08-13 | Complete M3 shell-first Terminal interface | `f85fb9f`, `696898b`, `8bad2d1` | `anti-entropy-loss-syndrome` |
