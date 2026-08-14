@@ -25,8 +25,6 @@ preserving the immutable/static architecture.
 - M5.1 comments are deferred; no comment API, database, SSR, or direct database
   reads belong to staging. Local image-like strings in authored Markdown are
   ordinary public body text and are not a staging concern.
-- Owner authorization currently covers planning only. No host mutation, DNS/TLS
-  change, deployment, or production traffic switch is authorized.
 - Local Docker preflight on 2026-08-14 confirms the existing runtime model:
   Docker Engine 26.1.5 built the complete M5 publication and minimal
   `f1refly:m5-runtime` Nginx image. The exact 23-file inventory, routes,
@@ -42,10 +40,10 @@ preserving the immutable/static architecture.
   baseline connection was closed by the remote host before it could report OS,
   disk, Docker daemon, or port occupancy. No remote state was changed and those
   facts remain pending a stable authorized connection.
-- Superseded decision: a remote `staging.majo.im` origin and its associated
-  host/DNS/TLS plan are not part of M6. The prior read-only SSH evidence is
-  retained only as discarded-option evidence; it authorizes no future remote
-  action.
+- Superseded decision: M6 formerly rejected remote `staging.majo.im` work.
+  Owner authorization on 2026-08-15 created M7 as the separate owner of a
+  reversible SSH-reverse-tunnel/Nginx staging rehearsal. This M6 record neither
+  authorizes nor constrains M7.
 - Owner decision: retain M6 as a production-preflight stage. It must exercise
   the complete release and rollback path in a restricted real environment before
   M7; production is not the first place where a deployment is tried.
@@ -119,8 +117,8 @@ direct database access, legacy Typecho mutation, and application feature work.
 
 - M6 is retained as the mandatory production-preflight and rollback rehearsal;
   successful package validation alone does not replace it.
-- Remote `majo.im` binding, a staging VM, SSH deployment, public DNS, and public
-  TLS are rejected for M6. The rehearsal is local and loopback-only.
+- Remote `majo.im` binding and related host changes are not M6 work; the
+  separately authorized M7 task owns that rehearsal.
 - M6 uses a local trusted development CA. Its certificate/private key are
   temporary owner-workstation material; they never enter the repository, Docker
   image, release artifact, or a remote host.
@@ -140,9 +138,7 @@ direct database access, legacy Typecho mutation, and application feature work.
 
 ## Deferral Record
 
-Owner decision on 2026-08-15: stop M6 planning here. Do not implement local
-TLS, install `mkcert`, alter the workstation trust store, configure a remote
-staging host, or start M7. Revisit TLS and release rehearsal only as part of a
-future, explicitly authorized formal-deployment task. This record preserves the
-discarded options and local Docker evidence without treating them as current
-work.
+Owner decision on 2026-08-15: stop the local-TLS branch of M6 here. Do not
+install `mkcert` or alter the workstation trust store. The owner subsequently
+authorized a separately scoped M7 reverse-tunnel rehearsal; that task, rather
+than this M6 planning record, governs any remote staging configuration.
