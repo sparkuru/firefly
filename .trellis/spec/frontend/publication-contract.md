@@ -147,8 +147,12 @@ commands, and only then assembles the release.
   `lab/index.html` must exist. NERV additionally owns a mounted `404.html`.
 - Text scanning covers extensionless text as well as known text extensions for
   private keys, credential tokens, `file://`, `.private`, container paths, and
-  local home paths. HTML/SVG attributes and HTML/SVG/CSS `url(...)` references
-  are decoded and resolved;
+  local home paths in Experiment mounts and non-authored site artifacts.
+  Owner-authorized Markdown bodies are emitted inside nested document files
+  such as `posts/<category>/<slug>/index.html` and `pages/<slug>/index.html`;
+  only those document HTML files are exempt from this signature scan. Their
+  HTML/SVG/CSS references are still decoded and resolved. HTML/SVG attributes
+  and HTML/SVG/CSS `url(...)` references elsewhere are decoded and resolved;
   local Experiment references cannot leave the mount and every local target must
   exist. Validation reports errors but never rewrites output.
 - `artifacts/` and `dist/` are promoted together. Existing targets move to unique

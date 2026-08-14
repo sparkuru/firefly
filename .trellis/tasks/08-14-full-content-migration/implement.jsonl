@@ -1,0 +1,15 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/tasks/08-14-full-content-migration/design.md", "reason": "Approved M5 migration architecture, boundaries, data flow, and rollback design."}
+{"file": ".trellis/tasks/08-14-full-content-migration/research/ui-ux-pro-max.md", "reason": "Approved UUPM research for static article directories, optional tags, and the deferred comment-interface boundary."}
+{"file": ".trellis/tasks/08-14-full-content-migration/research/repository-evidence.md", "reason": "Repository and non-sensitive private-source evidence for migration and managed assets."}
+{"file": ".trellis/tasks/08-14-full-content-migration/research/resource-exception-review.md", "reason": "Owner-approved deferred local assets and aggregate resource disposition evidence."}
+{"file": ".trellis/tasks/08-14-full-content-migration/research/sql-source-analysis.md", "reason": "MariaDB-validated source table, field, taxonomy, memo, identity, and privacy-safe aggregate evidence."}
+{"file": ".trellis/spec/frontend/content-workspace-contract.md", "reason": "Preserve workspace materialization, projection, canonical route, Terminal, and reader invariants."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Preserve package, source, route, asset, and publication boundaries."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Implement semantic static components and accessibility ownership consistently."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Apply required static, browser, publication, and runtime validation."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Maintain exact schema, path, metadata, and public-data decoding contracts."}
+{"file": ".trellis/spec/frontend/publication-contract.md", "reason": "Preserve safe publication assembly and Nginx runtime isolation."}
+{"file": ".trellis/spec/frontend/x-core-contract.md", "reason": "Keep migrated Markdown and presentation output inside X Core invariants."}
+{"file": ".trellis/spec/frontend/development-runtime.md", "reason": "Use containerized build, browser, runtime, and cleanup contracts."}
+{"file": ".trellis/spec/frontend/migration-contract.md", "reason": "Record the private Typecho intake, native folder projection, handoff privacy, resource gating, and promotion contract."}

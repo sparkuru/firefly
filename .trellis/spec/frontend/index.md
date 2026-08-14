@@ -20,8 +20,10 @@ packages, and two publication tooling packages:
 - `tooling/assemble-publication/`: declared Experiment build orchestration,
   static artifact validation, coordinated staging/release promotion, and
   assembled-publication browser evidence.
+- `tooling/migrate-typecho/`: owner-local, build-only Typecho SQL intake,
+  canonical Markdown projection, private handoff ledger, and promotion gates.
 
-All seven own separate manifests, lockfiles, tests, and build artifacts. The
+All eight own separate manifests, lockfiles, tests, and build artifacts. The
 approved dependency direction is X Core → semantic/Terminal → site; the two
 presentation packages do not import one another. The validator is build-only
 input to the site and assembler; the assembler depends on the validator; NERV
@@ -43,6 +45,7 @@ All files in this directory are written in English and cite implemented paths.
 | [X Core Contract](./x-core-contract.md) | AST pipeline, presentation registry, diagnostics, JSON metadata, and adapter boundary | Active |
 | [Experiment Publication Contract](./publication-contract.md) | Manifest/catalog signatures, build trust, safe artifacts, coordinated promotion, lab/Terminal/Nginx behavior | Active |
 | [Content Workspace Contract](./content-workspace-contract.md) | Configured Markdown root, authored symlinks, guest projection, virtual paths, command registry, nested routes, and Vim reader | Active |
+| [Migration Contract](./migration-contract.md) | Private Typecho intake, folder-derived corpus, metadata/resource policy, handoff privacy, and promotion gates | Active |
 
 ### Trellis Plus: Project Validation Profile
 
@@ -56,6 +59,7 @@ its own lockfile, then run its checks:
 | Semantic adapter | `./sam npm --prefix presentations/semantic ci` | `run check`, `run test`, `run build` |
 | Terminal presentation | `./sam npm --prefix presentations/terminal ci` | `run check`, `run test`, `run build` |
 | Publication assembler | `./sam npm --prefix tooling/assemble-publication ci` | `run check`, `run test`, `run build` |
+| Typecho migration | `./sam npm --prefix tooling/migrate-typecho ci` | `run check`, `run test`, `run build`; real intake stays below `.private/` |
 | Main site | `./sam npm --prefix apps/site ci` | `run test:content`, `run test:x-core`, `run check`, `run build` |
 | NERV | `./sam npm --prefix experiments/nerv ci` | `run check`, `run build` |
 

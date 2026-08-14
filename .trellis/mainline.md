@@ -6,7 +6,7 @@
 - **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, migration, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-13 — M4 was approved, committed, and archived; the separately approved M5 content-filesystem/Vim-reader prelude is implemented and independently checked, with final owner review pending before commit/archive.
+- **Owner decision:** 2026-08-14 — M5 content-filesystem/Vim-reader prelude was approved, committed, and archived. The owner reviewed the full-content-migration plan and authorized implementation; authored Markdown bodies and non-HTTP local asset references are confirmed public authoring content and are preserved as deferred OSS-upload work.
 
 ## Continuation Policy
 
@@ -24,10 +24,11 @@
 | 3 | `.trellis/tasks/archive/2026-08/08-12-m2-x-core-semantic-interface` — M2 X Core semantic interface | complete | The independently locked X Core and semantic packages, Astro metadata bridge, restrained semantic UI, adversarial contract checks, and browser evidence are committed and archived. |
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
-| 6 | `.trellis/tasks/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | submit-ready | Owner-approved implementation is complete; independent review/fixes and all automated gates pass. Awaiting focused human screenshot review and explicit commit/archive approval. |
-| 7 | M5 — full content migration | planned | Depends on M1–M4 and the approved content-filesystem prelude. |
-| 8 | M6 — staging rollout | planned | Depends on M5 and its quality gates. |
-| 9 | M7 — production rollout | planned | Depends on M6 acceptance. |
+| 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
+| 7 | `.trellis/tasks/08-14-full-content-migration` — M5 full content migration | in progress | The private importer, 100-document review candidate, memo/comment/identity handoffs, and site schema validation are in place; all 30 non-HTTP local asset references are owner-approved deferred work, while public materialization remains an explicit owner action. Owner-confirmed public Markdown bodies are preserved without redaction. |
+| 8 | M5.1 — dynamic comments and identity service | planned | Depends on M5's private comment handoff, opaque correspondence, and documented compatibility boundary. Owns the first public comment projection, independently deployed write API/database, consent, abuse controls, moderation, read-model export, and rebuild handoff; it must not convert the main site to SSR or direct database reads. |
+| 9 | M6 — staging rollout | planned | Depends on M5 and, if M5.1 is accepted for the release, its quality gates. |
+| 10 | M7 — production rollout | planned | Depends on M6 acceptance. |
 
 ## Evidence
 
@@ -60,7 +61,11 @@
 - M5 final owner refinement replaces collapsible breadcrumb whitespace with six explicit `1ch` gap boxes around real slash tokens. Independent review changed browser coverage to measure the gap boxes directly across valid wrapping; site check/build/static, focused breadcrumb 2/2, and full site 68/68 remain green. The owner approved commit after this refinement.
 - M5 durable contract: `.trellis/spec/frontend/content-workspace-contract.md` records workspace/link/materializer/access/path/registry/reader signatures, validation matrix, cases, tests, and wrong/correct patterns; adjacent frontend specs were reconciled from the flat M4 route/index assumptions.
 - M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, full migration, staging, and production remain later milestones.
+- M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The active M5 full-content-migration task begins from this clean, archived baseline.
+- M5 planning evidence: `.trellis/tasks/08-14-full-content-migration/research/sql-source-analysis.md` records the MariaDB-validated source table map, category-folder route evidence, custom-field candidates, memo export boundary, and private identity/comment handoff. It contains aggregate facts only.
+- M5 implementation evidence: `tooling/migrate-typecho/` now performs checksum-verified `.sql`/`.sql.gz` intake, strict adapter decoding, safe wrapper normalization, category-folder/page projection, private SQLite/JSONL handoff, managed-resource checks, owner-approved deferred local-asset handling, owner-confirmed public-body preservation, aggregate private review reporting, and guarded candidate/public materialization. The real ignored candidate contains 93 posts and 7 pages; schema checking passes with 0 errors/warnings. Its resource inventory is 961 references: 931 external and 30 deferred local image references awaiting OSS upload (23 relative `assets/...`, 7 legacy drive-style); there are 0 document/count/resource exceptions, and no body signature scan. `./sam npm run check:m5`, `test:m5`, and `build:m5` pass; migration tests are 8/8. The existing main-site Playwright matrix is 68/68, and `package-runtime.sh` passes the exact 23-file non-root/read-only runtime probes.
+- M5.1 is a protected follow-up: it is intentionally planned now so the dynamic-comment/identity-service design cannot be lost, but it is neither authorized nor merged into the current static migration task. Its entry gate is M5's approved private comment handoff, opaque correspondence, and compatibility contract; M5 does not publicly render historical comments.
 
 ## Next Decision
 
-Review the M5 desktop/mobile screenshots and checked behavior. If approved, commit and archive this task, run Project Pulse, and decide whether to begin the separate full content-migration inventory. Do not fold staging or production rollout into the prelude.
+The resource review is complete for migration: all 30 non-HTTP local image references are owner-approved deferred OSS-upload work and are not migration blockers; authored body text is already owner-approved public content and is preserved. Decide separately whether to materialize the private candidate into public content, with final assembly still requiring referenced assets to resolve. Historic counters remain private in M5; any later public projection needs a separate schema/display decision. After M5, present the M5.1 decision before staging; do not fold its service implementation, staging, or production rollout into this migration task.

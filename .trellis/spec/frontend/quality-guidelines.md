@@ -116,9 +116,11 @@ package suite from the single profile in `index.md`.
 - `/lab/` and Terminal recovery consume one frozen listed catalog projection.
   Site entry links use validated default entries; Terminal links use canonical
   mounts. Neither surface imports, requests, or preloads Experiment assets.
-- Output contains no source Markdown parser, hydration directive, external font
-  request, NERV/xterm/prototype dependency/style, draft, credential, private data,
-  or local absolute path. It contains exact same-origin JetBrains Mono v2.304
+- Outside owner-authorized nested `posts/<category>/<slug>/index.html` and
+  `pages/<slug>/index.html` body HTML, output contains no
+  source Markdown parser, hydration directive, external font request,
+  NERV/xterm/prototype dependency/style, draft, credential, private data, or
+  local absolute path. It contains exact same-origin JetBrains Mono v2.304
   Regular/Medium WOFF2 files plus the complete tagged OFL and provenance record;
   static tests pin all upstream bytes with SHA-256, and browser tests prove both
   weights load through `document.fonts` without a remote request.
