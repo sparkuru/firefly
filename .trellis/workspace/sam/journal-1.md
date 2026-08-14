@@ -185,3 +185,24 @@ Implemented and independently checked the owner-local Typecho-to-Markdown migrat
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: M7 reverse-tunnel staging rehearsal
+
+**Date**: 2026-08-15
+**Task**: M7 reverse-tunnel staging rehearsal
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed an owner-authorized, temporary staging.majo.im rehearsal through a loopback-only SSH reverse tunnel and Nginx Basic Auth edge. Verified the read-only packaged runtime, public/direct-origin TLS and routes, desktop/mobile browser paths, and independent full rollback; captured the reusable deployment boundary contract.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `eb3916f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
