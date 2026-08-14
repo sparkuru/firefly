@@ -42,6 +42,8 @@ test('successful startup reveals only the shell stream and prompt', async ({ pag
   await expect(page.locator('.terminal-titlebar')).toHaveCount(0);
   await expect(page.getByRole('button')).toHaveCount(0);
   await expect(page.getByText('Browse public documents')).toBeHidden();
+  const markup = await page.locator('body').innerHTML();
+  expect(markup).not.toMatch(/PRIVATE_(?:TITLE|BODY)_M5_7f2a|hidden-draft|owner-fixture/u);
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly $');
   expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 

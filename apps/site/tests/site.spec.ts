@@ -182,6 +182,14 @@ test('Terminal article remains complete and exposes a linked canonical breadcrum
 });
 
 test('nested post and directory indexes use canonical native links', async ({ page }) => {
+  await page.goto('/posts/');
+  await expect(page.getByRole('heading', { level: 1, name: 'posts/' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'characters/' })).toHaveAttribute('href', '/posts/characters/');
+  await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
+  await expect(page.getByRole('link', { name: 'llm-workflow-with-trellis.md' })).toHaveAttribute('href', '/posts/llm-workflow-with-trellis/');
+  await expect(page.getByText(/Hidden draft|PRIVATE_TITLE_M5_7f2a|comment-handoff|memos\.private/u)).toHaveCount(0);
+  await expect(page.locator('script')).toHaveCount(0);
+
   await page.goto('/posts/characters/');
   await expect(page.getByRole('heading', { level: 1, name: 'posts/characters/' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'nahida.md' })).toHaveAttribute('href', '/posts/characters/nahida/');
@@ -227,6 +235,11 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   for (const width of gapWidths) expect(width).toBeGreaterThan(0);
   await expect(breadcrumb.locator('.terminal-breadcrumb-separator')).toHaveCount(2);
   await expectNoHorizontalOverflow(page);
+
+  await page.goto('/pages/');
+  await expect(page.getByRole('heading', { level: 1, name: 'pages/' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'about.md' })).toHaveAttribute('href', '/pages/about/');
+  await expect(page.locator('script')).toHaveCount(0);
 });
 
 test('page deep link renders readable Markdown', async ({ page }) => {

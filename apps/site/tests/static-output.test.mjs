@@ -342,7 +342,8 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
     /\binnerHTML\b/u,
     /\binsertAdjacentHTML\b/u,
     /\bcreateContextualFragment\b/u,
-    /\beval\s*\(/u
+    /\beval\s*\(/u,
+    /F1REFLY_CONTENT_ROOT|\.generated-content|memos\.private|comment-handoff|migration\.sqlite/u
   ];
   for (const text of [sourceScript, builtScript]) {
     for (const pattern of prohibited) {

@@ -39,21 +39,77 @@ probe_status() {
 	}
 }
 
+assert_header() {
+	local request_path=$1
+	local pattern=$2
+	local headers
+
+	headers=$(curl --fail --silent --head "${RUNTIME_ORIGIN}${request_path}")
+	rg --ignore-case --quiet -- "${pattern}" <<<"${headers}" || {
+		printf '[package-runtime] %s is missing header matching %s\n' "${request_path}" "${pattern}" >&2
+		return 1
+	}
+}
+
+assert_no_header() {
+	local request_path=$1
+	local pattern=$2
+	local headers
+
+	headers=$(curl --fail --silent --head "${RUNTIME_ORIGIN}${request_path}")
+	if rg --ignore-case --quiet -- "${pattern}" <<<"${headers}"; then
+		printf '[package-runtime] %s has unexpected header matching %s\n' "${request_path}" "${pattern}" >&2
+		return 1
+	fi
+}
+
+assert_sha256() {
+	local file=$1
+	local expected=$2
+	local actual
+
+	actual=$(sha256sum -- "${file}")
+	actual=${actual%% *}
+	[[ "${actual}" == "${expected}" ]] || {
+		printf '[package-runtime] unexpected SHA-256 for %s\n' "${file}" >&2
+		return 1
+	}
+}
+
+assert_no_non_authored_private_data() {
+	if (
+		cd "${REPO_ROOT}/dist"
+		rg --quiet \
+			--glob '!posts/**/index.html' \
+			--glob '!pages/**/index.html' \
+			'PRIVATE_(TITLE|BODY)_M5_7f2a|private-owner|owner-fixture|hidden-draft|F1REFLY_CONTENT_ROOT|/home/|/tmp/f1refly-|/(srv/(typecho|uploads)|var/www|usr/(local/)?uploads)/|memos\.private\.jsonl|comment-handoff\.json|identity-handoff\.json|migration\.sqlite|resource-decisions\.json' \
+			.
+	); then
+		printf '[package-runtime] publication contains private data or migration metadata outside authored document bodies\n' >&2
+		return 1
+	fi
+}
+
 main() {
 	local port_binding
 	local root_headers
 	local runtime_user
 	local reader_asset
+	local asset
+	local expected_type
 	local attempt
 	local index
 	local -a manifest_inventory=()
 	local -a release_inventory=()
 	local -a runtime_inventory=()
+	local -a reader_assets=()
+	local -a site_assets=()
+	local -a nerv_assets=()
 	local -A manifest_files=()
 	local -A release_files=()
 	local -A runtime_files=()
 
-	for dependency in curl docker find jq mktemp rg sed sort; do
+	for dependency in curl docker find jq mktemp rg sed sha256sum sort; do
 		require_command "${dependency}"
 	done
 	[[ -x "${REPO_ROOT}/sam" ]] || {
@@ -81,10 +137,9 @@ main() {
 			return 1
 		}
 	done
-	if rg --quiet 'PRIVATE_(TITLE|BODY)_M5_7f2a|private-owner|owner-fixture|hidden-draft|F1REFLY_CONTENT_ROOT|/home/|/tmp/f1refly-' dist; then
-		printf '[package-runtime] publication contains a private or source-path sentinel\n' >&2
-		return 1
-	fi
+	assert_no_non_authored_private_data
+	assert_sha256 "${REPO_ROOT}/dist/fonts/JetBrainsMono-Regular-v2.304.woff2" "a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2"
+	assert_sha256 "${REPO_ROOT}/dist/fonts/JetBrainsMono-Medium-v2.304.woff2" "086c48dfbea9ddaff1320f7e09399b8e2924e88ce67453721255db3bdbb5a353"
 
 	CONTEXT_ROOT=$(mktemp -d /tmp/f1refly-runtime-context.XXXXXX)
 	mkdir -p "${CONTEXT_ROOT}/dist"
@@ -161,10 +216,37 @@ main() {
 		printf '[package-runtime] HTML headers expose a server version or immutable cache policy\n' >&2
 		return 1
 	fi
-	reader_asset=$(find dist/_astro -maxdepth 1 -type f -name 'TerminalDocument*.js' -printf '%f\n')
-	curl --fail --silent --head "${RUNTIME_ORIGIN}/_astro/${reader_asset}" | rg --ignore-case --quiet 'cache-control: public, max-age=31536000, immutable'
-	curl --fail --silent --head "${RUNTIME_ORIGIN}/fonts/JetBrainsMono-Regular-v2.304.woff2" | rg --ignore-case --quiet 'cache-control: public, max-age=31536000, immutable'
-	curl --fail --silent --head "${RUNTIME_ORIGIN}/fonts/JetBrainsMono-Medium-v2.304.woff2" | rg --ignore-case --quiet 'cache-control: public, max-age=31536000, immutable'
+	mapfile -t reader_assets < <(find dist/_astro -maxdepth 1 -type f -name 'TerminalDocument*.js' -printf '%f\n' | sort)
+	[[ "${#reader_assets[@]}" -eq 1 ]] || {
+		printf '[package-runtime] expected exactly one Terminal reader asset\n' >&2
+		return 1
+	}
+	reader_asset=${reader_assets[0]}
+	mapfile -t site_assets < <(find dist/_astro -maxdepth 1 -type f -printf '%f\n' | sort)
+	mapfile -t nerv_assets < <(find dist/lab/nerv/_astro -type f -printf '%P\n' | sort)
+	[[ "${#site_assets[@]}" -gt 0 && "${#nerv_assets[@]}" -gt 0 ]] || {
+		printf '[package-runtime] site and NERV must each publish immutable runtime assets\n' >&2
+		return 1
+	}
+	assert_header "/posts/characters/nahida/" '^content-type: text/html'
+	assert_no_header "/posts/characters/nahida/" '^cache-control: .*immutable'
+	assert_header "/_astro/${reader_asset}" '^content-type: application/javascript'
+	for asset in "${site_assets[@]}"; do
+		assert_header "/_astro/${asset}" '^cache-control: public, max-age=31536000, immutable'
+	done
+	for asset in "${nerv_assets[@]}"; do
+		case "${asset}" in
+		*.css) expected_type='^content-type: text/css' ;;
+		*.js) expected_type='^content-type: application/javascript' ;;
+		*) continue ;;
+		esac
+		assert_header "/lab/nerv/_astro/${asset}" "${expected_type}"
+		assert_header "/lab/nerv/_astro/${asset}" '^cache-control: public, max-age=31536000, immutable'
+	done
+	assert_header '/fonts/JetBrainsMono-Regular-v2.304.woff2' '^content-type: font/woff2'
+	assert_header '/fonts/JetBrainsMono-Medium-v2.304.woff2' '^content-type: font/woff2'
+	assert_header '/fonts/JetBrainsMono-Regular-v2.304.woff2' '^cache-control: public, max-age=31536000, immutable'
+	assert_header '/fonts/JetBrainsMono-Medium-v2.304.woff2' '^cache-control: public, max-age=31536000, immutable'
 
 	printf '[package-runtime] image %s passed exact 23-file publication, route, header, 404, non-root, and read-only probes\n' "${IMAGE_NAME}"
 }

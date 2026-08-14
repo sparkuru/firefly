@@ -50,6 +50,7 @@ const PROHIBITED_TEXT = [
   /\/home\/[^/\s"']+\//u,
   /\/Users\/[^/\s"']+\//u,
   /[A-Z]:\\Users\\[^\\\s"']+\\/u,
+  /\/(?:srv\/(?:typecho|uploads)|var\/www|usr\/(?:local\/)?uploads)\//iu,
   /\/app\//u,
   /(?:^|[\\/])\.private(?:[\\/]|$)/imu
 ];
@@ -176,6 +177,16 @@ function publicPathForFile(relative: string): string {
   return `/${relative}`;
 }
 
+function isAuthoredSiteDocument(relative: string): boolean {
+  const segments = relative.split('/');
+  const collection = segments[0];
+  return (
+    ((collection === 'posts' && segments.length === 4) ||
+      (collection === 'pages' && segments.length === 3)) &&
+    segments.at(-1) === 'index.html'
+  );
+}
+
 function decodeReference(reference: string, owner: string): string | null {
   const trimmed = reference.trim();
   if (
@@ -260,7 +271,7 @@ async function validateTextAndReferences(
     const bytes = await readFile(absolute);
     const isText = !bytes.includes(0);
     const contents = isText ? bytes.toString('utf8') : '';
-    if (isText) {
+    if (isText && !isAuthoredSiteDocument(relative)) {
       for (const pattern of PROHIBITED_TEXT) {
         if (pattern.test(contents)) {
           throw new TypeError(`${absolute}: prohibited private, credential, or source-path content.`);

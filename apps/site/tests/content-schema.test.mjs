@@ -33,7 +33,16 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(post.updated instanceof Date);
   assert.ok(page.date instanceof Date);
   assert.deepEqual(post.access, { visibility: 'public' });
+  assert.deepEqual(post.tags, ['foundation']);
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
+});
+
+test('used tag metadata stays a strict public string list', () => {
+  assert.equal(postSchema.safeParse({ ...validPost, tags: ['foundation', 'astro'] }).success, true);
+  assert.deepEqual(postSchema.parse({ ...validPost, tags: [' leading', 'trailing '] }).tags, ['leading', 'trailing']);
+  for (const tags of [[''], ['valid', 1], 'foundation']) {
+    assert.equal(postSchema.safeParse({ ...validPost, tags }).success, false);
+  }
 });
 
 test('access metadata is an exact public or private-owner union', () => {
@@ -121,4 +130,13 @@ test('the real Terminal article keeps strict metadata and representative Markdow
   assert.match(article, /^```mermaid\nflowchart TD/mu);
   assert.match(article, /\[Trellis repository\]\(https:\/\/github\.com\/mindfold-ai\/Trellis\.git\)/u);
   assert.doesNotMatch(article, /trellis-spec-bootstarp/u);
+});
+
+test('the nested fixture keeps explicit category-like tags without CMS metadata', async () => {
+  const article = await readFile(
+    new URL('../../../content/posts/characters/nahida.md', import.meta.url),
+    'utf8'
+  );
+  assert.match(article, /^tags:\n  - genshin\n  - characters$/mu);
+  assert.doesNotMatch(article, /(?:typecho|cid|mid|template|comments):/iu);
 });

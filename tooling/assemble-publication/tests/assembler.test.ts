@@ -78,6 +78,37 @@ test('release validation rejects missing references, escaping mount URLs, and pr
   await assert.rejects(validateRelease(release, [manifest]), /prohibited/u);
 });
 
+test('allows path-like authored post/page bodies but rejects the same text in an Experiment', async (context) => {
+  const { root, manifest } = await fixture(context);
+  const release = path.join(root, 'release');
+  const authoredBody = '<img src="asset.txt">\n/srv/typecho/public-example.txt';
+  await mkdir(path.join(release, 'posts/example/article'), { recursive: true });
+  await mkdir(path.join(release, 'pages/about'), { recursive: true });
+  await mkdir(path.join(release, 'lab/alpha'), { recursive: true });
+  await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
+  await writeFile(path.join(release, '404.html'), '<h1>Missing</h1>');
+  await writeFile(path.join(release, 'lab/index.html'), '<h1>Lab</h1>');
+  await writeFile(path.join(release, 'posts/example/article/index.html'), authoredBody);
+  await writeFile(path.join(release, 'pages/about/index.html'), authoredBody);
+  await writeFile(path.join(release, 'posts/example/article/asset.txt'), 'public asset');
+  await writeFile(path.join(release, 'pages/about/asset.txt'), 'public asset');
+  await writeFile(path.join(release, 'lab/alpha/index.html'), authoredBody);
+  await writeFile(path.join(release, 'lab/alpha/404.html'), '<h1>Missing</h1>');
+  await writeFile(path.join(release, 'lab/alpha/license'), 'fixture');
+
+  await assert.rejects(validateRelease(release, [manifest]), /prohibited/u);
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<h1>Alpha</h1>');
+  await writeFile(path.join(release, 'posts/index.html'), authoredBody);
+  await assert.rejects(validateRelease(release, [manifest]), /prohibited/u);
+  await rm(path.join(release, 'posts/index.html'));
+  await writeFile(path.join(release, 'index.html'), authoredBody);
+  await assert.rejects(validateRelease(release, [manifest]), /prohibited/u);
+  await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
+  await assert.doesNotReject(validateRelease(release, [manifest]));
+  await rm(path.join(release, 'pages/about/asset.txt'));
+  await assert.rejects(validateRelease(release, [manifest]), /does not resolve/u);
+});
+
 test('fresh assembly is deterministic, excludes stale files, and preserves a prior release on failure', async (context) => {
   const { root, manifest } = await fixture(context);
   await mkdir(path.join(root, 'dist'));

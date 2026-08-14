@@ -20,14 +20,14 @@
 | 状态 | 事实 | 架构影响 |
 | --- | --- | --- |
 | 已确认 | 原博客运行 Typecho 1.3.0 | 迁移完成后不保留 PHP、MySQL 或 CMS 运行时 |
-| 已确认 | 现有 93 篇文章和 7 个页面均为 Markdown | 全量静态生成可行 |
-| 已确认 | 2 个特殊页面使用 `cross.php` 与 `files.php` | 需保留 timeline/files 语义布局 |
-| 已确认 | 有 189 条已批准评论 | MVP 迁移为只读静态归档 |
+| 已确认 | SQL 中有 93 篇 post、7 个 page；正文是需规范化的 HTML/Markdown 混合输入 | 文章优先抽取为原生 Markdown；页面先按普通 page 输入保留 |
+| 已确认 | 1 个 page 使用 `cross.php`、1 个 page 使用 `files.php` | 先记录模板语义候选，不自动重建 timeline/files 特殊路由 |
+| 已确认 | 有 189 条已批准评论，另有独立 memo 数据 | M5 只做私有 handoff；公开评论与动态身份服务进入 M5.1 |
 | 已确认 | 数据库备份已通过 SHA-256 校验 | 私有备份不得进入公开 Git 历史 |
 | 已确认 | 已有 Typecho Terminal 原型 | 作为 Terminal Presentation 的交互和视觉参考 |
 | 已确认 | 已有一个 Astro 4.16 的 NERV 静态页面实现 | 收束为首个独立 Experiment，并保留必要授权声明 |
 | 已确认 | NERV 是该实现中唯一有效主题 | 实验身份定义为 `nerv`；DOS 原型不进入实验交付物 |
-| 待验证 | 生产站点 permalink、Web 服务与附件目录 | 上线前需完成只读盘点和 URL 映射 |
+| 待验证 | 生产站点 permalink、Web 服务与附件目录 | 上线前需完成只读盘点和资源清单；旧 URL 兼容不是 M5 发布前提 |
 
 数据库备份保存在新工作区的 `.private/backups/`，由 `.gitignore` 排除。公开仓库只记录备份存在、时间和校验状态，不记录数据库内容。
 
@@ -254,7 +254,7 @@ interface Enhancement {
 
 MVP 包含：
 
-- `semantic`：默认文章、页面、timeline 和 files 的可读表现。
+- `semantic`：默认文章与页面的可读表现；特殊页面语义需有独立产品决定后再扩展。
 - `terminal`：站点首页与可选文章表现，支持命令浏览内容。
 
 Presentation 必须输出合法语义 HTML，不修改源 Markdown，不读取生产数据库。客户端 props 必须安全序列化，未使用的增强模块不得进入页面 bundle。
@@ -321,7 +321,7 @@ aliases:
 | `description` | 是 | 索引、SEO 与 RSS 摘要 |
 | `tags` | 否 | 语义标签 |
 | `draft` | 是 | 草稿不进入生产构建 |
-| `layout` | 是 | `post`、`page`、`timeline`、`files` |
+| `layout` | 是 | 当前公开迁移使用 `post`、`page`；`timeline`、`files` 仅保留为未来扩展能力 |
 | `presentation` | 否 | `semantic` 或已注册 Presentation |
 | `aliases` | 否 | 旧 URL 和历史路径 |
 
@@ -344,15 +344,13 @@ Experiment 不通过文章 Front Matter 声明。主站实验索引从 `experime
 | 路径 | 所有者 | 说明 |
 | --- | --- | --- |
 | `/` | Terminal Presentation | 首屏终端入口，提供静态 fallback |
-| `/posts/<slug>/` | 主站 | 文章永久链接 |
+| `/posts/<category>/<slug>/` | 主站 | 按源分类文件夹组织的文章永久链接 |
 | `/pages/<slug>/` | 主站 | 独立页面 |
-| `/timeline/` | 主站 | 原 `cross.php` 语义迁移 |
-| `/files/` | 主站 | 原 `files.php` 语义迁移 |
-| `/tags/` | 主站 | 标签索引与详情 |
+| `/tags/` | 主站 | 仅在使用中的标签经过审核后生成索引与详情 |
 | `/lab/` | 主站 | 从实验清单生成的索引 |
 | `/lab/<experiment-id>/...` | Experiment | 独立静态产物 |
 
-旧 Typecho URL 优先保持。无法保持时生成一对一永久重定向清单。slug 不随标题自动变化，构建时检测重复 slug、canonical 和 alias。
+旧 Typecho URL 只作为私有迁移证据或经审核的可选 alias，不为兼容性重建 Typecho URL 语法。slug 不随标题自动变化，构建时检测重复 slug、canonical 和 alias。
 
 ## 11. Terminal Presentation
 
@@ -465,7 +463,8 @@ dist/
 
 - 默认禁止 Markdown 原始 HTML；例外内容必须清理。
 - Enhancement props 使用安全 JSON 序列化。
-- 构建产物不得包含数据库、邮箱、管理字段、凭据、本地绝对路径和草稿。
+- 构建产物不得包含数据库、邮箱、IP、用户代理、管理字段、凭据、本地绝对路径和草稿。
+- 身份映射默认只存在私有迁移/服务边界；公开别名必须逐项批准，最多包含显示名和明确批准的网址。
 - `.private/` 永不进入 Git；CI 不依赖其中数据。
 - fan work 和第三方资产的许可证、归属与免责声明保持可见。
 
@@ -481,14 +480,14 @@ dist/
 ### 15.1 内容与 X
 
 - Front Matter schema、重复 slug、日期和未知 layout 检测。
-- 内部链接、图片、附件和 alias 检测。
+- 内部链接、图片、附件和 alias 检测；分类文件夹和标签命名空间不得冲突。
 - mdast/hast 变换 fixture 与快照。
 - Heading、code、image、table、blockquote 和 directive 覆盖。
 - Presentation 输出合法 HTML，Enhancement Manifest 与 DOM `nodeId` 一致。
 
 ### 15.2 主站
 
-- 首页、文章、页面、timeline、files、tags、lab index 与 404 构建测试。
+- 首页、文章、页面、已审核 tags、lab index 与 404 构建测试。
 - 禁用 JavaScript 后的正文阅读测试。
 - Terminal 命令、键盘、移动端和 reduced-motion E2E。
 - bundle 检查确保普通文章不包含实验依赖。
@@ -504,10 +503,10 @@ dist/
 
 ### 15.4 迁移验收
 
-- 93 篇文章、7 个页面和 189 条已批准评论数量一致。
-- 标题、slug、日期和正文规范化结果一致。
-- 旧 URL 逐条验证状态码和目标。
-- 资源清单不存在未解释缺失项。
+- 93 篇文章和 7 个页面数量一致，或逐项记录获批准的例外。
+- 标题、slug、日期、分类文件夹、标签和正文规范化结果一致。
+- 私有 memo 导出保留权限/删除状态，私有评论 handoff 保留不透明对应关系；两者均不进入公开构建。
+- 资源清单不存在未解释缺失项；旧 URL 只在选择兼容 alias 时逐条验证。
 
 ## 16. 里程碑
 
@@ -518,7 +517,7 @@ dist/
 | M2 X Core | contracts、AST 管道、registry、diagnostics | 同一内容可切换 Presentation |
 | M3 Terminal MVP | Terminal Presentation 与内容索引 | 核心命令 E2E 通过 |
 | M4 Experiment pipeline | manifest 校验、独立构建、发布汇编 | `nerv` 挂载成功，普通 bundle 无污染 |
-| M5 全量迁移 | 100 个内容、评论、资源与 URL 映射 | 数量、正文、资源和链接验收通过 |
+| M5 全量迁移 | 100 个内容、私有 memo/comment handoff、资源与原生 folder routes | 文章/page 数量、正文、元数据、资源和隐私边界验收通过 |
 | M6 Staging | 可公开预览的完整站点 | 无 JS、移动端、实验与回滚验收通过 |
 | M7 Production | 不可变发布与原子切换 | 生产流量切换且可回滚 |
 
@@ -527,7 +526,8 @@ dist/
 - [ ] `content/` 不含 Astro import、client 指令或表现型 class。
 - [ ] 所有公开 Markdown 通过 schema 校验。
 - [ ] 93 篇文章与 7 个页面生成独立静态页面。
-- [ ] 189 条评论静态归档或有明确例外报告。
+- [ ] 189 条评论只进入私有 handoff；M5 不公开渲染评论或身份字段。
+- [ ] memo discovery 导出保留权限/删除状态但不生成公开路由。
 - [ ] 默认文章禁用 JavaScript 后仍完整可读。
 - [ ] Terminal 支持全部 MVP 命令。
 - [ ] `experiment.json` 可生成 `/lab/` 索引。
@@ -535,7 +535,7 @@ dist/
 - [ ] NERV 根页面与错误页在挂载路径下无资源 404。
 - [ ] 新增第二个 Experiment 不需要修改 X Core。
 - [ ] 普通文章 bundle 不包含 xterm 或实验 CSS。
-- [ ] RSS、Sitemap、canonical、404 和旧 URL 映射正确。
+- [ ] RSS、Sitemap、canonical、404 正确；可选 alias 有明确清单和验证结果。
 - [ ] 构建产物不包含凭据、私有备份、绝对路径和草稿。
 - [ ] Staging 验收完成后才允许生产切换。
 - [ ] 生产发布具有已验证回滚路径。
@@ -553,8 +553,8 @@ dist/
 | fan work 的 IP 与归属问题 | 中等 | 非商业、保留免责声明、许可证与来源；不把实验包装成官方内容 |
 | 数据库备份进入公共 Git | 高 | `.private/` 全目录忽略，构建和 CI 不读取备份 |
 | Adapter 污染正文 | 中等 | 内容 schema 禁止组件路径与表现 class |
-| 旧资源和 URL 丢失 | 较高 | 全量清单、alias、重定向和 staging 日志 |
-| 评论泄露邮箱 | 中等 | 只导出公开字段并做产物扫描 |
+| 旧资源和 URL 丢失 | 较高 | 全量资源清单、可选 alias 和 staging 日志 |
+| 评论或身份泄露 | 高 | M5 只生成私有 handoff；公开产物扫描邮箱、IP、用户代理、身份字段和 memo |
 
 ## 19. 默认决策与待验证项
 
@@ -567,7 +567,8 @@ dist/
 - Experiment 是可独立构建的完整静态子项目，统一挂载到 `/lab/<id>/`。
 - `nerv` 是首个 Experiment，也是其唯一公开身份。
 - Experiment 可保留自己的框架版本和 lockfile。
-- 历史评论静态只读，新评论暂时关闭。
+- M5 不公开历史评论；M5.1 单独决定公开读模型、新评论、审核与身份服务。
+- M5 保留 `views`、`stars`、`commentsNum` 为私有历史统计；未来展示必须另行设计 schema、隐私边界和回归覆盖。
 - 私有数据库备份不进入公开 Git。
 
 上线前待验证：
@@ -575,8 +576,10 @@ dist/
 - 当前 Typecho permalink、Web 服务、站点根目录与重写规则。
 - 上传附件、本地图片和外链资源清单。
 - `cross.php`、`files.php` 对应页面的最终语义。
-- 分类是否保留层级或统一为 tags。
-- 历史评论的公开展示形式。
+- 分类关系按源结构生成文章文件夹；使用中的 tags 是否公开由元数据候选审查决定。
+- `cross.php` 与 `files.php` 先作为 page/template 候选记录，不自动生成 `/timeline/` 或 `/files/` 特殊路由。
+- 原站本地上传资源迁入受管静态资源，可信第三方链接保留为外链，其余逐项记录例外。
+- 后续 M5.1 单独实现动态评论与身份服务：独立写 API/数据库、审核和公开读模型导出，不让主站 SSR 或直读数据库。
 - 生产静态目录、缓存头和回滚窗口。
 - GitHub 仓库最终 owner 与站点 canonical 域名。
 
