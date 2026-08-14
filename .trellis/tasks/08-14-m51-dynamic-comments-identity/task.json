@@ -1,0 +1,29 @@
+{
+  "id": "m51-dynamic-comments-identity",
+  "name": "m51-dynamic-comments-identity",
+  "title": "M5.1 dynamic comments and identity service",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-08-14",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "deferred": "true",
+    "defer_reason": "Owner chose later self-built comment service; complete current mainline first."
+  }
+}
