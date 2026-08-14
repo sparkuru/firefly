@@ -1,0 +1,4 @@
+{"file":".trellis/tasks/08-15-m7-reverse-tunnel-staging/design.md","reason":"Approved M7 tunnel, Nginx, Basic Auth, validation, and rollback boundaries."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Preserve assembled-release, runtime inventory, and static-publication isolation contracts."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Use existing loopback runtime, container labeling, and cleanup conventions."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Apply the required static/browser/runtime validation matrix without weakening existing checks."}

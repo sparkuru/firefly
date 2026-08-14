@@ -1,0 +1,4 @@
+{"file":".trellis/tasks/08-15-m7-reverse-tunnel-staging/design.md","reason":"Review loopback-only forwarding, remote edge isolation, secret handling, and rollback design."}
+{"file":".trellis/tasks/08-15-m7-reverse-tunnel-staging/implement.md","reason":"Review all remote/local mutation gates, validation coverage, and cleanup proof."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Check that only the validated assembled public release crosses the tunnel boundary."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check runtime process/container cleanup and loopback confinement."}

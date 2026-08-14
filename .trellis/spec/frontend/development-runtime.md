@@ -211,3 +211,90 @@ webServer: {
 With `"start:e2e": "astro preview"` and a prior successful build, this preserves
 the wrapper boundary, package/image match, immutable artifact under test, owned
 server lifecycle, and reproducible evidence.
+
+## Scenario: Temporary Remote Reverse-Tunnel Rehearsal
+
+### 1. Scope / Trigger
+
+Use this contract only after an owner explicitly authorizes a time-bounded remote
+staging rehearsal. It proves the packaged public release behind a real TLS/Nginx
+edge; it is not a production deployment, persistent tunnel, DNS/CDN change, or
+substitute for the standard package validation path.
+
+### 2. Signatures
+
+```bash
+./package-runtime.sh
+
+ssh -F /dev/null -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -N \
+  -R 127.0.0.1:<remote-port>:127.0.0.1:4321 <operator>@<staging-host>
+```
+
+The local source is the read-only `f1refly:m5-runtime` image produced by
+`package-runtime.sh`, mapped only as `127.0.0.1:4321:8080`. Do not use `dev.sh`
+as the edge-runtime source: it is a Node preview and does not reproduce Nginx
+response-header behavior.
+
+### 3. Contracts
+
+| Boundary | Contract |
+| --- | --- |
+| SSH forward | The remote bind is explicitly `127.0.0.1`; `GatewayPorts no` must remain effective. Nginx is the only public ingress. |
+| Remote Nginx | Add one uniquely named temporary server configuration and one password-hash file only; run `nginx -t` before every reload. |
+| TLS | Reuse an already validated certificate covering the staging hostname. Do not issue, renew, copy, or commit a certificate/key for a rehearsal. |
+| Access | Require temporary Basic Auth (or an owner-approved equivalent). Plaintext credentials stay in a mode-restricted temporary local file; only the hash reaches the remote host. |
+| Runtime | The container is non-root/read-only, has an exact M7 label, and publishes no non-loopback listener. |
+| Cleanup | Remove only the M7-named Nginx/auth files; terminate the exact SSH PID and exact labelled container; remove temporary credentials before reporting success. |
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| remote port, hostname, or M7 path is already occupied | stop before creating a tunnel or writing a file |
+| local packaging/runtime check fails | do not expose the remote entry point |
+| SSH forward cannot bind or is not loopback-only | stop and remove any local runtime; never retry with `0.0.0.0` or `GatewayPorts yes` |
+| Nginx syntax check fails | do not reload; remove the temporary files and revalidate the prior configuration |
+| unauthenticated public request is not denied | stop and roll back the site |
+| route/TLS/header/browser probe fails | roll back and retain only non-secret diagnostic evidence |
+| interruption or any command failure | the same trap/finally path removes Nginx/auth files, tunnel, runtime container, and temporary credentials |
+| post-cleanup listener/configuration check fails | report failure; do not claim a completed rehearsal |
+
+### 5. Good / Base / Bad Cases
+
+- **Good:** validated image → loopback container → `-R 127.0.0.1` tunnel →
+  one Basic-Auth Nginx site → direct/public/TLS/browser checks → verified
+  cleanup.
+- **Base:** local `./package-runtime.sh` alone remains the normal release-image
+  preflight and creates no remote state.
+- **Bad:** `-R 0.0.0.0:...`, a tunnel supervisor/systemd unit, a shared-Nginx
+  rewrite, public plaintext credentials, `dev.sh` as header evidence, or a
+  cleanup claim without separate listener/configuration checks.
+
+### 6. Tests Required
+
+- Before exposure: run `./package-runtime.sh` and prove the selected host/port
+  and M7 paths are unused.
+- During exposure: prove remote loopback reachability, `nginx -t`, authenticated
+  and `401` paths, public and direct-origin TLS, expected routes/redirects/two
+  404 owners, runtime headers/cache behavior, and desktop/mobile browser paths
+  with JavaScript disabled and enabled as appropriate.
+- After cleanup: independently check that the remote temporary files/site/port
+  are absent, `nginx -t` still passes, the local mapped port is closed, and no
+  exact-labelled runtime container remains.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```bash
+ssh -R 0.0.0.0:9450:127.0.0.1:4321 staging
+# leave a remote Nginx site/auth file and autossh process after testing
+```
+
+#### Correct
+
+```bash
+ssh -F /dev/null -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -N \
+  -R 127.0.0.1:9450:127.0.0.1:4321 staging
+# remove the exact temporary Nginx/auth paths, then prove port/config/container absence
+```
