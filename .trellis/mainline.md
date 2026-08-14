@@ -6,7 +6,7 @@
 - **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, migration, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-14 — M5 content-filesystem/Vim-reader and full-content migration are approved, committed, and archived. Authored Markdown bodies, including the 30 local image-like references, are public body text and require no asset follow-up. M5.1 comments are deferred for a later self-built solution; finish the remaining current mainline first.
+- **Owner decision:** 2026-08-15 — M5 content-filesystem/Vim-reader and full-content migration are approved, committed, and archived. Authored Markdown bodies, including the 30 local image-like references, are public body text and require no asset follow-up. M5.1 comments are deferred for a later self-built solution. M6 local-TLS staging is also deferred; revisit TLS only as part of a later explicitly authorized formal deployment.
 
 ## Continuation Policy
 
@@ -27,8 +27,8 @@
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
 | 7 | `.trellis/tasks/archive/2026-08/08-14-full-content-migration` — M5 full content migration | complete | The private importer, 100-document review candidate, memo/comment/identity handoffs, and site schema validation are committed and archived. The 30 local image-like references are public authored Markdown text, not assets or follow-up work. |
 | 8 | M5.1 — dynamic comments and identity service | deferred | Preserve M5's private handoff and the initial planning record for a later self-built service. It is not on the current release path and must not convert the main site to SSR or direct database reads. |
-| 9 | M6 — staging rollout | planned | Depends on completed M5. |
-| 10 | M7 — production rollout | planned | Depends on M6 acceptance. |
+| 9 | M6 — staging rollout | deferred | Local TLS and remote staging are not current work. Preserve its planning record; revisit only within a later formal-deployment decision. |
+| 10 | M7 — production rollout | planned | Requires a future explicit deployment/TLS authorization and does not start automatically. |
 
 ## Evidence
 
@@ -68,4 +68,4 @@
 
 ## Next Decision
 
-M5.1 is deferred for a later self-built solution. The next current-mainline decision is whether to open M6 staging-rollout planning; do not add a comment service, public historical comments, SSR, or direct database reads to the release path. Historic counters remain private unless a future task separately defines their schema and presentation.
+M5.1 and M6 are deferred. There is no active release task. A future formal-deployment decision must explicitly establish the deployment target, TLS approach, release/rollback path, and whether any staging rehearsal is needed; do not start M7 automatically. Historic counters remain private unless a future task separately defines their schema and presentation.
