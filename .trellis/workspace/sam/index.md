@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 9
+- **Total Sessions**: 10
 - **Last Active**: 2026-08-15
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~208 | Active |
+| `journal-1.md` | ~229 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-08-15 | Read-only rshell knowledge browser | `7b1a54e` | `anti-entropy-loss-syndrome` |
 | 9 | 2026-08-15 | M7 reverse-tunnel staging rehearsal | `eb3916f` | `anti-entropy-loss-syndrome` |
 | 8 | 2026-08-14 | M5 full content migration | `3e36dad`, `04746a6` | `anti-entropy-loss-syndrome` |
 | 7 | 2026-08-13 | M5 content filesystem and Vim reader | `58ab2d9`, `4433b6a` | `anti-entropy-loss-syndrome` |
