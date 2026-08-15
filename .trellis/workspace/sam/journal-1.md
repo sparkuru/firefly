@@ -206,3 +206,24 @@ Completed an owner-authorized, temporary staging.majo.im rehearsal through a loo
 ### Status
 
 [OK] **Completed**
+
+
+## Session 10: Read-only rshell knowledge browser
+
+**Date**: 2026-08-15
+**Task**: Read-only rshell knowledge browser
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and validated a bounded read-only rshell for the terminal: public corpus navigation, virtual cwd, quote-aware pipelines and substitutions, scratch redirects, safe grep, active command registries, trusted document rendering, dynamic prompts, and responsive output settlement. Updated frontend contracts and regression coverage. Terminal checks/build/tests passed; site checks/content/x-core/build passed; focused Terminal 44/44, focused reader 10/10, and full site Playwright 70/70 passed. Archived task 08-15-read-only-rshell; unrelated workspace changes remain untouched.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7b1a54e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
