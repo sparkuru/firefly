@@ -10,7 +10,7 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   });
 
   await page.goto('/');
-  const prompt = page.getByRole('textbox', { name: /Command for guest@f1refly \$/u });
+  const prompt = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
   await prompt.fill('tree /');
   await prompt.press('Enter');
   await expect(page.locator('.terminal-tree')).toBeVisible();
@@ -19,7 +19,7 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   await page.goto('/');
   await prompt.fill('help');
   await prompt.press('Enter');
-  await expect(page.getByText('help — show this command list')).toBeVisible();
+  await expect(page.getByText('help (?) — show this command list')).toBeVisible();
   await expect(prompt).toBeFocused();
   await capture('help-settlement');
 

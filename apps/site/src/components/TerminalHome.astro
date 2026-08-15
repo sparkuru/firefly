@@ -152,7 +152,7 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
   >
     <div id="terminal-transcript" class="terminal-transcript" data-terminal-transcript></div>
     <form class="terminal-command-form" data-terminal-form>
-      <label class="terminal-visually-hidden" for="terminal-command">
+      <label class="terminal-visually-hidden" for="terminal-command" data-terminal-command-label>
         Command for {DEFAULT_TERMINAL_PROMPT}
       </label>
       <p id="terminal-command-help" class="terminal-visually-hidden">
@@ -161,7 +161,7 @@ const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'pa
         candidates keep focus when ambiguous, while other Tab presses stay native.
       </p>
       <div class="terminal-command-row">
-        <span class="terminal-prompt" aria-hidden="true">{DEFAULT_TERMINAL_PROMPT}</span>
+        <span class="terminal-prompt" aria-hidden="true" data-terminal-prompt>{DEFAULT_TERMINAL_PROMPT}</span>
         <input
           class="terminal-command-input"
           id="terminal-command"

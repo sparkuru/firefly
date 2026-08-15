@@ -134,7 +134,7 @@ test('reader never treats a user-replaced visual Range as its owned selection', 
 
 test('vim resolves a closed canonical destination and :q exits directly to home', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: /Command for guest@f1refly \$/u });
+  const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
   await input.fill('vim ./characters/nahida.md');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/posts\/characters\/nahida\/$/u);

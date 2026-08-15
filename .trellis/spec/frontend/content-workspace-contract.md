@@ -88,10 +88,16 @@ executeCommand(options: {
   input: string;
   entries: readonly TerminalEntry[];
   experiments?: readonly TerminalExperiment[];
+  documents?: readonly TerminalTextDocument[];
   identity?: TerminalIdentity;
   now?: () => Date;
   registry?: TerminalCommandRegistry;
 }): CommandResult
+
+interface TerminalTextDocument {
+  readonly virtualPath: TerminalEntry['virtualPath'];
+  readonly lines: readonly string[];
+}
 
 completeCommand(
   input: string,
@@ -183,10 +189,21 @@ startTerminalReader(root: HTMLElement): void
 - `help`, execution, and completion resolve through the active registry supplied
   to `executeCommand`/`completeCommand`. A custom registry and aliases therefore
   require no unrelated switch edit. There is no runtime plugin loader.
+- Rshell execution resolves an alias to its canonical registry definition before
+  dispatch. Custom definitions receive only immutable state, public entries,
+  declared stdin, identity/clock, and `piped`/`stdinProvided` flags; their text
+  effects can participate in pipelines and `pureText: true` definitions can
+  participate in bounded substitution. Non-text effects are rejected in a
+  pipeline or substitution instead of being coerced into navigation or DOM
+  behavior.
 - Handlers are pure and return only the closed `TerminalEffect` union. They do
   not access the DOM, filesystem, shell, dynamic imports, or unchecked URLs.
-- The working directory is `~/blog/posts`. `tree` renders that posts subtree;
-  `tree /` renders `posts/` and `pages/`; `/posts` and `/pages` narrow it.
+- The working directory is immutable session state, initially `~/blog/posts`;
+  `cd` updates only that virtual path and the prompt derives from it. `tree`
+  renders the current public subtree; `tree /` renders `lab/`, `pages/`, and
+  `posts/`; `/posts` and `/pages` narrow it. The optional `TerminalTextDocument`
+  corpus contains normalized visible title/prose lines from already validated
+  public templates; it is never raw Markdown or HTML.
   Directories precede files and peers use deterministic code-point order.
 - Entry-list display is an executable operand view, not an internal-path dump:
   posts use cwd-relative paths such as `characters/nahida.md`; pages use virtual
@@ -214,6 +231,10 @@ startTerminalReader(root: HTMLElement): void
   output still settles its title. Motion is smooth normally and immediate under
   reduced motion; repeated prior transcript must not clip the new output's first
   line at the viewport top.
+- A non-document settlement measures the record-to-prompt span before scrolling:
+  it uses the record start when both fit in the viewport, otherwise it scrolls
+  the fresh prompt to the viewport end. This responsive fallback is required at
+  the mobile profile as well as desktop.
 
 #### Read-only Vim reader
 
