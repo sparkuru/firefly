@@ -139,6 +139,7 @@ executeCommand(options: {
   input: string;
   entries: readonly TerminalEntry[];
   experiments?: readonly TerminalExperiment[];
+  documents?: readonly TerminalTextDocument[];
   identity?: TerminalIdentity;
   now?: () => Date;
   registry?: TerminalCommandRegistry;
@@ -165,6 +166,11 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   and optional completion. Creation validates safe unique tokens, safe metadata,
   callable handlers, clones/freeze records, and supplies the active definition
   list to `help`, execution, and completion.
+- Rshell execution resolves aliases to the canonical definition and passes only
+  immutable state, public entries, normalized `TerminalTextDocument` lines,
+  declared stdin, identity/clock, and pipeline flags. Custom text definitions
+  may participate in pipelines; only `pureText: true` definitions may run in
+  bounded substitution, and non-text effects are rejected there.
 - Effects are closed: `lines`, `entries`, `experiments`, `navigation`,
   `document`, `document-navigation`, `tree`, and `clear`. Navigation effects
   contain decoded records; raw input never becomes a URL.
@@ -188,6 +194,8 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
 | safe ambiguous `cat`/`vim` path | `ambiguous` with `ownsTab: true`; retain focus and prefixed candidates |
 | safe zero-result `cat`/`vim` path | exhaustive `no-match` with `ownsTab: true`; retain exact input/focus and status |
 | non-path command ambiguity | `ambiguous` with `ownsTab: false`; preserve native traversal |
+| custom registry alias in a pipeline | execute the canonical custom definition with bounded text stdin; do not fall back to a legacy single-command path |
+| custom non-text effect in a pipeline/substitution | typed error; no navigation, DOM effect, or partial scratch mutation |
 | malformed template or controller exception | retain/restore recovery and hide partial session |
 
 ### 5. Good / Base / Bad Cases

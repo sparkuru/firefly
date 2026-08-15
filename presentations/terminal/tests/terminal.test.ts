@@ -18,7 +18,8 @@ import {
   formatDocumentOperand,
   navigateHistory,
   tokenizeCommand,
-  type TerminalEntry
+  type TerminalEntry,
+  type TerminalTextDocument
 } from '../src/runtime.js';
 
 const context: DocumentContext = {
@@ -41,7 +42,7 @@ const experiments = decodeTerminalExperiments([
 ]);
 
 test('default prompt stays derived from the default identity', () => {
-  assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest@f1refly $');
+  assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest@f1refly:~/blog/posts $');
 });
 
 function input(tree: HastRoot): NormalizedDocumentInput {
@@ -54,6 +55,23 @@ function run(command: string, state = createTerminalState()) {
     input: command,
     entries,
     experiments,
+    identity: DEFAULT_TERMINAL_IDENTITY,
+    now: () => new Date('2026-08-12T04:05:06.000Z')
+  });
+}
+
+const documents: readonly TerminalTextDocument[] = Object.freeze([
+  Object.freeze({ virtualPath: 'posts/characters/alpha.md', lines: Object.freeze(['Alpha record', 'nahida keeps the archive']) }),
+  Object.freeze({ virtualPath: 'pages/about.md', lines: Object.freeze(['About this garden', 'durable writing']) })
+]);
+
+function runShell(command: string, state = createTerminalState()) {
+  return executeCommand({
+    state,
+    input: command,
+    entries,
+    experiments,
+    documents,
     identity: DEFAULT_TERMINAL_IDENTITY,
     now: () => new Date('2026-08-12T04:05:06.000Z')
   });
@@ -175,12 +193,12 @@ test('tokenizer accepts balanced quotes and rejects unbalanced input without she
 
 test('every command has deterministic output and strict usage errors', () => {
   const help = JSON.stringify(run('help').effect);
-  assert.match(help, /cat <post-path\.md\|\/posts\/path\.md\|\/pages\/path\.md> — render a public document; relative paths resolve under posts/u);
-  assert.match(help, /vim <post-path\.md\|\/posts\/path\.md\|\/pages\/path\.md> — open a public document reader; relative paths resolve under posts/u);
-  assert.match(help, /tree \[\/\|\/posts\|\/pages\] — show the public content tree/u);
+  assert.match(help, /cat \[path\] — render a public document or stream a readable rshell resource/u);
+  assert.match(help, /vim <path> — open a listed public document reader/u);
+  assert.match(help, /tree \[path\] — show a public content subtree/u);
   assert.match(help, /clear — clear the screen/u);
   assert.doesNotMatch(help, /dynamic transcript/u);
-  assert.match(help, /ls \[posts\|pages\|lab\]/u);
+  assert.match(help, /ls \[path\]/u);
   assert.match(help, /open lab\/<id>/u);
   assert.equal(run('ls').effect?.kind, 'entries');
   const posts = run('ls posts').effect;
@@ -199,8 +217,9 @@ test('every command has deterministic output and strict usage errors', () => {
     relativeDocument.effect?.kind === 'document' ? relativeDocument.effect.entry : null,
     entries[0]
   );
-  assert.match(JSON.stringify(run('cat missing.md').effect), /No public document/u);
-  assert.match(JSON.stringify(run('cat ./pages/about.md').effect), /Relative paths resolve under posts; pages require \/pages\/<path>\.md/u);
+  assert.match(JSON.stringify(run('cat missing.md').effect), /No readable rshell resource/u);
+  assert.match(JSON.stringify(run('vim missing.md').effect), /Relative paths resolve under posts/u);
+  assert.match(JSON.stringify(run('cat ./pages/about.md').effect), /No readable rshell resource/u);
   assert.equal(run('cat /posts/characters/alpha.md').effect?.kind, 'document');
   assert.equal(run('cat /pages/about.md').effect?.kind, 'document');
   assert.equal(run('vim ./characters/alpha.md').effect?.kind, 'document-navigation');
@@ -213,8 +232,11 @@ test('every command has deterministic output and strict usage errors', () => {
   const fullTree = run('tree /').effect;
   assert.deepEqual(fullTree, {
     kind: 'tree',
-    root: '/',
+    root: '~/blog',
     lines: [
+      '├── lab/',
+      '│   ├── nerv/',
+      '│   └── quiet-lab/',
       '├── pages/',
       '│   └── about.md',
       '└── posts/',
@@ -223,7 +245,7 @@ test('every command has deterministic output and strict usage errors', () => {
     ]
   });
   for (const operand of ['../alpha.md', './nested/../alpha.md', '/alpha.md', 'https://example.com/alpha.md', '/etc/passwd', 'characters\\alpha.md']) {
-    assert.match(JSON.stringify(run(`cat ${operand}`).effect), /No public document/u, operand);
+    assert.match(JSON.stringify(run(`cat ${operand}`).effect), /No readable rshell resource/u, operand);
   }
   assert.match(JSON.stringify(run('about').effect), /static garden/u);
   assert.match(JSON.stringify(run('pwd').effect), /~\/blog\/posts/u);
@@ -268,6 +290,45 @@ test('history keeps 50 submissions and Arrow navigation preserves the draft', ()
   const afterCancel = navigateHistory(cancelled, 'down', '');
   assert.equal(afterCancel.input, '');
   assert.equal(afterCancel.state.historyCursor, null);
+});
+
+test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, and regex resources isolated', () => {
+  let state = createTerminalState();
+  assert.match(JSON.stringify(runShell('?').effect), /grep \[-inF\]/u);
+  let result = runShell('cd /pages', state);
+  state = result.state;
+  assert.equal(state.cwd, '~/blog/pages');
+  assert.match(JSON.stringify(runShell('pwd', state).effect), /~\/blog\/pages/u);
+  assert.equal(runShell('cat about.md', state).effect?.kind, 'document');
+
+  result = runShell("cat /posts/characters/alpha.md | grep -in 'nahida|furina'", state);
+  assert.deepEqual(result.effect, { kind: 'lines', tone: 'normal', lines: ['2:nahida keeps the archive'] });
+
+  result = runShell('whoami > /.rshell/tmp/identity.txt', state);
+  state = result.state;
+  assert.match(JSON.stringify(result.effect), /Wrote 1 line/u);
+  result = runShell('date >> /.rshell/tmp/identity.txt', state);
+  state = result.state;
+  assert.match(JSON.stringify(result.effect), /Wrote 2 lines/u);
+  assert.deepEqual(runShell('cat /.rshell/tmp/identity.txt', state).effect, { kind: 'lines', tone: 'normal', lines: ['guest', '2026-08-12 04:05:06 UTC'] });
+  assert.deepEqual(runShell('grep -F guest /.rshell/tmp/identity.txt', state).effect, { kind: 'lines', tone: 'normal', lines: ['/.rshell/tmp/identity.txt:guest'] });
+  assert.deepEqual(runShell('grep $(whoami) /.rshell/tmp/identity.txt', state).effect, { kind: 'lines', tone: 'normal', lines: ['/.rshell/tmp/identity.txt:guest'] });
+  assert.match(JSON.stringify(runShell("cat '$(whoami)'", state).effect), /\$\(whoami\)/u);
+
+  assert.deepEqual(runShell('echo $(whoami)', state).effect, { kind: 'lines', tone: 'error', lines: ['Unknown command: echo. Type "help" for commands.'] });
+  assert.match(JSON.stringify(runShell('grep $(cd /) /.rshell/tmp/identity.txt', state).effect), /Command substitution did not produce text/u);
+  assert.match(JSON.stringify(runShell('cd / | grep blog', state).effect), /standalone command/u);
+  const noWrite = runShell('whoami > /not-scratch', state);
+  assert.equal(noWrite.state.scratch.length, state.scratch.length);
+  assert.match(JSON.stringify(runShell('grep secret /etc/passwd', state).effect), /only listed public documents/u);
+  assert.match(JSON.stringify(runShell('grep "(?=x)" /posts', state).effect), /safe regular-language subset/u);
+  assert.match(JSON.stringify(runShell('grep "\\1" /posts', state).effect), /safe regular-language subset/u);
+  assert.match(JSON.stringify(runShell('grep "a{65}" /posts', state).effect), /safe regular-language subset/u);
+
+  const oversized: readonly TerminalTextDocument[] = Object.freeze([
+    Object.freeze({ virtualPath: 'posts/characters/alpha.md', lines: Object.freeze(Array.from({ length: 300 }, (_value, index) => `line-${index}`)) })
+  ]);
+  assert.match(JSON.stringify(executeCommand({ state: createTerminalState(), input: 'cat characters/alpha.md | cat', entries, documents: oversized }).effect), /output truncated/u);
 });
 
 test('completion consumes only unique contextual document and lab matches', () => {
@@ -323,10 +384,26 @@ test('immutable command registry keeps a unit-only alias consistent', () => {
   }]);
   const result = executeCommand({ state: createTerminalState(), input: 'hi', entries, registry });
   assert.deepEqual(result.effect, { kind: 'lines', tone: 'normal', lines: ['hello'] });
+  assert.deepEqual(
+    executeCommand({ state: createTerminalState(), input: 'hi | grep hello', entries, registry }).effect,
+    { kind: 'lines', tone: 'normal', lines: ['hello'] }
+  );
   assert.deepEqual(result.state.history, ['hi']);
-  assert.deepEqual(completeCommand('gr', entries, [], registry), { kind: 'unique', value: 'greet ', candidates: ['greet'] });
+  assert.deepEqual(completeCommand('gree', entries, [], registry), { kind: 'unique', value: 'greet ', candidates: ['greet'] });
   assert.deepEqual(completeCommand('hi', entries, [], registry), { kind: 'ambiguous', candidates: ['hi', 'history'], ownsTab: false });
   assert.match(JSON.stringify(executeCommand({ state: createTerminalState(), input: 'help', entries, registry }).effect), /greet \(hi\) \u2014 print a greeting/u);
+  const overriddenHelp = createTerminalCommandRegistry([{
+    name: 'help',
+    aliases: [],
+    summary: 'custom help',
+    usage: 'help',
+    execute: () => ({ kind: 'lines', tone: 'normal', lines: ['custom help'] })
+  }]);
+  assert.deepEqual(executeCommand({ state: createTerminalState(), input: 'help', entries, registry: overriddenHelp }).effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['custom help']
+  });
   assert.equal(Object.isFrozen(registry.definitions), true);
   assert.throws(() => createTerminalCommandRegistry([
     { name: 'one', aliases: ['shared'], summary: 'one', usage: 'one', execute: () => ({ kind: 'clear' }) },

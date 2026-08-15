@@ -1,0 +1,11 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Use the frontend validation and Playwright profile for the Terminal UI boundary."}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "Preserve the pure runtime/controller split, trusted templates, recovery, focus, and keyboard ownership."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Keep registry, index, state, effect, and decoder contracts exhaustive and descriptor-safe."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Preserve TerminalHome/template/component and styling ownership."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Apply Terminal static, browser, accessibility, responsive, and isolation evidence."}
+{"file": ".trellis/spec/frontend/content-workspace-contract.md", "reason": "Use the guest-only canonical virtual filesystem and document access contract."}
+{"file": ".trellis/tasks/08-15-read-only-rshell/research/current-terminal.md", "reason": "Current rshell extension points and inherited safety boundaries."}
+{"file": ".trellis/tasks/08-15-read-only-rshell/research/ui-ux-pro-max.md", "reason": "Approved content-first, keyboard, error-recovery, reduced-motion, and responsive UI guidance."}
+{"file": ".trellis/tasks/08-15-read-only-rshell/design.md", "reason": "Approved rshell architecture, pipeline, virtual filesystem, and UI design."}
+{"file": ".trellis/tasks/08-15-read-only-rshell/research/capability-shell-safety.md", "reason": "Owner-approved capability boundaries, simulated language features, regex research, and required denial tests."}

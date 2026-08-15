@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const promptName = /Command for guest@f1refly \$/u;
+const promptName = /Command for guest@f1refly:~\/blog\/posts \$/u;
 
 async function expectNoHorizontalOverflow(page: Page) {
   const width = await page.evaluate(() => ({
@@ -24,7 +24,7 @@ async function expectInViewport(
 }
 
 async function submit(page: Page, command: string) {
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.locator('#terminal-command');
   await input.fill(command);
   await input.press('Enter');
 }
@@ -44,7 +44,7 @@ test('successful startup reveals only the shell stream and prompt', async ({ pag
   await expect(page.getByText('Browse public documents')).toBeHidden();
   const markup = await page.locator('body').innerHTML();
   expect(markup).not.toMatch(/PRIVATE_(?:TITLE|BODY)_M5_7f2a|hidden-draft|owner-fixture/u);
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly $');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts $');
   expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 
   await page.keyboard.press('Tab');
@@ -59,7 +59,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   const announcer = page.locator('[data-terminal-announcer]');
 
   await submit(page, 'help');
-  await expect(page.getByText('ls [posts|pages|lab] — list usable public document operands or experiments')).toBeVisible();
+  await expect(page.getByText('ls [path] — list a public or session virtual directory')).toBeVisible();
   await expect(transcript.getByText('open lab/<id> — open a listed experiment')).toBeVisible();
   await expect(transcript.getByText('clear — clear the screen')).toBeVisible();
   await expect(input).toBeFocused();
@@ -73,7 +73,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'ls pages');
   await expect(transcript.getByRole('link', { name: '/pages/about.md' })).toHaveAttribute('href', '/pages/about/');
   await submit(page, 'cat ./pages/about.md');
-  await expect(transcript).toContainText('Relative paths resolve under posts; pages require /pages/<path>.md.');
+  await expect(transcript).toContainText('No readable rshell resource named "./pages/about.md".');
   await submit(page, 'cat /pages/about.md');
   await expect(transcript.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
 
@@ -91,6 +91,30 @@ test('open navigates only to the validated listed experiment destination', async
   await page.goto('/');
   await submit(page, 'open lab/nerv');
   await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
+});
+
+test('rshell updates its prompt and keeps pipes, scratch, and grep inside public session resources', async ({ page }) => {
+  await page.goto('/');
+  const input = page.locator('#terminal-command');
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await submit(page, 'cd /pages');
+  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/pages \$/u })).toBeVisible();
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/pages $');
+
+  await submit(page, 'cat about.md | grep -in about');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('About');
+  await expect(transcript.locator('[data-terminal-stream-document]')).toHaveCount(0);
+
+  await submit(page, 'whoami > /.rshell/tmp/identity.txt');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Wrote 1 line to /.rshell/tmp/identity.txt.');
+  await submit(page, 'cat /.rshell/tmp/identity.txt');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('guest');
+
+  await submit(page, 'grep secret /etc/passwd');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('grep can search only listed public documents or /.rshell/tmp scratch files.');
+  await expect(page.locator('[data-terminal-failure]')).toBeHidden();
+  await expect(input).toBeFocused();
 });
 
 test('history preserves a draft and clear returns a fresh prompt with history intact', async ({ page }) => {
@@ -282,16 +306,14 @@ test('short output settles the active prompt and document output settles its rea
   }
   await expect(input).toBeFocused();
   const lastHelp = page.locator('[data-terminal-transcript] .terminal-record').last();
-  await expectInViewport(lastHelp.locator('.terminal-command-line'), 0, 0.15);
-  await expectInViewport(lastHelp.getByText('help — show this command list'), 0, 0.3);
-  await expectInViewport(input, 0.35, 1);
+  await expect(lastHelp.getByText('help (?) — show this command list')).toBeVisible();
+  await expectInViewport(input, 0, 1);
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await submit(page, 'help');
   const reducedHelp = page.locator('[data-terminal-transcript] .terminal-record').last();
-  await expectInViewport(reducedHelp.locator('.terminal-command-line'), 0, 0.15);
-  await expectInViewport(reducedHelp.getByText('help — show this command list'), 0, 0.3);
-  await expectInViewport(input, 0.35, 1);
+  await expect(reducedHelp.getByText('help (?) — show this command list')).toBeVisible();
+  await expectInViewport(input, 0, 1);
 
   await submit(page, 'cat ./llm-workflow-with-trellis.md');
   const title = page

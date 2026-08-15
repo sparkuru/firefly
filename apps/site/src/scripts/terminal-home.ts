@@ -1,17 +1,19 @@
 import {
-  DEFAULT_TERMINAL_PROMPT,
+  DEFAULT_TERMINAL_IDENTITY,
   cancelCommandInput,
   completeCommand,
   createTerminalState,
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
+  formatTerminalPrompt,
   formatDocumentOperand,
   navigateHistory,
   type TerminalEffect,
   type TerminalEntry,
   type TerminalExperiment,
-  type TerminalState
+  type TerminalState,
+  type TerminalTextDocument
 } from '@f1refly/presentation-terminal/runtime';
 
 interface TerminalNodes {
@@ -19,6 +21,8 @@ interface TerminalNodes {
   readonly session: HTMLElement;
   readonly form: HTMLFormElement;
   readonly input: HTMLInputElement;
+  readonly commandLabel: HTMLLabelElement;
+  readonly prompt: HTMLElement;
   readonly transcript: HTMLElement;
   readonly completion: HTMLElement;
   readonly announcer: HTMLElement;
@@ -28,6 +32,7 @@ interface TerminalNodes {
 
 interface TerminalTemplates {
   readonly byPath: ReadonlyMap<string, HTMLTemplateElement>;
+  readonly documents: readonly TerminalTextDocument[];
 }
 
 interface RenderContext {
@@ -115,6 +120,8 @@ function readNodes(root: HTMLElement): TerminalNodes {
     session: requireElement(root, '[data-terminal-session]', HTMLElement),
     form: requireElement(root, '[data-terminal-form]', HTMLFormElement),
     input: requireElement(root, '#terminal-command', HTMLInputElement),
+    commandLabel: requireElement(root, '[data-terminal-command-label]', HTMLLabelElement),
+    prompt: requireElement(root, '[data-terminal-prompt]', HTMLElement),
     transcript: requireElement(root, '[data-terminal-transcript]', HTMLElement),
     completion: requireElement(root, '[data-terminal-completion]', HTMLElement),
     announcer: requireElement(root, '[data-terminal-announcer]', HTMLElement),
@@ -159,6 +166,7 @@ function readTemplates(
 ): TerminalTemplates {
   const expected = new Set<string>(entries.map((entry) => entry.virtualPath));
   const byPath = new Map<string, HTMLTemplateElement>();
+  const documents: TerminalTextDocument[] = [];
 
   for (const template of root.querySelectorAll<HTMLTemplateElement>('[data-terminal-template]')) {
     if (!(template instanceof HTMLTemplateElement)) {
@@ -172,6 +180,10 @@ function readTemplates(
       ? streamDocument.querySelectorAll<HTMLElement>('[data-terminal-stream-title]')
       : [];
     const streamTitle = streamTitles.length === 1 ? streamTitles[0] : null;
+    const proseNodes = streamDocument instanceof HTMLElement
+      ? streamDocument.querySelectorAll<HTMLElement>('.terminal-stream-prose')
+      : [];
+    const prose = proseNodes.length === 1 ? proseNodes[0] : null;
     if (
       virtualPath === null ||
       !expected.has(virtualPath) ||
@@ -180,6 +192,7 @@ function readTemplates(
       !streamDocument.matches('[data-terminal-stream-document]') ||
       template.content.querySelectorAll('[data-terminal-stream-document]').length !== 1 ||
       streamTitle === null ||
+      prose === null ||
       streamTitle.id.length === 0 ||
       streamDocument.getAttribute('aria-labelledby') !== streamTitle.id ||
       template.content.querySelector('script') !== null
@@ -187,12 +200,21 @@ function readTemplates(
       throw new TypeError('Terminal document templates must exactly match the public index.');
     }
     byPath.set(virtualPath, template);
+    const textNodes = [
+      streamDocument.querySelector<HTMLElement>('.terminal-stream-meta'),
+      streamTitle,
+      ...prose.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, td, th')
+    ];
+    const lines = textNodes
+      .map((node) => node?.textContent?.replaceAll(/\s+/gu, ' ').trim() ?? '')
+      .filter((line) => line.length > 0);
+    documents.push(Object.freeze({ virtualPath: virtualPath as TerminalEntry['virtualPath'], lines: Object.freeze(lines) }));
   }
 
   if (byPath.size !== expected.size) {
     throw new TypeError('Terminal document templates must exactly match the public index.');
   }
-  return { byPath };
+  return { byPath, documents: Object.freeze(documents) };
 }
 
 function appendTextLine(parent: HTMLElement, value: string): void {
@@ -364,12 +386,12 @@ function renderEffect(
   }
 }
 
-function appendCommandLine(record: HTMLElement, command: string): void {
+function appendCommandLine(record: HTMLElement, command: string, promptValue: string): void {
   const line = document.createElement('p');
   line.className = 'terminal-command-line';
   const prompt = document.createElement('span');
   prompt.className = 'terminal-prompt';
-  prompt.textContent = DEFAULT_TERMINAL_PROMPT;
+  prompt.textContent = promptValue;
   line.append(prompt, document.createTextNode(` ${command}`));
   record.append(line);
 }
@@ -395,11 +417,17 @@ function settleCommandOutput(record: HTMLElement, input: HTMLInputElement): void
     : 'smooth';
   input.focus({ preventScroll: true });
   const margin = Math.min(24, window.innerHeight * 0.05);
-  window.scrollBy({
-    behavior,
-    left: 0,
-    top: record.getBoundingClientRect().top - margin
-  });
+  const recordTop = record.getBoundingClientRect().top;
+  const inputBottom = input.getBoundingClientRect().bottom;
+  if (inputBottom - recordTop <= window.innerHeight - margin * 2) {
+    window.scrollBy({
+      behavior,
+      left: 0,
+      top: recordTop - margin
+    });
+    return;
+  }
+  input.scrollIntoView({ behavior, block: 'end', inline: 'nearest' });
 }
 
 function isEligibleTypingTarget(event: KeyboardEvent): boolean {
@@ -454,6 +482,11 @@ export function startTerminalHome(
   let outputInstance = 0;
   const execute = seams.execute ?? executeCommand;
   const render = seams.render ?? renderEffect;
+  const updatePrompt = (): void => {
+    const prompt = formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, state);
+    nodes.prompt.textContent = prompt;
+    nodes.commandLabel.textContent = `Command for ${prompt}`;
+  };
 
   const fail = (): void => {
     if (failed) {
@@ -466,8 +499,10 @@ export function startTerminalHome(
   const submit = (): void => {
     try {
       const command = nodes.input.value;
-      const result = execute({ state, input: command, entries, experiments });
+      const submittedPrompt = formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, state);
+      const result = execute({ state, input: command, entries, experiments, documents: templates.documents });
       state = result.state;
+      updatePrompt();
       nodes.completion.textContent = '';
       if (result.effect === null) {
         return;
@@ -482,7 +517,7 @@ export function startTerminalHome(
 
       const record = document.createElement('section');
       record.className = 'terminal-record';
-      appendCommandLine(record, command.trim());
+      appendCommandLine(record, command.trim(), submittedPrompt);
       outputInstance += 1;
       const rendered = render(result.effect, record, {
         templates,
@@ -598,4 +633,5 @@ export function startTerminalHome(
 
   nodes.fallback.hidden = true;
   nodes.session.hidden = false;
+  updatePrompt();
 }
