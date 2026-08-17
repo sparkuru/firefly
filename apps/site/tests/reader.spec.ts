@@ -69,7 +69,9 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
   await expect(search).toBeFocused();
   await search.fill('reader');
   await search.press('Enter');
-  await expect(page.locator('[data-reader-message]')).toContainText('matches for “reader”');
+  await expect(page.locator('[data-reader-search-status]')).toContainText('matches for “reader”');
+  await expect(page.locator('[data-reader-message]')).toBeHidden();
+  await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
   expect(await page.evaluate(() => !('highlights' in CSS) || CSS.highlights.has('terminal-reader-search'))).toBe(true);
   await region.press('n');
   await region.press('N');
@@ -78,7 +80,8 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
   await expect(backwardSearch).toHaveAttribute('placeholder', 'Search backward…');
   await backwardSearch.fill('missing literal query');
   await backwardSearch.press('Enter');
-  await expect(page.locator('[data-reader-message]')).toHaveText('No results for “missing literal query”.');
+  await expect(page.locator('[data-reader-search-status]')).toHaveText('No results for “missing literal query”.');
+  await expect(page.locator('[data-reader-message]')).toBeHidden();
 
   await region.press('v');
   await expect(page.locator('[data-reader-mode]')).toHaveText('-- VISUAL --');
@@ -164,6 +167,9 @@ test('reader keeps committed search status visible while scrolling and clears it
   await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
   await expect(statusSection).toHaveCSS('position', 'sticky');
   const initialStatus = await status.textContent();
+  await expect(status).toBeVisible();
+  await expect(page.locator('[data-reader-message]')).toBeHidden();
+  await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
 
   const viewportStatus = await page.evaluate(() => {
     window.scrollTo(0, document.documentElement.scrollHeight / 2);
@@ -454,6 +460,8 @@ test('semantic reader keeps committed search status visible while scrolling', as
   await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
   await expect(statusSection).toHaveCSS('position', 'sticky');
   await expect(status).toBeVisible();
+  await expect(page.locator('[data-reader-message]')).toBeHidden();
+  await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
 
   const viewportStatus = await page.evaluate(() => {
     window.scrollTo(0, document.documentElement.scrollHeight / 2);

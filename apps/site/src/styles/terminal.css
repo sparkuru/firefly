@@ -628,6 +628,10 @@
   background-color: var(--terminal-color-surface-subtle);
 }
 
+.terminal-reader-status[data-reader-search-active] > [data-reader-message] {
+  display: none;
+}
+
 .terminal-reader-status > p:first-child {
   display: flex;
   justify-content: space-between;
