@@ -242,17 +242,14 @@ blockquote {
 .reader-status {
   max-width: 70ch;
   margin-block: 1.5rem 0;
-  border-block: 1px solid var(--border);
-  padding-block: 0.75rem;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-.reader-status[data-reader-search-active] {
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
+  border-block: 1px solid var(--border);
+  padding-block: 0.75rem;
   background-color: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .reader-status[data-reader-search-active] > [data-reader-message] {

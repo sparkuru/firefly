@@ -616,16 +616,13 @@
 
 .terminal-reader-status {
   margin-block: var(--terminal-space-record) 0;
-  border-block: 1px solid var(--terminal-color-border);
-  padding-block: calc(var(--terminal-space-record) * 0.5);
-  color: var(--terminal-color-muted);
-}
-
-.terminal-reader-status[data-reader-search-active] {
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
+  border-block: 1px solid var(--terminal-color-border);
+  padding-block: calc(var(--terminal-space-record) * 0.5);
   background-color: var(--terminal-color-surface-subtle);
+  color: var(--terminal-color-muted);
 }
 
 .terminal-reader-status[data-reader-search-active] > [data-reader-message] {
