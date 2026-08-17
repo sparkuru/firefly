@@ -353,3 +353,24 @@ Completed the reader search chrome refinement: opaque sticky contrast surfaces, 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 17: Reader sticky contrast and full-width layout
+
+**Date**: 2026-08-18
+**Task**: Reader sticky contrast and full-width layout
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+将 semantic 与 Terminal reader sticky 状态栏改为主题反色的高对比表面，并从 readable container bleed 到 viewport 全宽；保持正文可读 measure、sticky 正常流高度、搜索/命令与无障碍反馈契约。补充 semantic/Terminal 桌面移动端 full-bleed、前景背景分离和无溢出断言，更新 durable reader contract。Astro check/build/static-output、内容/X Core、focused reader 36/36、完整站点 Playwright 102/102 全部通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9ee0aff` | (see git log) |
+
+### Status
+
+[OK] **Completed**
