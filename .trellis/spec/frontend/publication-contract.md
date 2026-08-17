@@ -232,9 +232,10 @@ commands, and only then assembles the release.
 - Terminal unit tests: exact Experiment decoder, lab commands/usage/errors,
   completion, frozen effects, and canonical href-only navigation.
 - Site static/Playwright: exactly ten default site HTML routes; JavaScript-free
-  directory indexes and `/lab/`; reader JS only on Terminal documents; no
-  Experiment asset edge on ordinary pages; lab recovery; nested tree/cat/vim;
-  all existing recovery/content behavior.
+  directory indexes and `/lab/`; reader JS on canonical document routes only,
+  with semantic documents activating it only for the explicit
+  `#terminal-reader` fragment; no Experiment asset edge on ordinary pages; lab
+  recovery; nested tree/cat/vim; all existing recovery/content behavior.
 - NERV and publication Playwright: mounted assets, entry, distinct 404, native
   return, desktop/mobile overflow, and reduced motion. Serve the already built
   artifact; do not substitute `astro dev` for publication evidence.

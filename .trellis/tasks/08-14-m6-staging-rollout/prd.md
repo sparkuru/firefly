@@ -16,8 +16,9 @@ preserving the immutable/static architecture.
   validated root release, then verifies exact manifest/release/image inventory,
   non-root/read-only execution, routes, distinct 404 ownership, headers, caches,
   and teardown.
-- `dev.sh` is a local loopback-only immutable-publication preview. It is not a
-  staging deployment mechanism.
+- `dev.sh` is a local immutable-publication preview with a configurable host
+  binding (default `0.0.0.0` for LAN review; `SAM_BIND_HOST=127.0.0.1` keeps it
+  loopback-only). It is not a staging deployment mechanism.
 - The repository contains no staging hostname, remote access details, TLS
   material, deployment credentials, or mutable remote configuration. These
   values remain outside Git. The owner has rejected making M6 depend on a

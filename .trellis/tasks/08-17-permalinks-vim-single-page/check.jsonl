@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Check package boundaries, required ./sam commands, browser profiles, and static/reader acceptance gates."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check reader/controller ownership, progressive enhancement, focus safety, native-key protection, and no-router/no-fetch behavior."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Check that fragment entry is not canonical identity and reader state remains local, ephemeral, and non-persistent."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check semantic/Terminal Astro composition, reader region/status semantics, unique IDs, and JavaScript-free output."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check closed navigation effects, canonical entry validation, and runtime/controller type boundaries."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check builds, static fallback, responsive overflow, reduced motion, accessibility, browser evidence, and publication claims."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check canonical permalink ownership, Vim reader behavior, route boundaries, and read-only capability preservation."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check data flow from vim operand to validated effect, fragment decoration, static route, reader focus, and style."}
+{"file":".trellis/tasks/08-17-permalinks-vim-single-page/research/ui-ux-pro-max.md","reason":"Check the implementation against approved content-first, deep-link, focus, spacing, reduced-motion, and responsive UI context."}
+{"file":".trellis/tasks/08-17-permalinks-vim-single-page/design.md","reason":"Check exact URL/focus states, semantic override, status-before-body layout, controller boundaries, and risks."}
+{"file":".trellis/tasks/08-17-permalinks-vim-single-page/implement.md","reason":"Check implementation order, validation coverage, screenshots, and rollback/definition-of-done evidence."}

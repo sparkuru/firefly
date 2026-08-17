@@ -248,7 +248,9 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(JSON.stringify(run('cat ./pages/about.md').effect), /No readable rshell resource/u);
   assert.equal(run('cat /posts/characters/alpha.md').effect?.kind, 'document');
   assert.equal(run('cat /pages/about.md').effect?.kind, 'document');
-  assert.equal(run('vim ./characters/alpha.md').effect?.kind, 'document-navigation');
+  const vimNavigation = run('vim ./characters/alpha.md').effect;
+  assert.equal(vimNavigation?.kind, 'document-navigation');
+  assert.equal(vimNavigation?.kind === 'document-navigation' ? vimNavigation.entry.href : null, '/posts/characters/alpha/');
   const postsTree = run('tree').effect;
   assert.deepEqual(postsTree, {
     kind: 'tree',
@@ -369,10 +371,10 @@ test('every command has deterministic output and strict usage errors', () => {
       lines: ['nerv/ — NERV', 'Use "open lab/nerv" to enter this experiment.']
     }, operand);
   }
-  const navigation = run('open lab/nerv');
-  assert.equal(navigation.effect?.kind, 'navigation');
-  assert.deepEqual(navigation.effect?.kind === 'navigation' ? navigation.effect.experiment : null, experiments[0]);
-  assert.equal(navigation.announcement, 'Opening NERV.');
+  const experimentNavigation = run('open lab/nerv');
+  assert.equal(experimentNavigation.effect?.kind, 'navigation');
+  assert.deepEqual(experimentNavigation.effect?.kind === 'navigation' ? experimentNavigation.effect.experiment : null, experiments[0]);
+  assert.equal(experimentNavigation.announcement, 'Opening NERV.');
   assert.match(JSON.stringify(run('open lab/unlisted').effect), /No listed experiment/u);
 });
 

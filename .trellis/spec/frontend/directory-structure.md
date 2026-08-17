@@ -53,7 +53,7 @@ apps/site/
 │   ├── pages/                    # Thin nested document/directory route entries
 │   ├── scripts/
 │   │   ├── terminal-home.ts      # Home command progressive enhancement
-│   │   └── terminal-reader.ts    # Terminal-document-only Vim reader
+│   │   └── terminal-reader.ts    # Canonical-document Vim reader enhancement
 │   └── styles/                   # Semantic compiled CSS + Terminal raw CSS
 └── tests/                        # Schema, negatives, integration, output, E2E
 experiments/nerv/
@@ -100,8 +100,10 @@ ignored. Never put authored source in them.
   `DocumentLayout` + `SemanticDocument` or `TerminalLayout` +
   `TerminalDocument`. Routes do not select layouts independently.
 - The home renders `TerminalHome.astro` and imports `terminal-home.ts`; only that
-  controller validates and clones inert templates. Terminal document routes
-  alone import `terminal-reader.ts` as progressive enhancement. Their semantic
+  controller validates and clones inert templates. Canonical document routes
+  import `terminal-reader.ts` as progressive enhancement: Terminal documents
+  are reader-capable when focused, while semantic documents activate it only
+  for the explicit `#terminal-reader` entry fragment. Every document's semantic
   content and breadcrumb remain complete without JavaScript.
 - Keep main-site tests and Playwright configuration inside `apps/site/`.
 - Keep vendored public fonts under `apps/site/public/fonts/` and their complete

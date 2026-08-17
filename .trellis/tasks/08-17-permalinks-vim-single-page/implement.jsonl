@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package boundaries, ./sam validation profile, browser projects, and static/reader acceptance gates."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Reader/controller ownership, progressive enhancement, focus, native-key boundaries, and no-fetch/no-router rules."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Route-local reader state, fragment versus canonical URL ownership, and no persistence/global-store constraints."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Astro document composition, semantic/Terminal layout ownership, reader markup responsibilities, and accessibility structure."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Closed Terminal effects, validated entry navigation, typed runtime/controller boundaries, and test obligations."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Static HTML, responsive, reduced-motion, accessibility, Playwright, and publication validation requirements."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Canonical paths, document routes, terminal document-navigation, and bounded read-only reader contract."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Source-of-truth and cross-layer review for runtime effects, controller URL decoration, Astro markup, and CSS."}
+{"file":".trellis/tasks/08-17-permalinks-vim-single-page/research/ui-ux-pro-max.md","reason":"Approved UUPM context: content-first hierarchy, deep links, visible focus, sparse non-sticky status, responsive checkpoints, and rejected SPA/font/icon patterns."}
+{"file":".trellis/tasks/08-17-permalinks-vim-single-page/design.md","reason":"Approved fragment/focus contract, semantic presentation override, shared reader markup, status placement, and verification design."}
+{"file":".trellis/tasks/08-17-permalinks-vim-single-page/implement.md","reason":"Ordered implementation, validation commands, evidence requirements, and rollback boundaries."}

@@ -614,9 +614,9 @@
 }
 
 .terminal-reader-status {
-  margin-top: calc(var(--terminal-space-record) * 2);
-  border-top: 1px solid var(--terminal-color-border);
-  padding-top: var(--terminal-space-record);
+  margin-block: var(--terminal-space-record) 0;
+  border-block: 1px solid var(--terminal-color-border);
+  padding-block: calc(var(--terminal-space-record) * 0.5);
   color: var(--terminal-color-muted);
 }
 
@@ -650,6 +650,18 @@
   background: transparent;
   color: var(--terminal-color-text);
   font: inherit;
+}
+
+.reader-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .terminal-reader-status input:focus-visible,

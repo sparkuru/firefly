@@ -1,0 +1,34 @@
+---
+interface Props {
+  variant: 'semantic' | 'terminal';
+}
+
+const { variant } = Astro.props;
+const className = variant === 'terminal' ? 'terminal-reader-status' : 'reader-status';
+const initiallyHidden = variant === 'semantic';
+---
+
+<section
+  class={className}
+  data-terminal-reader-status
+  aria-label="Reader status"
+  hidden={initiallyHidden}
+>
+  <p><span data-reader-mode>-- NORMAL --</span><span data-reader-position>1/1</span></p>
+  <form data-reader-search-form hidden>
+    <label for="terminal-reader-search">Search document</label>
+    <span data-reader-search-prefix>/</span><input id="terminal-reader-search" type="search" autocomplete="off" />
+  </form>
+  <form data-reader-command-form hidden>
+    <label for="terminal-reader-command">Reader command</label>
+    <span aria-hidden="true">:</span><input id="terminal-reader-command" type="text" autocomplete="off" />
+  </form>
+  <p data-reader-message>j/k move · /? search · v select · :q exit</p>
+  <p class={variant === 'terminal' ? 'terminal-visually-hidden' : 'reader-visually-hidden'} data-reader-announcer aria-live="polite" aria-atomic="true"></p>
+</section>
+
+<script>
+  import { startTerminalReader } from '../scripts/terminal-reader';
+  const reader = document.querySelector<HTMLElement>('[data-terminal-reader]');
+  if (reader !== null) startTerminalReader(reader);
+</script>

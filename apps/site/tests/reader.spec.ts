@@ -137,12 +137,93 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
   const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
   await input.fill('vim ./characters/nahida.md');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/posts\/characters\/nahida\/$/u);
+  await expect(page).toHaveURL(/\/posts\/characters\/nahida\/#terminal-reader$/u);
   const region = page.getByRole('region', { name: /Read-only Vim reader/u });
-  await region.focus();
+  await expect(region).toBeFocused();
+  await region.press('G');
+  await expect(page.locator('[data-reader-position]')).not.toHaveText(/^1\//u);
   await region.press(':');
   const command = page.getByRole('textbox', { name: 'Reader command' });
   await command.fill('q');
   await command.press('Enter');
   await expect(page).toHaveURL(/\/$/u);
+});
+
+test('vim activates a semantic document reader without changing its presentation', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
+  await input.fill('vim ./hello-static-foundation.md');
+  await input.press('Enter');
+
+  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+  await expect(page.locator('.semantic-document')).toHaveCount(1);
+  const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await expect(region).toBeFocused();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+  await region.press('G');
+  await expect(page.locator('[data-reader-position]')).not.toHaveText(/^1\//u);
+
+  await region.press(':');
+  const command = page.getByRole('textbox', { name: 'Reader command' });
+  await command.fill('q');
+  await command.press('Enter');
+  await expect(page).toHaveURL(/\/$/u);
+});
+
+test('reader fragment focus does not perform a second programmatic scroll', async ({ page }) => {
+  await page.addInitScript(() => {
+    const nativeScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (...args: Parameters<typeof nativeScrollIntoView>) {
+      const windowWithCounter = window as typeof window & { __readerScrollCount?: number };
+      windowWithCounter.__readerScrollCount = (windowWithCounter.__readerScrollCount ?? 0) + 1;
+      return nativeScrollIntoView.apply(this, args);
+    };
+  });
+
+  await page.goto('/posts/hello-static-foundation/#terminal-reader');
+  const result = await page.evaluate(() => ({
+    active: document.activeElement?.id,
+    hash: window.location.hash,
+    scrollCount: (window as typeof window & { __readerScrollCount?: number }).__readerScrollCount ?? 0
+  }));
+  expect(result.active).toBe('terminal-reader');
+  expect(result.hash).toBe('#terminal-reader');
+  expect(result.scrollCount).toBe(0);
+});
+
+test('direct canonical permalinks keep reader focus and key ownership idle', async ({ page }) => {
+  await page.goto('/posts/hello-static-foundation/');
+  const semanticRegion = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await expect(semanticRegion).not.toBeFocused();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeHidden();
+  const semanticPosition = page.locator('[data-reader-position]');
+  await page.keyboard.press('G');
+  await expect(semanticPosition).toHaveText(/^1\//u);
+
+  await page.goto('/posts/characters/nahida/');
+  const terminalRegion = page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u });
+  await expect(terminalRegion).not.toBeFocused();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+  const terminalPosition = page.locator('[data-reader-position]');
+  await page.keyboard.press('G');
+  await expect(terminalPosition).toHaveText(/^1\//u);
+
+  await page.goto('/posts/characters/nahida/#terminal-reader');
+  await expect(page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u })).toBeFocused();
+});
+
+test('reader entry keeps native Back and Forward route boundaries', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
+  await input.fill('vim ./hello-static-foundation.md');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u })).toBeVisible();
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+  await expect(page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u })).toBeFocused();
 });
