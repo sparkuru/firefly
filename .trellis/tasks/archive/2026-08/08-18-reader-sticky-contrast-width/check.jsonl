@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review required checks and browser evidence before commit."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review full-bleed layout containment, theme tokens, responsive behavior, and reader markup ownership."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check durable reader status/full-width behavior against the existing contract."}
+{"file":".trellis/tasks/08-18-reader-sticky-contrast-width/design.md","reason":"Review implementation against the approved contrast and viewport-bleed design."}
