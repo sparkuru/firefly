@@ -255,6 +255,10 @@ blockquote {
   background-color: var(--surface-raised);
 }
 
+.reader-status[data-reader-search-active] > [data-reader-message] {
+  display: none;
+}
+
 .reader-status[hidden] {
   display: none;
 }
