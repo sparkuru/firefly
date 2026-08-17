@@ -33,9 +33,10 @@
     'Sarasa Mono SC', 'Microsoft YaHei UI', ui-monospace, monospace;
   --terminal-font-size: 1rem;
   --terminal-line-height: 1.65;
-  --terminal-measure: min(80vw, 96rem);
-  --terminal-measure-recovery: min(100%, 96rem);
-  --terminal-measure-stream: min(100%, 96rem);
+  --terminal-measure: min(180rem, max(78rem, 86vw));
+  --terminal-measure-home: min(80vw, var(--terminal-measure));
+  --terminal-measure-recovery: min(100%, var(--terminal-measure));
+  --terminal-measure-stream: var(--terminal-measure);
   --terminal-readable-measure: 82ch;
   --terminal-space-record: 1.5rem;
   --terminal-space-prompt-settlement: min(35vh, 18rem);
@@ -65,7 +66,7 @@
 }
 
 .terminal-shell {
-  width: min(calc(100% - 2rem), 78rem);
+  width: min(calc(100% - 2rem), var(--terminal-measure));
   min-height: calc(100dvh - 2rem);
   margin: 1rem auto;
   border: 1px solid var(--terminal-color-border);
@@ -169,7 +170,7 @@
 }
 
 .terminal-home {
-  width: var(--terminal-measure);
+  width: var(--terminal-measure-home);
   min-width: 0;
   margin-inline: auto;
 }
@@ -620,6 +621,13 @@
   color: var(--terminal-color-muted);
 }
 
+.terminal-reader-status[data-reader-search-active] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--terminal-color-surface);
+}
+
 .terminal-reader-status > p:first-child {
   display: flex;
   justify-content: space-between;
@@ -636,8 +644,17 @@
 .terminal-reader-status form:not([hidden]) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.5rem;
   align-items: center;
   min-height: 44px;
+}
+
+.terminal-reader-status form:not([hidden]) > span {
+  display: inline-flex;
+  width: 1ch;
+  flex: 0 0 1ch;
+  align-items: center;
+  justify-content: center;
 }
 
 .terminal-reader-status label {

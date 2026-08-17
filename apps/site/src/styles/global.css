@@ -248,6 +248,13 @@ blockquote {
   font-size: 0.875rem;
 }
 
+.reader-status[data-reader-search-active] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--surface-raised);
+}
+
 .reader-status[hidden] {
   display: none;
 }
@@ -268,8 +275,17 @@ blockquote {
 .reader-status form:not([hidden]) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.5rem;
   align-items: center;
   min-height: 44px;
+}
+
+.reader-status form:not([hidden]) > span {
+  display: inline-flex;
+  width: 1ch;
+  flex: 0 0 1ch;
+  align-items: center;
+  justify-content: center;
 }
 
 .reader-status label {

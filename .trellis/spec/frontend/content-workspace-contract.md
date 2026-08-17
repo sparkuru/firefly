@@ -473,7 +473,14 @@ startTerminalReader(root: HTMLElement): void
   current occurrence (or bounded no-results text), while the `/`/`?` prefix,
   direction-specific label, and placeholder identify search direction.
   Occurrence movement settles only the page viewport from the range rectangle,
-  never a protected nested scroll region.
+  never a protected nested scroll region. A committed query also sets
+  `data-reader-search-active` on the complete reader status section; that
+  section may use a token-backed opaque sticky viewport position so the current
+  match status remains visible while the document scrolls. Cancelling the
+  query removes the attribute and restores normal document flow. The search
+  form keeps an explicit spacing gap between its visible prefix and native
+  input, including at the mobile width, without weakening the 44px target or
+  visible focus.
   Command mode accepts only `q`; successful `:q` navigates deterministically to
   `/` and does not depend on history.
 - Key handling preserves composition/IME, modifiers, unsupported keys, native
