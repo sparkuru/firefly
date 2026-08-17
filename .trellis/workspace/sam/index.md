@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 13
+- **Total Sessions**: 14
 - **Last Active**: 2026-08-17
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~292 | Active |
+| `journal-1.md` | ~313 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 14 | 2026-08-17 | Refine reader search viewport status and 4K frame | `58a8dd2` | `anti-entropy-loss-syndrome` |
 | 13 | 2026-08-17 | Refine reader search match navigation | `694b95e` | `anti-entropy-loss-syndrome` |
 | 12 | 2026-08-17 | Canonical reader navigation and Vim permalink refinement | `75317be` | `anti-entropy-loss-syndrome` |
 | 11 | 2026-08-17 | Polish Terminal command workflow | `ec62f96` | `anti-entropy-loss-syndrome` |
