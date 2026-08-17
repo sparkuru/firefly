@@ -133,7 +133,6 @@ a:hover {
 }
 
 .content-column,
-.semantic-document,
 .document-outline,
 .prose {
   max-width: 70ch;
@@ -240,15 +239,17 @@ blockquote {
 }
 
 .reader-status {
-  max-width: 70ch;
+  width: 100vw;
+  max-width: none;
   margin-block: 1.5rem 0;
+  margin-inline: calc((100% - 100vw) / 2);
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
   border-block: 1px solid var(--border);
-  padding-block: 0.75rem;
-  background-color: var(--surface-raised);
-  color: var(--text-muted);
+  padding: 0.75rem clamp(1rem, 4vw, 3rem);
+  background-color: var(--text);
+  color: var(--surface);
   font-size: 0.875rem;
 }
 
@@ -264,12 +265,12 @@ blockquote {
   display: flex;
   justify-content: space-between;
   gap: 1.5rem;
-  color: var(--link-active);
+  color: var(--surface);
 }
 
 .reader-status > [data-reader-search-status] {
   margin-block: 0.35rem 0;
-  color: var(--text);
+  color: var(--surface);
   font-weight: 650;
 }
 
@@ -311,17 +312,17 @@ blockquote {
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--surface);
   font: inherit;
 }
 
 .reader-status [data-reader-search-prefix] {
-  color: var(--link-active);
+  color: var(--surface);
   font-weight: 700;
 }
 
 .reader-status input::placeholder {
-  color: var(--text-muted);
+  color: var(--border);
   opacity: 1;
 }
 

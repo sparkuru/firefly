@@ -479,9 +479,13 @@ startTerminalReader(root: HTMLElement): void
   that marker temporarily but preserves the prior committed status text until
   the form is submitted or cancelled. The status section itself is always
   sticky whenever it is visible, remains in normal document flow, and uses the
-  presentation's token-backed opaque contrasting surface so its own height is
-  reserved while the document scrolls. A non-empty query replaces the query,
-  occurrence records, highlights, and committed-search marker as one lifecycle;
+  presentation's token-backed opaque inverse/contrasting surface so its own
+  height is reserved while the document scrolls. The visible status section
+  may bleed from its centered reader frame to the viewport edges, while the
+  document header, outline, and prose retain their existing readable measure;
+  this full-bleed treatment must not create document-level horizontal overflow.
+  A non-empty query replaces the query, occurrence records, highlights, and
+  committed-search marker as one lifecycle;
   an empty submission or Escape clears the query/highlights without changing
   the permanent sticky status lifecycle. The mode/position row owns reader
   orientation, `data-reader-search-status` owns committed occurrence context,

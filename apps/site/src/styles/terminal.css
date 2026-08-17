@@ -595,8 +595,7 @@
   text-underline-offset: 0.2em;
 }
 
-.terminal-directory,
-.terminal-reader-status {
+.terminal-directory {
   max-width: var(--terminal-measure);
 }
 
@@ -615,14 +614,17 @@
 }
 
 .terminal-reader-status {
+  width: 100vw;
+  max-width: none;
   margin-block: var(--terminal-space-record) 0;
+  margin-inline: calc((100% - 100vw) / 2);
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
   border-block: 1px solid var(--terminal-color-border);
-  padding-block: calc(var(--terminal-space-record) * 0.5);
-  background-color: var(--terminal-color-surface-subtle);
-  color: var(--terminal-color-muted);
+  padding: calc(var(--terminal-space-record) * 0.5) clamp(1rem, 4vw, 3rem);
+  background-color: var(--terminal-color-text);
+  color: var(--terminal-color-canvas);
 }
 
 .terminal-reader-status[data-reader-search-active] > [data-reader-message] {
@@ -633,12 +635,12 @@
   display: flex;
   justify-content: space-between;
   gap: var(--terminal-space-record);
-  color: var(--terminal-color-command);
+  color: var(--terminal-color-canvas);
 }
 
 .terminal-reader-status > [data-reader-search-status] {
   margin-block: 0.35rem 0;
-  color: var(--terminal-color-text);
+  color: var(--terminal-color-canvas);
   font-weight: 500;
 }
 
@@ -648,11 +650,11 @@
   align-items: center;
   min-height: 44px;
   gap: 0.5rem;
-  box-shadow: inset 0 -1px var(--terminal-color-border);
+  box-shadow: inset 0 -1px var(--terminal-color-canvas);
 }
 
 .terminal-reader-status form:not([hidden]):focus-within {
-  box-shadow: inset 0 -2px var(--terminal-color-focus);
+  box-shadow: inset 0 -2px var(--terminal-color-canvas);
 }
 
 .terminal-reader-status form:not([hidden]) > span {
@@ -680,17 +682,17 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--terminal-color-text);
+  color: var(--terminal-color-canvas);
   font: inherit;
 }
 
 .terminal-reader-status [data-reader-search-prefix] {
-  color: var(--terminal-color-command);
+  color: var(--terminal-color-canvas);
   font-weight: 500;
 }
 
 .terminal-reader-status input::placeholder {
-  color: var(--terminal-color-muted);
+  color: var(--terminal-color-canvas);
   opacity: 1;
 }
 

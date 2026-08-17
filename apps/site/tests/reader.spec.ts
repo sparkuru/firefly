@@ -40,6 +40,8 @@ async function readerSearchMetrics(page: Page) {
       inputOutline: inputStyle.outlineStyle,
       focusWithin: form.matches(':focus-within'),
       statusBackground: statusStyle.backgroundColor,
+      statusColor: statusStyle.color,
+      inputColor: inputStyle.color,
       canvasBackground: canvas,
       statusBorder: statusStyle.borderBlockStartColor,
       statusPosition: statusStyle.position,
@@ -82,10 +84,14 @@ test('reader status stays sticky, opaque, contained, and reports reader actions'
   expect(metrics.statusZIndex).not.toBe('auto');
   expect(metrics.statusBackground).not.toBe('rgba(0, 0, 0, 0)');
   expect(metrics.statusBackground).not.toBe(metrics.canvasBackground);
+  expect(metrics.statusColor).not.toBe(metrics.statusBackground);
+  expect(metrics.inputColor).not.toBe(metrics.statusBackground);
   expect(metrics.statusBorder).not.toBe('rgba(0, 0, 0, 0)');
   expect(metrics.statusHeight).toBeGreaterThan(0);
   expect(metrics.statusLeft).toBeGreaterThanOrEqual(0);
   expect(metrics.statusRight).toBeLessThanOrEqual(metrics.viewportWidth);
+  expect(metrics.statusLeft).toBeCloseTo(0, 0);
+  expect(metrics.statusRight).toBeCloseTo(metrics.viewportWidth, 0);
   expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
 
   await expect(mode).toHaveText('-- NORMAL --');
@@ -548,6 +554,14 @@ test('semantic reader keeps committed search status visible while scrolling', as
   await page.goto('/posts/hello-static-foundation/#terminal-reader');
   const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
   await expect(region).toBeFocused();
+  const initialMetrics = await readerSearchMetrics(page);
+  expect(initialMetrics.statusPosition).toBe('sticky');
+  expect(initialMetrics.statusBackground).not.toBe(initialMetrics.canvasBackground);
+  expect(initialMetrics.statusColor).not.toBe(initialMetrics.statusBackground);
+  expect(initialMetrics.inputColor).not.toBe(initialMetrics.statusBackground);
+  expect(initialMetrics.statusLeft).toBeCloseTo(0, 0);
+  expect(initialMetrics.statusRight).toBeCloseTo(initialMetrics.viewportWidth, 0);
+  expect(initialMetrics.documentWidth).toBeLessThanOrEqual(initialMetrics.viewportWidth);
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await search.fill('reader');
