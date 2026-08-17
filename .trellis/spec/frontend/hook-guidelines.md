@@ -58,11 +58,13 @@ not programmatically navigate for `cat`.
   template validation.
 - Render text with `textContent`, `createTextNode`, and native `<a>` elements;
   never use `innerHTML` for content or command output.
-- Preserve the latest pre-history draft and cap submissions at 50. Safe
-  `cat`/`vim` paths own Tab for unique, ambiguous, and zero-result completion.
-  Ambiguity keeps prompt focus and preserves `./` or `/`; zero-result completion
-  keeps exact input/focus and shows `No matches.`. Other command ambiguity,
-  unsafe/control/non-NFC paths, modified Tab, and IME-composed Tab remain native.
+- Preserve the latest pre-history draft and cap submissions at 50. When the
+  prompt is focused, prevent the default action for every Tab event, including
+  modifiers and IME/composition; only unmodified, non-composing Tab may rewrite
+  input. Safe `cat`/`vim` paths own the rewrite decision for unique, ambiguous,
+  and zero-result completion. Ambiguity keeps prompt focus and preserves `./`
+  or `/`; zero-result completion keeps exact input/focus and shows `No matches.`
+  Tab outside the prompt remains native.
 - Exact unmodified prompt `Ctrl+C` cancels current input/completion and history
   traversal draft without submitting, clearing prior transcript/history, or
   stealing composition and Alt/Meta/Shift variants.

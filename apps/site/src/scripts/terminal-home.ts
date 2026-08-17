@@ -1,5 +1,6 @@
 import {
   DEFAULT_TERMINAL_IDENTITY,
+  DEFAULT_TERMINAL_COMMAND_REGISTRY,
   cancelCommandInput,
   completeCommand,
   createTerminalState,
@@ -12,6 +13,7 @@ import {
   type TerminalEffect,
   type TerminalEntry,
   type TerminalExperiment,
+  type TerminalGrepMatch,
   type TerminalState,
   type TerminalTextDocument
 } from '@f1refly/presentation-terminal/runtime';
@@ -160,6 +162,15 @@ function readExperiments(root: HTMLElement): readonly TerminalExperiment[] {
   return decodeTerminalExperiments(raw);
 }
 
+function readTemplateTextLines(node: HTMLElement): readonly string[] {
+  const value = node.textContent ?? '';
+  if (node.tagName === 'PRE') {
+    return Object.freeze(value.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n').map((line) => line.normalize('NFC')));
+  }
+  const line = value.replaceAll(/\s+/gu, ' ').trim();
+  return line.length === 0 ? Object.freeze([]) : Object.freeze([line.normalize('NFC')]);
+}
+
 function readTemplates(
   root: HTMLElement,
   entries: readonly TerminalEntry[]
@@ -205,9 +216,7 @@ function readTemplates(
       streamTitle,
       ...prose.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, td, th')
     ];
-    const lines = textNodes
-      .map((node) => node?.textContent?.replaceAll(/\s+/gu, ' ').trim() ?? '')
-      .filter((line) => line.length > 0);
+    const lines = textNodes.flatMap((node) => node === null ? [] : readTemplateTextLines(node));
     documents.push(Object.freeze({ virtualPath: virtualPath as TerminalEntry['virtualPath'], lines: Object.freeze(lines) }));
   }
 
@@ -286,6 +295,133 @@ function scopeDocumentClone(fragment: DocumentFragment, instance: number): void 
   }
 }
 
+function appendHighlightedText(parent: HTMLElement, value: string, ranges: readonly (readonly [number, number])[]): void {
+  let cursor = 0;
+  for (const [rawStart, rawEnd] of ranges) {
+    const start = Math.max(cursor, Math.min(value.length, rawStart));
+    const end = Math.max(start, Math.min(value.length, rawEnd));
+    if (start > cursor) parent.append(document.createTextNode(value.slice(cursor, start)));
+    if (end > start) {
+      const mark = document.createElement('mark');
+      mark.textContent = value.slice(start, end);
+      parent.append(mark);
+    }
+    cursor = end;
+  }
+  if (cursor < value.length) parent.append(document.createTextNode(value.slice(cursor)));
+}
+
+function appendGrepMatch(parent: HTMLElement, match: TerminalGrepMatch): void {
+  const item = document.createElement('li');
+  item.className = 'terminal-grep-match';
+  const location = document.createElement('span');
+  location.className = 'terminal-grep-location';
+  location.textContent = match.path === '-'
+    ? (match.lineNumber === undefined ? '' : `${match.lineNumber}:`)
+    : `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:`;
+  const line = document.createElement('span');
+  line.className = 'terminal-grep-line';
+  appendHighlightedText(line, match.line, match.ranges);
+  item.append(location, line);
+  parent.append(item);
+}
+
+function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>, record: HTMLElement): void {
+  if (effect.directories.length === 0 && effect.entries.length === 0) {
+    appendTextLine(record, `No public ${effect.label}.`);
+    return;
+  }
+  const listing = document.createElement('ul');
+  listing.className = 'terminal-entry-list';
+  for (const directory of effect.directories) {
+    const row = document.createElement('li');
+    row.className = 'terminal-entry-row terminal-entry-row--directory';
+    row.dataset.terminalEntryKind = 'directory';
+    const label = document.createElement('code');
+    label.className = 'terminal-entry-directory';
+    label.textContent = directory;
+    row.append(label);
+    listing.append(row);
+  }
+  for (const entry of effect.entries) {
+    const row = document.createElement('li');
+    row.className = 'terminal-entry-row terminal-entry-row--document';
+    row.dataset.terminalEntryKind = 'document';
+    const link = document.createElement('a');
+    link.href = entry.href;
+    link.textContent = entry.filename;
+    link.setAttribute('aria-label', formatDocumentOperand(entry));
+    const date = document.createElement('time');
+    date.dateTime = entry.date;
+    date.textContent = entry.date;
+    const title = document.createElement('span');
+    title.className = 'terminal-entry-title';
+    title.textContent = entry.title;
+    row.append(link, date, title);
+    listing.append(row);
+  }
+  record.append(listing);
+}
+
+function renderHelpEffect(effect: Extract<TerminalEffect, { kind: 'help' }>, record: HTMLElement): void {
+  const help = document.createElement('div');
+  help.className = 'terminal-help';
+  for (const group of effect.groups) {
+    const section = document.createElement('section');
+    section.className = 'terminal-help-group';
+    const heading = document.createElement('h2');
+    heading.textContent = group.name;
+    section.append(heading);
+    const list = document.createElement('ul');
+    list.className = 'terminal-help-list';
+    for (const command of group.commands) {
+      const item = document.createElement('li');
+      item.className = 'terminal-help-command';
+      const usage = document.createElement('code');
+      usage.textContent = command.usage;
+      const detail = document.createElement('span');
+      detail.className = 'terminal-help-detail';
+      const summary = document.createElement('span');
+      summary.className = 'terminal-help-summary';
+      summary.textContent = command.summary;
+      detail.append(summary);
+      if (command.aliases.length > 0) {
+        const aliases = document.createElement('span');
+        aliases.className = 'terminal-help-aliases';
+        aliases.textContent = `alias ${command.aliases.join(', ')}`;
+        detail.append(aliases);
+      }
+      item.append(usage, detail);
+      list.append(item);
+    }
+    section.append(list);
+    help.append(section);
+  }
+  record.append(help);
+}
+
+function renderGrepEffect(effect: Extract<TerminalEffect, { kind: 'grep' }>, record: HTMLElement): void {
+  const grep = document.createElement('div');
+  grep.className = 'terminal-grep';
+  const summary = document.createElement('p');
+  summary.className = 'terminal-grep-summary';
+  summary.textContent = effect.noResults ? `No matches for "${effect.pattern}".` : `${effect.matches.length} match${effect.matches.length === 1 ? '' : 'es'}`;
+  grep.append(summary);
+  if (effect.matches.length > 0) {
+    const list = document.createElement('ul');
+    list.className = 'terminal-grep-list';
+    for (const match of effect.matches) appendGrepMatch(list, match);
+    grep.append(list);
+  }
+  if (effect.truncated) {
+    const notice = document.createElement('p');
+    notice.className = 'terminal-grep-truncated';
+    notice.textContent = 'Output truncated at the session limit.';
+    grep.append(notice);
+  }
+  record.append(grep);
+}
+
 function renderEffect(
   effect: TerminalEffect,
   record: HTMLElement,
@@ -304,21 +440,14 @@ function renderEffect(
         appendTextLine(record, line);
       }
       return { focusTarget: null };
+    case 'help':
+      renderHelpEffect(effect, record);
+      return { focusTarget: null };
+    case 'grep':
+      renderGrepEffect(effect, record);
+      return { focusTarget: null };
     case 'entries': {
-      if (effect.entries.length === 0) {
-        appendTextLine(record, `No public ${effect.label}.`);
-        return { focusTarget: null };
-      }
-      const list = document.createElement('ul');
-      for (const entry of effect.entries) {
-        const item = document.createElement('li');
-        const link = document.createElement('a');
-        link.href = entry.href;
-        link.textContent = formatDocumentOperand(entry);
-        item.append(link, document.createTextNode(` — ${entry.date} — ${entry.title}`));
-        list.append(item);
-      }
-      record.append(list);
+      renderEntryListing(effect, record);
       return { focusTarget: null };
     }
     case 'experiments': {
@@ -327,12 +456,18 @@ function renderEffect(
         return { focusTarget: null };
       }
       const list = document.createElement('ul');
+      list.className = 'terminal-entry-list terminal-experiment-list';
       for (const experiment of effect.experiments) {
         const item = document.createElement('li');
+        item.className = 'terminal-entry-row terminal-entry-row--experiment';
+        item.dataset.terminalEntryKind = 'experiment';
         const link = document.createElement('a');
         link.href = experiment.href;
         link.textContent = `${experiment.id}/`;
-        item.append(link, document.createTextNode(` — ${experiment.title}`));
+        const title = document.createElement('span');
+        title.className = 'terminal-entry-title';
+        title.textContent = experiment.title;
+        item.append(link, title);
         list.append(item);
       }
       record.append(list);
@@ -403,6 +538,14 @@ function showFatalFailure(nodes: TerminalNodes): void {
   nodes.fallbackHeading.focus();
 }
 
+function clearTranscript(nodes: TerminalNodes, announcement: string): void {
+  nodes.transcript.replaceChildren();
+  nodes.input.value = '';
+  nodes.completion.textContent = '';
+  nodes.announcer.textContent = announcement;
+  settleViewport(nodes.input, 'center');
+}
+
 function settleViewport(target: HTMLElement, block: ScrollLogicalPosition): void {
   const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     ? 'auto'
@@ -450,6 +593,14 @@ function isEligibleTypingTarget(event: KeyboardEvent): boolean {
   }
   const selection = window.getSelection();
   return selection === null || selection.isCollapsed;
+}
+
+function renderAmbiguousCompletion(node: HTMLElement, candidates: readonly string[]): void {
+  node.textContent = `Matches: ${candidates.join(', ')}`;
+  const note = document.createElement('span');
+  note.className = 'terminal-completion-note';
+  note.textContent = 'input unchanged by design; type more to complete.';
+  node.append(document.createElement('br'), note);
 }
 
 function insertAtPromptSelection(input: HTMLInputElement, value: string): void {
@@ -508,10 +659,7 @@ export function startTerminalHome(
         return;
       }
       if (result.effect.kind === 'clear') {
-        nodes.transcript.replaceChildren();
-        nodes.input.value = '';
-        nodes.announcer.textContent = result.announcement;
-        settleViewport(nodes.input, 'center');
+        clearTranscript(nodes, result.announcement);
         return;
       }
 
@@ -553,9 +701,50 @@ export function startTerminalHome(
     composing = false;
   });
   nodes.input.addEventListener('keydown', (event) => {
-    if (composing || event.isComposing) {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      nodes.input.focus({ preventScroll: true });
+      if (
+        composing ||
+        event.isComposing ||
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const completion = completeCommand(
+        nodes.input.value,
+        entries,
+        experiments,
+        DEFAULT_TERMINAL_COMMAND_REGISTRY,
+        state.cwd,
+        state.aliases
+      );
+      switch (completion.kind) {
+        case 'unique':
+          nodes.input.value = completion.value;
+          nodes.input.setSelectionRange(nodes.input.value.length, nodes.input.value.length);
+          nodes.completion.textContent = '';
+          break;
+        case 'ambiguous':
+          renderAmbiguousCompletion(nodes.completion, completion.candidates);
+          break;
+        case 'no-match':
+          nodes.completion.textContent = 'No matches.';
+          break;
+        case 'none':
+          nodes.completion.textContent = '';
+          break;
+        default: {
+          const exhaustive: never = completion;
+          throw new TypeError(`Unsupported completion result: ${String(exhaustive)}`);
+        }
+      }
       return;
     }
+    if (composing || event.isComposing) return;
     if (
       event.key.toLocaleLowerCase('en-US') === 'c' &&
       event.ctrlKey &&
@@ -571,6 +760,19 @@ export function startTerminalHome(
       settleViewport(nodes.input, 'center');
       return;
     }
+    if (
+      event.key.toLocaleLowerCase('en-US') === 'l' &&
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      state = cancelCommandInput(state);
+      updatePrompt();
+      clearTranscript(nodes, 'Command transcript cleared.');
+      return;
+    }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault();
       const navigation = navigateHistory(
@@ -582,39 +784,6 @@ export function startTerminalHome(
       nodes.input.value = navigation.input;
       nodes.input.setSelectionRange(nodes.input.value.length, nodes.input.value.length);
       return;
-    }
-    if (
-      event.key === 'Tab' &&
-      !event.shiftKey &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey
-    ) {
-      const completion = completeCommand(nodes.input.value, entries, experiments);
-      switch (completion.kind) {
-        case 'unique':
-          event.preventDefault();
-          nodes.input.value = completion.value;
-          nodes.completion.textContent = '';
-          break;
-        case 'ambiguous':
-          if (completion.ownsTab) {
-            event.preventDefault();
-          }
-          nodes.completion.textContent = `Matches: ${completion.candidates.join(', ')}`;
-          break;
-        case 'no-match':
-          event.preventDefault();
-          nodes.completion.textContent = 'No matches.';
-          break;
-        case 'none':
-          nodes.completion.textContent = '';
-          break;
-        default: {
-          const exhaustive: never = completion;
-          throw new TypeError(`Unsupported completion result: ${String(exhaustive)}`);
-        }
-      }
     }
   });
   nodes.input.addEventListener('input', () => {

@@ -33,9 +33,10 @@
     'Sarasa Mono SC', 'Microsoft YaHei UI', ui-monospace, monospace;
   --terminal-font-size: 1rem;
   --terminal-line-height: 1.65;
-  --terminal-measure: 78ch;
-  --terminal-measure-recovery: 70ch;
-  --terminal-measure-stream: 76ch;
+  --terminal-measure: min(80vw, 96rem);
+  --terminal-measure-recovery: min(100%, 96rem);
+  --terminal-measure-stream: min(100%, 96rem);
+  --terminal-readable-measure: 82ch;
   --terminal-space-record: 1.5rem;
   --terminal-space-prompt-settlement: min(35vh, 18rem);
 }
@@ -168,13 +169,14 @@
 }
 
 .terminal-home {
-  width: min(100%, var(--terminal-measure));
+  width: var(--terminal-measure);
   min-width: 0;
   margin-inline: auto;
 }
 
 .terminal-recovery {
-  max-width: var(--terminal-measure-recovery);
+  width: var(--terminal-measure-recovery);
+  max-width: 100%;
 }
 
 .terminal-recovery h2 {
@@ -254,6 +256,147 @@
   padding-left: 1.4rem;
 }
 
+.terminal-record .terminal-entry-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-entry-row {
+  display: grid;
+  grid-template-columns: minmax(22ch, 30ch) minmax(10ch, 12ch) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.terminal-entry-row a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.terminal-entry-directory {
+  color: var(--terminal-color-command);
+  overflow-wrap: anywhere;
+}
+
+.terminal-entry-row time {
+  color: var(--terminal-color-muted);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.terminal-entry-title {
+  min-width: 0;
+  color: var(--terminal-color-muted);
+  overflow-wrap: anywhere;
+}
+
+.terminal-entry-row--experiment .terminal-entry-title {
+  grid-column: 3;
+}
+
+.terminal-help {
+  display: grid;
+  gap: 1.35rem;
+  margin-block: 0.75rem 0.5rem;
+}
+
+.terminal-help-group {
+  min-width: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--terminal-color-border);
+}
+
+.terminal-help-group h2 {
+  margin: 0 0 0.7rem;
+  color: var(--terminal-color-command);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.terminal-help-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-help-command {
+  display: grid;
+  grid-template-columns: minmax(18ch, max-content) minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.terminal-help-command code {
+  min-width: 0;
+  color: var(--terminal-color-text);
+  overflow-wrap: anywhere;
+}
+
+.terminal-help-detail {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.terminal-help-summary {
+  color: var(--terminal-color-muted);
+}
+
+.terminal-help-aliases {
+  color: var(--terminal-color-warning);
+  font-size: 0.875rem;
+}
+
+.terminal-grep {
+  min-width: 0;
+  margin-block: 0.7rem;
+}
+
+.terminal-grep-summary,
+.terminal-grep-truncated {
+  margin: 0.4rem 0;
+  color: var(--terminal-color-muted);
+}
+
+.terminal-grep-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-grep-match {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.terminal-grep-location {
+  color: var(--terminal-color-command);
+  white-space: nowrap;
+}
+
+.terminal-grep-line {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal-grep-line mark {
+  padding-inline: 0.08em;
+  background: var(--terminal-color-highlight);
+  color: var(--terminal-color-text);
+}
+
 .terminal-command-line {
   color: var(--terminal-color-text);
 }
@@ -281,12 +424,14 @@
 }
 
 .terminal-command-row > .terminal-prompt {
-  flex: none;
-  white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .terminal-command-input {
-  width: 100%;
+  flex: 1 1 10ch;
+  width: auto;
   min-width: 0;
   min-height: 44px;
   padding: 0;
@@ -310,11 +455,19 @@
   color: var(--terminal-color-warning);
 }
 
+.terminal-completion-note {
+  display: inline-block;
+  margin-top: 0.2rem;
+  color: var(--terminal-color-muted);
+  font-size: 0.875em;
+}
+
 .terminal-completion:empty {
   display: none;
 }
 
 .terminal-stream-document {
+  width: 100%;
   max-width: var(--terminal-measure-stream);
   margin-block: 1.5rem 0;
   padding-block: 1.25rem 0.25rem;
@@ -368,6 +521,7 @@
 }
 
 .terminal-stream-prose :where(p, ul, ol, blockquote) {
+  max-width: var(--terminal-readable-measure);
   margin-block: 0 1.15rem;
 }
 
@@ -384,17 +538,8 @@
   color: var(--terminal-color-warning);
 }
 
-.terminal-stream-footer {
-  margin-top: 1.5rem;
-  font-size: 0.875rem;
-}
-
-.terminal-stream-footer a {
-  color: var(--terminal-color-muted);
-}
-
 .terminal-document {
-  max-width: var(--terminal-measure);
+  max-width: var(--terminal-measure-stream);
 }
 
 .terminal-document-header {
@@ -627,6 +772,10 @@
 }
 
 @media (max-width: 40rem) {
+  .terminal-home {
+    width: 100%;
+  }
+
   .terminal-shell:not(.terminal-shell--home) {
     width: 100%;
     min-height: 100dvh;
@@ -659,6 +808,40 @@
 
   .terminal-command-row {
     gap: 0.5rem;
+  }
+
+  .terminal-entry-row {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 0.15rem 0.75rem;
+  }
+
+  .terminal-entry-row time {
+    justify-self: end;
+  }
+
+  .terminal-entry-title {
+    grid-column: 1 / -1;
+  }
+
+  .terminal-entry-row--experiment .terminal-entry-title {
+    grid-column: 1 / -1;
+  }
+
+  .terminal-help-command {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .terminal-grep-match {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}
+
+@media (min-width: 48rem) {
+  .terminal-help {
+    grid-template-columns: repeat(auto-fit, minmax(32rem, 1fr));
+    column-gap: clamp(2rem, 5vw, 5rem);
   }
 }
 

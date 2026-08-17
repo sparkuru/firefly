@@ -69,7 +69,7 @@ package suite from the single profile in `index.md`.
   reader coverage:
   prompt-only startup, commands/errors, manifest-backed lab listing/navigation, history/draft
   restoration, safe unique/ambiguous/zero-result path completion with retained focus and
-  normal/unsafe/list Tab escape, prompt `Ctrl+C` cancellation,
+  prompt-wide Tab prevention plus native outside-prompt traversal, prompt `Ctrl+C` cancellation,
   IME-safe and mobile soft-keyboard Enter, inline `cat` with unchanged URL,
   record-start/document viewport settlement, executable list operands, nested
   tree/cat/vim, Vim movement/search/
@@ -174,7 +174,7 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
   shared tree/path resolution, exact entry/template bijection,
   trusted cloning without HTML-string APIs, repeated-clone ID/fragment/ARIA
   scoping, clear preservation of history/recovery data, prompt-only startup,
-  path Tab ownership and prefix preservation, prompt Ctrl+C cancellation, safe
+  prompt-wide Tab ownership with outside-prompt native traversal and prefix preservation, prompt Ctrl+C cancellation, safe
   global typing exclusions, record/document settlement with reduced motion,
   semantic root-theme purity, pinned font/license
   integrity, reader key/Range/native-ownership boundaries, fatal recovery

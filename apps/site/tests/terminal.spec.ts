@@ -59,31 +59,167 @@ test('commands render continuous typed results, lab discovery, and latest announ
   const announcer = page.locator('[data-terminal-announcer]');
 
   await submit(page, 'help');
-  await expect(page.getByText('ls [path] — list a public or session virtual directory')).toBeVisible();
-  await expect(transcript.getByText('open lab/<id> — open a listed experiment')).toBeVisible();
-  await expect(transcript.getByText('clear — clear the screen')).toBeVisible();
+  await expect(transcript.getByRole('heading', { level: 2, name: 'Explore' })).toBeVisible();
+  await expect(transcript.getByRole('heading', { level: 2, name: 'Read & navigate' })).toBeVisible();
+  await expect(transcript.getByText('list a public or session virtual directory')).toBeVisible();
+  await expect(transcript.getByText('filter stdin or public text')).toBeVisible();
+  await expect(transcript.getByText('change the virtual directory')).toBeVisible();
+  await expect(transcript.getByText('open a listed experiment')).toBeVisible();
+  await expect(transcript.getByText('clear the screen')).toBeVisible();
+  await expect(transcript).toContainText('alias l, ll');
+  const grepUsage = transcript.locator('.terminal-help-command code').filter({ hasText: 'grep [-inF] <pattern> [path ...]' });
+  await expect(grepUsage).toHaveCount(1);
+  if (await page.evaluate(() => window.innerWidth >= 768)) {
+    const usageGeometry = await grepUsage.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { height: element.getBoundingClientRect().height, lineHeight: Number.parseFloat(style.lineHeight) };
+    });
+    expect(usageGeometry.height).toBeLessThanOrEqual(usageGeometry.lineHeight * 1.25);
+  }
   await expect(input).toBeFocused();
 
+  await submit(page, 'alias l');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('l=ls');
+  await submit(page, 'l');
+  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(2);
+  await submit(page, 'll');
+  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(2);
+
+  await input.fill('ls he');
+  await input.press('Tab');
+  await expect(input).toHaveValue('ls hello-static-foundation.md');
+  await expect(input).toBeFocused();
+  await input.press('Enter');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Hello, static foundation');
+
+  await input.fill('ls charac');
+  await input.press('Tab');
+  await expect(input).toHaveValue('ls characters/');
+  await expect(input).toBeFocused();
+  await input.press('Enter');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('nahida.md');
+
+  await submit(page, 'ls cha');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Did you mean "characters/"? Press Tab to complete.');
+  await submit(page, 'ls cha*');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('nahida.md');
+  await submit(page, 'ls *cha*');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('nahida.md');
+  await submit(page, 'ls characters/');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Notes on Nahida');
+  await submit(page, 'ls --help');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Usage: ls [path|pattern]');
+
+  await submit(page, 'ls lab/');
+  const labListing = transcript.locator('.terminal-record').last();
+  await expect(labListing.locator('.terminal-experiment-list')).toHaveCSS('list-style-type', 'none');
+  await expect(labListing.locator('[data-terminal-entry-kind="experiment"]')).toHaveCount(1);
+  await expect(labListing.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
+  await submit(page, 'ls /');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
+  await submit(page, 'ls /lab/nerv/');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Use "open lab/nerv" to enter this experiment.');
+
+  await input.fill('cd charac');
+  await input.press('Tab');
+  await expect(input).toHaveValue('cd characters/');
+  await expect(input).toBeFocused();
+  await input.press('Enter');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/characters $');
+  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts\/characters \$/u })).toBeFocused();
+  await submit(page, 'ls');
+  const nestedListing = transcript.locator('.terminal-entry-list').last();
+  await expect(nestedListing.locator('.terminal-entry-row')).toHaveCount(1);
+  await expect(nestedListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(0);
+  await expect(nestedListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(1);
+  await expect(nestedListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
+  await expect(nestedListing).toContainText('2026-08-13');
+  const nestedInput = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts\/characters \$/u });
+  await nestedInput.fill('cat n');
+  await nestedInput.press('Tab');
+  await expect(nestedInput).toHaveValue('cat nahida.md');
+  await expect(nestedInput).toBeFocused();
+  await nestedInput.press('Enter');
+  await expect(transcript).toContainText('Notes on Nahida');
+  await submit(page, 'cd /posts');
+  await submit(page, 'ls *.md');
+  const wildcardListing = transcript.locator('.terminal-entry-list').last();
+  await expect(wildcardListing.locator('.terminal-entry-row--document')).toHaveCount(2);
+  await expect(wildcardListing).toContainText('Hello, static foundation');
+  await expect(wildcardListing).toContainText('llm workflow with trellis');
+
+  await submit(page, 'cd ../');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog $');
+  await submit(page, 'ls');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
+  await submit(page, 'cd /posts');
+
+  await submit(page, 'cd /');
+  const rootInput = page.locator('#terminal-command');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog $');
+  await rootInput.fill('cd ');
+  await rootInput.press('Tab');
+  await expect(rootInput).toBeFocused();
+  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches: lab/, pages/, posts/');
+  await expect(page.locator('.terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
+  await rootInput.fill('cd la');
+  await rootInput.press('Tab');
+  await expect(rootInput).toHaveValue('cd lab/');
+  await expect(rootInput).toBeFocused();
+
   await submit(page, 'ls posts');
-  await expect(transcript.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
-  await expect(transcript.getByRole('link', { name: 'characters/nahida.md' })).toHaveAttribute('href', '/posts/characters/nahida/');
-  await expect(transcript).toContainText('2026-05-28');
+  const postsListing = transcript.locator('.terminal-entry-list').last();
+  await expect(postsListing.locator('.terminal-entry-row')).toHaveCount(3);
+  await expect(postsListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(1);
+  await expect(postsListing.locator('[data-terminal-entry-kind="directory"] code')).toHaveText('characters/');
+  await expect(postsListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(2);
+  await expect(postsListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
+  await expect(postsListing).toHaveCSS('padding-left', '0px');
+  await expect(postsListing.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
+  await expect(postsListing.getByRole('link', { name: 'characters/nahida.md' })).toHaveCount(0);
+  await expect(postsListing).toContainText('2026-05-28');
+  const listingColumns = await postsListing.locator('[data-terminal-entry-kind="document"]').evaluateAll((rows) => rows.map((row) => getComputedStyle(row).gridTemplateColumns));
+  expect(new Set(listingColumns).size).toBe(1);
   await expect(announcer).toHaveText('3 posts listed.');
 
   await submit(page, 'ls pages');
   await expect(transcript.getByRole('link', { name: '/pages/about.md' })).toHaveAttribute('href', '/pages/about/');
+  await rootInput.fill('ls /pages/ab');
+  await rootInput.press('Tab');
+  await expect(rootInput).toHaveValue('ls /pages/about.md');
+  await expect(rootInput).toBeFocused();
+  await rootInput.press('Enter');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
   await submit(page, 'cat ./pages/about.md');
   await expect(transcript).toContainText('No readable rshell resource named "./pages/about.md".');
   await submit(page, 'cat /pages/about.md');
   await expect(transcript.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
 
   await submit(page, 'ls lab');
-  await expect(transcript.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
+  await expect(transcript.locator('.terminal-record').last().getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(transcript).toContainText('NERV');
   await expect(announcer).toHaveText('1 experiments listed.');
   await submit(page, 'open lab/unlisted');
   await expect(transcript).toContainText('No listed experiment named "lab/unlisted"');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
+  await expect(rootInput).toBeFocused();
+});
+
+test('user aliases are session-local and disappear after refresh', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await submit(page, 'alias la=ls');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('la=ls');
+  await submit(page, 'la');
+  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(2);
+  await submit(page, 'help');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('la');
+
+  await page.reload();
+  await submit(page, 'la');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Unknown command: la');
   await expect(input).toBeFocused();
 });
 
@@ -105,6 +241,21 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await submit(page, 'cat about.md | grep -in about');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About');
   await expect(transcript.locator('[data-terminal-stream-document]')).toHaveCount(0);
+  await submit(page, 'cd /posts');
+  await submit(page, 'cat characters/nahida.md | grep a');
+  const pipedGrep = transcript.locator('.terminal-record').last();
+  await expect(pipedGrep.locator('.terminal-grep-line mark').first()).toHaveText('a');
+  await submit(page, 'grep -inF about /pages/about.md');
+  await expect(transcript.locator('.terminal-grep-match').last()).toContainText('/pages/about.md:');
+  await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
+  await submit(page, 'grep about -i /pages/about.md');
+  await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
+  await submit(page, 'grep -F definitely-not-in-the-public-corpus');
+  await expect(transcript.locator('.terminal-grep-summary').last()).toHaveText('No matches for "definitely-not-in-the-public-corpus".');
+  await submit(page, 'grep -nF "# " /posts/llm-workflow-with-trellis.md');
+  const sourceMatches = transcript.locator('.terminal-record').last().locator('.terminal-grep-line');
+  await expect.poll(async () => sourceMatches.count()).toBeGreaterThan(1);
+  expect((await sourceMatches.allTextContents()).every((line) => line.length < 5000)).toBe(true);
 
   await submit(page, 'whoami > /.rshell/tmp/identity.txt');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Wrote 1 line to /.rshell/tmp/identity.txt.');
@@ -136,7 +287,8 @@ test('history preserves a draft and clear returns a fresh prompt with history in
 
   await input.fill('ls p');
   await input.press('Tab');
-  await expect(completion).toHaveText('Matches: pages, posts');
+  await expect(completion).toContainText('Matches: pages/, posts/');
+  await expect(completion.locator('.terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
   await input.focus();
   await submit(page, 'history');
   await expect(transcript).toContainText('history');
@@ -148,6 +300,24 @@ test('history preserves a draft and clear returns a fresh prompt with history in
   await input.press('ArrowUp');
   await expect(input).toHaveValue('clear');
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
+});
+
+test('Ctrl+L clears the transcript without consuming command history and cls aliases clear', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await submit(page, 'pwd');
+  await input.press('Control+L');
+  await expect(transcript).toBeEmpty();
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await input.press('ArrowUp');
+  await expect(input).toHaveValue('pwd');
+  await input.fill('cls');
+  await input.press('Enter');
+  await expect(transcript).toBeEmpty();
+  await expect(input).toBeFocused();
 });
 
 test('Control+C cancels only the current prompt and completion state', async ({ page }) => {
@@ -189,7 +359,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   await expect(input).toHaveValue('');
 });
 
-test('completion consumes only unique matches and otherwise preserves Tab traversal', async ({ page }) => {
+test('the prompt owns every Tab while completion only rewrites safe unmodified matches', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
   await input.focus();
@@ -198,11 +368,18 @@ test('completion consumes only unique matches and otherwise preserves Tab traver
   await expect(input).toHaveValue('help ');
   await expect(input).toBeFocused();
 
+  await input.fill('ls ');
+  await input.press('Tab');
+  await expect(input).toHaveValue('ls ');
+  await expect(input).toBeFocused();
+  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches:');
+
   await input.fill('ls p');
   await input.press('Tab');
   await expect(input).toHaveValue('ls p');
-  await expect(page.locator('[data-terminal-completion]')).toHaveText('Matches: pages, posts');
-  await expect(input).not.toBeFocused();
+  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches: pages/, posts/');
+  await expect(page.locator('[data-terminal-completion] .terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
+  await expect(input).toBeFocused();
 
   await input.focus();
   for (const ambiguous of ['cat ./', 'vim ./', 'cat /', 'vim /']) {
@@ -241,8 +418,7 @@ test('completion consumes only unique matches and otherwise preserves Tab traver
     await input.fill(unsafe);
     await input.press('Tab');
     await expect(input).toHaveValue(unsafe);
-    await expect(input).not.toBeFocused();
-    await input.focus();
+    await expect(input).toBeFocused();
   }
 
   const modifiedTabResults = await input.evaluate((element) => [
@@ -256,14 +432,14 @@ test('completion consumes only unique matches and otherwise preserves Tab traver
     key: 'Tab',
     ...modifiers
   }))));
-  expect(modifiedTabResults).toEqual([true, true, true, true]);
+  expect(modifiedTabResults).toEqual([false, false, false, false]);
 
   await input.fill('open lab/n');
   await input.press('Tab');
   await expect(input).toHaveValue('open lab/nerv');
 });
 
-test('IME composition leaves Enter, Arrow history, and Tab key events unintercepted', async ({ page }) => {
+test('IME composition leaves text controls native while prompt Tab remains owned', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
   await submit(page, 'pwd');
@@ -282,7 +458,7 @@ test('IME composition leaves Enter, Arrow history, and Tab key events unintercep
     );
     return results;
   });
-  expect(dispatchResults).toEqual([true, true, true, true, true]);
+  expect(dispatchResults).toEqual([true, true, true, false, true]);
   await expect(input).toHaveValue('about');
   await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(1);
 
@@ -306,13 +482,15 @@ test('short output settles the active prompt and document output settles its rea
   }
   await expect(input).toBeFocused();
   const lastHelp = page.locator('[data-terminal-transcript] .terminal-record').last();
-  await expect(lastHelp.getByText('help (?) — show this command list')).toBeVisible();
+  await expect(lastHelp.getByRole('heading', { level: 2, name: 'Session' })).toBeVisible();
+  await expect(lastHelp.getByText('show this command list')).toBeVisible();
   await expectInViewport(input, 0, 1);
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await submit(page, 'help');
   const reducedHelp = page.locator('[data-terminal-transcript] .terminal-record').last();
-  await expect(reducedHelp.getByText('help (?) — show this command list')).toBeVisible();
+  await expect(reducedHelp.getByRole('heading', { level: 2, name: 'Session' })).toBeVisible();
+  await expect(reducedHelp.getByText('show this command list')).toBeVisible();
   await expectInViewport(input, 0, 1);
 
   await submit(page, 'cat ./llm-workflow-with-trellis.md');
@@ -490,7 +668,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   await expect(title).toBeVisible();
   await expect(title).toBeFocused();
   await expect(first.getByRole('link', { name: 'permalink' })).toHaveAttribute('href', '/posts/llm-workflow-with-trellis/');
-  await expect(first.getByRole('link', { name: 'Return to prompt' })).toHaveAttribute('href', '#terminal-command');
+  await expect(first.getByRole('link', { name: 'Return to prompt' })).toHaveCount(0);
   await expect(first.locator('[data-scoped-link]')).toHaveAttribute('href', '#terminal-output-1-install');
   await expect(first.locator('[data-scoped-label]')).toHaveAttribute('for', 'terminal-output-1-scoped-field');
   await expect(first.locator('[data-scoped-field]')).toHaveAttribute('id', 'terminal-output-1-scoped-field');
@@ -530,7 +708,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
     return {
       ids,
       labelledBy: articles.map((article) => article.getAttribute('aria-labelledby')),
-      returnHrefs: articles.map((article) => article.querySelector('[data-terminal-return]')?.getAttribute('href')),
+      returnControls: articles.map((article) => article.querySelectorAll('[data-terminal-return]').length),
       permalinks: articles.map((article) => article.querySelector('.terminal-stream-permalink')?.getAttribute('href'))
     };
   });
@@ -541,7 +719,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
     expect(id).not.toBeNull();
     expect(identityEvidence.ids).toContain(id ?? '');
   }
-  expect(identityEvidence.returnHrefs).toEqual(['#terminal-command', '#terminal-command']);
+  expect(identityEvidence.returnControls).toEqual([0, 0]);
   expect(identityEvidence.permalinks).toEqual([
     '/posts/llm-workflow-with-trellis/',
     '/posts/llm-workflow-with-trellis/'
@@ -714,4 +892,10 @@ test('reduced motion and responsive checkpoints preserve full-page containment',
     await expectNoHorizontalOverflow(page);
     expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().width)).toBeLessThanOrEqual(width);
   }
+  const desktopWidth = await page.locator('.terminal-home').evaluate((element) => ({
+    actual: element.getBoundingClientRect().width,
+    viewport: window.innerWidth
+  }));
+  expect(desktopWidth.actual).toBeGreaterThan(desktopWidth.viewport * 0.75);
+  expect(desktopWidth.actual).toBeLessThanOrEqual(desktopWidth.viewport * 0.81);
 });

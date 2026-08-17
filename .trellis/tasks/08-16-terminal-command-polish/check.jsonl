@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package map, canonical validation commands, browser profile, and stable Terminal acceptance boundaries."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check runtime/controller ownership, safe DOM rendering, focus/recovery behavior, and keyboard boundaries."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check command definition/context/effect contracts, registry validation, parser/pipeline invariants, and exhaustive effects."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check semantic grouped-help/grep output structure, wide-content ownership, and Terminal style boundaries."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check package/build/browser validation, responsive checkpoints, accessibility, static fallback, and overflow evidence."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check public corpus, virtual path, document rendering, command registry, and read-only boundaries against the task diff."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check canonical ./sam usage and validation/runtime assumptions."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check source-of-truth and cross-layer data flow for runtime, controller, templates, and CSS changes."}
+{"file":".trellis/tasks/08-16-terminal-command-polish/research/ui-ux-pro-max.md","reason":"Check the implementation against the approved UUPM-derived responsive, readability, contrast, focus, and no-results guidance."}
+{"file":".trellis/tasks/08-16-terminal-command-polish/design.md","reason":"Check code against the approved command architecture, corpus model, grouped-help UI, grep result model, and width strategy."}
+{"file":".trellis/tasks/08-16-terminal-command-polish/implement.md","reason":"Check implementation order, validation coverage, browser evidence, and rollback constraints."}

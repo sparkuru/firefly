@@ -1,0 +1,191 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { executeCat } from '../src/commands/cat.js';
+import { executeCd } from '../src/commands/cd.js';
+import { executeGrep } from '../src/commands/grep.js';
+import { executeLs } from '../src/commands/ls.js';
+import { executeOpen, executeVim } from '../src/commands/session.js';
+import { commandArguments } from '../src/commands/arguments.js';
+import { NEUTRAL_COMMAND_REGISTRY } from '../src/commands/registry.js';
+import type { ProcessContext } from '../src/shell/contracts.js';
+import { runRshellInput } from '../src/shell/runner.js';
+import { textStream } from '../src/shell/streams.js';
+import { createPublicIndex } from '../src/vfs/public-index.js';
+
+const fs = createPublicIndex({
+  documents: [
+    { kind: 'post', path: '/posts/characters/alpha.md', relativePath: 'characters/alpha.md', filename: 'alpha.md', title: 'Alpha', href: '/posts/characters/alpha/', date: '2026-05-28' },
+    { kind: 'page', path: '/pages/about.md', relativePath: 'about.md', filename: 'about.md', title: 'About', href: '/pages/about/', date: '2026-02-01' }
+  ],
+  experiments: [{ id: 'nerv', title: 'NERV', href: '/lab/nerv/' }],
+  textDocuments: [{ path: '/posts/characters/alpha.md', lines: ['Alpha record', 'nahida keeps the archive'] }]
+});
+
+function context(overrides: Partial<ProcessContext> = {}): ProcessContext {
+  return {
+    cwd: '/posts',
+    fs,
+    session: { history: [], scratch: [] },
+    clock: () => new Date('2026-08-12T04:05:06.000Z'),
+    signal: { aborted: false },
+    ...overrides
+  };
+}
+
+function runnerOptions(overrides: Partial<Parameters<typeof runRshellInput>[1]> = {}): Parameters<typeof runRshellInput>[1] {
+  return {
+    cwd: '/posts',
+    fs,
+    session: { history: [], scratch: [] },
+    clock: () => new Date('2026-08-12T04:05:06.000Z'),
+    signal: { aborted: false },
+    registry: NEUTRAL_COMMAND_REGISTRY,
+    identity: {
+      user: 'guest',
+      host: 'f1refly',
+      workingDirectory: '~/blog/posts',
+      about: 'A small public foundation.'
+    },
+    ...overrides
+  };
+}
+
+const args = commandArguments;
+
+test('public index exposes a bounded virtual namespace, not host paths', () => {
+  assert.deepEqual(fs.resolve('characters', '/posts', 'directory'), { ok: true, path: '/posts/characters' });
+  assert.deepEqual(fs.resolve('.', '/', 'pattern'), { ok: true, path: '/' });
+  assert.equal(fs.stat('/etc/passwd'), undefined);
+  assert.deepEqual(fs.list('/')?.directories, ['lab/', 'pages/', 'posts/']);
+  assert.deepEqual(fs.list('/')?.documents, []);
+  assert.deepEqual(fs.list('/posts')?.documents, []);
+  assert.deepEqual(fs.list('/posts/characters')?.documents.map(({ path }) => path), ['/posts/characters/alpha.md']);
+  assert.deepEqual(fs.glob('/pages/*'), ['/pages/about.md']);
+});
+
+test('each neutral command owns an argv parser and accepts interspersed options', () => {
+  assert.equal(NEUTRAL_COMMAND_REGISTRY.definitions.every(({ parse }) => typeof parse === 'function'), true);
+  const leading = runRshellInput('grep -i nahida', runnerOptions());
+  const trailing = runRshellInput('grep nahida -i', runnerOptions());
+  const clustered = runRshellInput('grep -inF nahida', runnerOptions());
+  assert.deepEqual(trailing, leading);
+  assert.equal(clustered.status, 0);
+  assert.deepEqual(runRshellInput('grep --ignore-case nahida', runnerOptions()), leading);
+  assert.equal(runRshellInput('grep -- nahida', runnerOptions()).status, 0);
+  assert.equal(runRshellInput('grep -x nahida', runnerOptions()).status, 1);
+});
+
+test('relative commands resolve the virtual root without a double slash', () => {
+  const root = runRshellInput('ls', runnerOptions({ cwd: '/' }));
+  assert.equal(root.status, 0);
+  assert.deepEqual(root.stdout.lines, ['lab/', 'pages/', 'posts/']);
+  assert.deepEqual(runRshellInput('ls .', runnerOptions({ cwd: '/' })).stdout.lines, root.stdout.lines);
+});
+
+test('neutral commands exchange streams and values without terminal effects', () => {
+  const listing = executeLs(context(), args());
+  assert.equal(listing.status, 0);
+  assert.equal(listing.value?.kind, 'directory-listing');
+  assert.deepEqual(listing.stdout.lines, ['characters/']);
+
+  const document = executeCat(context(), args(['characters/alpha.md']));
+  assert.equal(document.value?.kind, 'document');
+  assert.deepEqual(document.stdout.lines, ['Alpha record', 'nahida keeps the archive']);
+
+  const changed = executeCd(context(), args(['characters']));
+  assert.deepEqual(changed.statePatch, { kind: 'cwd', cwd: '/posts/characters' });
+
+  const piped = executeCat(context({ stdin: textStream(['piped line']) }), args());
+  assert.deepEqual(piped.stdout.lines, ['piped line']);
+});
+
+test('grep and navigation use independent value/control channels', () => {
+  const nested = executeGrep(context(), args(['nahida'], { 'line-number': true }));
+  assert.deepEqual(nested.stdout.lines, ['/posts/characters/alpha.md:2:nahida keeps the archive']);
+  const report = executeGrep(context({ stdin: textStream(['nahida keeps the archive']) }), args(['nahida'], { 'line-number': true }));
+  assert.equal(report.value?.kind, 'grep-report');
+  assert.deepEqual(report.stdout.lines, ['1:nahida keeps the archive']);
+  assert.deepEqual(executeOpen(context(), args(['lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeVim(context(), args(['/pages/about.md'])).controls, [{ kind: 'open-document', path: '/pages/about.md' }]);
+});
+
+test('neutral runner wires stdout only and keeps final values and controls separate', () => {
+  const piped = runRshellInput('cat characters/alpha.md | grep -nF nahida', runnerOptions());
+  assert.equal(piped.status, 0);
+  assert.deepEqual(piped.stderr.lines, []);
+  assert.deepEqual(piped.stdout.lines, ['2:nahida keeps the archive']);
+  assert.equal(piped.value?.kind, 'grep-report');
+
+  const opened = runRshellInput('open lab/nerv', runnerOptions());
+  assert.deepEqual(opened.controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(opened.stdout.lines, []);
+
+  const standalone = runRshellInput('cd characters | cat', runnerOptions());
+  assert.equal(standalone.status, 1);
+  assert.deepEqual(standalone.stderr.lines, ['"cd" is a standalone command and cannot be piped.']);
+});
+
+test('neutral runner applies state patches and bounded scratch redirects', () => {
+  const changed = runRshellInput('cd characters', runnerOptions());
+  assert.deepEqual(changed.statePatch, { kind: 'cwd', cwd: '/posts/characters' });
+
+  const written = runRshellInput('ls --help > /.rshell/tmp/help', runnerOptions());
+  assert.equal(written.status, 0);
+  assert.deepEqual(written.stdout.lines, []);
+  assert.deepEqual(written.statePatch?.kind, 'session');
+  if (written.statePatch?.kind !== 'session') return;
+  assert.deepEqual(written.statePatch.session.scratch, [{
+    name: 'help',
+    lines: [
+      'Usage: ls [path|pattern]',
+      'list a public or session virtual directory',
+      'Options: -h, --help; * matches known public names.'
+    ]
+  }]);
+
+  const session = written.statePatch.session;
+  const scratchFs = createPublicIndex({
+    documents: [
+      { kind: 'post', path: '/posts/characters/alpha.md', relativePath: 'characters/alpha.md', filename: 'alpha.md', title: 'Alpha', href: '/posts/characters/alpha/', date: '2026-05-28' },
+      { kind: 'page', path: '/pages/about.md', relativePath: 'about.md', filename: 'about.md', title: 'About', href: '/pages/about/', date: '2026-02-01' }
+    ],
+    experiments: [{ id: 'nerv', title: 'NERV', href: '/lab/nerv/' }],
+    textDocuments: [{ path: '/posts/characters/alpha.md', lines: ['Alpha record', 'nahida keeps the archive'] }],
+    scratch: session.scratch
+  });
+  const read = runRshellInput('cat /.rshell/tmp/help', runnerOptions({ fs: scratchFs, session }));
+  assert.equal(read.status, 0);
+  assert.deepEqual(read.stdout.lines, session.scratch[0]?.lines);
+});
+
+test('neutral session commands consume injected identity, command metadata, and VFS', () => {
+  const help = runRshellInput('help', runnerOptions());
+  assert.equal(help.status, 0);
+  assert.equal(help.value?.kind, 'help');
+  assert.equal(help.stdout.lines[0], 'Explore');
+  assert.ok(help.stdout.lines.some((line) => line.includes('help (?)')));
+
+  const tree = runRshellInput('tree /', runnerOptions());
+  assert.equal(tree.status, 0);
+  assert.deepEqual(tree.stdout.lines, [
+    '~/blog',
+    '├── lab/',
+    '│   └── nerv/',
+    '├── pages/',
+    '│   └── about.md',
+    '└── posts/',
+    '    └── characters/',
+    '        └── alpha.md'
+  ]);
+
+  assert.deepEqual(runRshellInput('pwd', runnerOptions()).stdout.lines, ['~/blog/posts']);
+  assert.deepEqual(runRshellInput('whoami', runnerOptions()).stdout.lines, ['guest']);
+  assert.deepEqual(runRshellInput('id', runnerOptions()).stdout.lines[0], 'uid=guest gid=guest groups=public-read');
+  assert.deepEqual(runRshellInput('history', runnerOptions({ session: { history: ['ls'], scratch: [] } })).stdout.lines, ['1  ls']);
+  assert.ok(runRshellInput('alias ?', runnerOptions()).stdout.lines.includes('?=help'));
+  const alias = runRshellInput('alias la=ls', runnerOptions());
+  assert.equal(alias.status, 0);
+  assert.deepEqual(alias.stdout.lines, ['la=ls']);
+  assert.deepEqual(alias.statePatch?.kind === 'session' ? alias.statePatch.session.aliases : undefined, [{ name: 'la', target: 'ls' }]);
+  assert.equal(runRshellInput('la', runnerOptions({ session: { history: [], scratch: [], aliases: [{ name: 'la', target: 'ls' }] } })).status, 0);
+});
