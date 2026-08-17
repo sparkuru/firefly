@@ -227,3 +227,24 @@ Implemented and validated a bounded read-only rshell for the terminal: public co
 ### Status
 
 [OK] **Completed**
+
+
+## Session 11: Polish Terminal command workflow
+
+**Date**: 2026-08-17
+**Task**: Polish Terminal command workflow
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Refactored the read-only Terminal into neutral shell/parser/runner/VFS and command boundaries; unified ls/cd/cat/vim/open completion behavior, session aliases, prompt-wide Tab ownership, Ctrl+L/clear behavior, grouped help, readable listings, and 80% desktop measure. Added shared ambiguity feedback, safe DOM rendering, unit/browser/build evidence, and archived the completed task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ec62f96` | (see git log) |
+
+### Status
+
+[OK] **Completed**

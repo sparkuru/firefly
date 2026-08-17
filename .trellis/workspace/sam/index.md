@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
-- **Last Active**: 2026-08-15
+- **Total Sessions**: 11
+- **Last Active**: 2026-08-17
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~229 | Active |
+| `journal-1.md` | ~250 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-08-17 | Polish Terminal command workflow | `ec62f96` | `anti-entropy-loss-syndrome` |
 | 10 | 2026-08-15 | Read-only rshell knowledge browser | `7b1a54e` | `anti-entropy-loss-syndrome` |
 | 9 | 2026-08-15 | M7 reverse-tunnel staging rehearsal | `eb3916f` | `anti-entropy-loss-syndrome` |
 | 8 | 2026-08-14 | M5 full content migration | `3e36dad`, `04746a6` | `anti-entropy-loss-syndrome` |
