@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Verify the final affected frontend package and Playwright validation profile."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check native keyboard, IME, selection, protected target, and progressive enhancement behavior."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check reader status semantics, labels, DOM ownership, and static HTML completeness."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Check no URL/storage/global persistence for query or occurrence state."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check exact-range coverage, responsive focus, reduced motion, static output, and full browser evidence."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check TypeScript Range/Highlight contracts and browser boundary safety."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check occurrence-level search against canonical reader and read-only contracts."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/research/ui-ux-pro-max.md","reason":"Check search affordance clarity, visible focus/status behavior, contrast, responsive layout, and reduced-motion treatment."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/prd.md","reason":"Review implementation against requirements and acceptance criteria."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/design.md","reason":"Review data flow, matching, highlighting, navigation, status, and risks."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/implement.md","reason":"Review ordered checklist, validation commands, evidence, and rollback boundaries."}

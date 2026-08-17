@@ -99,7 +99,13 @@ semantic documents expose it only after the explicit `#terminal-reader`
 fragment entry. It recognizes only `j/k/g/G`, `/?`, `n/N`, `v`, Escape, and
 `:q`; movement targets semantic reading units, visual mode owns a real
 boundary-checked Range, and `:q` assigns `/`. Search/command use labeled native
-inputs. Generated unit IDs avoid all existing IDs.
+inputs. Search is occurrence-based: each non-overlapping literal match owns an
+exact text-node `Range`, `n/N` move through occurrence records rather than unit
+IDs, and the persistent status reports the active occurrence. CSS Highlights
+may render cloned all-match and active-match ranges, but unsupported browsers
+must retain navigation without mutating content or browser selection. The
+search prefix, direction-specific label, and placeholder must make `/` versus
+`?` discoverable. Generated unit IDs avoid all existing IDs.
 
 The reader must ignore IME, modifiers, native controls, links, editables, media,
 standard ARIA widgets/containers, local-scroll regions, and user-owned

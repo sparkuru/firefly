@@ -627,6 +627,12 @@
   color: var(--terminal-color-command);
 }
 
+.terminal-reader-status > [data-reader-search-status] {
+  margin-block: 0.35rem 0;
+  color: var(--terminal-color-text);
+  font-weight: 500;
+}
+
 .terminal-reader-status form:not([hidden]) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -650,6 +656,16 @@
   background: transparent;
   color: var(--terminal-color-text);
   font: inherit;
+}
+
+.terminal-reader-status [data-reader-search-prefix] {
+  color: var(--terminal-color-command);
+  font-weight: 500;
+}
+
+.terminal-reader-status input::placeholder {
+  color: var(--terminal-color-muted);
+  opacity: 1;
 }
 
 .reader-visually-hidden {
@@ -678,6 +694,11 @@
 ::highlight(terminal-reader-search) {
   background-color: var(--terminal-color-highlight);
   color: var(--terminal-color-text);
+}
+
+::highlight(terminal-reader-search-active) {
+  background-color: var(--terminal-color-warning);
+  color: var(--terminal-color-canvas);
 }
 
 .terminal-document h1,

@@ -26,7 +26,7 @@ test('reader moves by semantic units and honors reduced motion', async ({ page }
 test('reader search, repeat, visual Range, Escape, and unsupported commands are bounded', async ({ page }) => {
   const region = await openReader(page);
   await region.press('/');
-  const search = page.getByRole('searchbox', { name: 'Search document' });
+  const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await expect(search).toBeFocused();
   await search.fill('reader');
   await search.press('Enter');
@@ -35,8 +35,10 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
   await region.press('n');
   await region.press('N');
   await region.press('?');
-  await search.fill('missing literal query');
-  await search.press('Enter');
+  const backwardSearch = page.getByRole('searchbox', { name: /Search document backward/u });
+  await expect(backwardSearch).toHaveAttribute('placeholder', 'Search backward…');
+  await backwardSearch.fill('missing literal query');
+  await backwardSearch.press('Enter');
   await expect(page.locator('[data-reader-message]')).toHaveText('No results for “missing literal query”.');
 
   await region.press('v');
@@ -54,6 +56,57 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
   await expect(page.locator('[data-reader-message]')).toContainText('Only :q is available');
   await command.press('Escape');
   await expect(region).toBeFocused();
+});
+
+test('reader searches exact repeated occurrences from the canonical fragment entry', async ({ page }) => {
+  await page.goto('/posts/llm-workflow-with-trellis/#terminal-reader');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for llm workflow with trellis/u });
+  await expect(region).toBeFocused();
+
+  await region.press('?');
+  const search = page.getByRole('searchbox', { name: /Search document backward/u });
+  await expect(search).toHaveAttribute('placeholder', 'Search backward…');
+  await expect(page.locator('[data-reader-search-prefix]')).toHaveText('?');
+  await search.fill('trellis');
+  await search.press('Enter');
+
+  const status = page.locator('[data-reader-search-status]');
+  await expect(status).toHaveText(/^\d+\/\d+ matches for “trellis”\.$/u);
+  const state = await page.evaluate(() => {
+    const all = CSS.highlights.get('terminal-reader-search');
+    const active = CSS.highlights.get('terminal-reader-search-active');
+    const ranges = [...(all ?? [])].map((range) => {
+      const container = range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? range.startContainer as Element
+        : range.startContainer.parentElement;
+      return {
+        text: range.toString(),
+        unit: container?.closest<HTMLElement>('[data-reader-unit]')?.dataset.readerUnit ?? ''
+      };
+    });
+    return {
+      ranges,
+      activeText: [...(active ?? [])][0]?.toString() ?? '',
+      status: document.querySelector<HTMLElement>('[data-reader-search-status]')?.textContent ?? ''
+    };
+  });
+  expect(state.ranges.length).toBeGreaterThan(1);
+  expect(state.ranges.every(({ text }) => text.toLocaleLowerCase() === 'trellis')).toBe(true);
+  const rangesByUnit = state.ranges.reduce<Record<string, number>>((counts, { unit }) => ({
+    ...counts,
+    [unit]: (counts[unit] ?? 0) + 1
+  }), {});
+  expect(Object.values(rangesByUnit).some((count) => count > 1)).toBe(true);
+  expect(state.activeText.toLocaleLowerCase()).toBe('trellis');
+  const initialStatus = state.status;
+
+  await region.press('n');
+  await expect(status).not.toHaveText(initialStatus);
+  const nextActiveText = await page.evaluate(() => [...(CSS.highlights.get('terminal-reader-search-active') ?? [])][0]?.toString() ?? '');
+  expect(nextActiveText.toLocaleLowerCase()).toBe('trellis');
+
+  await region.press('N');
+  await expect(status).toHaveText(initialStatus);
 });
 
 test('reader preserves links, local-scroll regions, modifier keys, IME, and manual selection', async ({ page }) => {
