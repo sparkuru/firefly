@@ -1,0 +1,7 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend validation profile and package/style ownership."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Reader component ownership, sticky/responsive presentation, focus, and Terminal/semantic style isolation."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Route-local reader modes, action feedback, keyboard boundaries, native inputs, and fallback behavior."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Ephemeral reader mode, active-unit, search, selection, and message ownership."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required static, build, focused/full browser, responsive, and accessibility validation gates."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Durable reader mode/search/status contracts to extend with permanent sticky behavior."}
+{"file":".trellis/tasks/08-17-reader-persistent-status-panel/research/ui-ux-pro-max.md","reason":"Applied sticky navigation, feedback, focus, and contrast findings."}

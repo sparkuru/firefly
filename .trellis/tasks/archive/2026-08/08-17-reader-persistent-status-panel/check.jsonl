@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review all required site checks, static output, focused reader, full browser, and human-review boundaries."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review sticky layout containment, visible focus, semantic markup, and presentation isolation."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Review action feedback, route-local state, keyboard ownership, and native fallback."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Review that the persistent panel derives only from existing route-local reader state."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check the permanent sticky status and visible feedback ownership against the reader contract."}
+{"file":".trellis/tasks/08-17-reader-persistent-status-panel/design.md","reason":"Review implementation against the approved state/layout design and rollback boundaries."}
