@@ -1,0 +1,7 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package boundaries and required browser/build validation profile."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Reader component ownership, Terminal styling isolation, focus, responsive, and prompt-row conventions."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Route-local reader controller, native input, keyboard ownership, and fallback contracts."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Ephemeral reader query/match/mode ownership and no global state contract."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required focused/full browser, build, static-output, and diff validation."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Executable reader search, sticky status, prefix/input, and cancellation contract."}
+{"file":".trellis/tasks/08-17-reader-search-chrome-alignment/research/ui-ux-pro-max.md","reason":"Applied UI/UX findings and local prompt-row design decision."}
