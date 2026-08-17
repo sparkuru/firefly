@@ -332,3 +332,24 @@ Completed the reader search chrome refinement: opaque sticky contrast surfaces, 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 16: Reader persistent sticky status panel
+
+**Date**: 2026-08-17
+**Task**: Reader persistent sticky status panel
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+将 semantic 与 Terminal reader 状态栏改为可见即常驻 sticky，复用现有模式/位置/搜索/命令反馈；保持提交搜索结果单行显示与独立 aria-live 通道，补充桌面移动端动作、滚动、响应式和语义 fragment 覆盖，更新 reader contract。Astro check/build、static-output、内容/X Core、focused reader 与完整浏览器套件全部通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7015f48` | (see git log) |
+
+### Status
+
+[OK] **Completed**

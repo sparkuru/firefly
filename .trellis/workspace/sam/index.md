@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 15
+- **Total Sessions**: 16
 - **Last Active**: 2026-08-17
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~334 | Active |
+| `journal-1.md` | ~355 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 16 | 2026-08-17 | Reader persistent sticky status panel | `7015f48` | `anti-entropy-loss-syndrome` |
 | 15 | 2026-08-17 | Reader search chrome contrast and repeat alignment | `db18940` | `anti-entropy-loss-syndrome` |
 | 14 | 2026-08-17 | Refine reader search viewport status and 4K frame | `58a8dd2` | `anti-entropy-loss-syndrome` |
 | 13 | 2026-08-17 | Refine reader search match navigation | `694b95e` | `anti-entropy-loss-syndrome` |
