@@ -318,6 +318,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /data-language="mermaid"/u);
   assert.match(terminalArticle, /data-terminal-reader-region/u);
   assert.equal((terminalArticle.match(/id="terminal-reader"/gu) ?? []).length, 1);
+  assert.match(terminalArticle, /<p data-reader-search-status hidden><\/p>/u);
   assert.match(terminalArticle, /data-reader-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
   assert.match(nestedArticle, /guest@f1refly:~\/blog \$/u);

@@ -15,9 +15,10 @@ const initiallyHidden = variant === 'semantic';
   hidden={initiallyHidden}
 >
   <p><span data-reader-mode>-- NORMAL --</span><span data-reader-position>1/1</span></p>
+  <p data-reader-search-status hidden></p>
   <form data-reader-search-form hidden>
-    <label for="terminal-reader-search">Search document</label>
-    <span data-reader-search-prefix>/</span><input id="terminal-reader-search" type="search" autocomplete="off" />
+    <label data-reader-search-label for="terminal-reader-search">Search document forward</label>
+    <span data-reader-search-prefix aria-hidden="true">/</span><input id="terminal-reader-search" type="search" autocomplete="off" placeholder="Search forward…" />
   </form>
   <form data-reader-command-form hidden>
     <label for="terminal-reader-command">Reader command</label>

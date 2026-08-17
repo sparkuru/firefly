@@ -459,8 +459,21 @@ startTerminalReader(root: HTMLElement): void
   a centered reading band; reduced motion changes smooth scrolling to immediate.
 - Visual mode owns a real `Range` only while the browser selection has exactly
   the same boundaries. A user-replaced selection is never cleared or captured.
-- Search uses labeled native input, literal case-insensitive text matching,
-  wraparound `n`/`N`, and optional CSS Highlights without rewriting content.
+- Search uses a labeled native input, literal case-insensitive matching, and a
+  route-local occurrence record `{ unitIndex, range }` for every non-overlapping
+  match. The collector walks text nodes within one reading unit, maps folded
+  text offsets back to the original DOM boundaries, and never crosses units or
+  rewrites authored content. `n`/`N` navigate those occurrence records with
+  wraparound, including repeated matches inside one paragraph or `<pre>`.
+  When supported, CSS Highlights register `terminal-reader-search` for all
+  cloned ranges and `terminal-reader-search-active` for the current clone; the
+  unsupported-Highlight fallback keeps status/navigation/scrolling functional
+  without inserting `<mark>` or taking browser selection ownership. A
+  committed query exposes persistent `data-reader-search-status` text for the
+  current occurrence (or bounded no-results text), while the `/`/`?` prefix,
+  direction-specific label, and placeholder identify search direction.
+  Occurrence movement settles only the page viewport from the range rectangle,
+  never a protected nested scroll region.
   Command mode accepts only `q`; successful `:q` navigates deterministically to
   `/` and does not depend on history.
 - Key handling preserves composition/IME, modifiers, unsupported keys, native
@@ -512,6 +525,11 @@ startTerminalReader(root: HTMLElement): void
 | inline `cat` stream footer | end at the trusted document content without a redundant `Return to prompt` control; keep the prompt below and focused |
 | long help after prior output | first new record line not top-clipped; fresh prompt usable/visible when geometry permits |
 | JavaScript unavailable or reader startup cannot initialize | full document/breadcrumb remains usable |
+| empty reader search | cancel the input without creating or replacing a committed query |
+| committed literal search with matches | one exact DOM range per non-overlapping occurrence; persistent current/total status; all/active CSS Highlights when supported |
+| repeated matches within one reading unit | `n`/`N` changes the active occurrence and status even when the active unit ID is unchanged |
+| committed literal search with no matches | clear prior ranges and show bounded `No results for “…”` status/announcement |
+| CSS Highlights unavailable | retain occurrence count, active unit, keyboard navigation, and page settlement without DOM wrappers or selection mutation |
 | protected reader target, IME, modifier, or user-owned selection | preserve native behavior; no reader movement/mode takeover |
 | unsupported ex command | stay on document and announce bounded error |
 | `:q` | navigate to `/` exactly |
@@ -584,7 +602,9 @@ startTerminalReader(root: HTMLElement): void
   Tab focus; inline `cat` prompt adjacency; Ctrl+C and modifier/IME exclusions;
   safe ambiguous and zero-result path Tab focus plus prompt-wide Tab prevention;
   repeated help settlement; all reader modes/keys; Ctrl+L clear and `ls lab`
-  row presentation; Range ownership; reduced motion; overflow and focus.
+  row presentation; exact reader search ranges and current/total status;
+  same-unit `n`/`N` wraparound; backward-search prefix/label/placeholder;
+  Range ownership; reduced motion; overflow and focus.
 - External workspace E2E: native Markdown plus chained file/directory links,
   exact read-only mounts, built routes, zero stage symlinks, no private or host
   path in output, then restore the default build.

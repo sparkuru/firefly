@@ -46,7 +46,7 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   await capture('reader-normal');
 
   await reader.press('/');
-  const search = page.getByRole('searchbox', { name: 'Search document' });
+  const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await search.fill('reader');
   await capture('reader-search');
   await search.press('Escape');

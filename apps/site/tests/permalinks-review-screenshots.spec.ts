@@ -16,7 +16,7 @@ test('capture canonical reader entry and idle states', async ({ page }, testInfo
   await capture('semantic-reader-entry');
 
   await semanticReader.press('/');
-  await page.getByRole('searchbox', { name: 'Search document' }).fill('reader');
+  await page.getByRole('searchbox', { name: /Search document forward/u }).fill('reader');
   await capture('semantic-reader-search');
 
   await page.goto('/posts/characters/nahida/');

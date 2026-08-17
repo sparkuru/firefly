@@ -259,6 +259,12 @@ blockquote {
   color: var(--link-active);
 }
 
+.reader-status > [data-reader-search-status] {
+  margin-block: 0.35rem 0;
+  color: var(--text);
+  font-weight: 650;
+}
+
 .reader-status form:not([hidden]) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -284,6 +290,16 @@ blockquote {
   font: inherit;
 }
 
+.reader-status [data-reader-search-prefix] {
+  color: var(--link-active);
+  font-weight: 700;
+}
+
+.reader-status input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
 .reader-visually-hidden {
   position: absolute;
   width: 1px;
@@ -301,6 +317,16 @@ blockquote {
 [data-reader-active] {
   outline: 0.1875rem solid var(--focus);
   outline-offset: 0.1875rem;
+}
+
+::highlight(terminal-reader-search) {
+  background-color: #f1d6ad;
+  color: var(--text);
+}
+
+::highlight(terminal-reader-search-active) {
+  background-color: var(--focus);
+  color: var(--surface);
 }
 
 .semantic-document,

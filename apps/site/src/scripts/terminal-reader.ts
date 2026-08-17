@@ -1,6 +1,20 @@
 type ReaderMode = 'normal' | 'visual' | 'search' | 'command';
 type SearchDirection = 1 | -1;
 const searchHighlightName = 'terminal-reader-search';
+const activeSearchHighlightName = 'terminal-reader-search-active';
+
+type SearchMatch = {
+  readonly unitIndex: number;
+  readonly range: Range;
+};
+
+type SearchTextPoint = readonly [Text, number];
+
+type SearchTextIndex = {
+  readonly foldedText: string;
+  readonly startPoints: ReadonlyMap<number, SearchTextPoint>;
+  readonly endPoints: ReadonlyMap<number, SearchTextPoint>;
+};
 
 const readingUnitSelector = [
   ':scope > h2',
@@ -71,15 +85,71 @@ function requireOne<T extends Element>(root: ParentNode, selector: string, const
   return nodes[0];
 }
 
+function buildSearchTextIndex(unit: HTMLElement): SearchTextIndex {
+  const startPoints = new Map<number, SearchTextPoint>();
+  const endPoints = new Map<number, SearchTextPoint>();
+  let foldedText = '';
+  const walker = document.createTreeWalker(unit, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+
+  while (node instanceof Text) {
+    const value = node.nodeValue ?? '';
+    for (let offset = 0; offset < value.length;) {
+      const codePoint = value.codePointAt(offset);
+      if (codePoint === undefined) break;
+      const nextOffset = offset + (codePoint > 0xffff ? 2 : 1);
+      const foldedCharacter = String.fromCodePoint(codePoint).toLocaleLowerCase();
+      startPoints.set(foldedText.length, [node, offset]);
+      foldedText += foldedCharacter;
+      endPoints.set(foldedText.length, [node, nextOffset]);
+      offset = nextOffset;
+    }
+    node = walker.nextNode();
+  }
+
+  return { foldedText, startPoints, endPoints };
+}
+
+function collectSearchMatches(units: readonly HTMLElement[], query: string): SearchMatch[] {
+  if (query.length === 0) return [];
+  const foldedQuery = query.toLocaleLowerCase();
+  if (foldedQuery.length === 0) return [];
+
+  return units.flatMap((unit, unitIndex) => {
+    const { foldedText, startPoints, endPoints } = buildSearchTextIndex(unit);
+    const matches: SearchMatch[] = [];
+    let searchOffset = 0;
+
+    while (searchOffset <= foldedText.length - foldedQuery.length) {
+      const matchOffset = foldedText.indexOf(foldedQuery, searchOffset);
+      if (matchOffset === -1) break;
+      const matchEnd = matchOffset + foldedQuery.length;
+      const startPoint = startPoints.get(matchOffset);
+      const endPoint = endPoints.get(matchEnd);
+      if (startPoint !== undefined && endPoint !== undefined) {
+        const range = document.createRange();
+        range.setStart(startPoint[0], startPoint[1]);
+        range.setEnd(endPoint[0], endPoint[1]);
+        if (!range.collapsed) matches.push({ unitIndex, range });
+      }
+      searchOffset = matchEnd;
+    }
+
+    return matches;
+  });
+}
+
 export function startTerminalReader(root: HTMLElement): void {
   const region = requireOne(root, '[data-terminal-reader-region]', HTMLElement);
   const status = requireOne(root, '[data-terminal-reader-status]', HTMLElement);
   const modeNode = requireOne(root, '[data-reader-mode]', HTMLElement);
   const positionNode = requireOne(root, '[data-reader-position]', HTMLElement);
+  const searchStatus = requireOne(root, '[data-reader-search-status]', HTMLElement);
   const messageNode = requireOne(root, '[data-reader-message]', HTMLElement);
   const announcer = requireOne(root, '[data-reader-announcer]', HTMLElement);
   const searchForm = requireOne(root, '[data-reader-search-form]', HTMLFormElement);
   const searchInput = requireOne(root, '#terminal-reader-search', HTMLInputElement);
+  const searchLabel = requireOne(root, '[data-reader-search-label]', HTMLLabelElement);
   const searchPrefix = requireOne(root, '[data-reader-search-prefix]', HTMLElement);
   const commandForm = requireOne(root, '[data-reader-command-form]', HTMLFormElement);
   const commandInput = requireOne(root, '#terminal-reader-command', HTMLInputElement);
@@ -114,7 +184,7 @@ export function startTerminalReader(root: HTMLElement): void {
   let composing = false;
   let searchDirection: SearchDirection = 1;
   let searchQuery = '';
-  let searchMatches: number[] = [];
+  let searchMatches: SearchMatch[] = [];
   let searchMatchIndex = -1;
   const highlightRegistry = (CSS as unknown as {
     highlights?: { delete(name: string): void; set(name: string, highlight: unknown): void };
@@ -130,15 +200,42 @@ export function startTerminalReader(root: HTMLElement): void {
     announcer.textContent = message;
   };
 
+  const searchStatusText = () => searchMatches.length === 0
+    ? `No results for “${searchQuery}”.`
+    : `${searchMatchIndex + 1}/${searchMatches.length} matches for “${searchQuery}”.`;
+
+  const updateSearchStatus = () => {
+    if (searchQuery.length === 0) {
+      searchStatus.hidden = true;
+      searchStatus.textContent = '';
+      return;
+    }
+    searchStatus.hidden = false;
+    searchStatus.textContent = searchStatusText();
+  };
+
   const updateStatus = () => {
     modeNode.textContent = `-- ${mode.toUpperCase()} --`;
     positionNode.textContent = `${activeIndex + 1}/${units.length}`;
     region.setAttribute('aria-activedescendant', units[activeIndex]!.id);
     units.forEach((unit, index) => unit.toggleAttribute('data-reader-active', index === activeIndex));
+    updateSearchStatus();
   };
 
   const settleActive = () => {
     units[activeIndex]!.scrollIntoView({ behavior: motionBehavior(), block: 'center', inline: 'nearest' });
+  };
+
+  const settleSearchMatch = (range: Range) => {
+    const rect = range.getBoundingClientRect();
+    const viewportTop = window.innerHeight * 0.25;
+    const viewportBottom = window.innerHeight * 0.75;
+    const offset = rect.top < viewportTop
+      ? rect.top - viewportTop
+      : rect.bottom > viewportBottom
+        ? rect.bottom - viewportBottom
+        : 0;
+    if (offset !== 0) window.scrollBy({ top: offset, behavior: motionBehavior() });
   };
 
   const clearOwnedSelection = () => {
@@ -158,13 +255,14 @@ export function startTerminalReader(root: HTMLElement): void {
 
   const renderSearchHighlights = () => {
     highlightRegistry?.delete(searchHighlightName);
+    highlightRegistry?.delete(activeSearchHighlightName);
     if (highlightRegistry === undefined || HighlightConstructor === undefined || searchMatches.length === 0) return;
-    const ranges = searchMatches.map((index) => {
-      const range = document.createRange();
-      range.selectNodeContents(units[index]!);
-      return range;
-    });
+    const ranges = searchMatches.map(({ range }) => range.cloneRange());
     highlightRegistry.set(searchHighlightName, new HighlightConstructor(...ranges));
+    const activeMatch = searchMatches[searchMatchIndex];
+    if (activeMatch !== undefined) {
+      highlightRegistry.set(activeSearchHighlightName, new HighlightConstructor(activeMatch.range.cloneRange()));
+    }
   };
 
   const renderVisualSelection = () => {
@@ -188,6 +286,17 @@ export function startTerminalReader(root: HTMLElement): void {
     settleActive();
   };
 
+  const moveToSearchMatch = (nextIndex: number) => {
+    const match = searchMatches[nextIndex];
+    if (match === undefined) return;
+    searchMatchIndex = nextIndex;
+    activeIndex = match.unitIndex;
+    updateStatus();
+    renderSearchHighlights();
+    announce(searchStatusText());
+    settleSearchMatch(match.range);
+  };
+
   const restoreNormal = (message = 'Normal mode.') => {
     clearOwnedSelection();
     mode = 'normal';
@@ -203,6 +312,9 @@ export function startTerminalReader(root: HTMLElement): void {
     mode = 'search';
     searchDirection = direction;
     searchPrefix.textContent = direction === 1 ? '/' : '?';
+    const directionLabel = direction === 1 ? 'forward' : 'backward';
+    searchLabel.textContent = `Search document ${directionLabel}`;
+    searchInput.placeholder = `Search ${directionLabel}…`;
     searchForm.hidden = false;
     commandForm.hidden = true;
     searchInput.value = '';
@@ -216,9 +328,8 @@ export function startTerminalReader(root: HTMLElement): void {
       announce(searchQuery.length === 0 ? 'No search query.' : `No results for “${searchQuery}”.`);
       return;
     }
-    searchMatchIndex = (searchMatchIndex + direction + searchMatches.length) % searchMatches.length;
-    moveTo(searchMatches[searchMatchIndex]!);
-    announce(`${searchMatchIndex + 1}/${searchMatches.length} matches for “${searchQuery}”.`);
+    const nextIndex = (searchMatchIndex + direction + searchMatches.length) % searchMatches.length;
+    moveToSearchMatch(nextIndex);
   };
 
   const hasUnownedSelection = () => {
@@ -252,21 +363,19 @@ export function startTerminalReader(root: HTMLElement): void {
       return;
     }
     searchQuery = query;
-    const folded = query.toLocaleLowerCase();
-    searchMatches = units.flatMap((unit, index) => unit.textContent?.toLocaleLowerCase().includes(folded) ? [index] : []);
+    searchMatches = collectSearchMatches(units, query);
+    searchMatchIndex = -1;
     renderSearchHighlights();
     if (searchMatches.length === 0) {
-      searchMatchIndex = -1;
       updateStatus();
       announce(`No results for “${query}”.`);
       return;
     }
     const ordered = searchDirection === 1
-      ? searchMatches.findIndex((index) => index > activeIndex)
-      : searchMatches.findLastIndex((index) => index < activeIndex);
+      ? searchMatches.findIndex(({ unitIndex }) => unitIndex > activeIndex)
+      : searchMatches.findLastIndex(({ unitIndex }) => unitIndex < activeIndex);
     searchMatchIndex = ordered === -1 ? (searchDirection === 1 ? 0 : searchMatches.length - 1) : ordered;
-    moveTo(searchMatches[searchMatchIndex]!);
-    announce(`${searchMatchIndex + 1}/${searchMatches.length} matches for “${query}”.`);
+    moveToSearchMatch(searchMatchIndex);
   });
 
   commandForm.addEventListener('submit', (event) => {

@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Load the package topology, ./sam validation boundary, and Playwright desktop/mobile profile."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Preserve reader keyboard ownership, native controls, IME, selection, and progressive enhancement boundaries."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review ReaderStatus markup, semantic/Terminal composition, accessible labels, and JavaScript-free output."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Keep query, occurrence ranges, active match, and highlights route-local and non-persistent."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Apply static output, responsive, reduced-motion, browser, focus, and screenshot evidence requirements."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Review typed browser-boundary contracts and safe DOM Range/Highlight handling."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Preserve canonical reader, search, selection, route, and read-only contracts while adding occurrence-level behavior."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/research/ui-ux-pro-max.md","reason":"Apply the approved reader visual language, accessible search affordances, responsive constraints, and focus/status treatment."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/prd.md","reason":"Task requirements and acceptance criteria."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/design.md","reason":"Occurrence model, exact Range highlights, navigation, status, and compatibility design."}
+{"file":".trellis/tasks/08-17-reader-search-match-navigation/implement.md","reason":"Ordered implementation and validation plan."}
