@@ -248,3 +248,24 @@ Refactored the read-only Terminal into neutral shell/parser/runner/VFS and comma
 ### Status
 
 [OK] **Completed**
+
+
+## Session 12: Canonical reader navigation and Vim permalink refinement
+
+**Date**: 2026-08-17
+**Task**: Canonical reader navigation and Vim permalink refinement
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented canonical document reader entry through #terminal-reader, semantic and Terminal reader contracts, validated focus and native navigation, added responsive review evidence and regression coverage, updated frontend specs, passed package/static/focused/full browser checks, committed all workspace changes, and archived the task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `75317be` | (see git log) |
+
+### Status
+
+[OK] **Completed**
