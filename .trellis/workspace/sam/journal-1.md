@@ -311,3 +311,24 @@ Implemented sticky committed-search status for semantic and Terminal readers, ad
 ### Status
 
 [OK] **Completed**
+
+
+## Session 15: Reader search chrome contrast and repeat alignment
+
+**Date**: 2026-08-17
+**Task**: Reader search chrome contrast and repeat alignment
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed the reader search chrome refinement: opaque sticky contrast surfaces, prompt-style focus rows, transient search/command lifecycle isolation, repeated / and ? regression coverage, frontend contract update, and full validation (Astro check, content/X Core, build, focused reader 32/32, full main-site 98/98).
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `db18940` | (see git log) |
+
+### Status
+
+[OK] **Completed**
