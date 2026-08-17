@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package boundaries and main-site validation profile."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Reader component ownership, route-local style isolation, responsive measures, and accessibility."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required Astro, static-output, focused/full browser, responsive, and diff validation."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Existing reader sticky/status presentation contract and search feedback ownership."}
