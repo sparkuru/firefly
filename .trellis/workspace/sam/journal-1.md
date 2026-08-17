@@ -290,3 +290,24 @@ Implemented exact occurrence-level reader search ranges and separate active/all 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 14: Refine reader search viewport status and 4K frame
+
+**Date**: 2026-08-17
+**Task**: Refine reader search viewport status and 4K frame
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented sticky committed-search status for semantic and Terminal readers, added explicit prefix/input spacing with native focus preservation, and made the Terminal frame grow fluidly on wide screens with a bounded cap and no page overflow. Added mobile/desktop/semantic/4K browser coverage, generated a diagnostic 3840px screenshot, updated frontend contracts, and passed check, content 23/23, X Core 5/5, static output 12/12, reader 28/28, and full site E2E 94/94.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `58a8dd2` | (see git log) |
+
+### Status
+
+[OK] **Completed**
