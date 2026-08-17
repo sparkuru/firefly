@@ -271,6 +271,16 @@ test('document fragment deep link resolves without browser JavaScript', async ({
   await expectNoHorizontalOverflow(page);
 });
 
+test('reader entry fragment remains a native location without browser JavaScript', async ({ page }) => {
+  await page.goto('/posts/hello-static-foundation/#terminal-reader');
+
+  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+  await expect(page.locator('#terminal-reader')).toBeVisible();
+  await expect(page.locator('[data-terminal-reader-status]')).toHaveAttribute('hidden', '');
+  await expect(page.getByRole('heading', { level: 1, name: 'Hello, static foundation' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
 test('unknown route renders the static 404 recovery path', async ({ page }) => {
   const response = await page.goto('/missing-route/');
 

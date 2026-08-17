@@ -1,6 +1,7 @@
 ---
 import type { PublicDocument } from '../lib/render-document';
 import type { renderDocument } from '../lib/render-document';
+import ReaderStatus from './ReaderStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
@@ -15,7 +16,7 @@ const showOutline = metadata.outline.length >= 2;
 const kind = entry.collection === 'posts' ? 'Post' : 'Page';
 ---
 
-<article class="semantic-document">
+<article class="semantic-document" data-terminal-reader data-terminal-reader-entry="fragment">
   <header class="article-header">
     <p class="eyebrow">{kind}</p>
     <h1>{entry.data.title}</h1>
@@ -50,7 +51,16 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
     )
   }
 
-  <div class="prose">
+  <ReaderStatus variant="semantic" />
+
+  <div
+    id="terminal-reader"
+    class="prose"
+    data-terminal-reader-region
+    tabindex="-1"
+    role="region"
+    aria-label={`Read-only Vim reader for ${entry.data.title}`}
+  >
     <Content />
   </div>
 </article>

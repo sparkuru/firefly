@@ -428,9 +428,30 @@ startTerminalReader(root: HTMLElement): void
 
 #### Read-only Vim reader
 
-- Only Terminal document routes load `terminal-reader.ts`. Static HTML remains
-  complete and navigable without JavaScript; directory indexes, semantic
-  documents, home, lab, and NERV do not load the reader asset.
+- Canonical document routes load `terminal-reader.ts` as progressive
+  enhancement. Terminal documents are reader-capable when focused; semantic
+  documents keep the reader status hidden and activate it only for the explicit
+  `#terminal-reader` entry fragment. Static HTML remains complete and
+  navigable without JavaScript; directory indexes, home, lab, and NERV do not
+  load the reader asset.
+- The pure `document-navigation` effect remains fragment-free and carries the
+  validated canonical `entry.href`. The browser controller owns the only
+  reader-intent decoration: `readerDestinationHref(href: string)` must accept a
+  same-origin absolute or path-like canonical URL, set exactly
+  `#terminal-reader`, and return only its path/query/hash form. Raw `vim`
+  operands never reach this helper, and ordinary breadcrumbs, directory links,
+  permalinks, and inline `cat` output remain fragment-free.
+- A semantic document uses `data-terminal-reader-entry="fragment"`; its status
+  stays hidden and its region is not focusable until `window.location.hash ===
+  '#terminal-reader'`. A Terminal document uses
+  `data-terminal-reader-entry="always"`; its status is visible on direct entry,
+  but it only steals focus for the exact reader fragment. Fragment entry waits
+  one animation frame after native hash settlement, then calls
+  `focus({ preventScroll: true })`; direct canonical routes, other fragments,
+  Back/Forward, and JavaScript-disabled pages retain native browser ownership.
+- `:q` assigns `/` directly and does not use `history` APIs. Reader mode,
+  search, selection, active-unit, and generated-unit state remain route-local
+  and ephemeral; a route change discards them.
 - The reader owns local `normal`, `visual`, `search`, and `command` modes. Its
   bounded keys are `j`, `k`, `g`, `G`, `/`, `?`, `n`, `N`, `v`, `Escape`, and
   `:q`. It is a reader, not an editor.

@@ -95,6 +95,19 @@ const protectedTypingTargetSelector = [
   '[data-wide-content]'
 ].join(',');
 
+function readerDestinationHref(href: string): string {
+  const destination = new URL(href, window.location.href);
+  if (
+    destination.origin !== window.location.origin ||
+    destination.pathname.length === 0 ||
+    !destination.pathname.startsWith('/')
+  ) {
+    throw new TypeError('Reader destinations must be same-origin canonical routes.');
+  }
+  destination.hash = 'terminal-reader';
+  return `${destination.pathname}${destination.search}${destination.hash}`;
+}
+
 export interface TerminalControllerSeams {
   readonly execute?: typeof executeCommand;
   readonly render?: (
@@ -481,11 +494,12 @@ function renderEffect(
       return { focusTarget: null, navigationHref: effect.experiment.href };
     }
     case 'document-navigation': {
+      const navigationHref = readerDestinationHref(effect.entry.href);
       const link = document.createElement('a');
-      link.href = effect.entry.href;
+      link.href = navigationHref;
       link.textContent = `Open ${effect.entry.title} in the reader`;
       record.append(link);
-      return { focusTarget: null, navigationHref: effect.entry.href };
+      return { focusTarget: null, navigationHref };
     }
     case 'document': {
       const template = context.templates.byPath.get(effect.entry.virtualPath);

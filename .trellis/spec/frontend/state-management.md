@@ -19,7 +19,7 @@ server-state layer, event bus, or state-management dependency.
 | Terminal document templates | One inert `renderDocument()` fragment per public entry, keyed by filename | Home build; exact bijection validated before startup |
 | Terminal command state | Last 50 submissions, cursor, restored draft | Home controller using pure runtime transitions |
 | Terminal output | Closed text/document/experiment/navigation/clear effects | DOM controller renderer |
-| Reader state | Local mode, active unit, owned Range, query/matches | Terminal document controller |
+| Reader state | Local mode, active unit, owned Range, query/matches | Canonical document reader controller |
 | Ephemeral interaction | NERV `clickCount` | NERV route script |
 | Browser-derived value | NERV `window.scrollY` to stripe CSS property | Scroll listener |
 | URL/persistence | NERV `from` parameter and `has_visited` cookie | Redirect boundary |

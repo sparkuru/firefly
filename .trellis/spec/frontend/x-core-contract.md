@@ -116,10 +116,12 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   negative builds for route/path collision, unsupported layout, unregistered
   adapter, private leakage, and raw HTML.
 - `apps/site run build`: validate ten default site HTML, one semantic CSS, one
-  home command JS, one Terminal-document reader JS, zero maps/unknown files,
-  JavaScript-free semantic/directory routes, and bidirectional presentation-
-  package/style closure. Home template bodies must be
-  `renderDocument()` output while remaining absent from JavaScript/index data.
+  home command JS, one canonical-document reader JS, zero maps/unknown files,
+  JavaScript-free directory routes, and bidirectional presentation-package/
+  style closure. Semantic document HTML remains complete without JavaScript and
+  activates the reader only for the explicit `#terminal-reader` fragment. Home
+  template bodies must be `renderDocument()` output while remaining absent from
+  JavaScript/index data.
 - Focused then full Playwright: static semantic/Terminal heading/outline and
   focusable local overflow at `1440x900` and `375x812`; interactive projects test
   the site-owned Terminal home controller consuming build-rendered templates,

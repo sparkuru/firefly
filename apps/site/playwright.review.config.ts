@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: 'review-screenshots.spec.ts',
+  testMatch: ['review-screenshots.spec.ts', 'permalinks-review-screenshots.spec.ts'],
   fullyParallel: false,
   reporter: [['list']],
   use: {

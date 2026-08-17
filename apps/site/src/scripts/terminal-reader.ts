@@ -73,6 +73,7 @@ function requireOne<T extends Element>(root: ParentNode, selector: string, const
 
 export function startTerminalReader(root: HTMLElement): void {
   const region = requireOne(root, '[data-terminal-reader-region]', HTMLElement);
+  const status = requireOne(root, '[data-terminal-reader-status]', HTMLElement);
   const modeNode = requireOne(root, '[data-reader-mode]', HTMLElement);
   const positionNode = requireOne(root, '[data-reader-position]', HTMLElement);
   const messageNode = requireOne(root, '[data-reader-message]', HTMLElement);
@@ -82,6 +83,11 @@ export function startTerminalReader(root: HTMLElement): void {
   const searchPrefix = requireOne(root, '[data-reader-search-prefix]', HTMLElement);
   const commandForm = requireOne(root, '[data-reader-command-form]', HTMLFormElement);
   const commandInput = requireOne(root, '#terminal-reader-command', HTMLInputElement);
+  const fragmentEntry = root.dataset.terminalReaderEntry === 'fragment';
+  const readerFragment = window.location.hash === '#terminal-reader';
+  if (fragmentEntry && !readerFragment) return;
+  status.hidden = false;
+  region.tabIndex = 0;
   const units = [...region.querySelectorAll<HTMLElement>(readingUnitSelector)].filter((unit) => unit.textContent?.trim());
   if (units.length === 0) return;
 
@@ -318,4 +324,11 @@ export function startTerminalReader(root: HTMLElement): void {
   });
 
   updateStatus();
+  if (readerFragment) {
+    window.requestAnimationFrame(() => {
+      if (window.location.hash === '#terminal-reader') {
+        region.focus({ preventScroll: true });
+      }
+    });
+  }
 }

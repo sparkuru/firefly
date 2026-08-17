@@ -6,16 +6,21 @@ There is no component framework, custom hook layer, browser data-fetching layer,
 client cache, or lifecycle abstraction.
 
 - `apps/site/` emits useful static HTML for every route. The Terminal home owns
-  one command controller; canonical Terminal documents own one read-only reader
-  controller. Directory indexes, `/lab/`, semantic documents, About, and 404 are
-  JavaScript-free. No hydration directive exists.
+  one command controller; canonical document routes own one read-only reader
+  controller. Terminal documents expose the reader directly, while semantic
+  documents keep the reader status hidden and activate it only for the explicit
+  `#terminal-reader` fragment. Directory indexes, `/lab/`, and 404 are
+  JavaScript-free; all document content remains useful without JavaScript. No
+  hydration directive exists.
 - X Core and both adapters run only during Markdown build/render. Their emitted
   enhancement manifests are empty and have no generic browser loader.
 - `@f1refly/presentation-terminal/runtime` (the package's `./runtime` export) is
   a pure, side-effect-free command/index module.
   `apps/site/src/scripts/terminal-home.ts` owns command DOM wiring.
 - `apps/site/src/scripts/terminal-reader.ts` is a separate route-local controller
-  for already-rendered Terminal documents; it does not import the command engine.
+  for already-rendered canonical documents; it does not import the command
+  engine and does not activate a semantic document without the explicit reader
+  fragment.
 - `experiments/nerv/` has one route-owned inline browser script in
   `src/pages/index.astro`.
 
@@ -86,13 +91,15 @@ not programmatically navigate for `cat`.
   the whole session, restore recovery, expose one explicit failure message, and
   focus one recovery target.
 
-## Terminal Document Reader
+## Canonical Document Reader
 
-The reader enhances semantic Terminal document HTML with local normal, visual,
-search, and command modes. It recognizes only `j/k/g/G`, `/?`, `n/N`, `v`,
-Escape, and `:q`; movement targets semantic reading units, visual mode owns a
-real boundary-checked Range, and `:q` assigns `/`. Search/command use labeled
-native inputs. Generated unit IDs avoid all existing IDs.
+The reader enhances already-rendered canonical document HTML with local normal,
+visual, search, and command modes. Terminal documents expose it directly;
+semantic documents expose it only after the explicit `#terminal-reader`
+fragment entry. It recognizes only `j/k/g/G`, `/?`, `n/N`, `v`, Escape, and
+`:q`; movement targets semantic reading units, visual mode owns a real
+boundary-checked Range, and `:q` assigns `/`. Search/command use labeled native
+inputs. Generated unit IDs avoid all existing IDs.
 
 The reader must ignore IME, modifiers, native controls, links, editables, media,
 standard ARIA widgets/containers, local-scroll regions, and user-owned

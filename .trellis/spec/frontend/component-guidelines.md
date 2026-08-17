@@ -35,13 +35,16 @@ routes.
   not call Astro `render()` directly, parse metadata, or repeat presentation,
   collection, or heading validation.
 - `SemanticDocument.astro` owns the article header/date, conditional outline,
-  `.prose` container, and `<Content />`. Show `On this page` only for two or more
-  body headings; its links use the exact validated X Core/Astro IDs.
+  fragment-entry reader status/region, `.prose` container, and `<Content />`.
+  Show `On this page` only for two or more body headings; its links use the
+  exact validated X Core/Astro IDs. Its reader status is hidden and its region
+  is not ordinarily focusable until `#terminal-reader` is present.
 - `TerminalDocument.astro` owns the linked root/parent breadcrumb, underlined but
-  unlinked current `.md` filename, article metadata, conditional outline, `.terminal-prose`,
-  reader status/forms, and `<Content />`. It imports only the bounded
-  `terminal-reader.ts` controller, never the home command runtime. The document
-  remains complete when that module does not run.
+  unlinked current `.md` filename, article metadata, conditional outline,
+  `.terminal-prose`, reader status/forms, and `<Content />`. Shared
+  `ReaderStatus.astro` imports only the bounded `terminal-reader.ts` controller,
+  never the home command runtime. The document remains complete when that
+  module does not run.
 - `TerminalHome.astro` owns the server-rendered recovery navigation, one inert
   build-rendered document template per public entry, the hidden-until-ready shell
   session, continuous transcript/prompt, completion hint, and announcer.

@@ -45,8 +45,8 @@ test('static build emits only the implemented route surface', async () => {
   ]);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
   assert.equal(scripts.length, 2);
-  assert.ok(scripts.some((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)));
-  assert.ok(scripts.some((file) => /^_astro\/TerminalDocument\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)));
+  assert.equal(scripts.filter((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/ReaderStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 1);
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
@@ -158,7 +158,7 @@ test('semantic and Terminal presentation packages remain bidirectionally isolate
 test('route closures isolate semantic CSS, Terminal styles, and home JavaScript', async () => {
   const files = await listFiles(distRoot);
   const homeScript = files.find((file) => /TerminalHome.*\.js$/u.test(file));
-  const readerScript = files.find((file) => /TerminalDocument.*\.js$/u.test(file));
+  const readerScript = files.find((file) => /ReaderStatus.*\.js$/u.test(file));
   const stylesheet = files.find((file) => file.endsWith('.css'));
   assert.ok(homeScript);
   assert.ok(readerScript);
@@ -172,7 +172,8 @@ test('route closures isolate semantic CSS, Terminal styles, and home JavaScript'
     semantic: await readFile(path.join(distRoot, 'posts/hello-static-foundation/index.html'), 'utf8'),
     terminal: await readFile(path.join(distRoot, 'posts/llm-workflow-with-trellis/index.html'), 'utf8')
   };
-  const semanticRoutes = [routes.notFound, routes.about, routes.semantic, routes.lab];
+  const readerDocumentRoutes = [routes.about, routes.semantic];
+  const staticSemanticRoutes = [routes.notFound, routes.lab];
 
   assert.match(routes.home, /data-terminal-home/u);
   assert.match(routes.home, /data-terminal-experiment-id="nerv"/u);
@@ -192,11 +193,19 @@ test('route closures isolate semantic CSS, Terminal styles, and home JavaScript'
   assert.match(routes.terminal, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
   assert.doesNotMatch(routes.terminal, new RegExp(homeScript.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.terminal, new RegExp(stylesheet.replaceAll('.', '\\.')));
+  assert.match(routes.semantic, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
+  assert.doesNotMatch(routes.semantic, new RegExp(homeScript.replaceAll('.', '\\.')));
+  assert.match(routes.semantic, new RegExp(stylesheet.replaceAll('.', '\\.')));
+  for (const html of readerDocumentRoutes) {
+    assert.match(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
+    assert.match(html, new RegExp(readerScript.replaceAll('.', '\\.')));
+    assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
+  }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/nerv\/"/u);
   assert.doesNotMatch(routes.lab, /<script\b|logo-container|warning-stripe/iu);
 
-  for (const html of semanticRoutes) {
+  for (const html of staticSemanticRoutes) {
     assert.match(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-(?:home|entry|wide)/u);
     assert.doesNotMatch(html, /--terminal-color-canvas/u);
@@ -308,6 +317,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /<h1>llm workflow with trellis<\/h1>/u);
   assert.match(terminalArticle, /data-language="mermaid"/u);
   assert.match(terminalArticle, /data-terminal-reader-region/u);
+  assert.equal((terminalArticle.match(/id="terminal-reader"/gu) ?? []).length, 1);
   assert.match(terminalArticle, /data-reader-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
   assert.match(nestedArticle, /guest@f1refly:~\/blog \$/u);
@@ -358,10 +368,18 @@ test('semantic output contains outline targets and localized wide regions', asyn
     'utf8'
   );
 
+  const statusIndex = post.indexOf('data-terminal-reader-status');
+  const readerIndex = post.indexOf('data-terminal-reader-region');
+  assert.ok(statusIndex >= 0);
+  assert.ok(readerIndex > statusIndex);
+  assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
+  assert.match(post, /data-terminal-reader-entry="fragment"/u);
+  assert.match(post, /data-terminal-reader-status[^>]*hidden/u);
   assert.match(post, /aria-labelledby="document-outline-title"/u);
   assert.match(post, /href="#markdown-to-durable-html"/u);
   assert.match(post, /id="markdown-to-durable-html"/u);
   assert.match(post, /data-wide-content="code"/u);
   assert.match(post, /data-wide-content="table"/u);
-  assert.doesNotMatch(post, /<script\b/iu);
+  assert.match(post, /<h1>Hello, static foundation<\/h1>/u);
+  assert.match(post, /No browser-side parser/u);
 });

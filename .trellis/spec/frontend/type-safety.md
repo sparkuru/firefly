@@ -545,8 +545,8 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   listed-experiment leaf handling, Ctrl+L/cls and lab-row behavior, and hostile
   path rejection.
 - Static output: exact serialized fields/template bijection, canonical nested
-  routes, bodies absent from index/JS, home-only command asset, document-only
-  reader asset, and package/style graph closure.
+  routes, bodies absent from index/JS, home-only command asset, canonical-
+  document-only reader asset, and package/style graph closure.
 - Playwright: prompt/history/IME/Tab/recovery/global typing, grouped help,
   flat mixed-depth `ls`/responsive columns, ls completion focus/options/
   wildcard rendering, multiline grep/no-result rendering,
