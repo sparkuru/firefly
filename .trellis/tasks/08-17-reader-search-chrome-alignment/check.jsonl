@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Use the project's required Astro, content, static-output, focused reader, and full browser quality gates."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review presentation isolation, responsive containment, native semantics, and visible focus."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Review reader lifecycle, keyboard exclusions, reduced motion, and no-JavaScript fallback."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check committed/transient search status, occurrence navigation, prefix direction, and cancellation behavior."}
+{"file":".trellis/tasks/08-17-reader-search-chrome-alignment/design.md","reason":"Verify implementation and evidence against the approved root-cause and interaction design."}

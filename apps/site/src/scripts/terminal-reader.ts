@@ -205,7 +205,10 @@ export function startTerminalReader(root: HTMLElement): void {
     : `${searchMatchIndex + 1}/${searchMatches.length} matches for “${searchQuery}”.`;
 
   const updateSearchStatus = () => {
-    status.toggleAttribute('data-reader-search-active', searchQuery.length > 0);
+    status.toggleAttribute(
+      'data-reader-search-active',
+      searchQuery.length > 0 && mode !== 'search' && mode !== 'command'
+    );
     if (searchQuery.length === 0) {
       searchStatus.hidden = true;
       searchStatus.textContent = '';

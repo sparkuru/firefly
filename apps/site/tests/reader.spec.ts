@@ -8,6 +8,45 @@ async function openReader(page: Page) {
   return region;
 }
 
+async function readerSearchMetrics(page: Page) {
+  return page.evaluate(() => {
+    const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
+    const form = document.querySelector<HTMLFormElement>('[data-reader-search-form]');
+    const prefix = document.querySelector<HTMLElement>('[data-reader-search-prefix]');
+    const input = document.querySelector<HTMLInputElement>('#terminal-reader-search');
+    if (status === null || form === null || prefix === null || input === null) {
+      throw new Error('Missing reader search controls.');
+    }
+    const formStyle = getComputedStyle(form);
+    const inputStyle = getComputedStyle(input);
+    const statusStyle = getComputedStyle(status);
+    const terminalRoot = document.querySelector<HTMLElement>('.terminal-root');
+    const canvas = terminalRoot === null
+      ? getComputedStyle(document.documentElement).backgroundColor
+      : getComputedStyle(terminalRoot).backgroundColor;
+    const formRect = form.getBoundingClientRect();
+    const prefixRect = prefix.getBoundingClientRect();
+    const inputRect = input.getBoundingClientRect();
+    return {
+      formDisplay: formStyle.display,
+      formWidth: formRect.width,
+      formHeight: formRect.height,
+      formBoxShadow: formStyle.boxShadow,
+      prefixWidth: prefixRect.width,
+      inputWidth: inputRect.width,
+      gap: inputRect.left - prefixRect.right,
+      inputHeight: inputRect.height,
+      inputOutline: inputStyle.outlineStyle,
+      focusWithin: form.matches(':focus-within'),
+      statusBackground: statusStyle.backgroundColor,
+      canvasBackground: canvas,
+      statusBorder: statusStyle.borderBlockStartColor,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth
+    };
+  });
+}
+
 test('reader moves by semantic units and honors reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const region = await openReader(page);
@@ -151,6 +190,8 @@ test('reader keeps committed search status visible while scrolling and clears it
   await expect(status).toHaveText(initialStatus ?? '');
 
   await page.keyboard.press('/');
+  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(status).toHaveText(initialStatus ?? '');
   await page.keyboard.press('Enter');
   await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
   await expect(status).toBeHidden();
@@ -163,6 +204,153 @@ test('reader keeps committed search status visible while scrolling and clears it
   await page.keyboard.press('/');
   await page.getByRole('searchbox', { name: /Search document forward/u }).press('Escape');
   await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+});
+
+test('reader search cycles keep transient prompt chrome separate in both directions', async ({ page }) => {
+  const routes = [
+    {
+      path: '/posts/llm-workflow-with-trellis/',
+      regionName: /Read-only Vim reader for llm workflow with trellis/u,
+      query: 'trellis'
+    },
+    {
+      path: '/posts/hello-static-foundation/#terminal-reader',
+      regionName: /Read-only Vim reader for Hello, static foundation/u,
+      query: 'reader'
+    }
+  ];
+
+  for (const route of routes) {
+    await page.goto(route.path);
+    const region = page.getByRole('region', { name: route.regionName });
+    await region.focus();
+    const statusSection = page.locator('[data-terminal-reader-status]');
+    const status = page.locator('[data-reader-search-status]');
+    let committedStatus: string | null = null;
+
+    for (const direction of [
+      { key: '/', prefix: '/', label: /Search document forward/u, placeholder: 'Search forward…' },
+      { key: '?', prefix: '?', label: /Search document backward/u, placeholder: 'Search backward…' }
+    ]) {
+      await region.press(direction.key);
+      const input = page.getByRole('searchbox', { name: direction.label });
+      await expect(input).toBeFocused();
+      const metrics = await readerSearchMetrics(page);
+      expect(metrics.formDisplay).toBe('flex');
+      expect(metrics.formWidth).toBeGreaterThan(0);
+      expect(metrics.formHeight).toBeGreaterThanOrEqual(44);
+      expect(metrics.prefixWidth).toBeGreaterThan(0);
+      expect(metrics.inputWidth).toBeGreaterThan(0);
+      expect(metrics.gap).toBeGreaterThanOrEqual(8);
+      expect(metrics.inputHeight).toBeGreaterThanOrEqual(44);
+      expect(metrics.inputOutline).toBe('none');
+      expect(metrics.focusWithin).toBe(true);
+      expect(metrics.formBoxShadow).not.toBe('none');
+      expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+      expect(metrics.statusBorder).not.toBe('rgba(0, 0, 0, 0)');
+      await expect(page.locator('[data-reader-search-prefix]')).toHaveText(direction.prefix);
+      await expect(input).toHaveAttribute('placeholder', direction.placeholder);
+      await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+      if (committedStatus === null) await expect(status).toBeHidden();
+      else await expect(status).toHaveText(committedStatus);
+
+      await input.fill(route.query);
+      await input.press('Enter');
+      await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+      await expect(status).toContainText(`matches for “${route.query}”.`);
+      await expect(statusSection).toHaveCSS('position', 'sticky');
+      const activeMetrics = await page.evaluate(() => {
+        const statusNode = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
+        if (statusNode === null) throw new Error('Missing reader status section.');
+        const style = getComputedStyle(statusNode);
+        const terminalRoot = document.querySelector<HTMLElement>('.terminal-root');
+        const canvas = terminalRoot === null
+          ? getComputedStyle(document.documentElement).backgroundColor
+          : getComputedStyle(terminalRoot).backgroundColor;
+        return {
+          background: style.backgroundColor,
+          canvas,
+          border: style.borderBlockStartColor
+        };
+      });
+      expect(activeMetrics.background).not.toBe('rgba(0, 0, 0, 0)');
+      expect(activeMetrics.background).not.toBe(activeMetrics.canvas);
+      expect(activeMetrics.border).not.toBe('rgba(0, 0, 0, 0)');
+      committedStatus = await status.textContent();
+
+      await region.press(direction.key);
+      const reopened = page.getByRole('searchbox', { name: direction.label });
+      await expect(reopened).toBeFocused();
+      await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+      await expect(status).toHaveText(committedStatus ?? '');
+      const reopenedMetrics = await readerSearchMetrics(page);
+      expect(reopenedMetrics.formDisplay).toBe('flex');
+      expect(reopenedMetrics.gap).toBeGreaterThanOrEqual(8);
+      expect(reopenedMetrics.inputHeight).toBeGreaterThanOrEqual(44);
+      expect(reopenedMetrics.focusWithin).toBe(true);
+      expect(reopenedMetrics.documentWidth).toBeLessThanOrEqual(reopenedMetrics.viewportWidth);
+      await reopened.press('Escape');
+      await expect(region).toBeFocused();
+      await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+      await expect(status).toBeHidden();
+      committedStatus = null;
+    }
+
+    await region.press(':');
+    const command = page.getByRole('textbox', { name: 'Reader command' });
+    await expect(command).toBeFocused();
+    const commandMetrics = await page.evaluate(() => {
+      const form = document.querySelector<HTMLFormElement>('[data-reader-command-form]');
+      const prefix = form === null ? null : form.querySelector<HTMLElement>(':scope > span');
+      const input = document.querySelector<HTMLInputElement>('#terminal-reader-command');
+      if (form === null || prefix === null || input === null) throw new Error('Missing reader command controls.');
+      const formRect = form.getBoundingClientRect();
+      const prefixRect = prefix.getBoundingClientRect();
+      const inputRect = input.getBoundingClientRect();
+      return {
+        display: getComputedStyle(form).display,
+        height: formRect.height,
+        gap: inputRect.left - prefixRect.right,
+        inputHeight: inputRect.height,
+        inputOutline: getComputedStyle(input).outlineStyle,
+        boxShadow: getComputedStyle(form).boxShadow,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth
+      };
+    });
+    expect(commandMetrics.display).toBe('flex');
+    expect(commandMetrics.height).toBeGreaterThanOrEqual(44);
+    expect(commandMetrics.gap).toBeGreaterThanOrEqual(8);
+    expect(commandMetrics.inputHeight).toBeGreaterThanOrEqual(44);
+    expect(commandMetrics.inputOutline).toBe('none');
+    expect(commandMetrics.boxShadow).not.toBe('none');
+    expect(commandMetrics.documentWidth).toBeLessThanOrEqual(commandMetrics.viewportWidth);
+    await command.press('Escape');
+    await expect(region).toBeFocused();
+  }
+});
+
+test('reader command input also leaves committed search chrome while editing', async ({ page }) => {
+  const region = await openReader(page);
+  await region.press('/');
+  const search = page.getByRole('searchbox', { name: /Search document forward/u });
+  await search.fill('reader');
+  await search.press('Enter');
+
+  const statusSection = page.locator('[data-terminal-reader-status]');
+  const status = page.locator('[data-reader-search-status]');
+  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  const committedStatus = await status.textContent();
+
+  await region.press(':');
+  const command = page.getByRole('textbox', { name: 'Reader command' });
+  await expect(command).toBeFocused();
+  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(status).toHaveText(committedStatus ?? '');
+  await command.press('Escape');
+  await expect(region).toBeFocused();
+  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(status).toBeHidden();
 });
 
 test('reader search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
