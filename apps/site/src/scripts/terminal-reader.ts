@@ -205,6 +205,7 @@ export function startTerminalReader(root: HTMLElement): void {
     : `${searchMatchIndex + 1}/${searchMatches.length} matches for “${searchQuery}”.`;
 
   const updateSearchStatus = () => {
+    status.toggleAttribute('data-reader-search-active', searchQuery.length > 0);
     if (searchQuery.length === 0) {
       searchStatus.hidden = true;
       searchStatus.textContent = '';
@@ -212,6 +213,13 @@ export function startTerminalReader(root: HTMLElement): void {
     }
     searchStatus.hidden = false;
     searchStatus.textContent = searchStatusText();
+  };
+
+  const clearSearch = () => {
+    searchQuery = '';
+    searchMatches = [];
+    searchMatchIndex = -1;
+    renderSearchHighlights();
   };
 
   const updateStatus = () => {
@@ -299,6 +307,7 @@ export function startTerminalReader(root: HTMLElement): void {
 
   const restoreNormal = (message = 'Normal mode.') => {
     clearOwnedSelection();
+    clearSearch();
     mode = 'normal';
     searchForm.hidden = true;
     commandForm.hidden = true;
@@ -358,6 +367,7 @@ export function startTerminalReader(root: HTMLElement): void {
     mode = 'normal';
     region.focus({ preventScroll: true });
     if (query.length === 0) {
+      clearSearch();
       updateStatus();
       announce('Search cancelled.');
       return;

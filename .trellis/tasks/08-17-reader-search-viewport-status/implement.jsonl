@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Load the frontend package topology, ./sam boundary, and browser validation profile."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Preserve reader keyboard ownership, native controls, IME, selection, and progressive enhancement boundaries."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review ReaderStatus structure, semantic/Terminal composition, labels, and static HTML ownership."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Keep the active-search layout state and query route-local with no URL, storage, or global persistence."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Apply responsive, reduced-motion, focus, static-output, browser, and visual evidence requirements."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Review the typed DOM controller change at the browser boundary."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Preserve the canonical reader, search, scroll, and read-only contracts while adding the active status layout rule."}
+{"file":".trellis/tasks/08-17-reader-search-viewport-status/research/ui-ux-pro-max.md","reason":"Apply the approved responsive spacing, contrast, sticky-surface, focus, and accessibility guidance."}
+{"file":".trellis/tasks/08-17-reader-search-viewport-status/prd.md","reason":"Task requirements and acceptance criteria."}
+{"file":".trellis/tasks/08-17-reader-search-viewport-status/design.md","reason":"Sticky status state flow, prefix/input geometry, compatibility, and verification design."}
+{"file":".trellis/tasks/08-17-reader-search-viewport-status/implement.md","reason":"Ordered implementation, validation commands, review evidence, and rollback boundaries."}

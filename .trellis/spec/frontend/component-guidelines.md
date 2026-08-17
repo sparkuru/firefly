@@ -96,8 +96,11 @@ routes.
 - Never import either package's global stylesheet into the other package.
 - Keep responsive rules next to the selectors they modify. Long-form content
   retains a controlled measure; both configured viewports must avoid document
-  overflow. Grouped Terminal help uses a content-sized usage track rather than a
-  fixed narrow command column; its group grid auto-fits only when each group has
+  overflow. Terminal document frames may grow fluidly beyond the established
+  desktop baseline on very wide viewports, but must use a bounded cap and keep
+  prose readable; wide code/table surfaces retain localized overflow. Grouped
+  Terminal help uses a content-sized usage track rather than a fixed narrow
+  command column; its group grid auto-fits only when each group has
   enough width for the usage/description relationship, and collapses before
   tablet-width wrapping becomes noisy.
 

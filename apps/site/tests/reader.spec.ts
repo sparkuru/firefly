@@ -71,6 +71,8 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
   await search.press('Enter');
 
   const status = page.locator('[data-reader-search-status]');
+  const statusSection = page.locator('[data-terminal-reader-status]');
+  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
   await expect(status).toHaveText(/^\d+\/\d+ matches for “trellis”\.$/u);
   const state = await page.evaluate(() => {
     const all = CSS.highlights.get('terminal-reader-search');
@@ -107,6 +109,181 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
 
   await region.press('N');
   await expect(status).toHaveText(initialStatus);
+});
+
+test('reader keeps committed search status visible while scrolling and clears it on cancellation', async ({ page }) => {
+  await page.goto('/posts/llm-workflow-with-trellis/');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for llm workflow with trellis/u });
+  await region.focus();
+  await region.press('/');
+  const search = page.getByRole('searchbox', { name: /Search document forward/u });
+  await search.fill('trellis');
+  await search.press('Enter');
+
+  const statusSection = page.locator('[data-terminal-reader-status]');
+  const status = page.locator('[data-reader-search-status]');
+  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  await expect(statusSection).toHaveCSS('position', 'sticky');
+  const initialStatus = await status.textContent();
+
+  const viewportStatus = await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight / 2);
+    const section = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
+    if (section === null) throw new Error('Missing reader status section.');
+    const rect = section.getBoundingClientRect();
+    return {
+      top: rect.top,
+      bottom: rect.bottom,
+      height: rect.height,
+      viewportHeight: window.innerHeight,
+      scrollY: window.scrollY
+    };
+  });
+  expect(viewportStatus.scrollY).toBeGreaterThan(0);
+  expect(viewportStatus.top).toBeGreaterThanOrEqual(0);
+  expect(viewportStatus.bottom).toBeLessThanOrEqual(viewportStatus.viewportHeight);
+  expect(viewportStatus.height).toBeGreaterThan(0);
+
+  await page.keyboard.press('n');
+  await expect(status).not.toHaveText(initialStatus ?? '');
+  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  await page.keyboard.press('N');
+  await expect(status).toHaveText(initialStatus ?? '');
+
+  await page.keyboard.press('/');
+  await page.keyboard.press('Enter');
+  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(status).toBeHidden();
+
+  await page.keyboard.press('/');
+  const cancelledSearch = page.getByRole('searchbox', { name: /Search document forward/u });
+  await cancelledSearch.fill('trellis');
+  await cancelledSearch.press('Enter');
+  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  await page.keyboard.press('/');
+  await page.getByRole('searchbox', { name: /Search document forward/u }).press('Escape');
+  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+});
+
+test('reader search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
+  const routes = [
+    {
+      path: '/posts/llm-workflow-with-trellis/',
+      regionName: /Read-only Vim reader for llm workflow with trellis/u
+    },
+    {
+      path: '/posts/hello-static-foundation/#terminal-reader',
+      regionName: /Read-only Vim reader for Hello, static foundation/u
+    }
+  ];
+
+  for (const route of routes) {
+    await page.goto(route.path);
+    const region = page.getByRole('region', { name: route.regionName });
+    await region.focus();
+
+    for (const direction of [
+      { key: '/', prefix: '/', label: /Search document forward/u, placeholder: 'Search forward…' },
+      { key: '?', prefix: '?', label: /Search document backward/u, placeholder: 'Search backward…' }
+    ]) {
+      await region.press(direction.key);
+      const input = page.getByRole('searchbox', { name: direction.label });
+      const metrics = await page.evaluate(() => {
+        const prefix = document.querySelector<HTMLElement>('[data-reader-search-prefix]');
+        const searchInput = document.querySelector<HTMLInputElement>('#terminal-reader-search');
+        if (prefix === null || searchInput === null) throw new Error('Missing reader search controls.');
+        const prefixRect = prefix.getBoundingClientRect();
+        const inputRect = searchInput.getBoundingClientRect();
+        return {
+          gap: inputRect.left - prefixRect.right,
+          inputHeight: inputRect.height,
+          prefixText: prefix.textContent,
+          labelText: searchInput.labels?.[0]?.textContent ?? '',
+          placeholder: searchInput.getAttribute('placeholder'),
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth
+        };
+      });
+      await expect(input).toBeFocused();
+      expect(metrics.prefixText).toBe(direction.prefix);
+      expect(metrics.labelText).toMatch(direction.label);
+      expect(metrics.placeholder).toBe(direction.placeholder);
+      expect(metrics.gap).toBeGreaterThanOrEqual(8);
+      expect(metrics.inputHeight).toBeGreaterThanOrEqual(44);
+      expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+      await input.press('Escape');
+      await expect(region).toBeFocused();
+    }
+  }
+});
+
+test('Terminal document frame keeps its baseline, grows fluidly, and contains the page at wide widths', async ({ page }, testInfo) => {
+  const viewports = [1440, 2560, 3840];
+  const oldFrameCap = 78 * 16;
+
+  for (const width of viewports) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/posts/llm-workflow-with-trellis/');
+    const metrics = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>('.terminal-shell');
+      const article = document.querySelector<HTMLElement>('.terminal-document');
+      if (shell === null || article === null) throw new Error('Missing Terminal frame.');
+      return {
+        shellWidth: shell.getBoundingClientRect().width,
+        articleWidth: article.getBoundingClientRect().width,
+        frameMaxWidth: Number.parseFloat(getComputedStyle(article).maxWidth),
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth
+      };
+    });
+    const expectedMeasure = Math.min(180 * 16, Math.max(oldFrameCap, width * 0.86));
+    expect(metrics.frameMaxWidth).toBeCloseTo(expectedMeasure, 0);
+    expect(metrics.shellWidth).toBeCloseTo(expectedMeasure, 0);
+    expect(metrics.articleWidth).toBeGreaterThan(0);
+    expect(metrics.articleWidth).toBeLessThanOrEqual(metrics.shellWidth);
+    expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+    if (width === 3840) expect(metrics.shellWidth).toBeGreaterThan(oldFrameCap);
+    if (width === 3840 && testInfo.project.name === 'chromium-desktop-interactive') {
+      await page.screenshot({
+        path: testInfo.outputPath('reader-frame-3840.png'),
+        animations: 'disabled'
+      });
+    }
+  }
+});
+
+test('semantic reader keeps committed search status visible while scrolling', async ({ page }) => {
+  await page.goto('/posts/hello-static-foundation/#terminal-reader');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await expect(region).toBeFocused();
+  await region.press('/');
+  const search = page.getByRole('searchbox', { name: /Search document forward/u });
+  await search.fill('reader');
+  await search.press('Enter');
+
+  const statusSection = page.locator('[data-terminal-reader-status]');
+  const status = page.locator('[data-reader-search-status]');
+  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  await expect(statusSection).toHaveCSS('position', 'sticky');
+  await expect(status).toBeVisible();
+
+  const viewportStatus = await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight / 2);
+    const section = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
+    if (section === null) throw new Error('Missing semantic reader status section.');
+    const rect = section.getBoundingClientRect();
+    return {
+      top: rect.top,
+      bottom: rect.bottom,
+      height: rect.height,
+      viewportHeight: window.innerHeight,
+      scrollY: window.scrollY
+    };
+  });
+  expect(viewportStatus.scrollY).toBeGreaterThan(0);
+  expect(viewportStatus.top).toBeGreaterThanOrEqual(0);
+  expect(viewportStatus.bottom).toBeLessThanOrEqual(viewportStatus.viewportHeight);
+  expect(viewportStatus.height).toBeGreaterThan(0);
 });
 
 test('reader preserves links, local-scroll regions, modifier keys, IME, and manual selection', async ({ page }) => {
