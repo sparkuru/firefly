@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # dev.sh - Build and serve the assembled publication through ./sam.
 #
-# Service: http://${SAM_BIND_HOST:-127.0.0.1}:${WEB_HOST_PORT:-4321}/
+# Service: http://${SAM_BIND_HOST:-0.0.0.0}:${WEB_HOST_PORT:-4321}/
 # Requires Docker, ./sam, and dependencies installed with:
 #   ./sam npm run install:m4
 set -Eeuo pipefail
@@ -11,7 +11,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_LABEL="sam.repo=${REPO_ROOT}"
 SCOPE_LABEL="sam.scope=dev.sh"
 
-SAM_BIND_HOST="${SAM_BIND_HOST:-127.0.0.1}"
+SAM_BIND_HOST="${SAM_BIND_HOST:-0.0.0.0}"
 WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
 WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
 

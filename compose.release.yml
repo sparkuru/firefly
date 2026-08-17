@@ -1,0 +1,34 @@
+name: f1refly-release
+
+services:
+  publication:
+    image: ${F1REFLY_RELEASE_IMAGE:-f1refly:m5-runtime}
+    pull_policy: never
+    init: true
+    user: nginx
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${F1REFLY_RELEASE_BIND_HOST:-0.0.0.0}:${F1REFLY_RELEASE_PORT:-4321}:8080"
+    restart: unless-stopped
+    stop_grace_period: 10s
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - --tries=1
+        - http://127.0.0.1:8080/healthz
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    labels:
+      com.f1refly.scope: release
+      com.f1refly.service: publication
