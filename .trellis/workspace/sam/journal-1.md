@@ -269,3 +269,24 @@ Implemented canonical document reader entry through #terminal-reader, semantic a
 ### Status
 
 [OK] **Completed**
+
+
+## Session 13: Refine reader search match navigation
+
+**Date**: 2026-08-17
+**Task**: Refine reader search match navigation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented exact occurrence-level reader search ranges and separate active/all CSS Highlights; made n/N navigate repeated matches with persistent status and range settlement; clarified backward-search labels/placeholders; added reader/static regression coverage and durable frontend contracts. Passed check, content 23/23, x-core 5/5, build/static 12/12, focused reader 20/20, site 18/18, full E2E 86/86.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `694b95e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
