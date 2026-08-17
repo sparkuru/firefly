@@ -27,6 +27,7 @@ async function readerSearchMetrics(page: Page) {
     const formRect = form.getBoundingClientRect();
     const prefixRect = prefix.getBoundingClientRect();
     const inputRect = input.getBoundingClientRect();
+    const statusRect = status.getBoundingClientRect();
     return {
       formDisplay: formStyle.display,
       formWidth: formRect.width,
@@ -41,6 +42,13 @@ async function readerSearchMetrics(page: Page) {
       statusBackground: statusStyle.backgroundColor,
       canvasBackground: canvas,
       statusBorder: statusStyle.borderBlockStartColor,
+      statusPosition: statusStyle.position,
+      statusZIndex: statusStyle.zIndex,
+      statusLeft: statusRect.left,
+      statusRight: statusRect.right,
+      statusTop: statusRect.top,
+      statusBottom: statusRect.bottom,
+      statusHeight: statusRect.height,
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth
     };
@@ -60,6 +68,96 @@ test('reader moves by semantic units and honors reduced motion', async ({ page }
   await expect(position).toHaveText(/^1\//u);
   await region.press('k');
   await expect(position).toHaveText(/^1\//u);
+});
+
+test('reader status stays sticky, opaque, contained, and reports reader actions', async ({ page }) => {
+  const region = await openReader(page);
+  const statusSection = page.locator('[data-terminal-reader-status]');
+  const mode = page.locator('[data-reader-mode]');
+  const message = page.locator('[data-reader-message]');
+  await expect(statusSection).toBeVisible();
+
+  const metrics = await readerSearchMetrics(page);
+  expect(metrics.statusPosition).toBe('sticky');
+  expect(metrics.statusZIndex).not.toBe('auto');
+  expect(metrics.statusBackground).not.toBe('rgba(0, 0, 0, 0)');
+  expect(metrics.statusBackground).not.toBe(metrics.canvasBackground);
+  expect(metrics.statusBorder).not.toBe('rgba(0, 0, 0, 0)');
+  expect(metrics.statusHeight).toBeGreaterThan(0);
+  expect(metrics.statusLeft).toBeGreaterThanOrEqual(0);
+  expect(metrics.statusRight).toBeLessThanOrEqual(metrics.viewportWidth);
+  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+
+  await expect(mode).toHaveText('-- NORMAL --');
+  await expect(message).toContainText('j/k move');
+  await region.press('j');
+  await expect(message).toHaveText(/Reading unit 2 of \d+\./u);
+  await region.press('k');
+  await expect(message).toHaveText(/Reading unit 1 of \d+\./u);
+  await region.press('G');
+  await expect(message).toHaveText(/Reading unit \d+ of \d+\./u);
+  await region.press('g');
+  await expect(message).toHaveText(/Reading unit 1 of \d+\./u);
+
+  await region.press('v');
+  await expect(mode).toHaveText('-- VISUAL --');
+  await expect(message).toHaveText('Visual selection: units 1 through 1.');
+  await region.press('j');
+  await expect(message).toHaveText(/Visual selection: units 1 through 2\./u);
+  await region.press('Escape');
+  await expect(mode).toHaveText('-- NORMAL --');
+  await expect(message).toHaveText('Normal mode.');
+
+  await region.press('n');
+  await expect(message).toHaveText('No search query.');
+  await region.press('N');
+  await expect(message).toHaveText('No search query.');
+  await region.press('/');
+  await expect(message).toHaveText('Forward search.');
+  await page.getByRole('searchbox', { name: /Search document forward/u }).press('Escape');
+  await expect(message).toHaveText('Cancelled.');
+  await region.press('?');
+  await expect(message).toHaveText('Backward search.');
+  await page.getByRole('searchbox', { name: /Search document backward/u }).press('Escape');
+  await expect(message).toHaveText('Cancelled.');
+
+  await region.press(':');
+  const command = page.getByRole('textbox', { name: 'Reader command' });
+  await expect(message).toHaveText('Reader command mode. Type q to exit.');
+  await command.fill('write');
+  await command.press('Enter');
+  await expect(message).toHaveText('Unsupported reader command: :write. Only :q is available.');
+  await command.press('Escape');
+  await expect(mode).toHaveText('-- NORMAL --');
+  await expect(message).toHaveText('Cancelled.');
+});
+
+test('reader keeps the active unit visible below the sticky status while scrolling', async ({ page }) => {
+  const region = await openReader(page);
+  await region.press('G');
+
+  const geometry = await page.evaluate(() => {
+    const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
+    const active = document.querySelector<HTMLElement>('[data-reader-active]');
+    if (status === null || active === null) throw new Error('Missing reader geometry nodes.');
+    const statusRect = status.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    return {
+      statusPosition: getComputedStyle(status).position,
+      statusTop: statusRect.top,
+      statusBottom: statusRect.bottom,
+      activeTop: activeRect.top,
+      activeBottom: activeRect.bottom,
+      viewportHeight: window.innerHeight,
+      scrollY: window.scrollY
+    };
+  });
+
+  expect(geometry.statusPosition).toBe('sticky');
+  expect(geometry.scrollY).toBeGreaterThan(0);
+  expect(geometry.statusTop).toBeGreaterThanOrEqual(0);
+  expect(geometry.activeTop).toBeGreaterThanOrEqual(geometry.statusBottom - 1);
+  expect(geometry.activeBottom).toBeLessThanOrEqual(geometry.viewportHeight + 1);
 });
 
 test('reader search, repeat, visual Range, Escape, and unsupported commands are bounded', async ({ page }) => {

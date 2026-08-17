@@ -477,12 +477,19 @@ startTerminalReader(root: HTMLElement): void
   `data-reader-search-active` on the complete reader status section while the
   reader is not editing a search or command form; opening `/` or `?` removes
   that marker temporarily but preserves the prior committed status text until
-  the form is submitted or cancelled. Submitting a non-empty query replaces the
-  query, occurrence records, highlights, and sticky marker as one lifecycle;
-  an empty submission or Escape clears the query/highlights and restores normal
-  document flow. The active section may use a token-backed opaque sticky
-  viewport position so the current match status remains visible while the
-  document scrolls. Each visible search/command form is a flex row with one
+  the form is submitted or cancelled. The status section itself is always
+  sticky whenever it is visible, remains in normal document flow, and uses the
+  presentation's token-backed opaque contrasting surface so its own height is
+  reserved while the document scrolls. A non-empty query replaces the query,
+  occurrence records, highlights, and committed-search marker as one lifecycle;
+  an empty submission or Escape clears the query/highlights without changing
+  the permanent sticky status lifecycle. The mode/position row owns reader
+  orientation, `data-reader-search-status` owns committed occurrence context,
+  and `data-reader-message` owns the latest visible action feedback. When the
+  committed search status owns the current feedback, the generic message is
+  hidden to avoid a duplicate line; `data-reader-announcer` remains the
+  separate polite live channel for the same updates. Each visible
+  search/command form is a flex row with one
   continuous inset bottom rule and `:focus-within` focus treatment; its fixed
   `1ch` prefix and native input keep an explicit gap at mobile width without
   weakening the 44px target or visible focus.
