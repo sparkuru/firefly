@@ -1,3 +1,21 @@
+import type {
+  ProcessContext as ShellProcessContext,
+  ProcessResult as ShellProcessResult,
+  ReadonlyShellScratchFile,
+  ReadonlyShellSession,
+  ShellCommandMetadata
+} from './shell/contracts.js';
+import { textStream } from './shell/streams.js';
+import { expandStageWords } from './shell/expansion.js';
+import { parseRshell } from './shell/parser.js';
+import type { RshellStage } from './shell/parser.js';
+import { resolveSessionCommand, runRshell } from './shell/runner.js';
+import type { ParsedCommandArguments } from './commands/arguments.js';
+import { NEUTRAL_COMMAND_REGISTRY, NEUTRAL_COMMAND_SPECS } from './commands/registry.js';
+import { createPublicIndex } from './vfs/public-index.js';
+import type { PublicDocument, ReadonlyVirtualFs } from './vfs/contracts.js';
+import { displayVirtualPath as displayVfsPath, virtualPathFromDisplay as virtualPathFromVfsDisplay } from './vfs/paths.js';
+
 export type TerminalEntryKind = 'post' | 'page';
 
 export interface TerminalEntry {
@@ -33,19 +51,65 @@ export interface TerminalScratchFile {
   readonly lines: readonly string[];
 }
 
+export interface TerminalAlias {
+  readonly name: string;
+  readonly target: string;
+}
+
 export interface TerminalState {
   readonly history: readonly string[];
   readonly historyCursor: number | null;
   readonly draftInput: string;
   readonly cwd: string;
   readonly scratch: readonly TerminalScratchFile[];
+  readonly aliases: readonly TerminalAlias[];
 }
 
 export type TerminalTone = 'normal' | 'muted' | 'error';
 
+export type TerminalCommandGroup =
+  | 'Explore'
+  | 'Read & navigate'
+  | 'Identity & time'
+  | 'Session'
+  | 'Other';
+
+export interface TerminalHelpCommand {
+  readonly name: string;
+  readonly aliases: readonly string[];
+  readonly summary: string;
+  readonly usage: string;
+}
+
+export interface TerminalHelpGroup {
+  readonly name: TerminalCommandGroup;
+  readonly commands: readonly TerminalHelpCommand[];
+}
+
+export interface TerminalGrepMatch {
+  readonly path: string;
+  readonly lineNumber?: number;
+  readonly line: string;
+  readonly ranges: readonly (readonly [number, number])[];
+}
+
 export type TerminalEffect =
   | { readonly kind: 'lines'; readonly tone: TerminalTone; readonly lines: readonly string[] }
-  | { readonly kind: 'entries'; readonly entries: readonly TerminalEntry[]; readonly label: string }
+  | { readonly kind: 'help'; readonly groups: readonly TerminalHelpGroup[] }
+  | {
+      readonly kind: 'grep';
+      readonly pattern: string;
+      readonly matches: readonly TerminalGrepMatch[];
+      readonly noResults: boolean;
+      readonly truncated: boolean;
+    }
+  | {
+      readonly kind: 'entries';
+      readonly directories: readonly string[];
+      readonly entries: readonly TerminalEntry[];
+      readonly label: string;
+      readonly directory: string;
+    }
   | { readonly kind: 'experiments'; readonly experiments: readonly TerminalExperiment[] }
   | { readonly kind: 'navigation'; readonly experiment: TerminalExperiment }
   | { readonly kind: 'document'; readonly entry: TerminalEntry }
@@ -72,7 +136,9 @@ export type CompletionResult =
 export interface TerminalCommandContext {
   readonly state: TerminalState;
   readonly entries: readonly TerminalEntry[];
+  readonly documents: readonly TerminalTextDocument[];
   readonly experiments: readonly TerminalExperiment[];
+  readonly fs: ReadonlyVirtualFs;
   readonly identity: TerminalIdentity;
   readonly now: () => Date;
   readonly registry: TerminalCommandRegistry;
@@ -81,25 +147,37 @@ export interface TerminalCommandContext {
   readonly piped: boolean;
 }
 
+export interface TerminalCommandExecution {
+  readonly state: TerminalState;
+  readonly effect: TerminalEffect;
+}
+
+export type CommandHandlerResult = TerminalEffect | TerminalCommandExecution;
+
 export type CommandHandler = (
   operands: readonly string[],
   context: TerminalCommandContext
-) => TerminalEffect;
+) => CommandHandlerResult;
 
 export type CompletionHandler = (
   operand: string,
-  context: Pick<TerminalCommandContext, 'entries' | 'experiments'>,
+  context: Pick<TerminalCommandContext, 'entries' | 'experiments'> & { readonly cwd: string },
   invokedName: string
 ) => CompletionResult;
 
 export interface TerminalCommandDefinition {
   readonly name: string;
   readonly aliases: readonly string[];
+  readonly group?: TerminalCommandGroup;
+  readonly order?: number;
   readonly summary: string;
   readonly usage: string;
   readonly execute: CommandHandler;
   readonly complete?: CompletionHandler;
   readonly pureText?: boolean;
+  readonly standalone?: boolean;
+  readonly redirect?: 'text' | 'forbidden';
+  readonly recoverable?: boolean;
 }
 
 export interface TerminalCommandRegistry {
@@ -119,22 +197,18 @@ export const DEFAULT_TERMINAL_PROMPT =
 
 const commandToken = /^[a-z][a-z0-9-]*$/u;
 const unsafePathSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
-const standaloneRshellCommands = new Set(['cd', 'clear', 'open', 'vim']);
-const pureTextRshellCommands = new Set([
-  'help',
-  '?',
-  'ls',
-  'cat',
-  'tree',
-  'about',
-  'pwd',
-  'whoami',
-  'id',
-  'date',
-  'history',
-  'alias',
-  'grep'
+
+const terminalCommandGroups: readonly TerminalCommandGroup[] = Object.freeze([
+  'Explore',
+  'Read & navigate',
+  'Identity & time',
+  'Session',
+  'Other'
 ]);
+
+function isTerminalCommandGroup(value: unknown): value is TerminalCommandGroup {
+  return typeof value === 'string' && terminalCommandGroups.includes(value as TerminalCommandGroup);
+}
 
 export function createTerminalState(): TerminalState {
   return Object.freeze({
@@ -142,7 +216,8 @@ export function createTerminalState(): TerminalState {
     historyCursor: null,
     draftInput: '',
     cwd: DEFAULT_TERMINAL_IDENTITY.workingDirectory,
-    scratch: Object.freeze([])
+    scratch: Object.freeze([]),
+    aliases: Object.freeze([])
   });
 }
 
@@ -304,34 +379,25 @@ export function decodeTerminalExperiments(value: unknown): readonly TerminalExpe
   return experiments;
 }
 
+/**
+ * Compatibility adapter for consumers that only need one quote-aware command
+ * stage. Full rshell execution uses parseRshell directly.
+ */
 export function tokenizeCommand(input: string): TokenizeResult {
-  const tokens = [];
-  let token = '';
-  let quote: "'" | '"' | null = null;
-  let started = false;
-  for (const character of input) {
-    if (quote !== null) {
-      if (character === quote) quote = null;
-      else token += character;
-      started = true;
-    } else if (character === "'" || character === '"') {
-      quote = character;
-      started = true;
-    } else if (/\s/u.test(character)) {
-      if (started) { tokens.push(token); token = ''; started = false; }
-    } else { token += character; started = true; }
+  if (input.trim().length === 0) return { ok: true, tokens: Object.freeze([]) };
+  const parsed = parseRshell(input);
+  if (!parsed.ok) return parsed;
+  if (parsed.stages.length !== 1 || parsed.stages[0]?.redirect !== undefined) {
+    return { ok: false, message: 'Tokenizer accepts one command stage without pipelines or redirects.' };
   }
-  if (quote !== null) return { ok: false, message: 'Unbalanced quote. Close the quote and try again.' };
-  if (started) tokens.push(token);
-  return { ok: true, tokens: Object.freeze(tokens) };
+  return {
+    ok: true,
+    tokens: Object.freeze(parsed.stages[0]!.words.map((word) => word.segments.map(({ value }) => value).join('')))
+  };
 }
 
 function lines(tone: TerminalTone, ...values: string[]): TerminalEffect {
   return Object.freeze({ kind: 'lines', tone, lines: Object.freeze(values) });
-}
-
-function usage(definition: TerminalCommandDefinition): TerminalEffect {
-  return lines('error', `Usage: ${definition.usage}`);
 }
 
 function completeFrom(
@@ -341,31 +407,23 @@ function completeFrom(
   ownsAmbiguousTab = false
 ): CompletionResult {
   const matches = [...new Set(candidates)].filter((candidate) => candidate.startsWith(prefix)).sort();
+  const exact = matches.find((candidate) => candidate === prefix);
+  if (exact !== undefined) return { kind: 'unique', value: render(exact), candidates: Object.freeze([exact]) };
   if (matches.length === 1 && matches[0] !== undefined) return { kind: 'unique', value: render(matches[0]), candidates: Object.freeze(matches) };
   return matches.length > 1
     ? { kind: 'ambiguous', candidates: Object.freeze(matches), ownsTab: ownsAmbiguousTab }
     : { kind: 'none', candidates: Object.freeze([]) };
 }
 
-function validPathOperand(operand: string): boolean {
-  return operand.length > 0 && operand.normalize('NFC') === operand && !operand.includes('%') && !operand.includes('\\') && !operand.includes('?') && !operand.includes('#') && !operand.includes('://') && !/[\u0000-\u001f\u007f]/u.test(operand) && !operand.split('/').some((segment, index) => (segment === '' && index !== 0) || segment === '.' || segment === '..' || segment.startsWith('.'));
+function virtualPathFromCwd(cwd: string): string {
+  return cwd === rshellRoot
+    ? '/'
+    : cwd.startsWith(`${rshellRoot}/`)
+      ? cwd.slice(rshellRoot.length)
+      : '/posts';
 }
 
-function resolveDocumentOperand(operand: string, entries: readonly TerminalEntry[]): TerminalEntry | undefined {
-  let virtualPath: string;
-  if (operand.startsWith('/')) {
-    const candidate = operand.slice(1);
-    if (!validPathOperand(candidate) || (!candidate.startsWith('posts/') && !candidate.startsWith('pages/'))) return undefined;
-    virtualPath = candidate;
-  } else {
-    const candidate = operand.startsWith('./') ? operand.slice(2) : operand;
-    if (!validPathOperand(candidate) || operand.startsWith('././')) return undefined;
-    virtualPath = `posts/${candidate}`;
-  }
-  return entries.find((entry) => entry.virtualPath === virtualPath);
-}
-
-function pathCompletion(operand: string, entries: readonly TerminalEntry[], invokedName: string): CompletionResult {
+function pathCompletion(operand: string, entries: readonly TerminalEntry[], invokedName: string, cwd: string): CompletionResult {
   const absolute = operand.startsWith('/');
   const dotted = operand.startsWith('./');
   const prefix = absolute ? operand.slice(1) : dotted ? operand.slice(2) : operand;
@@ -377,9 +435,13 @@ function pathCompletion(operand: string, entries: readonly TerminalEntry[], invo
   ) {
     return { kind: 'none', candidates: Object.freeze([]) };
   }
-  const candidatePaths = entries
-    .filter((entry) => absolute || entry.kind === 'post')
-    .map((entry) => absolute ? entry.virtualPath : entry.relativePath);
+  const cwdPath = virtualPathFromCwd(cwd);
+  const candidatePaths = entries.flatMap((entry) => {
+    if (absolute) return [entry.virtualPath];
+    const fullPath = `/${entry.virtualPath}`;
+    const prefixPath = cwdPath === '/' ? '/' : `${cwdPath}/`;
+    return fullPath.startsWith(prefixPath) ? [fullPath.slice(prefixPath.length)] : [];
+  });
   const slash = prefix.lastIndexOf('/');
   const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
   const segmentPrefix = prefix.slice(slash + 1);
@@ -411,60 +473,171 @@ function pathCompletion(operand: string, entries: readonly TerminalEntry[], invo
   });
 }
 
-export function formatDocumentOperand(entry: TerminalEntry): string {
-  return entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
+function wildcardSegmentMatches(pattern: string, value: string): boolean {
+  let patternIndex = 0;
+  let valueIndex = 0;
+  let starIndex = -1;
+  let starValueIndex = -1;
+  while (valueIndex < value.length) {
+    if (patternIndex < pattern.length && pattern[patternIndex] === value[valueIndex]) {
+      patternIndex += 1;
+      valueIndex += 1;
+    } else if (patternIndex < pattern.length && pattern[patternIndex] === '*') {
+      starIndex = patternIndex;
+      starValueIndex = valueIndex;
+      patternIndex += 1;
+    } else if (starIndex !== -1) {
+      patternIndex = starIndex + 1;
+      starValueIndex += 1;
+      valueIndex = starValueIndex;
+    } else {
+      return false;
+    }
+  }
+  while (patternIndex < pattern.length && pattern[patternIndex] === '*') patternIndex += 1;
+  return patternIndex === pattern.length;
 }
 
-interface TreeNode { readonly directories: Map<string, TreeNode>; readonly files: string[] }
+function lsCompletion(
+  operand: string,
+  entries: readonly TerminalEntry[],
+  experiments: readonly TerminalExperiment[],
+  invokedName: string,
+  cwd: string
+): CompletionResult {
+  const absolute = operand.startsWith('/');
+  const dotted = operand.startsWith('./');
+  const prefix = absolute ? operand.slice(1) : dotted ? operand.slice(2) : operand;
+  if (
+    prefix.includes('*') ||
+    prefix.normalize('NFC') !== prefix ||
+    prefix.includes('%') ||
+    prefix.includes('\\') ||
+    prefix.includes('?') ||
+    prefix.includes('#') ||
+    prefix.includes('://') ||
+    /[\u0000-\u001f\u007f]/u.test(prefix) ||
+    prefix.split('/').some((segment, index, values) => (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'))
+  ) {
+    return { kind: 'none', candidates: Object.freeze([]) };
+  }
+  if (absolute && prefix.length > 0 && !['posts', 'pages', 'lab'].some((mount) => mount.startsWith(prefix) || prefix.startsWith(`${mount}/`))) {
+    return { kind: 'none', candidates: Object.freeze([]) };
+  }
 
-function renderTree(entries: readonly TerminalEntry[], operand: string | undefined): { root: string; lines: readonly string[] } | undefined {
-  const mount = operand === undefined ? 'posts' : operand === '/' ? '' : operand === '/posts' ? 'posts' : operand === '/pages' ? 'pages' : null;
-  if (mount === null) return undefined;
-  const root: TreeNode = { directories: new Map(), files: [] };
-  for (const entry of entries) {
-    const segments = entry.virtualPath.split('/');
-    if (mount !== '' && segments.shift() !== mount) continue;
-    let node = root;
-    const filename = segments.pop();
-    if (filename === undefined) continue;
-    for (const segment of segments) {
-      let child = node.directories.get(segment);
-      if (child === undefined) { child = { directories: new Map(), files: [] }; node.directories.set(segment, child); }
-      node = child;
-    }
-    node.files.push(filename);
+  const directoryPaths = new Set(
+    [...knownDirectories(entries, Object.freeze([])), ...experiments.map(({ id }) => `/lab/${id}`)]
+      .filter((path) => !path.startsWith('/.rshell'))
+  );
+  const paths = [
+    ...directoryPaths,
+    ...entries.map(({ virtualPath }) => `/${virtualPath}`)
+  ];
+  const cwdPath = virtualPathFromCwd(cwd);
+  const candidatePaths = paths.flatMap((path) => {
+    const candidate = directoryPaths.has(path) && path !== '/' ? `${path}/` : path;
+    if (absolute) return [candidate === '/' ? '/' : candidate.slice(1)];
+    const prefixPath = cwdPath === '/' ? '/' : `${cwdPath}/`;
+    return path.startsWith(prefixPath) && path !== cwdPath ? [candidate.slice(prefixPath.length)] : [];
+  });
+  const slash = prefix.lastIndexOf('/');
+  const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
+  const segmentPrefix = prefix.slice(slash + 1);
+  const candidates = candidatePaths.flatMap((candidate) => {
+    if (!candidate.startsWith(parent)) return [];
+    const remaining = candidate.slice(parent.length);
+    const nextSlash = remaining.indexOf('/');
+    const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
+    return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
+  });
+  const displayPrefix = absolute ? '/' : dotted ? './' : '';
+  if (!absolute && !dotted) candidates.push('posts/', 'pages/', 'lab/');
+  if (!absolute && !dotted) candidates.push('-h', '--help');
+  const completion = completeFrom(
+    prefix,
+    candidates,
+    (candidate) => `${invokedName} ${displayPrefix}${candidate}`,
+    operand.length === 0
+  );
+  if (completion.kind === 'none') {
+    return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
   }
-  if (mount === '') {
-    for (const collection of ['posts', 'pages'] as const) {
-      const collectionNode: TreeNode = { directories: new Map(), files: [] };
-      for (const entry of entries.filter(({ kind }) => kind === (collection === 'posts' ? 'post' : 'page'))) {
-        const segments = entry.relativePath.split('/');
-        const filename = segments.pop();
-        let node = collectionNode;
-        for (const segment of segments) {
-          let child = node.directories.get(segment);
-          if (child === undefined) { child = { directories: new Map(), files: [] }; node.directories.set(segment, child); }
-          node = child;
-        }
-        if (filename) node.files.push(filename);
-      }
-      root.directories.set(collection, collectionNode);
-    }
+  if (completion.kind !== 'ambiguous') return completion;
+  return Object.freeze({
+    ...completion,
+    candidates: Object.freeze(completion.candidates.map((candidate) => `${displayPrefix}${candidate}`))
+  });
+}
+
+function directoryCompletion(
+  operand: string,
+  entries: readonly TerminalEntry[],
+  invokedName: string,
+  cwd: string,
+  includeMountAliases = false,
+  includeHelpOptions = false,
+  experiments: readonly TerminalExperiment[] = Object.freeze([])
+): CompletionResult {
+  const absolute = operand.startsWith('/');
+  const dotted = operand.startsWith('./');
+  const prefix = absolute ? operand.slice(1) : dotted ? operand.slice(2) : operand;
+  if (
+    prefix.includes('*') ||
+    prefix.normalize('NFC') !== prefix ||
+    prefix.includes('%') ||
+    prefix.includes('\\') ||
+    prefix.includes('?') ||
+    prefix.includes('#') ||
+    prefix.includes('://') ||
+    /[\u0000-\u001f\u007f]/u.test(prefix) ||
+    prefix.split('/').some((segment, index, values) => (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'))
+  ) {
+    return { kind: 'none', candidates: Object.freeze([]) };
   }
-  const output: string[] = [];
-  const visit = (node: TreeNode, prefix: string) => {
-    const children = [
-      ...[...node.directories].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([name, child]) => ({ name: `${name}/`, child })),
-      ...node.files.sort().map((name) => ({ name, child: undefined }))
-    ];
-    children.forEach((child, index) => {
-      const last = index === children.length - 1;
-      output.push(`${prefix}${last ? '└──' : '├──'} ${child.name}`);
-      if (child.child) visit(child.child, `${prefix}${last ? '    ' : '│   '}`);
-    });
-  };
-  visit(root, '');
-  return { root: operand ?? '~/blog/posts', lines: Object.freeze(output) };
+
+  const directories = [...new Set([
+    ...knownDirectories(entries, Object.freeze([])),
+    ...experiments.map(({ id }) => `/lab/${id}`)
+  ])]
+    .filter((path) => !path.startsWith('/.rshell'))
+    .sort();
+  const cwdPath = virtualPathFromCwd(cwd);
+  const candidatePaths = directories.flatMap((path) => {
+    if (absolute) return [path === '/' ? '/' : `${path.slice(1)}/`];
+    const prefixPath = cwdPath === '/' ? '/' : `${cwdPath}/`;
+    return path.startsWith(prefixPath) && path !== cwdPath ? [`${path.slice(prefixPath.length)}/`] : [];
+  });
+  const slash = prefix.lastIndexOf('/');
+  const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
+  const segmentPrefix = prefix.slice(slash + 1);
+  const candidates = candidatePaths.flatMap((candidate) => {
+    if (!candidate.startsWith(parent)) return [];
+    const remaining = candidate.slice(parent.length);
+    const nextSlash = remaining.indexOf('/');
+    const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
+    return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
+  });
+  const displayPrefix = absolute ? '/' : dotted ? './' : '';
+  if (includeMountAliases && !absolute && !dotted) candidates.push('posts', 'pages', 'lab');
+  if (includeHelpOptions && !absolute && !dotted) candidates.push('-h', '--help');
+  const completion = completeFrom(
+    prefix,
+    candidates,
+    (candidate) => `${invokedName} ${displayPrefix}${candidate}`,
+    true
+  );
+  if (completion.kind === 'none') {
+    return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
+  }
+  if (completion.kind !== 'ambiguous') return completion;
+  return Object.freeze({
+    ...completion,
+    candidates: Object.freeze(completion.candidates.map((candidate) => `${displayPrefix}${candidate}`))
+  });
+}
+
+export function formatDocumentOperand(entry: TerminalEntry): string {
+  return entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
 }
 
 export function createTerminalCommandRegistry(definitions: readonly TerminalCommandDefinition[]): TerminalCommandRegistry {
@@ -482,7 +655,12 @@ export function createTerminalCommandRegistry(definitions: readonly TerminalComm
       (definition.usage !== definition.name && !definition.usage.startsWith(`${definition.name} `)) ||
       typeof definition.execute !== 'function' ||
       (definition.complete !== undefined && typeof definition.complete !== 'function') ||
-      (definition.pureText !== undefined && typeof definition.pureText !== 'boolean')) {
+      (definition.pureText !== undefined && typeof definition.pureText !== 'boolean') ||
+      (definition.standalone !== undefined && typeof definition.standalone !== 'boolean') ||
+      (definition.redirect !== undefined && definition.redirect !== 'text' && definition.redirect !== 'forbidden') ||
+      (definition.recoverable !== undefined && typeof definition.recoverable !== 'boolean') ||
+      (definition.group !== undefined && !isTerminalCommandGroup(definition.group)) ||
+      (definition.order !== undefined && (!Number.isSafeInteger(definition.order) || definition.order < 0))) {
       throw new TypeError('Terminal command definitions must have safe metadata and handlers.');
     }
     const clone = Object.freeze({ ...definition, aliases: Object.freeze([...definition.aliases]) });
@@ -495,74 +673,46 @@ export function createTerminalCommandRegistry(definitions: readonly TerminalComm
   return Object.freeze({ definitions: Object.freeze(frozen), resolve: (name: string) => lookup.get(name) });
 }
 
-type DefaultCommandHandler = (
-  operands: readonly string[],
-  context: TerminalCommandContext,
-  invalidUsage: () => TerminalEffect
-) => TerminalEffect;
-
-function define(name: string, summary: string, usageText: string, handler: DefaultCommandHandler, complete?: CompletionHandler, aliases: readonly string[] = Object.freeze([])): TerminalCommandDefinition {
-  let definition: TerminalCommandDefinition;
-  const execute: CommandHandler = (operands, context) => handler(operands, context, () => usage(definition));
-  definition = {
-    name,
-    aliases: Object.freeze([...aliases]),
-    summary,
-    usage: usageText,
-    execute,
-    pureText: pureTextRshellCommands.has(name),
-    ...(complete ? { complete } : {})
+function neutralDefinition(
+  spec: typeof NEUTRAL_COMMAND_SPECS[number],
+  complete: CompletionHandler | undefined
+): TerminalCommandDefinition {
+  return {
+    name: spec.name,
+    aliases: Object.freeze([...spec.aliases]),
+    group: spec.group,
+    order: spec.order,
+    summary: spec.summary,
+    usage: spec.usage,
+    execute: (operands, context) => {
+      const parsed = spec.parse(operands);
+      return parsed.ok
+        ? executeNeutralCommand(spec.execute, parsed.arguments, context)
+        : lines('error', parsed.message);
+    },
+    pureText: spec.policy.substitution === 'allowed',
+    standalone: spec.policy.pipeline === 'forbidden',
+    redirect: spec.policy.redirect,
+    recoverable: false,
+    ...(complete === undefined ? {} : { complete })
   };
-  return definition;
+}
+
+function neutralCompletion(name: string): CompletionHandler | undefined {
+  if (name === 'ls') return (operand, context, invoked) => lsCompletion(operand, context.entries, context.experiments, invoked, context.cwd);
+  if (name === 'cat' || name === 'vim') return (operand, context, invoked) => pathCompletion(operand, context.entries, invoked, context.cwd);
+  if (name === 'cd') return (operand, context, invoked) => directoryCompletion(operand, context.entries, invoked, context.cwd);
+  if (name === 'open') return (operand, context, invoked) => completeFrom(operand, context.experiments.map(({ id }) => `lab/${id}`), (candidate) => `${invoked} ${candidate}`);
+  if (name === 'tree') return (operand, _context, invoked) => completeFrom(operand, ['/', '/posts', '/pages', '/lab'], (candidate) => `${invoked} ${candidate}`);
+  return undefined;
 }
 
 const definitions = [
-  define('help', 'show this command list', 'help', (operands, context, invalidUsage) => operands.length === 0
-    ? lines('normal', ...context.registry.definitions.map((item) => `${item.usage}${item.aliases.length ? ` (${item.aliases.join(', ')})` : ''} — ${item.summary}`))
-    : invalidUsage(), undefined, Object.freeze(['?'])),
-  define('ls', 'list a public or session virtual directory', 'ls [path]', (operands, context, invalidUsage) => {
-    if (operands.length > 1 || (operands[0] !== undefined && !['posts', 'pages', 'lab'].includes(operands[0]))) return invalidUsage();
-    if (operands[0] === 'lab') return { kind: 'experiments', experiments: Object.freeze([...context.experiments]) };
-    const kind = operands[0] === 'posts' ? 'post' : operands[0] === 'pages' ? 'page' : null;
-    return { kind: 'entries', entries: Object.freeze(context.entries.filter((entry) => kind === null || entry.kind === kind)), label: operands[0] ?? 'all documents' };
-  }, (operand, _context, invoked) => completeFrom(operand, ['posts', 'pages', 'lab'], (candidate) => `${invoked} ${candidate}`)),
-  define('open', 'open a listed experiment', 'open lab/<id>', (operands, context, invalidUsage) => {
-    if (operands.length !== 1 || !operands[0]?.startsWith('lab/')) return invalidUsage();
-    const experiment = context.experiments.find(({ id }) => operands[0] === `lab/${id}`);
-    return experiment ? { kind: 'navigation', experiment } : lines('error', `No listed experiment named "${operands[0]}". Try "ls lab".`);
-  }, (operand, context, invoked) => completeFrom(operand, context.experiments.map(({ id }) => `lab/${id}`), (candidate) => `${invoked} ${candidate}`)),
-  define('cat', 'render a public document or stream a readable rshell resource', 'cat [path]', (operands, context, invalidUsage) => {
-    if (operands.length !== 1) return invalidUsage();
-    const entry = resolveDocumentOperand(operands[0]!, context.entries);
-    return entry ? { kind: 'document', entry } : lines('error', `No public document named "${operands[0]}". Relative paths resolve under posts; pages require /pages/<path>.md. Try "tree" or "tree /".`);
-  }, (operand, context, invoked) => pathCompletion(operand, context.entries, invoked)),
-  define('vim', 'open a listed public document reader', 'vim <path>', (operands, context, invalidUsage) => {
-    if (operands.length !== 1) return invalidUsage();
-    const entry = resolveDocumentOperand(operands[0]!, context.entries);
-    return entry ? { kind: 'document-navigation', entry } : lines('error', `No public document named "${operands[0]}". Relative paths resolve under posts; pages require /pages/<path>.md. Try "tree" or "tree /".`);
-  }, (operand, context, invoked) => pathCompletion(operand, context.entries, invoked)),
-  define('tree', 'show a public content subtree', 'tree [path]', (operands, context, invalidUsage) => {
-    if (operands.length > 1) return invalidUsage();
-    const tree = renderTree(context.entries, operands[0]);
-    return tree ? { kind: 'tree', root: tree.root, lines: tree.lines } : invalidUsage();
-  }, (operand, _context, invoked) => completeFrom(operand, ['/', '/posts', '/pages'], (candidate) => `${invoked} ${candidate}`)),
-  define('about', 'describe this site', 'about', (operands, context, invalidUsage) => operands.length === 0 ? lines('normal', context.identity.about) : invalidUsage()),
-  define('cd', 'change the read-only virtual directory', 'cd [path]', (operands, _context, invalidUsage) => operands.length <= 1 ? lines('normal', 'cd is available in the rshell session.') : invalidUsage()),
-  define('pwd', 'print the current path', 'pwd', (operands, context, invalidUsage) => operands.length === 0 ? lines('normal', context.identity.workingDirectory) : invalidUsage()),
-  define('whoami', 'print the current user', 'whoami', (operands, context, invalidUsage) => operands.length === 0 ? lines('normal', context.identity.user) : invalidUsage()),
-  define('id', 'show the guest identity and read-only capability boundary', 'id', (operands, context, invalidUsage) => operands.length === 0 ? lines('normal', `${context.identity.user} (read-only public posts, pages, and lab)`) : invalidUsage()),
-  define('date', 'print the UTC clock', 'date', (operands, context, invalidUsage) => operands.length === 0 ? lines('normal', formatUtcDate(context.now())) : invalidUsage()),
-  define('history', 'show recent commands', 'history', (operands, context, invalidUsage) => operands.length === 0 ? lines('muted', ...context.state.history.map((item, index) => `${index + 1}  ${item}`)) : invalidUsage()),
-  define('alias', 'list or query built-in aliases', 'alias [name]', (operands, context, invalidUsage) => operands.length <= 1 ? lines('normal', ...context.registry.definitions.flatMap((item) => item.aliases.map((alias) => `${alias}=${item.name}`))) : invalidUsage()),
-  define('grep', 'filter stdin or public text with a safe regular subset', 'grep [-inF] <pattern> [path ...]', (operands, _context, invalidUsage) => operands.length >= 1 ? lines('normal', 'grep is available in the rshell session.') : invalidUsage()),
-  define('clear', 'clear the screen', 'clear', (operands, _context, invalidUsage) => operands.length === 0 ? { kind: 'clear' } : invalidUsage())
+  ...NEUTRAL_COMMAND_SPECS.map((spec) => neutralDefinition(spec, neutralCompletion(spec.name)))
 ];
 
 export const DEFAULT_TERMINAL_COMMAND_REGISTRY = createTerminalCommandRegistry(definitions);
 export const TERMINAL_COMMANDS = Object.freeze(definitions.map(({ name }) => name));
-const defaultRshellHandlers: ReadonlyMap<string, CommandHandler> = new Map(
-  definitions.map((definition) => [definition.name, definition.execute])
-);
 
 function withSubmission(state: TerminalState, input: string): TerminalState {
   return Object.freeze({
@@ -579,34 +729,12 @@ export function formatUtcDate(date: Date): string {
 }
 
 const rshellRoot = '~/blog';
-const maxRshellInput = 8_000;
-const maxRshellStages = 8;
 const maxRshellLines = 240;
 const maxRshellText = 24_000;
 const maxScratchFiles = 16;
 const maxScratchBytes = 12_000;
-const maxSubstitutionDepth = 4;
 const maxGrepResources = 256;
 const maxGrepLines = 50_000;
-
-interface RshellWordSegment {
-  readonly value: string;
-  readonly expandSubstitution: boolean;
-}
-
-interface RshellWord {
-  readonly segments: readonly RshellWordSegment[];
-}
-
-interface RshellStage {
-  readonly words: readonly RshellWord[];
-  readonly redirect?: 'replace' | 'append';
-  readonly target?: string;
-}
-
-interface RshellParseSuccess { readonly ok: true; readonly stages: readonly RshellStage[] }
-interface RshellParseFailure { readonly ok: false; readonly message: string }
-type RshellParseResult = RshellParseSuccess | RshellParseFailure;
 
 interface RshellOutput {
   readonly state: TerminalState;
@@ -634,173 +762,9 @@ function boundedLines(values: readonly string[]): readonly string[] {
   return Object.freeze(result);
 }
 
-function readSubstitution(source: string, start: number): { readonly end: number; readonly value: string } | undefined {
-  let depth = 1;
-  let quote: "'" | '"' | null = null;
-  for (let index = start + 2; index < source.length; index += 1) {
-    const character = source[index]!;
-    if (quote !== null) {
-      if (character === quote) quote = null;
-      continue;
-    }
-    if (character === "'" || character === '"') { quote = character; continue; }
-    if (character === '$' && source[index + 1] === '(') { depth += 1; index += 1; continue; }
-    if (character === ')') {
-      depth -= 1;
-      if (depth === 0) return { end: index + 1, value: source.slice(start + 2, index) };
-    }
-  }
-  return undefined;
-}
-
-function parseRshell(input: string): RshellParseResult {
-  if (input.length > maxRshellInput) return { ok: false, message: `Command input is limited to ${maxRshellInput} characters.` };
-  const stages: RshellStage[] = [];
-  let words: RshellWord[] = [];
-  let segments: RshellWordSegment[] = [];
-  let word = '';
-  let wordExpands = true;
-  let started = false;
-  let quote: "'" | '"' | null = null;
-  let redirect: 'replace' | 'append' | undefined;
-  let target: string | undefined;
-  const append = (value: string, expandSubstitution: boolean): void => {
-    if (word.length > 0 && wordExpands !== expandSubstitution) {
-      segments.push(Object.freeze({ value: word, expandSubstitution: wordExpands }));
-      word = '';
-    }
-    wordExpands = expandSubstitution;
-    word += value;
-  };
-  const flush = (): string | undefined => {
-    if (!started) return undefined;
-    if (word.length > 0) {
-      segments.push(Object.freeze({ value: word, expandSubstitution: wordExpands }));
-    }
-    const value = segments.map(({ value: segment }) => segment).join('');
-    const parsedWord = Object.freeze({ segments: Object.freeze([...segments]) });
-    segments = [];
-    word = '';
-    wordExpands = true;
-    started = false;
-    if (redirect !== undefined && target === undefined) target = value;
-    else if (redirect !== undefined) return 'A redirect accepts exactly one target.';
-    else words.push(parsedWord);
-    return undefined;
-  };
-  const finishStage = (): string | undefined => {
-    const failure = flush();
-    if (failure !== undefined) return failure;
-    if (words.length === 0) return 'A pipeline stage cannot be empty.';
-    if (redirect !== undefined && target === undefined) return 'A redirect needs a scratch target.';
-    stages.push(Object.freeze({ words: Object.freeze(words), ...(redirect ? { redirect, target } : {}) }));
-    words = [];
-    redirect = undefined;
-    target = undefined;
-    return undefined;
-  };
-  for (let index = 0; index < input.length; index += 1) {
-    const character = input[index]!;
-    if (quote === "'") {
-      if (character === quote) {
-        if (word.length > 0) {
-          segments.push(Object.freeze({ value: word, expandSubstitution: false }));
-          word = '';
-        }
-        quote = null;
-        wordExpands = true;
-      } else append(character, false);
-      started = true;
-      continue;
-    }
-    if (quote === '"') {
-      if (character === quote) {
-        if (word.length > 0) {
-          segments.push(Object.freeze({ value: word, expandSubstitution: true }));
-          word = '';
-        }
-        quote = null;
-      } else if (character === '$' && input[index + 1] === '(') {
-        const substitution = readSubstitution(input, index);
-        if (substitution === undefined) return { ok: false, message: 'Unbalanced command substitution. Close $(...) and try again.' };
-        append(input.slice(index, substitution.end), true);
-        index = substitution.end - 1;
-      } else {
-        append(character, true);
-      }
-      started = true;
-      continue;
-    }
-    if (character === "'" || character === '"') {
-      if (word.length > 0) {
-        segments.push(Object.freeze({ value: word, expandSubstitution: true }));
-        word = '';
-      }
-      quote = character;
-      wordExpands = character === '"';
-      started = true;
-      continue;
-    }
-    if (character === '$' && input[index + 1] === '(') {
-      const substitution = readSubstitution(input, index);
-      if (substitution === undefined) return { ok: false, message: 'Unbalanced command substitution. Close $(...) and try again.' };
-      append(input.slice(index, substitution.end), true);
-      started = true;
-      index = substitution.end - 1;
-      continue;
-    }
-    if (/\s/u.test(character)) {
-      const failure = flush();
-      if (failure !== undefined) return { ok: false, message: failure };
-      continue;
-    }
-    if (character === '|') {
-      if (redirect !== undefined) return { ok: false, message: 'Redirection is allowed only on the final pipeline stage.' };
-      const failure = finishStage();
-      if (failure !== undefined) return { ok: false, message: failure };
-      continue;
-    }
-    if (character === '>') {
-      const failure = flush();
-      if (failure !== undefined) return { ok: false, message: failure };
-      if (words.length === 0 || redirect !== undefined) return { ok: false, message: 'Redirection follows a command and has one target.' };
-      redirect = input[index + 1] === '>' ? 'append' : 'replace';
-      if (redirect === 'append') index += 1;
-      continue;
-    }
-    append(character, true);
-    started = true;
-  }
-  if (quote !== null) return { ok: false, message: 'Unbalanced quote. Close the quote and try again.' };
-  const failure = finishStage();
-  if (failure !== undefined) return { ok: false, message: failure };
-  if (stages.length > maxRshellStages) return { ok: false, message: `At most ${maxRshellStages} pipeline stages are allowed.` };
-  return { ok: true, stages: Object.freeze(stages) };
-}
-
 function safeRshellLine(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.length > 4_000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) return undefined;
-  return value.normalize('NFC').replaceAll(/\s+/gu, ' ').trim();
-}
-
-function publicTextByPath(
-  documents: readonly TerminalTextDocument[] | undefined,
-  entries: readonly TerminalEntry[]
-): ReadonlyMap<string, readonly string[]> {
-  const paths = new Set(entries.map(({ virtualPath }) => virtualPath));
-  const result = new Map<string, readonly string[]>();
-  for (const document of documents ?? []) {
-    if (!paths.has(document.virtualPath) || result.has(document.virtualPath)) continue;
-    const normalized = document.lines.map(safeRshellLine).filter((line): line is string => line !== undefined && line.length > 0);
-    result.set(document.virtualPath, Object.freeze(normalized));
-  }
-  for (const entry of entries) {
-    if (!result.has(entry.virtualPath)) {
-      const title = safeRshellLine(entry.title);
-      result.set(entry.virtualPath, title === undefined ? Object.freeze([]) : Object.freeze([title]));
-    }
-  }
-  return result;
+  return value.normalize('NFC');
 }
 
 function normaliseVirtualPath(
@@ -855,10 +819,6 @@ function normaliseVirtualPath(
   return `/${segments.join('/')}` || '/';
 }
 
-function displayVirtualPath(path: string): string {
-  return path === '/' ? rshellRoot : `${rshellRoot}${path}`;
-}
-
 function entryAt(path: string, entries: readonly TerminalEntry[]): TerminalEntry | undefined {
   return entries.find((entry) => `/${entry.virtualPath}` === path);
 }
@@ -877,98 +837,6 @@ function knownDirectories(entries: readonly TerminalEntry[], scratch: readonly T
   return directories;
 }
 
-function listDirectory(path: string, entries: readonly TerminalEntry[], experiments: readonly TerminalExperiment[], scratch: readonly TerminalScratchFile[]): readonly string[] | undefined {
-  const directories = knownDirectories(entries, scratch);
-  if (!directories.has(path)) return undefined;
-  if (path === '/lab') return Object.freeze(experiments.map(({ id }) => `${id}/`).sort());
-  const prefix = path === '/' ? '/' : `${path}/`;
-  const children = new Set<string>();
-  for (const directory of directories) {
-    if (!directory.startsWith(prefix) || directory === path) continue;
-    const remaining = directory.slice(prefix.length);
-    if (!remaining.includes('/') && !(path === '/' && remaining === '.rshell')) children.add(`${remaining}/`);
-  }
-  for (const entry of entries) {
-    const full = `/${entry.virtualPath}`;
-    if (!full.startsWith(prefix)) continue;
-    const remaining = full.slice(prefix.length);
-    if (!remaining.includes('/')) children.add(remaining);
-  }
-  if (path === '/.rshell/tmp') for (const file of scratch) children.add(file.name);
-  return Object.freeze([...children].sort());
-}
-
-interface RshellTreeNode {
-  readonly directories: Map<string, RshellTreeNode>;
-  readonly files: Set<string>;
-}
-
-function renderRshellTree(
-  path: string,
-  entries: readonly TerminalEntry[],
-  experiments: readonly TerminalExperiment[]
-): { readonly root: string; readonly lines: readonly string[] } | undefined {
-  if (path.startsWith('/.rshell') || !knownDirectories(entries, Object.freeze([])).has(path)) return undefined;
-  const root: RshellTreeNode = { directories: new Map(), files: new Set() };
-  const addDirectory = (segments: readonly string[]): void => {
-    let node = root;
-    for (const segment of segments) {
-      let child = node.directories.get(segment);
-      if (child === undefined) {
-        child = { directories: new Map(), files: new Set() };
-        node.directories.set(segment, child);
-      }
-      node = child;
-    }
-  };
-  const addResource = (resourcePath: string): void => {
-    const prefix = path === '/' ? '/' : `${path}/`;
-    if (!resourcePath.startsWith(prefix) || resourcePath === path) return;
-    const segments = resourcePath.slice(prefix.length).split('/');
-    const filename = segments.pop();
-    if (filename === undefined || filename.length === 0) return;
-    let node = root;
-    for (const segment of segments) {
-      let child = node.directories.get(segment);
-      if (child === undefined) {
-        child = { directories: new Map(), files: new Set() };
-        node.directories.set(segment, child);
-      }
-      node = child;
-    }
-    node.files.add(filename);
-  };
-
-  if (path === '/') {
-    addDirectory(['posts']);
-    addDirectory(['pages']);
-    addDirectory(['lab']);
-  }
-  for (const entry of entries) addResource(`/${entry.virtualPath}`);
-  if (path === '/lab' || path === '/') {
-    for (const experiment of experiments) {
-      const segments = path === '/' ? ['lab', experiment.id] : [experiment.id];
-      addDirectory(segments);
-    }
-  }
-
-  const output: string[] = [];
-  const compare = (left: string, right: string): number => left < right ? -1 : left > right ? 1 : 0;
-  const visit = (node: RshellTreeNode, prefix: string): void => {
-    const children = [
-      ...[...node.directories].sort(([left], [right]) => compare(left, right)).map(([name, child]) => ({ name: `${name}/`, child })),
-      ...[...node.files].sort(compare).map((name) => ({ name, child: undefined }))
-    ];
-    children.forEach((child, index) => {
-      const last = index === children.length - 1;
-      output.push(`${prefix}${last ? '└──' : '├──'} ${child.name}`);
-      if (child.child !== undefined) visit(child.child, `${prefix}${last ? '    ' : '│   '}`);
-    });
-  };
-  visit(root, '');
-  return Object.freeze({ root: displayVirtualPath(path), lines: Object.freeze(output) });
-}
-
 function scratchName(path: string): string | undefined {
   const prefix = '/.rshell/tmp/';
   if (!path.startsWith(prefix)) return undefined;
@@ -980,266 +848,24 @@ function freezeScratch(files: readonly TerminalScratchFile[]): readonly Terminal
   return Object.freeze(files.map((file) => Object.freeze({ name: file.name, lines: Object.freeze([...file.lines]) })).sort((left, right) => left.name.localeCompare(right.name)));
 }
 
-function readTextResource(path: string, entries: readonly TerminalEntry[], corpus: ReadonlyMap<string, readonly string[]>, scratch: readonly TerminalScratchFile[]): readonly string[] | undefined {
-  const entry = entryAt(path, entries);
-  if (entry !== undefined) return corpus.get(entry.virtualPath);
-  const name = scratchName(path);
-  return name === undefined ? undefined : scratch.find((file) => file.name === name)?.lines;
+function formatHelpCommand(command: TerminalHelpCommand): string {
+  const aliases = command.aliases.length === 0 ? '' : ` (${command.aliases.join(', ')})`;
+  return `  ${command.usage}${aliases} — ${command.summary}`;
 }
 
-function resourcePaths(path: string, entries: readonly TerminalEntry[], scratch: readonly TerminalScratchFile[]): readonly string[] | undefined {
-  const entry = entryAt(path, entries);
-  if (entry !== undefined || scratchName(path) !== undefined) return Object.freeze([path]);
-  const directories = knownDirectories(entries, scratch);
-  if (!directories.has(path)) return undefined;
-  const prefix = path === '/' ? '/' : `${path}/`;
-  const publicPaths = entries.map((item) => `/${item.virtualPath}`).filter((item) => item.startsWith(prefix));
-  const scratchPaths = scratch.map((item) => `/.rshell/tmp/${item.name}`).filter((item) => item.startsWith(prefix));
-  return Object.freeze([...publicPaths, ...scratchPaths].sort());
-}
-
-type RegexAtom =
-  | { readonly type: 'literal'; readonly value: string }
-  | { readonly type: 'any' }
-  | { readonly type: 'class'; readonly inverted: boolean; readonly items: readonly (readonly [string, string])[] }
-  | { readonly type: 'start' }
-  | { readonly type: 'end' }
-  | { readonly type: 'concat'; readonly values: readonly RegexAtom[] }
-  | { readonly type: 'alt'; readonly values: readonly RegexAtom[] }
-  | { readonly type: 'repeat'; readonly value: RegexAtom; readonly minimum: number; readonly maximum: number | null };
-
-interface RegexParser { readonly characters: readonly string[]; index: number; depth: number; readonly insensitive: boolean }
-
-function escapedAtom(character: string): RegexAtom | undefined {
-  const range = (first: string, last: string): readonly [string, string] => Object.freeze([first, last]);
-  if (character === 'd') return { type: 'class', inverted: false, items: Object.freeze([range('0', '9')]) };
-  if (character === 'D') return { type: 'class', inverted: true, items: Object.freeze([range('0', '9')]) };
-  if (character === 'w') return { type: 'class', inverted: false, items: Object.freeze([range('0', '9'), range('A', 'Z'), range('a', 'z'), range('_', '_')]) };
-  if (character === 'W') return { type: 'class', inverted: true, items: Object.freeze([range('0', '9'), range('A', 'Z'), range('a', 'z'), range('_', '_')]) };
-  if (character === 's') return { type: 'class', inverted: false, items: Object.freeze([range(' ', ' '), range('\t', '\t')]) };
-  if (character === 'S') return { type: 'class', inverted: true, items: Object.freeze([range(' ', ' '), range('\t', '\t')]) };
-  if ('123456789'.includes(character)) return undefined;
-  return { type: 'literal', value: character };
-}
-
-function parseClass(parser: RegexParser): RegexAtom | undefined {
-  let inverted = false;
-  if (parser.characters[parser.index] === '^') { inverted = true; parser.index += 1; }
-  const items: (readonly [string, string])[] = [];
-  while (parser.index < parser.characters.length && parser.characters[parser.index] !== ']') {
-    let first = parser.characters[parser.index++]!;
-    if (first === '\\') {
-      const escaped = parser.characters[parser.index++];
-      if (escaped === undefined) return undefined;
-      const special = escapedAtom(escaped);
-      if (special?.type === 'class' && !special.inverted) { items.push(...special.items); continue; }
-      if (special === undefined || special.type !== 'literal') return undefined;
-      first = special.value;
-    }
-    let last = first;
-    if (parser.characters[parser.index] === '-' && parser.characters[parser.index + 1] !== ']' && parser.characters[parser.index + 1] !== undefined) {
-      parser.index += 1;
-      last = parser.characters[parser.index++]!;
-      if (last === '\\') return undefined;
-      if (first.codePointAt(0)! > last.codePointAt(0)!) return undefined;
-    }
-    items.push(Object.freeze([first, last] as [string, string]));
-  }
-  if (parser.characters[parser.index] !== ']' || items.length === 0) return undefined;
-  parser.index += 1;
-  return { type: 'class', inverted, items: Object.freeze(items) };
-}
-
-function parseRegexAtom(parser: RegexParser): RegexAtom | undefined {
-  const character = parser.characters[parser.index++];
-  if (character === undefined) return { type: 'concat', values: Object.freeze([]) };
-  if (character === '.') return { type: 'any' };
-  if (character === '^') return { type: 'start' };
-  if (character === '$') return { type: 'end' };
-  if (character === '[') return parseClass(parser);
-  if (character === '\\') {
-    const escaped = parser.characters[parser.index++];
-    return escaped === undefined ? undefined : escapedAtom(escaped);
-  }
-  if (character === '(') {
-    if (parser.characters[parser.index] === '?') return undefined;
-    if (parser.depth >= 16) return undefined;
-    parser.depth += 1;
-    const inner = parseRegexAlternation(parser);
-    parser.depth -= 1;
-    if (parser.characters[parser.index] !== ')') return undefined;
-    parser.index += 1;
-    return inner;
-  }
-  if (character === ')' || character === '|' || character === '*' || character === '+' || character === '?' || character === '{' || character === '}') return undefined;
-  return { type: 'literal', value: character };
-}
-
-function parseRepeat(parser: RegexParser): RegexAtom | undefined {
-  let value = parseRegexAtom(parser);
-  if (value === undefined) return undefined;
-  const marker = parser.characters[parser.index];
-  if (marker === '*') { parser.index += 1; return { type: 'repeat', value, minimum: 0, maximum: null }; }
-  if (marker === '+') { parser.index += 1; return { type: 'repeat', value, minimum: 1, maximum: null }; }
-  if (marker === '?') { parser.index += 1; return { type: 'repeat', value, minimum: 0, maximum: 1 }; }
-  if (marker !== '{') return value;
-  parser.index += 1;
-  const digits = (): number | undefined => {
-    let raw = '';
-    while (parser.characters[parser.index] !== undefined && '0123456789'.includes(parser.characters[parser.index]!)) raw += parser.characters[parser.index++]!;
-    return raw.length === 0 ? undefined : Number(raw);
-  };
-  const minimum = digits();
-  if (minimum === undefined || minimum > 64) return undefined;
-  let maximum: number | null = minimum;
-  if (parser.characters[parser.index] === ',') { parser.index += 1; maximum = parser.characters[parser.index] === '}' ? null : digits() ?? -1; }
-  if (parser.characters[parser.index] !== '}' || maximum === -1 || (maximum !== null && (maximum < minimum || maximum > 64))) return undefined;
-  parser.index += 1;
-  value = { type: 'repeat', value, minimum, maximum };
-  return value;
-}
-
-function parseRegexSequence(parser: RegexParser): RegexAtom | undefined {
-  const values: RegexAtom[] = [];
-  while (parser.index < parser.characters.length && parser.characters[parser.index] !== ')' && parser.characters[parser.index] !== '|') {
-    const value = parseRepeat(parser);
-    if (value === undefined) return undefined;
-    values.push(value);
-  }
-  return { type: 'concat', values: Object.freeze(values) };
-}
-
-function parseRegexAlternation(parser: RegexParser): RegexAtom | undefined {
-  const values: RegexAtom[] = [];
-  const first = parseRegexSequence(parser);
-  if (first === undefined) return undefined;
-  values.push(first);
-  while (parser.characters[parser.index] === '|') {
-    parser.index += 1;
-    const next = parseRegexSequence(parser);
-    if (next === undefined) return undefined;
-    values.push(next);
-  }
-  return values.length === 1 ? values[0] : { type: 'alt', values: Object.freeze(values) };
-}
-
-type RegexState =
-  | { readonly kind: 'char'; readonly value: string; to: number }
-  | { readonly kind: 'any'; to: number }
-  | { readonly kind: 'class'; readonly inverted: boolean; readonly items: readonly (readonly [string, string])[]; to: number }
-  | { readonly kind: 'start'; to: number }
-  | { readonly kind: 'end'; to: number }
-  | { readonly kind: 'epsilon'; to: number }
-  | { readonly kind: 'split'; to: number; alternate: number }
-  | { readonly kind: 'match' };
-
-interface Fragment { readonly start: number; readonly outs: readonly (readonly [number, 'to' | 'alternate'])[] }
-
-function compileSafeRegex(pattern: string, insensitive: boolean): { readonly test: (line: string) => boolean } | undefined {
-  if (pattern.length === 0 || pattern.length > 256) return undefined;
-  const parser: RegexParser = { characters: Object.freeze([...pattern]), index: 0, depth: 0, insensitive };
-  const ast = parseRegexAlternation(parser);
-  if (ast === undefined || parser.index !== parser.characters.length) return undefined;
-  const states: RegexState[] = [];
-  const add = (state: RegexState): number => { states.push(state); return states.length - 1; };
-  const out = (index: number, key: 'to' | 'alternate'): readonly [number, 'to' | 'alternate'] => Object.freeze([index, key]);
-  const patch = (outs: readonly (readonly [number, 'to' | 'alternate'])[], target: number): void => {
-    for (const [index, key] of outs) {
-      const state = states[index]!;
-      if (key === 'alternate') {
-        if (state.kind !== 'split') throw new TypeError('Invalid regular-expression branch.');
-        state.alternate = target;
-      } else {
-        if (!('to' in state)) throw new TypeError('Invalid regular-expression transition.');
-        state.to = target;
-      }
-    }
-  };
-  const join = (values: readonly RegexAtom[]): Fragment => {
-    if (values.length === 0) { const start = add({ kind: 'epsilon', to: -1 }); return { start, outs: Object.freeze([out(start, 'to')]) }; }
-    let fragment = compile(values[0]!);
-    for (const value of values.slice(1)) { const next = compile(value); patch(fragment.outs, next.start); fragment = { start: fragment.start, outs: next.outs }; }
-    return fragment;
-  };
-  const compile = (node: RegexAtom): Fragment => {
-    if (node.type === 'literal') { const start = add({ kind: 'char', value: node.value, to: -1 }); return { start, outs: Object.freeze([out(start, 'to')]) }; }
-    if (node.type === 'any') { const start = add({ kind: 'any', to: -1 }); return { start, outs: Object.freeze([out(start, 'to')]) }; }
-    if (node.type === 'class') { const start = add({ kind: 'class', inverted: node.inverted, items: node.items, to: -1 }); return { start, outs: Object.freeze([out(start, 'to')]) }; }
-    if (node.type === 'start' || node.type === 'end') { const start = add({ kind: node.type, to: -1 }); return { start, outs: Object.freeze([out(start, 'to')]) }; }
-    if (node.type === 'concat') return join(node.values);
-    if (node.type === 'alt') {
-      const values = node.values.map(compile);
-      let start = values[0]!.start;
-      let outs = [...values[0]!.outs];
-      for (const value of values.slice(1)) { const split = add({ kind: 'split', to: start, alternate: value.start }); start = split; outs = [...outs, ...value.outs]; }
-      return { start, outs: Object.freeze(outs) };
-    }
-    const repeated: RegexAtom[] = [];
-    for (let index = 0; index < node.minimum; index += 1) repeated.push(node.value);
-    let fragment = join(repeated);
-    if (node.maximum === null) {
-      const body = compile(node.value);
-      const split = add({ kind: 'split', to: body.start, alternate: -1 });
-      patch(fragment.outs, split);
-      patch(body.outs, split);
-      return { start: fragment.start, outs: Object.freeze([out(split, 'alternate')]) };
-    }
-    for (let index = node.minimum; index < node.maximum; index += 1) {
-      const body = compile(node.value);
-      const split = add({ kind: 'split', to: body.start, alternate: -1 });
-      patch(fragment.outs, split);
-      fragment = { start: fragment.start, outs: Object.freeze([...body.outs, out(split, 'alternate')]) };
-    }
-    return fragment;
-  };
-  const fragment = compile(ast);
-  if (states.length > 2_048) return undefined;
-  const match = add({ kind: 'match' });
-  patch(fragment.outs, match);
-  const fold = (value: string): string => insensitive ? value.toLocaleLowerCase('en-US') : value;
-  const addClosure = (set: Set<number>, index: number, position: number, length: number, seen: Set<number>): void => {
-    if (seen.has(index)) return;
-    seen.add(index);
-    const state = states[index]!;
-    if (state.kind === 'epsilon') addClosure(set, state.to, position, length, seen);
-    else if (state.kind === 'split') { addClosure(set, state.to, position, length, seen); addClosure(set, state.alternate, position, length, seen); }
-    else if (state.kind === 'start') { if (position === 0) addClosure(set, state.to, position, length, seen); }
-    else if (state.kind === 'end') { if (position === length) addClosure(set, state.to, position, length, seen); }
-    else set.add(index);
-  };
-  const charMatches = (state: RegexState, character: string): boolean => {
-    const folded = fold(character);
-    if (state.kind === 'char') return folded === fold(state.value);
-    if (state.kind === 'any') return true;
-    if (state.kind !== 'class') return false;
-    const point = folded.codePointAt(0)!;
-    const inside = state.items.some(([first, last]) => point >= fold(first).codePointAt(0)! && point <= fold(last).codePointAt(0)!);
-    return state.inverted ? !inside : inside;
-  };
-  return {
-    test: (line: string): boolean => {
-      const characters = [...line];
-      let current = new Set<number>();
-      addClosure(current, fragment.start, 0, characters.length, new Set());
-      for (let position = 0; position <= characters.length; position += 1) {
-        if (current.has(match)) return true;
-        if (position === characters.length) break;
-        const next = new Set<number>();
-        for (const index of current) {
-          const state = states[index]!;
-          if ((state.kind === 'char' || state.kind === 'any' || state.kind === 'class') && charMatches(state, characters[position]!)) addClosure(next, state.to, position + 1, characters.length, new Set());
-        }
-        addClosure(next, fragment.start, position + 1, characters.length, new Set());
-        current = next;
-      }
-      return current.has(match);
-    }
-  };
+function formatGrepMatch(match: TerminalGrepMatch): string {
+  if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}:${match.line}`;
+  return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
 }
 
 function stdoutForEffect(effect: TerminalEffect): readonly string[] {
   if (effect.kind === 'lines') return effect.lines;
-  if (effect.kind === 'entries') return Object.freeze(effect.entries.map((entry) => `${formatDocumentOperand(entry)} — ${entry.date} — ${entry.title}`));
+  if (effect.kind === 'help') return Object.freeze(effect.groups.flatMap((group) => [group.name, ...group.commands.map(formatHelpCommand)]));
+  if (effect.kind === 'grep') return Object.freeze(effect.matches.map(formatGrepMatch));
+  if (effect.kind === 'entries') return Object.freeze([
+    ...effect.directories,
+    ...effect.entries.map((entry) => `${formatDocumentOperand(entry)} — ${entry.date} — ${entry.title}`)
+  ]);
   if (effect.kind === 'experiments') return Object.freeze(effect.experiments.map((experiment) => `${experiment.id}/ — ${experiment.title}`));
   if (effect.kind === 'tree') return Object.freeze([effect.root, ...effect.lines]);
   return Object.freeze([]);
@@ -1251,131 +877,191 @@ function announcementFor(effect: TerminalEffect): string {
   if (effect.kind === 'navigation') return `Opening ${effect.experiment.title}.`;
   if (effect.kind === 'clear') return 'Command transcript cleared.';
   if (effect.kind === 'experiments') return `${effect.experiments.length} experiments listed.`;
-  if (effect.kind === 'entries') return `${effect.entries.length} ${effect.label} listed.`;
+  if (effect.kind === 'entries') return `${effect.directories.length + effect.entries.length} ${effect.label} listed.`;
   if (effect.kind === 'tree') return `${effect.lines.length} tree entries listed.`;
+  if (effect.kind === 'help') return `${effect.groups.reduce((total, group) => total + group.commands.length, 0)} commands listed.`;
+  if (effect.kind === 'grep') return effect.noResults ? `No matches for "${effect.pattern}".` : `${effect.matches.length} grep match${effect.matches.length === 1 ? '' : 'es'} listed.`;
   return effect.lines.at(-1) ?? '';
 }
 
-function expandStageWords(
-  words: readonly RshellWord[],
+function isTextEffect(effect: TerminalEffect): boolean {
+  return effect.kind === 'lines' || effect.kind === 'help' || effect.kind === 'grep' || effect.kind === 'entries' || effect.kind === 'experiments' || effect.kind === 'tree';
+}
+
+function publicDocumentFromEntry(entry: TerminalEntry): PublicDocument {
+  return Object.freeze({
+    kind: entry.kind,
+    path: `/${entry.virtualPath}`,
+    relativePath: entry.relativePath,
+    filename: entry.filename,
+    title: entry.title,
+    href: entry.href,
+    date: entry.date
+  });
+}
+
+function createTerminalVirtualFs(
   state: TerminalState,
   entries: readonly TerminalEntry[],
   experiments: readonly TerminalExperiment[],
-  corpus: ReadonlyMap<string, readonly string[]>,
-  identity: TerminalIdentity,
-  now: () => Date,
+  documents: readonly TerminalTextDocument[]
+): ReadonlyVirtualFs {
+  return createPublicIndex({
+    documents: Object.freeze(entries.map(publicDocumentFromEntry)),
+    experiments: Object.freeze(experiments.map((experiment) => Object.freeze({ ...experiment }))),
+    textDocuments: Object.freeze(documents.map((document) => Object.freeze({
+      path: `/${document.virtualPath}`,
+      lines: Object.freeze(document.lines.map(safeRshellLine).filter((line): line is string => line !== undefined))
+    }))),
+    scratch: Object.freeze(state.scratch.map((file) => Object.freeze({
+      name: file.name,
+      lines: Object.freeze(file.lines.map(safeRshellLine).filter((line): line is string => line !== undefined))
+    })))
+  });
+}
+
+function shellSessionFromState(state: TerminalState): ReadonlyShellSession {
+  const scratch: readonly ReadonlyShellScratchFile[] = Object.freeze(state.scratch.map((file) => Object.freeze({
+    name: file.name,
+    lines: Object.freeze([...file.lines])
+  })));
+  const aliases = Object.freeze(state.aliases.map((alias) => Object.freeze({ ...alias })));
+  return Object.freeze({ history: Object.freeze([...state.history]), scratch, aliases });
+}
+
+function shellCommandMetadata(
   registry: TerminalCommandRegistry,
-  depth: number
-): { readonly ok: true; readonly words: readonly string[] } | { readonly ok: false; readonly message: string } {
-  if (depth > maxSubstitutionDepth) return { ok: false, message: 'Command substitution nesting is too deep.' };
-  const expanded: string[] = [];
-  for (const parsedWord of words) {
-    let value = '';
-    for (const segment of parsedWord.segments) {
-      if (!segment.expandSubstitution) {
-        value += segment.value;
-        continue;
-      }
-      for (let index = 0; index < segment.value.length;) {
-        if (segment.value[index] !== '$' || segment.value[index + 1] !== '(') {
-          value += segment.value[index]!;
-          index += 1;
-          continue;
-        }
-        const substitution = readSubstitution(segment.value, index);
-        if (substitution === undefined) return { ok: false, message: 'Unbalanced command substitution.' };
-        const parsed = parseRshell(substitution.value);
-        if (!parsed.ok || parsed.stages.some((stage) => stage.redirect !== undefined)) return { ok: false, message: 'Command substitution accepts only pure text commands.' };
-        const nested = executeRshellStages(parsed.stages, state, entries, experiments, corpus, identity, now, registry, true, depth + 1);
-        if (nested.error) return { ok: false, message: 'Command substitution did not produce text.' };
-        value += nested.stdout.join(' ').trim();
-        index = substitution.end;
-      }
-    }
-    if (value.length > 2_000) return { ok: false, message: 'Command substitution output is too large.' };
-    expanded.push(value);
-  }
-  return { ok: true, words: Object.freeze(expanded) };
+  session: ReadonlyShellSession
+): readonly ShellCommandMetadata[] {
+  return Object.freeze(registry.definitions.map((spec): ShellCommandMetadata => {
+    const aliases = (session.aliases ?? [])
+      .filter((alias) => {
+        const resolved = resolveSessionCommand(alias.target, session);
+        return resolved !== undefined && registry.resolve(resolved)?.name === spec.name;
+      })
+      .map(({ name }) => name);
+    return Object.freeze({
+      name: spec.name,
+      aliases: Object.freeze([...spec.aliases, ...aliases]),
+      usage: spec.usage,
+      summary: spec.summary,
+      group: spec.group ?? 'Other',
+      order: spec.order ?? Number.MAX_SAFE_INTEGER
+    });
+  }));
 }
 
-function executeGrep(
-  words: readonly string[],
-  stdin: readonly string[],
-  stdinProvided: boolean,
-  cwd: string,
-  entries: readonly TerminalEntry[],
-  corpus: ReadonlyMap<string, readonly string[]>,
-  scratch: readonly TerminalScratchFile[],
-  state: TerminalState
-): RshellOutput {
-  let index = 0;
-  let insensitive = false;
-  let number = false;
-  let literal = false;
-  while (words[index]?.startsWith('-') && words[index] !== '-') {
-    const flags = words[index]!.slice(1);
-    if (flags.length === 0 || [...flags].some((flag) => !'inF'.includes(flag))) return rshellError(state, 'Usage: grep [-inF] <pattern> [path ...]');
-    insensitive ||= flags.includes('i');
-    number ||= flags.includes('n');
-    literal ||= flags.includes('F');
-    index += 1;
-  }
-  const pattern = words[index++];
-  if (
-    pattern === undefined ||
-    pattern.length === 0 ||
-    pattern.length > 256 ||
-    /[\u0000-\u001f\u007f]/u.test(pattern)
-  ) {
-    return rshellError(state, 'Usage: grep [-inF] <pattern> [path ...]');
-  }
-  const matcher = literal
-    ? { test: (line: string) => insensitive ? line.toLocaleLowerCase('en-US').includes(pattern.toLocaleLowerCase('en-US')) : line.includes(pattern) }
-    : compileSafeRegex(pattern, insensitive);
-  if (matcher === undefined) return rshellError(state, 'grep pattern is outside the safe regular-language subset.');
-  if (stdinProvided && index < words.length) return rshellError(state, 'grep accepts stdin or named public resources, not both.');
-  if (stdinProvided) {
-    if (stdin.length > maxGrepLines) return rshellError(state, 'grep input exceeds the session work limit.');
-    const values: string[] = [];
-    for (const [lineIndex, line] of stdin.entries()) {
-      if (matcher.test(line)) values.push(number ? `${lineIndex + 1}:${line}` : line);
-    }
-    const bounded = boundedLines(values);
-    return { state, effect: lines('normal', ...bounded), stdout: bounded, error: false };
-  }
-  const operands = words.slice(index);
-  const sourcePaths: string[] = [];
-  if (operands.length === 0) {
-    sourcePaths.push(...entries.map((entry) => `/${entry.virtualPath}`));
-  } else {
-    for (const operand of operands) {
-      const path = normaliseVirtualPath(operand, cwd, false);
-      if (path === undefined) return rshellError(state, 'grep can search only listed public documents or /.rshell/tmp scratch files.');
-      const resources = resourcePaths(path, entries, scratch);
-      if (resources === undefined) return rshellError(state, 'grep can search only listed public documents or /.rshell/tmp scratch files.');
-      sourcePaths.push(...resources);
-    }
-  }
-  const uniqueSourcePaths = [...new Set(sourcePaths)];
-  if (uniqueSourcePaths.length > maxGrepResources) return rshellError(state, 'grep resource scope exceeds the session work limit.');
-  if (uniqueSourcePaths.length === 0) return rshellError(state, 'grep can search only listed public documents or /.rshell/tmp scratch files.');
-  const values: string[] = [];
-  let scannedLines = 0;
-  for (const path of uniqueSourcePaths) {
-    const source = readTextResource(path, entries, corpus, scratch);
-    if (source === undefined) return rshellError(state, `No readable rshell resource named "${path}".`);
-    for (const [lineIndex, line] of source.entries()) {
-      scannedLines += 1;
-      if (scannedLines > maxGrepLines) return rshellError(state, 'grep input exceeds the session work limit.');
-      if (matcher.test(line)) values.push(number ? `${path}:${lineIndex + 1}:${line}` : `${path}:${line}`);
-    }
-  }
-  const bounded = boundedLines(values);
-  return { state, effect: lines('normal', ...bounded), stdout: bounded, error: false };
+function shellProcessContext(context: TerminalCommandContext): ShellProcessContext {
+  return Object.freeze({
+    ...(context.stdinProvided ? { stdin: textStream(context.stdin) } : {}),
+    cwd: virtualPathFromVfsDisplay(context.state.cwd),
+    fs: context.fs,
+    session: shellSessionFromState(context.state),
+    clock: context.now,
+    signal: Object.freeze({ aborted: false }),
+    commands: shellCommandMetadata(context.registry, shellSessionFromState(context.state)),
+    identity: Object.freeze({ ...context.identity })
+  });
 }
 
-function isTextEffect(effect: TerminalEffect): boolean {
-  return effect.kind === 'lines' || effect.kind === 'entries' || effect.kind === 'experiments' || effect.kind === 'tree';
+function stateFromShellPatch(state: TerminalState, patch: ShellProcessResult['statePatch']): TerminalState {
+  if (patch === undefined) return state;
+  if (patch.kind === 'cwd') return Object.freeze({ ...state, cwd: displayVfsPath(patch.cwd) });
+  return Object.freeze({
+    ...state,
+    history: Object.freeze([...patch.session.history]),
+    scratch: freezeScratch(patch.session.scratch),
+    aliases: Object.freeze((patch.session.aliases ?? state.aliases).map((alias) => Object.freeze({ ...alias })))
+  });
+}
+
+function adaptShellValue(value: NonNullable<ShellProcessResult['value']>, context: TerminalCommandContext): TerminalEffect | undefined {
+  if (value.kind === 'help') {
+    return {
+      kind: 'help',
+      groups: Object.freeze(value.groups.map((group) => Object.freeze({
+        name: group.name,
+        commands: Object.freeze(group.commands.map((command) => Object.freeze({ ...command })))
+      })))
+    };
+  }
+  if (value.kind === 'tree') return { kind: 'tree', root: value.root, lines: Object.freeze([...value.lines]) };
+  if (value.kind === 'document') {
+    const entry = entryAt(value.document.path, context.entries);
+    return entry === undefined ? undefined : { kind: 'document', entry };
+  }
+  if (value.kind === 'grep-report') {
+    return {
+      kind: 'grep',
+      pattern: value.report.pattern,
+      matches: Object.freeze([...value.report.matches]),
+      noResults: value.report.noResults,
+      truncated: value.report.truncated
+    };
+  }
+  if (value.kind !== 'directory-listing') return undefined;
+  const listing = value.listing;
+  if (listing.path === '/lab') {
+    const experiments = listing.experiments
+      .map(({ id }) => context.experiments.find((experiment) => experiment.id === id))
+      .filter((experiment): experiment is TerminalExperiment => experiment !== undefined);
+    return { kind: 'experiments', experiments: Object.freeze(experiments) };
+  }
+  if (listing.path.startsWith('/posts') || listing.path.startsWith('/pages')) {
+    const entries = listing.documents
+      .map((document) => entryAt(document.path, context.entries))
+      .filter((entry): entry is TerminalEntry => entry !== undefined);
+    const label = listing.path.startsWith('/pages') ? 'pages' : 'posts';
+    return {
+      kind: 'entries',
+      directories: Object.freeze([...listing.directories]),
+      entries: Object.freeze(entries),
+      label,
+      directory: listing.path
+    };
+  }
+  return undefined;
+}
+
+function adaptShellControls(
+  controls: NonNullable<ShellProcessResult['controls']>,
+  context: TerminalCommandContext
+): TerminalEffect | undefined {
+  const control = controls[0];
+  if (control === undefined || controls.length !== 1) return undefined;
+  if (control.kind === 'clear-transcript') return { kind: 'clear' };
+  if (control.kind === 'open-document') {
+    const entry = entryAt(control.path, context.entries);
+    return entry === undefined ? undefined : { kind: 'document-navigation', entry };
+  }
+  const experiment = context.experiments.find(({ id }) => id === control.id);
+  return experiment === undefined ? undefined : { kind: 'navigation', experiment };
+}
+
+function adaptShellResult(result: ShellProcessResult, context: TerminalCommandContext, pure: boolean): CommandHandlerResult {
+  const nextState = stateFromShellPatch(context.state, result.statePatch);
+  if (result.status !== 0) {
+    const errorLines = result.stderr.lines.length > 0 ? result.stderr.lines : ['Command failed.'];
+    const effect = lines('error', ...errorLines);
+    return nextState === context.state ? effect : { state: nextState, effect };
+  }
+  const structured = result.controls !== undefined && !context.piped && !pure
+    ? adaptShellControls(result.controls, context)
+    : result.value?.kind === 'grep-report'
+    ? adaptShellValue(result.value, context)
+    : !context.piped && !pure && result.value !== undefined
+      ? adaptShellValue(result.value, context)
+      : undefined;
+  const effect = structured ?? lines('normal', ...boundedLines(result.stdout.lines));
+  return nextState === context.state ? effect : { state: nextState, effect };
+}
+
+function executeNeutralCommand(
+  command: (context: ShellProcessContext, args: ParsedCommandArguments) => ShellProcessResult,
+  args: ParsedCommandArguments,
+  context: TerminalCommandContext
+): CommandHandlerResult {
+  return adaptShellResult(command(shellProcessContext(context), args), context, false);
 }
 
 function executeRegisteredStage(
@@ -1386,16 +1072,20 @@ function executeRegisteredStage(
   state: TerminalState,
   entries: readonly TerminalEntry[],
   experiments: readonly TerminalExperiment[],
+  documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
   now: () => Date,
   registry: TerminalCommandRegistry,
   piped: boolean,
   pure: boolean
 ): RshellOutput {
+  const fs = createTerminalVirtualFs(state, entries, experiments, documents);
   const context: TerminalCommandContext = Object.freeze({
     state,
     entries,
+    documents,
     experiments,
+    fs,
     identity,
     now,
     registry,
@@ -1403,31 +1093,38 @@ function executeRegisteredStage(
     stdinProvided,
     piped
   });
-  let effect: TerminalEffect;
+  let result: CommandHandlerResult;
   try {
-    effect = definition.execute(Object.freeze([...operands]), context);
+    result = definition.execute(Object.freeze([...operands]), context);
   } catch {
+    if (definition.recoverable === false) throw new Error(`Command "${definition.name}" failed.`);
     return rshellError(state, `Command "${definition.name}" failed.`);
   }
+  const nextState = 'effect' in result ? result.state : state;
+  const effect = 'effect' in result ? result.effect : result;
   if ((piped || pure) && !isTextEffect(effect)) {
     return rshellError(state, `"${definition.name}" does not produce text for this rshell operation.`);
   }
   const output = boundedLines(stdoutForEffect(effect));
   if (effect.kind === 'lines') {
-    return { state, effect: lines(effect.tone, ...output), stdout: output, error: effect.tone === 'error' };
+    return { state: nextState, effect: lines(effect.tone, ...output), stdout: output, error: effect.tone === 'error' };
   }
-  if (piped || pure) return { state, effect: lines('normal', ...output), stdout: output, error: false };
-  return { state, effect, stdout: output, error: false };
+  if (effect.kind === 'grep') {
+    return { state: nextState, effect, stdout: output, error: false };
+  }
+  if (piped || pure) return { state: nextState, effect: lines('normal', ...output), stdout: output, error: false };
+  return { state: nextState, effect, stdout: output, error: false };
 }
 
 function executeRshellStage(
   words: readonly string[],
+  stageRedirect: RshellStage['redirect'],
   stdin: readonly string[],
   stdinProvided: boolean,
   state: TerminalState,
   entries: readonly TerminalEntry[],
   experiments: readonly TerminalExperiment[],
-  corpus: ReadonlyMap<string, readonly string[]>,
+  documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
   now: () => Date,
   registry: TerminalCommandRegistry,
@@ -1436,93 +1133,92 @@ function executeRshellStage(
 ): RshellOutput {
   const [command, ...operands] = words;
   if (command === undefined) return rshellError(state, 'A pipeline stage cannot be empty.');
-  const definition = registry.resolve(command);
+  const resolvedCommand = resolveSessionCommand(command, shellSessionFromState(state));
+  const definition = resolvedCommand === undefined ? undefined : registry.resolve(resolvedCommand);
   if (definition === undefined) return rshellError(state, `Unknown command: ${command}. Type "help" for commands.`);
-  const canonicalCommand = definition.name;
-  const builtIn = defaultRshellHandlers.get(canonicalCommand) === definition.execute;
-  if (pure && ((builtIn && standaloneRshellCommands.has(canonicalCommand)) || (!builtIn && definition.pureText !== true))) {
+  if (pure && definition.pureText !== true) {
     return rshellError(state, `"${command}" is not allowed in command substitution.`);
   }
-  if (piped && builtIn && standaloneRshellCommands.has(canonicalCommand)) {
+  if (piped && definition.standalone === true) {
     return rshellError(state, `"${command}" is a standalone command and cannot be piped.`);
   }
-  const text = (tone: TerminalTone, values: readonly string[]): RshellOutput => {
-    const output = boundedLines(values);
-    return { state, effect: lines(tone, ...output), stdout: output, error: tone === 'error' };
-  };
-  const single = (): boolean => operands.length === 0;
-  if (builtIn && canonicalCommand === 'help') {
-    if (!single()) return rshellError(state, 'Usage: help');
-    return text('normal', registry.definitions.map((definition) => `${definition.usage}${definition.aliases.length > 0 ? ` (${definition.aliases.join(', ')})` : ''} — ${definition.summary}`));
+  if (stageRedirect !== undefined && definition.redirect === 'forbidden') {
+    return rshellError(state, `"${command}" does not support redirect.`);
   }
-  if (builtIn && canonicalCommand === 'about') return single() ? text('normal', [identity.about]) : rshellError(state, 'Usage: about');
-  if (builtIn && canonicalCommand === 'pwd') return single() ? text('normal', [state.cwd]) : rshellError(state, 'Usage: pwd');
-  if (builtIn && canonicalCommand === 'whoami') return single() ? text('normal', [identity.user]) : rshellError(state, 'Usage: whoami');
-  if (builtIn && canonicalCommand === 'id') return single() ? text('normal', [`uid=${identity.user} gid=${identity.user} groups=public-read`, 'capabilities: read public posts/pages/lab; deny private, draft, host, network, and persistence']) : rshellError(state, 'Usage: id');
-  if (builtIn && canonicalCommand === 'date') return single() ? text('normal', [formatUtcDate(now())]) : rshellError(state, 'Usage: date');
-  if (builtIn && canonicalCommand === 'history') return single() ? text('muted', state.history.map((item, itemIndex) => `${itemIndex + 1}  ${item}`)) : rshellError(state, 'Usage: history');
-  if (builtIn && canonicalCommand === 'alias') {
-    if (operands.length > 1) return rshellError(state, 'Usage: alias [name]');
-    const aliases = registry.definitions.flatMap((definition) => definition.aliases.map((alias) => `${alias}=${definition.name}`));
-    if (operands[0] === undefined) return text('normal', aliases);
-    const value = aliases.find((alias) => alias.startsWith(`${operands[0]}=`));
-    return value === undefined ? rshellError(state, `No built-in alias named "${operands[0]}".`) : text('normal', [value]);
-  }
-  if (builtIn && canonicalCommand === 'clear') return single() ? { state, effect: { kind: 'clear' }, stdout: Object.freeze([]), error: false } : rshellError(state, 'Usage: clear');
-  if (builtIn && canonicalCommand === 'cd') {
-    if (operands.length > 1) return rshellError(state, 'Usage: cd [path]');
-    const path = normaliseVirtualPath(operands[0] ?? '~', state.cwd, true);
-    if (path === undefined || !knownDirectories(entries, state.scratch).has(path) || path.startsWith('/.rshell')) return rshellError(state, 'cd accepts only listed public directories.');
-    const next = Object.freeze({ ...state, cwd: displayVirtualPath(path) });
-    return { state: next, effect: lines('normal'), stdout: Object.freeze([]), error: false };
-  }
-  if (builtIn && canonicalCommand === 'ls') {
-    if (operands.length > 1) return rshellError(state, 'Usage: ls [path]');
-    const path = operands[0] !== undefined && ['posts', 'pages', 'lab'].includes(operands[0])
-      ? `/${operands[0]}`
-      : normaliseVirtualPath(operands[0] ?? '.', state.cwd, true);
-    if (path === undefined) return rshellError(state, 'ls accepts only rshell virtual paths.');
-    const listing = listDirectory(path, entries, experiments, state.scratch);
-    if (listing === undefined) return rshellError(state, `No rshell directory named "${operands[0] ?? state.cwd}".`);
-    const postEntries = path === '/posts' ? entries.filter((entry) => entry.kind === 'post') : undefined;
-    const pageEntries = path === '/pages' ? entries.filter((entry) => entry.kind === 'page') : undefined;
-    if (!piped && postEntries !== undefined) return { state, effect: { kind: 'entries', entries: Object.freeze(postEntries), label: 'posts' }, stdout: stdoutForEffect({ kind: 'entries', entries: postEntries, label: 'posts' }), error: false };
-    if (!piped && pageEntries !== undefined) return { state, effect: { kind: 'entries', entries: Object.freeze(pageEntries), label: 'pages' }, stdout: stdoutForEffect({ kind: 'entries', entries: pageEntries, label: 'pages' }), error: false };
-    if (!piped && path === '/lab') return { state, effect: { kind: 'experiments', experiments: Object.freeze([...experiments]) }, stdout: stdoutForEffect({ kind: 'experiments', experiments }), error: false };
-    return text('normal', listing);
-  }
-  if (builtIn && canonicalCommand === 'tree') {
-    if (operands.length > 1) return rshellError(state, 'Usage: tree [path]');
-    const path = normaliseVirtualPath(operands[0] ?? '.', state.cwd, true);
-    if (path === undefined) return rshellError(state, 'Usage: tree [public virtual path]');
-    const tree = renderRshellTree(path, entries, experiments);
-    if (tree === undefined) return rshellError(state, 'Usage: tree [public virtual path]');
-    const effect: TerminalEffect = { kind: 'tree', root: tree.root, lines: tree.lines };
-    return { state, effect: piped ? lines('normal', ...stdoutForEffect(effect)) : effect, stdout: stdoutForEffect(effect), error: false };
-  }
-  if (builtIn && (canonicalCommand === 'cat' || canonicalCommand === 'vim')) {
-    if (canonicalCommand === 'cat' && operands.length === 0 && stdinProvided) return text('normal', stdin);
-    if (operands.length !== 1) return rshellError(state, `Usage: ${command} <path>`);
-    const noResource = (): RshellOutput => rshellError(
-      state,
-      `No readable rshell resource named "${operands[0]}". Relative paths resolve under posts; pages require /pages/<path>.md.`
-    );
-    const path = normaliseVirtualPath(operands[0]!, state.cwd, false);
-    if (path === undefined) return noResource();
-    const entry = entryAt(path, entries);
-    if (canonicalCommand === 'vim') return entry === undefined ? noResource() : { state, effect: { kind: 'document-navigation', entry }, stdout: Object.freeze([]), error: false };
-    const resource = readTextResource(path, entries, corpus, state.scratch);
-    if (resource === undefined) return noResource();
-    if (!piped && !stdinProvided && entry !== undefined) return { state, effect: { kind: 'document', entry }, stdout: resource, error: false };
-    return text('normal', resource);
-  }
-  if (builtIn && canonicalCommand === 'open') {
-    if (operands.length !== 1 || !operands[0]?.startsWith('lab/')) return rshellError(state, 'Usage: open lab/<id>');
-    const experiment = experiments.find((item) => `lab/${item.id}` === operands[0]);
-    return experiment === undefined ? rshellError(state, `No listed experiment named "${operands[0]}".`) : { state, effect: { kind: 'navigation', experiment }, stdout: Object.freeze([]), error: false };
-  }
-  if (builtIn && canonicalCommand === 'grep') return executeGrep(operands, stdin, stdinProvided, state.cwd, entries, corpus, state.scratch, state);
-  return executeRegisteredStage(definition, operands, stdin, stdinProvided, state, entries, experiments, identity, now, registry, piped, pure);
+  return executeRegisteredStage(
+    definition,
+    operands,
+    stdin,
+    stdinProvided,
+    state,
+    entries,
+    experiments,
+    documents,
+    identity,
+    now,
+    registry,
+    piped,
+    pure
+  );
+}
+
+function canUseNeutralStages(stages: readonly RshellStage[], registry: TerminalCommandRegistry, session: ReadonlyShellSession): boolean {
+  if (registry !== DEFAULT_TERMINAL_COMMAND_REGISTRY || stages.length === 0) return false;
+  return stages.every((stage) => {
+    if (stage.redirect !== undefined) return false;
+    const command = stage.words[0];
+    if (command === undefined || command.segments.some((segment) => segment.expandSubstitution)) return false;
+    const name = command.segments.map(({ value }) => value).join('');
+    const resolved = resolveSessionCommand(name, session);
+    return resolved !== undefined && NEUTRAL_COMMAND_REGISTRY.resolve(resolved) !== undefined;
+  });
+}
+
+function executeNeutralStages(
+  stages: readonly RshellStage[],
+  initialState: TerminalState,
+  entries: readonly TerminalEntry[],
+  experiments: readonly TerminalExperiment[],
+  documents: readonly TerminalTextDocument[],
+  identity: TerminalIdentity,
+  now: () => Date,
+  registry: TerminalCommandRegistry,
+  piped: boolean,
+  pure: boolean,
+  depth: number
+): RshellOutput {
+  const fs = createTerminalVirtualFs(initialState, entries, experiments, documents);
+  const process = runRshell({
+    stages,
+    cwd: virtualPathFromVfsDisplay(initialState.cwd),
+    fs,
+    session: shellSessionFromState(initialState),
+    clock: now,
+    signal: Object.freeze({ aborted: false }),
+    registry: NEUTRAL_COMMAND_REGISTRY,
+    identity: Object.freeze({ ...identity }),
+    pure,
+    depth
+  });
+  const context: TerminalCommandContext = Object.freeze({
+    state: initialState,
+    entries,
+    documents,
+    experiments,
+    fs,
+    identity,
+    now,
+    registry,
+    stdin: Object.freeze([]),
+    stdinProvided: false,
+    piped
+  });
+  const adapted = adaptShellResult(process, context, pure);
+  const state = 'effect' in adapted ? adapted.state : initialState;
+  const effect = 'effect' in adapted ? adapted.effect : adapted;
+  if (process.status !== 0) return { state, effect, stdout: Object.freeze([]), error: true };
+  if ((piped || pure) && !isTextEffect(effect)) return rshellError(state, 'The command does not produce text for this rshell operation.');
+  return { state, effect, stdout: boundedLines(process.stdout.lines), error: false };
 }
 
 function executeRshellStages(
@@ -1530,21 +1226,40 @@ function executeRshellStages(
   initialState: TerminalState,
   entries: readonly TerminalEntry[],
   experiments: readonly TerminalExperiment[],
-  corpus: ReadonlyMap<string, readonly string[]>,
+  documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
   now: () => Date,
   registry: TerminalCommandRegistry,
   pure: boolean,
   depth: number
 ): RshellOutput {
+  if (canUseNeutralStages(stages, registry, shellSessionFromState(initialState))) {
+    return executeNeutralStages(stages, initialState, entries, experiments, documents, identity, now, registry, stages.length > 1, pure, depth);
+  }
   let state = initialState;
   let stdin: readonly string[] = Object.freeze([]);
   let output: RshellOutput | undefined;
   for (let index = 0; index < stages.length; index += 1) {
     const stage = stages[index]!;
-    const expanded = expandStageWords(stage.words, state, entries, experiments, corpus, identity, now, registry, depth);
+    const expanded = expandStageWords(stage.words, depth, {
+      executeSubstitution: (nestedStages, nestedDepth) => {
+        const nested = executeRshellStages(
+          nestedStages,
+          state,
+          entries,
+          experiments,
+          documents,
+          identity,
+          now,
+          registry,
+          true,
+          nestedDepth
+        );
+        return { stdout: nested.stdout, error: nested.error };
+      }
+    });
     if (!expanded.ok) return rshellError(state, expanded.message);
-    output = executeRshellStage(expanded.words, stdin, index > 0, state, entries, experiments, corpus, identity, now, registry, stages.length > 1, pure);
+    output = executeRshellStage(expanded.words, stage.redirect, stdin, index > 0, state, entries, experiments, documents, identity, now, registry, stages.length > 1, pure);
     if (output.error) return output;
     state = output.state;
     stdin = output.stdout;
@@ -1581,12 +1296,13 @@ export function executeCommand(options: {
   const parsed = parseRshell(input);
   if (!parsed.ok) return { state, effect: lines('error', parsed.message), announcement: parsed.message };
   const registry = options.registry ?? DEFAULT_TERMINAL_COMMAND_REGISTRY;
+  const documents = options.documents ?? Object.freeze([]);
   const effect = executeRshellStages(
     parsed.stages,
     state,
     options.entries,
     options.experiments ?? Object.freeze([]),
-    publicTextByPath(options.documents, options.entries),
+    documents,
     options.identity ?? DEFAULT_TERMINAL_IDENTITY,
     options.now ?? (() => new Date()),
     registry,
@@ -1612,15 +1328,24 @@ export function cancelCommandInput(state: TerminalState): TerminalState {
   return Object.freeze({ ...state, historyCursor: null, draftInput: '' });
 }
 
-export function completeCommand(input: string, entries: readonly TerminalEntry[], experiments: readonly TerminalExperiment[] = Object.freeze([]), registry: TerminalCommandRegistry = DEFAULT_TERMINAL_COMMAND_REGISTRY): CompletionResult {
+export function completeCommand(
+  input: string,
+  entries: readonly TerminalEntry[],
+  experiments: readonly TerminalExperiment[] = Object.freeze([]),
+  registry: TerminalCommandRegistry = DEFAULT_TERMINAL_COMMAND_REGISTRY,
+  cwd = DEFAULT_TERMINAL_IDENTITY.workingDirectory,
+  aliases: readonly TerminalAlias[] = Object.freeze([])
+): CompletionResult {
   if (!input.includes(' ')) {
-    const tokens = registry.definitions.flatMap(({ name, aliases }) => [name, ...aliases]);
+    const tokens = registry.definitions.flatMap(({ name, aliases: builtInAliases }) => [name, ...builtInAliases]);
+    tokens.push(...aliases.map(({ name }) => name));
     return completeFrom(input, tokens, (candidate) => `${candidate} `);
   }
   const match = /^(\S+)\s+([^\s]*)$/u.exec(input);
   if (match === null) return { kind: 'none', candidates: Object.freeze([]) };
   const invokedName = match[1]!;
-  const definition = registry.resolve(invokedName);
+  const resolvedName = resolveSessionCommand(invokedName, { aliases });
+  const definition = resolvedName === undefined ? undefined : registry.resolve(resolvedName);
   if (definition?.complete === undefined) return { kind: 'none', candidates: Object.freeze([]) };
-  return definition.complete(match[2] ?? '', { entries, experiments }, invokedName);
+  return definition.complete(match[2] ?? '', { entries, experiments, cwd }, invokedName);
 }

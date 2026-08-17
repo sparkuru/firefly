@@ -180,8 +180,7 @@ test('runtime subpath stays side-effect-free and independent from adapter depend
   const declarations = await readFile(new URL('../src/runtime.d.ts', import.meta.url), 'utf8');
   const graph = `${runtime}\n${declarations}`;
 
-  assert.doesNotMatch(graph, /@f1refly\/x-core|\b(?:hast|astro)\b|\.\/index\.js/u);
-  assert.doesNotMatch(runtime, /^\s*import\s/mu);
+  assert.doesNotMatch(graph, /@f1refly\/x-core|\b(?:hast|astro)\b|\.\/index\.js|apps\/site/u);
 });
 
 test('tokenizer accepts balanced quotes and rejects unbalanced input without shell interpretation', () => {
@@ -192,19 +191,45 @@ test('tokenizer accepts balanced quotes and rejects unbalanced input without she
 });
 
 test('every command has deterministic output and strict usage errors', () => {
-  const help = JSON.stringify(run('help').effect);
-  assert.match(help, /cat \[path\] — render a public document or stream a readable rshell resource/u);
-  assert.match(help, /vim <path> — open a listed public document reader/u);
-  assert.match(help, /tree \[path\] — show a public content subtree/u);
-  assert.match(help, /clear — clear the screen/u);
+  const helpEffect = run('help').effect;
+  assert.equal(helpEffect?.kind, 'help');
+  const help = JSON.stringify(helpEffect);
+  assert.deepEqual(
+    helpEffect?.kind === 'help' ? helpEffect.groups.map(({ name }) => name) : [],
+    ['Explore', 'Read & navigate', 'Identity & time', 'Session']
+  );
+  assert.match(help, /cat \[path\]/u);
+  assert.match(help, /render a document or stream text/u);
+  assert.match(help, /vim <path>/u);
+  assert.match(help, /tree \[path\]/u);
+  assert.match(help, /clear/u);
+  assert.match(help, /clear the screen/u);
+  assert.match(help, /cls/u);
   assert.doesNotMatch(help, /dynamic transcript/u);
-  assert.match(help, /ls \[path\]/u);
+  assert.match(help, /ls \[path\|pattern\]/u);
   assert.match(help, /open lab\/<id>/u);
   assert.equal(run('ls').effect?.kind, 'entries');
   const posts = run('ls posts').effect;
   const pages = run('ls pages').effect;
-  assert.deepEqual(posts?.kind === 'entries' ? posts.entries : [], [entries[0]]);
+  assert.deepEqual(posts?.kind === 'entries' ? posts.entries : [], []);
   assert.deepEqual(pages?.kind === 'entries' ? pages.entries : [], [entries[1]]);
+  assert.deepEqual(run('ls /').effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['lab/', 'pages/', 'posts/']
+  });
+  const charactersState = run('cd characters').state;
+  assert.equal(charactersState.cwd, '~/blog/posts/characters');
+  assert.deepEqual(run('ls', charactersState).effect, {
+    kind: 'entries',
+    directories: [],
+    entries: [entries[0]],
+    label: 'posts',
+    directory: '/posts/characters'
+  });
+  const workspaceState = run('cd ../', run('cd /posts').state).state;
+  assert.equal(workspaceState.cwd, '~/blog');
+  assert.deepEqual(run('ls', workspaceState).effect, run('ls /').effect);
   assert.equal(formatDocumentOperand(entries[0]!), 'characters/alpha.md');
   assert.equal(formatDocumentOperand(entries[1]!), '/pages/about.md');
   const document = run('cat characters/alpha.md');
@@ -217,6 +242,7 @@ test('every command has deterministic output and strict usage errors', () => {
     relativeDocument.effect?.kind === 'document' ? relativeDocument.effect.entry : null,
     entries[0]
   );
+  assert.equal(run('cat alpha.md', charactersState).effect?.kind, 'document');
   assert.match(JSON.stringify(run('cat missing.md').effect), /No readable rshell resource/u);
   assert.match(JSON.stringify(run('vim missing.md').effect), /Relative paths resolve under posts/u);
   assert.match(JSON.stringify(run('cat ./pages/about.md').effect), /No readable rshell resource/u);
@@ -253,6 +279,45 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(JSON.stringify(run('date').effect), /2026-08-12 04:05:06 UTC/u);
   assert.match(JSON.stringify(run('history').effect), /1  history/u);
   assert.equal(run('clear').effect?.kind, 'clear');
+  assert.equal(run('cls').effect?.kind, 'clear');
+  assert.equal(run('l').effect?.kind, 'entries');
+  assert.equal(run('ll').effect?.kind, 'entries');
+  assert.match(JSON.stringify(run('alias').effect), /l=ls/u);
+  assert.match(JSON.stringify(run('alias').effect), /ll=ls/u);
+  assert.match(JSON.stringify(run('alias').effect), /cls=clear/u);
+  assert.deepEqual(run('alias l').effect, { kind: 'lines', tone: 'normal', lines: ['l=ls'] });
+  const aliasState = run('alias la=ls').state;
+  assert.deepEqual(aliasState.aliases, [{ name: 'la', target: 'ls' }]);
+  assert.deepEqual(run('alias la', aliasState).effect, { kind: 'lines', tone: 'normal', lines: ['la=ls'] });
+  assert.match(JSON.stringify(run('help', aliasState).effect), /la/u);
+  assert.equal(run('la', aliasState).effect?.kind, 'entries');
+  assert.match(JSON.stringify(run('la').effect), /Unknown command: la/u);
+  assert.equal(run('alias la=cat').state.aliases[0]?.target, 'cat');
+  assert.deepEqual(run('ls cha').effect, {
+    kind: 'lines',
+    tone: 'error',
+    lines: ['No rshell directory named "cha". Did you mean "characters/"? Press Tab to complete.']
+  });
+  for (const pattern of ['cha*', '*cha*']) {
+    assert.deepEqual(run(`ls ${pattern}`).effect, {
+      kind: 'entries',
+      directories: [],
+      entries: [entries[0]],
+      label: 'posts',
+      directory: '/posts/characters'
+    }, pattern);
+  }
+  for (const option of ['-h', '--help']) {
+    assert.deepEqual(run(`ls ${option}`).effect, {
+      kind: 'lines',
+      tone: 'normal',
+      lines: [
+        'Usage: ls [path|pattern]',
+        'list a public or session virtual directory',
+        'Options: -h, --help; * matches known public names.'
+      ]
+    }, option);
+  }
   for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'vim', 'tree /private', 'open', 'open other', 'open lab/nerv extra', 'about extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
     assert.match(JSON.stringify(run(command).effect), /Usage:/u, command);
   }
@@ -261,6 +326,49 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.equal(lab.effect?.kind, 'experiments');
   assert.deepEqual(lab.effect?.kind === 'experiments' ? lab.effect.experiments : [], experiments);
   assert.equal(lab.announcement, '2 experiments listed.');
+  assert.deepEqual(run('ls lab/').effect, lab.effect);
+  assert.deepEqual(run('ls /lab/').effect, lab.effect);
+  assert.deepEqual(run('ls characters/').effect, run('ls characters').effect);
+  assert.deepEqual(run('ls /pages/about.md').effect, {
+    kind: 'entries',
+    directories: [],
+    entries: [entries[1]],
+    label: 'pages',
+    directory: '/pages'
+  });
+  assert.deepEqual(run('ls /posts/characters/alpha.md').effect, {
+    kind: 'entries',
+    directories: [],
+    entries: [entries[0]],
+    label: 'posts',
+    directory: '/posts/characters'
+  });
+  for (const operand of ['h', 'llm']) {
+    assert.deepEqual(run(`ls ${operand}`).effect, {
+      kind: 'lines',
+      tone: 'error',
+      lines: [`No rshell directory named "${operand}". Try "ls --help".`]
+    }, operand);
+  }
+  assert.deepEqual(run('ls h?').effect, {
+    kind: 'lines',
+    tone: 'error',
+    lines: ['ls accepts only safe rshell virtual paths or * directory patterns.']
+  });
+  for (const pattern of ['h*', 'l*']) {
+    assert.deepEqual(run(`ls ${pattern}`).effect, {
+      kind: 'lines',
+      tone: 'error',
+      lines: [`No rshell path matches "${pattern}". Try "ls --help".`]
+    }, pattern);
+  }
+  for (const operand of ['/lab/nerv', '/lab/nerv/']) {
+    assert.deepEqual(run(`ls ${operand}`).effect, {
+      kind: 'lines',
+      tone: 'normal',
+      lines: ['nerv/ — NERV', 'Use "open lab/nerv" to enter this experiment.']
+    }, operand);
+  }
   const navigation = run('open lab/nerv');
   assert.equal(navigation.effect?.kind, 'navigation');
   assert.deepEqual(navigation.effect?.kind === 'navigation' ? navigation.effect.experiment : null, experiments[0]);
@@ -294,6 +402,7 @@ test('history keeps 50 submissions and Arrow navigation preserves the draft', ()
 
 test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, and regex resources isolated', () => {
   let state = createTerminalState();
+  assert.deepEqual(runShell('grep -i nahida', state).effect, runShell('grep nahida -i', state).effect);
   assert.match(JSON.stringify(runShell('?').effect), /grep \[-inF\]/u);
   let result = runShell('cd /pages', state);
   state = result.state;
@@ -302,7 +411,18 @@ test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, an
   assert.equal(runShell('cat about.md', state).effect?.kind, 'document');
 
   result = runShell("cat /posts/characters/alpha.md | grep -in 'nahida|furina'", state);
-  assert.deepEqual(result.effect, { kind: 'lines', tone: 'normal', lines: ['2:nahida keeps the archive'] });
+  assert.deepEqual(result.effect, {
+    kind: 'grep',
+    pattern: 'nahida|furina',
+    matches: [{ path: '-', lineNumber: 2, line: 'nahida keeps the archive', ranges: [[0, 6]] }],
+    noResults: false,
+    truncated: false
+  });
+  assert.deepEqual(runShell("cat /posts/characters/alpha.md | grep -in 'nahida|furina' | cat", state).effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['2:nahida keeps the archive']
+  });
 
   result = runShell('whoami > /.rshell/tmp/identity.txt', state);
   state = result.state;
@@ -311,8 +431,20 @@ test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, an
   state = result.state;
   assert.match(JSON.stringify(result.effect), /Wrote 2 lines/u);
   assert.deepEqual(runShell('cat /.rshell/tmp/identity.txt', state).effect, { kind: 'lines', tone: 'normal', lines: ['guest', '2026-08-12 04:05:06 UTC'] });
-  assert.deepEqual(runShell('grep -F guest /.rshell/tmp/identity.txt', state).effect, { kind: 'lines', tone: 'normal', lines: ['/.rshell/tmp/identity.txt:guest'] });
-  assert.deepEqual(runShell('grep $(whoami) /.rshell/tmp/identity.txt', state).effect, { kind: 'lines', tone: 'normal', lines: ['/.rshell/tmp/identity.txt:guest'] });
+  assert.deepEqual(runShell('grep -F guest /.rshell/tmp/identity.txt', state).effect, {
+    kind: 'grep',
+    pattern: 'guest',
+    matches: [{ path: '/.rshell/tmp/identity.txt', line: 'guest', ranges: [[0, 5]] }],
+    noResults: false,
+    truncated: false
+  });
+  assert.deepEqual(runShell('grep $(whoami) /.rshell/tmp/identity.txt', state).effect, {
+    kind: 'grep',
+    pattern: 'guest',
+    matches: [{ path: '/.rshell/tmp/identity.txt', line: 'guest', ranges: [[0, 5]] }],
+    noResults: false,
+    truncated: false
+  });
   assert.match(JSON.stringify(runShell("cat '$(whoami)'", state).effect), /\$\(whoami\)/u);
 
   assert.deepEqual(runShell('echo $(whoami)', state).effect, { kind: 'lines', tone: 'error', lines: ['Unknown command: echo. Type "help" for commands.'] });
@@ -331,14 +463,56 @@ test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, an
   assert.match(JSON.stringify(executeCommand({ state: createTerminalState(), input: 'cat characters/alpha.md | cat', entries, documents: oversized }).effect), /output truncated/u);
 });
 
+test('grep preserves source lines, reports canonical locations, and exposes safe ranges', () => {
+  const source: readonly TerminalTextDocument[] = Object.freeze([
+    Object.freeze({
+      virtualPath: 'posts/characters/alpha.md',
+      lines: Object.freeze(['tree:', '├── characters/', '  # keep this line'])
+    })
+  ]);
+  const result = executeCommand({
+    state: createTerminalState(),
+    input: 'grep -nF "# " /posts/characters/alpha.md',
+    entries,
+    documents: source
+  });
+  assert.deepEqual(result.effect, {
+    kind: 'grep',
+    pattern: '# ',
+    matches: [{ path: '/posts/characters/alpha.md', lineNumber: 3, line: '  # keep this line', ranges: [[2, 4]] }],
+    noResults: false,
+    truncated: false
+  });
+  const empty = executeCommand({
+    state: createTerminalState(),
+    input: 'grep -F absent /posts/characters/alpha.md',
+    entries,
+    documents: source
+  });
+  assert.deepEqual(empty.effect, { kind: 'grep', pattern: 'absent', matches: [], noResults: true, truncated: false });
+  assert.equal(empty.announcement, 'No matches for "absent".');
+});
+
 test('completion consumes only unique contextual document and lab matches', () => {
   assert.deepEqual(completeCommand('hel', entries, experiments), { kind: 'unique', value: 'help ', candidates: ['help'] });
-  assert.equal(completeCommand('l', entries, experiments).kind, 'unique');
+  assert.deepEqual(completeCommand('l', entries, experiments), { kind: 'unique', value: 'l ', candidates: ['l'] });
   assert.equal(completeCommand('', entries, experiments).kind, 'ambiguous');
   const listCompletion = completeCommand('ls p', entries, experiments);
-  assert.equal(listCompletion.kind, 'ambiguous');
+  assert.deepEqual(listCompletion, { kind: 'ambiguous', candidates: ['pages/', 'posts/'], ownsTab: false });
   assert.equal(listCompletion.kind === 'ambiguous' && listCompletion.ownsTab, false);
-  assert.deepEqual(completeCommand('ls l', entries, experiments), { kind: 'unique', value: 'ls lab', candidates: ['lab'] });
+  assert.deepEqual(completeCommand('ls pa', entries, experiments), { kind: 'unique', value: 'ls pages/', candidates: ['pages/'] });
+  const emptyListCompletion = completeCommand('ls ', entries, experiments);
+  assert.equal(emptyListCompletion.kind, 'ambiguous');
+  assert.equal(emptyListCompletion.kind === 'ambiguous' && emptyListCompletion.ownsTab, true);
+  assert.deepEqual(completeCommand('ls l', entries, experiments), { kind: 'unique', value: 'ls lab/', candidates: ['lab/'] });
+  assert.deepEqual(completeCommand('ls cha', entries, experiments), { kind: 'unique', value: 'ls characters/', candidates: ['characters/'] });
+  assert.deepEqual(completeCommand('ls --he', entries, experiments), { kind: 'unique', value: 'ls --help', candidates: ['--help'] });
+  assert.deepEqual(completeCommand('cd cha', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts'), { kind: 'unique', value: 'cd characters/', candidates: ['characters/'] });
+  assert.deepEqual(completeCommand('cd la', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cd lab/', candidates: ['lab/'] });
+  assert.deepEqual(completeCommand('cd la', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts'), { kind: 'no-match', candidates: [], ownsTab: true });
+  const rootCdCompletion = completeCommand('cd ', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog');
+  assert.deepEqual(rootCdCompletion, { kind: 'ambiguous', candidates: ['lab/', 'pages/', 'posts/'], ownsTab: true });
+  assert.deepEqual(completeCommand('cat a', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/characters'), { kind: 'unique', value: 'cat alpha.md', candidates: ['alpha.md'] });
   assert.deepEqual(completeCommand('cat cha', entries, experiments), { kind: 'unique', value: 'cat characters/', candidates: ['characters/'] });
   assert.deepEqual(completeCommand('cat characters/alp', entries, experiments), { kind: 'unique', value: 'cat characters/alpha.md', candidates: ['characters/alpha.md'] });
   assert.deepEqual(completeCommand('cat ./characters/alp', entries, experiments), { kind: 'unique', value: 'cat ./characters/alpha.md', candidates: ['characters/alpha.md'] });
@@ -347,6 +521,60 @@ test('completion consumes only unique contextual document and lab matches', () =
     ...rawEntries,
     { kind: 'post', virtualPath: 'posts/beta.md', relativePath: 'beta.md', filename: 'beta.md', title: 'Beta', href: '/posts/beta/', date: '2026-06-01' }
   ]);
+  const helloEntries = decodeTerminalEntries([
+    ...rawEntries,
+    { kind: 'post', virtualPath: 'posts/hello-static-foundation.md', relativePath: 'hello-static-foundation.md', filename: 'hello-static-foundation.md', title: 'Hello, static foundation', href: '/posts/hello-static-foundation/', date: '2026-08-12' }
+  ]);
+  const wildcardEntries = decodeTerminalEntries([
+    ...helloEntries,
+    { kind: 'post', virtualPath: 'posts/hidden-draft.md', relativePath: 'hidden-draft.md', filename: 'hidden-draft.md', title: 'Hidden draft', href: '/posts/hidden-draft/', date: '2026-08-11' }
+  ]);
+  assert.deepEqual(completeCommand('ls he', helloEntries, experiments), {
+    kind: 'unique',
+    value: 'ls hello-static-foundation.md',
+    candidates: ['hello-static-foundation.md']
+  });
+  assert.deepEqual(completeCommand('ls /pages/ab', entries, experiments), {
+    kind: 'unique',
+    value: 'ls /pages/about.md',
+    candidates: ['pages/about.md']
+  });
+  assert.deepEqual(executeCommand({
+    state: createTerminalState(),
+    input: 'ls hello-static-foundation.md',
+    entries: helloEntries,
+    experiments
+  }).effect, {
+    kind: 'entries',
+    directories: [],
+    entries: [helloEntries[2]],
+    label: 'posts',
+    directory: '/posts'
+  });
+  assert.deepEqual(executeCommand({
+    state: createTerminalState(),
+    input: 'ls he*',
+    entries: helloEntries,
+    experiments
+  }).effect, {
+    kind: 'entries',
+    directories: [],
+    entries: [helloEntries[2]],
+    label: 'posts',
+    directory: '/posts'
+  });
+  assert.deepEqual(executeCommand({
+    state: createTerminalState(),
+    input: 'ls *.md',
+    entries: wildcardEntries,
+    experiments
+  }).effect, {
+    kind: 'entries',
+    directories: [],
+    entries: [wildcardEntries[2], wildcardEntries[3]],
+    label: 'posts',
+    directory: '/posts'
+  });
   assert.deepEqual(completeCommand('cat ./', pathEntries, experiments), {
     kind: 'ambiguous',
     candidates: ['./beta.md', './characters/'],
@@ -384,14 +612,24 @@ test('immutable command registry keeps a unit-only alias consistent', () => {
   }]);
   const result = executeCommand({ state: createTerminalState(), input: 'hi', entries, registry });
   assert.deepEqual(result.effect, { kind: 'lines', tone: 'normal', lines: ['hello'] });
-  assert.deepEqual(
-    executeCommand({ state: createTerminalState(), input: 'hi | grep hello', entries, registry }).effect,
-    { kind: 'lines', tone: 'normal', lines: ['hello'] }
-  );
+  assert.deepEqual(executeCommand({ state: createTerminalState(), input: 'hi | grep hello', entries, registry }).effect, {
+    kind: 'grep',
+    pattern: 'hello',
+    matches: [{ path: '-', line: 'hello', ranges: [[0, 5]] }],
+    noResults: false,
+    truncated: false
+  });
+  assert.deepEqual(executeCommand({ state: createTerminalState(), input: 'hi | grep hello | cat', entries, registry }).effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['hello']
+  });
   assert.deepEqual(result.state.history, ['hi']);
   assert.deepEqual(completeCommand('gree', entries, [], registry), { kind: 'unique', value: 'greet ', candidates: ['greet'] });
-  assert.deepEqual(completeCommand('hi', entries, [], registry), { kind: 'ambiguous', candidates: ['hi', 'history'], ownsTab: false });
-  assert.match(JSON.stringify(executeCommand({ state: createTerminalState(), input: 'help', entries, registry }).effect), /greet \(hi\) \u2014 print a greeting/u);
+  assert.deepEqual(completeCommand('hi', entries, [], registry), { kind: 'unique', value: 'hi ', candidates: ['hi'] });
+  const customHelp = executeCommand({ state: createTerminalState(), input: 'help', entries, registry }).effect;
+  assert.equal(customHelp?.kind, 'help');
+  assert.equal(customHelp?.kind === 'help' && customHelp.groups.at(-1)?.commands[0]?.summary, 'print a greeting');
   const overriddenHelp = createTerminalCommandRegistry([{
     name: 'help',
     aliases: [],

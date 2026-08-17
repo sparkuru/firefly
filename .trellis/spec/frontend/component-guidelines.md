@@ -55,7 +55,9 @@ routes.
 - `TerminalStreamDocument.astro` owns the compact script-free article fragment
   inside each home template. It receives output already produced by the same
   `renderDocument()` and registered adapter path as the canonical route; it does
-  not import a layout, stylesheet, or browser runtime.
+  not import a layout, stylesheet, or browser runtime. Its inline stream ends at
+  the trusted document content; do not add a redundant prompt-return footer when
+  the active command prompt already follows the stream.
 - `ContentDirectoryIndex.astro` owns JavaScript-free immediate-child directory
   and document navigation. `/posts/`, nested post directories, and `/pages/`
   pass only canonical guest-projected directory props.
@@ -91,7 +93,10 @@ routes.
 - Never import either package's global stylesheet into the other package.
 - Keep responsive rules next to the selectors they modify. Long-form content
   retains a controlled measure; both configured viewports must avoid document
-  overflow.
+  overflow. Grouped Terminal help uses a content-sized usage track rather than a
+  fixed narrow command column; its group grid auto-fits only when each group has
+  enough width for the usage/description relationship, and collapses before
+  tablet-width wrapping becomes noisy.
 
 ## Markup and Accessibility
 

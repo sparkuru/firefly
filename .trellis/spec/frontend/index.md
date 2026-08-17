@@ -106,8 +106,8 @@ its own lockfile, then run its checks:
     and no document overflow;
   - interactive coverage: prompt-only startup, deterministic commands/errors,
     manifest-backed `ls lab` / `open lab/<id>`, history/draft restoration,
-    safe unique/ambiguous path completion with prefix preservation and normal/
-    unsafe/list Tab escape, prompt Ctrl+C cancellation, IME-safe and mobile
+    safe unique/ambiguous path completion with prefix preservation, prompt-wide
+    Tab prevention and native outside-prompt traversal, prompt Ctrl+C cancellation, IME-safe and mobile
     soft-keyboard Enter submission, inline `cat` with unchanged URL,
     record-start/document viewport settlement, safe printable typing with native/
     ARIA widget and local-scroll exclusions, actual 400/500 font loading,

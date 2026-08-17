@@ -1,0 +1,11 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package map, canonical validation commands, browser profile, and stable Terminal acceptance boundaries."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Pure runtime/controller ownership, command registry contracts, safe DOM rendering, focus, recovery, and keyboard boundaries."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Terminal definition/context/effect contracts, registry validation, parser and pipeline invariants, and required unit coverage."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Semantic Terminal component structure, command output states, wide-content contract, and style ownership."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required package/build/browser validation, responsive checkpoints, accessibility, and static fallback invariants."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Public corpus, virtual paths, command registry, document rendering, and read-only knowledge-browser boundaries."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Canonical ./sam wrapper and project-local validation/runtime constraints."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Cross-layer data-flow and source-of-truth review guidance for runtime, controller, templates, and CSS changes."}
+{"file":".trellis/tasks/08-16-terminal-command-polish/research/ui-ux-pro-max.md","reason":"Task-level UUPM design-system and UX research; raw recommendations and selected responsive/accessibility guidance."}
+{"file":".trellis/tasks/08-16-terminal-command-polish/design.md","reason":"Approved command architecture, corpus line model, grouped-help presentation, grep effects, width strategy, and compatibility boundaries."}
+{"file":".trellis/tasks/08-16-terminal-command-polish/implement.md","reason":"Ordered implementation, validation commands, browser evidence, and rollback checkpoints."}

@@ -19,7 +19,8 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   await page.goto('/');
   await prompt.fill('help');
   await prompt.press('Enter');
-  await expect(page.getByText('help (?) — show this command list')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Explore' })).toBeVisible();
+  await expect(page.getByText('show this command list')).toBeVisible();
   await expect(prompt).toBeFocused();
   await capture('help-settlement');
 

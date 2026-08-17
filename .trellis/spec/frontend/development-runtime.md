@@ -73,7 +73,7 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | --- | --- |
 | `SAM_IMAGE` | Defaults to `node:22-alpine`. Browser runs use `mcr.microsoft.com/playwright:v1.62.0-noble`. |
 | `SAM_IPC` | Unset means `private`; accepted values are exactly `private` and `host`. Browser runs use `host`; explicit empty is invalid. |
-| `SAM_BIND_HOST` | Service host binding, default `127.0.0.1`; do not broaden without an explicit LAN requirement. |
+| `SAM_BIND_HOST` | `dev.sh` defaults to `0.0.0.0` for LAN-accessible development; direct `sam` defaults to `127.0.0.1`; override with a narrower address when needed. |
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | `F1REFLY_CONTENT_ROOT` | Optional absolute readable posts workspace; defaults to `<repo>/content/posts`. `sam` resolves and passes it into the container. |
@@ -129,6 +129,9 @@ so Playwright owns and terminates that preview process.
   uses exact read-only content mounts, rebuilds the M5 release, and the same
   loopback origin returns `200` for `/`, `/lab/`, and `/lab/nerv/`; the matching
   `down` command stops only the exact repository/scope containers.
+- Good: `SAM_BIND_HOST=127.0.0.1 WEB_HOST_PORT=4322 ./dev.sh` keeps a preview
+  loopback-only when LAN access is not wanted; the default `dev.sh` binding is
+  `0.0.0.0` for review from another host on the development network.
 - Base: site or NERV check/build uses plain `./sam`, private IPC, no published
   port, UID mapping, and repository-local HOME.
 - Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,
@@ -165,8 +168,9 @@ WEB_HOST_PORT=4322 ./dev.sh down
 
 Verify invalid IPC cases, executable modes, ignored `.devhome/`, and no stale
 `hako` / `HAKO_*` reference. For the root development entry, also verify the
-exact `sam.repo`, `sam.scope=dev.sh`, and `sam.service=web` labels, loopback-only
-port mapping, closed port after teardown, and zero matching containers.
+exact `sam.repo`, `sam.scope=dev.sh`, and `sam.service=web` labels, the configured
+host binding (default `0.0.0.0`), closed port after teardown, and zero matching
+containers.
 For workspace changes, also prove chained file/directory mounts are read-only,
 broad/broken/FIFO inputs fail, the generated stage has zero symlinks, and host
 paths/private sentinels do not enter output. For packaging, compare the manifest,
