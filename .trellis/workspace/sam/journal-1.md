@@ -437,3 +437,24 @@ Unified all four current public document routes on the Terminal presentation by 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 21: Move reader statusline to viewport bottom
+
+**Date**: 2026-08-18
+**Task**: Move reader statusline to viewport bottom
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented the reader statusline as viewport-fixed bottom chrome for semantic and Terminal documents. Moved status after content, added measured height reservation with safe-area-aware CSS, preserved reader/search behavior, updated durable contract and geometry/static coverage, and passed Astro check/build plus content, X Core, static-output, reader, site, Terminal, and diff checks. Left unrelated mainline and staging-task worktree changes untouched.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7448fb0` | (see git log) |
+
+### Status
+
+[OK] **Completed**
