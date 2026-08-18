@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review that all public document routes use the existing Terminal layout/component boundary without duplicating or deleting generic adapters."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Review reader fragment focus, native/no-JavaScript fallback, and route-local browser behavior after presentation migration."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review static artifact ownership, responsive/accessibility evidence, focused/full Playwright coverage, and diff hygiene."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Review stylesheet/script isolation and whether the unified document routes remain inside the approved dependency graph."}
+{"file":".trellis/tasks/08-18-unify-public-document-presentation/research/ui-ux-pro-max.md","reason":"Check that the implementation preserves the approved existing Terminal visual language and rejects unapproved generated alternatives."}
+{"file":".trellis/tasks/08-18-unify-public-document-presentation/design.md","reason":"Check implementation and tests against the approved unified-route, fallback, responsive, and rollback decisions."}

@@ -35,6 +35,15 @@ async function expectHeadingLevels(page: Page, levels: number[]) {
   expect(actual).toEqual(levels);
 }
 
+async function expectTerminalDocument(page: Page) {
+  await expect(page.locator('html.terminal-root[data-terminal-theme="phosphor"]')).toHaveCount(1);
+  await expect(page.locator('.terminal-document')).toHaveCount(1);
+  await expect(page.locator('.semantic-document')).toHaveCount(0);
+  await expect(page.locator('.terminal-titlebar')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Document path' })).toBeVisible();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+}
+
 test('home exposes Terminal fallback content and visible keyboard focus', async ({ page }) => {
   await page.goto('/');
 
@@ -93,10 +102,11 @@ test('lab index is a JavaScript-free semantic catalog with native navigation', a
   await expectNoHorizontalOverflow(page);
 });
 
-test('post deep link renders Markdown as semantic HTML', async ({ page }) => {
+test('post deep link renders Markdown in the unified Terminal theme', async ({ page }) => {
   await page.goto('/posts/hello-static-foundation/');
 
   await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/$/);
+  await expectTerminalDocument(page);
   const article = page.getByRole('article');
   await expect(
     article.getByRole('heading', { level: 1, name: 'Hello, static foundation' })
@@ -142,7 +152,12 @@ test('post deep link renders Markdown as semantic HTML', async ({ page }) => {
   expect(await codeRegion.evaluate((element) => element.scrollWidth)).toBeGreaterThan(
     await codeRegion.evaluate((element) => element.clientWidth)
   );
-  await codeRegion.focus();
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (await codeRegion.evaluate((element) => element === document.activeElement)) {
+      break;
+    }
+    await page.keyboard.press('Tab');
+  }
   await expect(codeRegion).toBeFocused();
   expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe(
     'none'
@@ -154,6 +169,7 @@ test('post deep link renders Markdown as semantic HTML', async ({ page }) => {
 test('Terminal article remains complete and exposes a linked canonical breadcrumb', async ({ page }) => {
   await page.goto('/posts/llm-workflow-with-trellis/');
 
+  await expectTerminalDocument(page);
   const article = page.getByRole('article');
   await expect(article.getByRole('heading', { level: 1, name: 'llm workflow with trellis' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
@@ -196,6 +212,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await expect(page.locator('script')).toHaveCount(0);
 
   await page.goto('/posts/characters/nahida/');
+  await expectTerminalDocument(page);
   await expect(page.getByRole('heading', { level: 1, name: 'Notes on Nahida' })).toBeVisible();
   const breadcrumb = page.getByRole('navigation', { name: 'Document path' });
   expect((await breadcrumb.textContent())?.replace(/\s+/gu, ' ').trim()).toBe(
@@ -245,6 +262,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
 test('page deep link renders readable Markdown', async ({ page }) => {
   await page.goto('/pages/about/');
 
+  await expectTerminalDocument(page);
   const article = page.getByRole('article');
   await expect(
     article.getByRole('heading', { level: 1, name: 'About this foundation' })
@@ -276,7 +294,7 @@ test('reader entry fragment remains a native location without browser JavaScript
 
   await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
   await expect(page.locator('#terminal-reader')).toBeVisible();
-  await expect(page.locator('[data-terminal-reader-status]')).toHaveAttribute('hidden', '');
+  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Hello, static foundation' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
