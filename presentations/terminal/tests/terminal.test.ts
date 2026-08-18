@@ -246,13 +246,42 @@ test('every command has deterministic output and strict usage errors', () => {
   );
   assert.equal(run('cat alpha.md', charactersState).effect?.kind, 'document');
   assert.match(JSON.stringify(run('cat missing.md').effect), /No readable rshell resource/u);
-  assert.match(JSON.stringify(run('vim missing.md').effect), /Relative paths resolve under posts/u);
-  assert.match(JSON.stringify(run('cat ./pages/about.md').effect), /No readable rshell resource/u);
+  const vimMissing = run('vim missing.md').effect;
+  assert.equal(vimMissing?.kind, 'lines');
+  assert.match(vimMissing?.kind === 'lines' ? vimMissing.lines[0] ?? '' : '', /Try "tree" or "tree \//u);
+  assert.doesNotMatch(JSON.stringify(run('cat missing.md').effect), /absolute/u);
   assert.equal(run('cat /posts/characters/alpha.md').effect?.kind, 'document');
   assert.equal(run('cat /pages/about.md').effect?.kind, 'document');
   const vimNavigation = run('vim ./characters/alpha.md').effect;
   assert.equal(vimNavigation?.kind, 'document-navigation');
   assert.equal(vimNavigation?.kind === 'document-navigation' ? vimNavigation.entry.href : null, '/posts/characters/alpha/');
+  for (const operand of ['pages/about.md', './pages/about.md']) {
+    const page = run(`cat ${operand}`, workspaceState).effect;
+    assert.equal(page?.kind, 'document', operand);
+    assert.equal(page?.kind === 'document' ? page.entry : null, entries[1], operand);
+  }
+  assert.equal(run('cat posts/characters/alpha.md', workspaceState).effect?.kind, 'document');
+  assert.equal(run('cat ./posts/characters/alpha.md', workspaceState).effect?.kind, 'document');
+  for (const operand of ['pages/about.md', './pages/about.md']) {
+    assert.equal(run(`vim ${operand}`, workspaceState).effect?.kind, 'document-navigation', operand);
+    const rootGrep = runShell(`grep -i about ${operand}`, workspaceState).effect;
+    assert.equal(rootGrep?.kind, 'grep', operand);
+    assert.deepEqual(rootGrep?.kind === 'grep' ? rootGrep.matches.map(({ path }) => path) : [], ['/pages/about.md'], operand);
+  }
+  assert.equal(run('vim ./posts/characters/alpha.md', workspaceState).effect?.kind, 'document-navigation');
+  const postGrep = runShell('grep -i nahida ./posts/characters/alpha.md', workspaceState).effect;
+  assert.equal(postGrep?.kind, 'grep');
+  assert.deepEqual(postGrep?.kind === 'grep' ? postGrep.matches.map(({ path }) => path) : [], ['/posts/characters/alpha.md']);
+  for (const operand of ['lab/nerv', './lab/nerv']) {
+    assert.deepEqual(run(`cat ${operand}`, workspaceState).effect, {
+      kind: 'lines',
+      tone: 'error',
+      lines: [`Cannot read rshell experiment "${operand}" as a document. Try "open lab/nerv".`]
+    }, operand);
+  }
+  for (const operand of ['../pages/about.md', './pages/../posts/characters/alpha.md']) {
+    assert.match(JSON.stringify(run(`cat ${operand}`, workspaceState).effect), /No readable rshell resource named/u, operand);
+  }
   const postsTree = run('tree').effect;
   assert.equal(postsTree?.kind, 'tree');
   if (postsTree?.kind !== 'tree') return;
@@ -541,6 +570,10 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('cat cha', entries, experiments), { kind: 'unique', value: 'cat characters/', candidates: ['characters/'] });
   assert.deepEqual(completeCommand('cat characters/alp', entries, experiments), { kind: 'unique', value: 'cat characters/alpha.md', candidates: ['characters/alpha.md'] });
   assert.deepEqual(completeCommand('cat ./characters/alp', entries, experiments), { kind: 'unique', value: 'cat ./characters/alpha.md', candidates: ['characters/alpha.md'] });
+  assert.deepEqual(completeCommand('cat pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat pages/about.md', candidates: ['pages/about.md'] });
+  assert.deepEqual(completeCommand('cat ./pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat ./pages/about.md', candidates: ['pages/about.md'] });
+  assert.deepEqual(completeCommand('cat posts/charac', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat posts/characters/', candidates: ['posts/characters/'] });
+  assert.deepEqual(completeCommand('vim pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'vim pages/about.md', candidates: ['pages/about.md'] });
   assert.deepEqual(completeCommand('vim /pages/abo', entries, experiments), { kind: 'unique', value: 'vim /pages/about.md', candidates: ['pages/about.md'] });
   const pathEntries = decodeTerminalEntries([
     ...rawEntries,

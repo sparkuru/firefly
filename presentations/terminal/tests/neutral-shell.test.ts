@@ -18,7 +18,10 @@ const fs = createPublicIndex({
     { kind: 'page', path: '/pages/about.md', relativePath: 'about.md', filename: 'about.md', title: 'About', href: '/pages/about/', date: '2026-02-01' }
   ],
   experiments: [{ id: 'nerv', title: 'NERV', href: '/lab/nerv/' }],
-  textDocuments: [{ path: '/posts/characters/alpha.md', lines: ['Alpha record', 'nahida keeps the archive'] }]
+  textDocuments: [
+    { path: '/posts/characters/alpha.md', lines: ['Alpha record', 'nahida keeps the archive'] },
+    { path: '/pages/about.md', lines: ['About page', 'durable writing'] }
+  ]
 });
 
 function context(overrides: Partial<ProcessContext> = {}): ProcessContext {
@@ -80,6 +83,48 @@ test('relative commands resolve the virtual root without a double slash', () => 
   assert.equal(root.status, 0);
   assert.deepEqual(root.stdout.lines, ['lab/', 'pages/', 'posts/']);
   assert.deepEqual(runRshellInput('ls .', runnerOptions({ cwd: '/' })).stdout.lines, root.stdout.lines);
+});
+
+test('root resource mounts resolve for reads, search, and navigation without changing nested fallback', () => {
+  const root = context({ cwd: '/' });
+  for (const operand of ['pages/about.md', './pages/about.md']) {
+    const page = executeCat(root, args([operand]));
+    assert.equal(page.value?.kind, 'document', operand);
+    assert.equal(page.value?.kind === 'document' ? page.value.document.path : undefined, '/pages/about.md', operand);
+  }
+
+  for (const operand of ['posts/characters/alpha.md', './posts/characters/alpha.md']) {
+    const post = executeCat(root, args([operand]));
+    assert.equal(post.value?.kind, 'document', operand);
+    assert.equal(post.value?.kind === 'document' ? post.value.document.path : undefined, '/posts/characters/alpha.md', operand);
+  }
+
+  const barePost = executeCat(root, args(['characters/alpha.md']));
+  assert.equal(barePost.value?.kind, 'document');
+  assert.equal(barePost.value?.kind === 'document' ? barePost.value.document.path : undefined, '/posts/characters/alpha.md');
+
+  for (const operand of ['pages/about.md', './pages/about.md']) {
+    const grep = executeGrep(root, args(['About', operand]));
+    assert.deepEqual(grep.stdout.lines, ['/pages/about.md:About page'], operand);
+    assert.deepEqual(executeVim(root, args([operand])).controls, [{ kind: 'open-document', path: '/pages/about.md' }], operand);
+  }
+  const postGrep = executeGrep(root, args(['Alpha', './posts/characters/alpha.md']));
+  assert.deepEqual(postGrep.stdout.lines, ['/posts/characters/alpha.md:Alpha record']);
+  assert.deepEqual(executeVim(root, args(['./posts/characters/alpha.md'])).controls, [{ kind: 'open-document', path: '/posts/characters/alpha.md' }]);
+
+  for (const operand of ['lab/nerv', './lab/nerv']) {
+    const experiment = executeCat(root, args([operand]));
+    assert.deepEqual(experiment.stderr.lines, [`Cannot read rshell experiment "${operand}" as a document. Try "open lab/nerv".`], operand);
+  }
+  const directory = executeCat(root, args(['pages']));
+  assert.deepEqual(directory.stderr.lines, ['Cannot read rshell directory "pages" as a document. Try "ls pages".']);
+
+  const nestedPage = executeCat(context(), args(['pages/about.md']));
+  assert.match(nestedPage.stderr.lines[0] ?? '', /No readable rshell resource named "pages\/about\.md"/u);
+  for (const operand of ['../pages/about.md', './pages/../posts/characters/alpha.md']) {
+    const traversal = executeCat(root, args([operand]));
+    assert.match(traversal.stderr.lines[0] ?? '', /No readable rshell resource named/u, operand);
+  }
 });
 
 test('neutral commands exchange streams and values without terminal effects', () => {
