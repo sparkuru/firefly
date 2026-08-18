@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
+- **Total Sessions**: 22
 - **Last Active**: 2026-08-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~460 | Active |
+| `journal-1.md` | ~481 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 22 | 2026-08-18 | Simplify Terminal document navigation | `ae19768` | `anti-entropy-loss-syndrome` |
 | 21 | 2026-08-18 | Move reader statusline to viewport bottom | `7448fb0` | `anti-entropy-loss-syndrome` |
 | 20 | 2026-08-18 | Unify public document presentation | `8c63b61` | `anti-entropy-loss-syndrome` |
 | 19 | 2026-08-18 | Make terminal document paths shell-intuitive | `1e48c77` | `anti-entropy-loss-syndrome` |
