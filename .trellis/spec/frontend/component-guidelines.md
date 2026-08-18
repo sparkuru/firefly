@@ -39,12 +39,16 @@ routes.
   Show `On this page` only for two or more body headings; its links use the
   exact validated X Core/Astro IDs. Its reader status is hidden and its region
   is not ordinarily focusable until `#terminal-reader` is present.
-- `TerminalDocument.astro` owns the linked root/parent breadcrumb, underlined but
-  unlinked current `.md` filename, article metadata, conditional outline,
-  `.terminal-prose`, reader status/forms, and `<Content />`. Shared
-  `ReaderStatus.astro` imports only the bounded `terminal-reader.ts` controller,
-  never the home command runtime. The document remains complete when that
-  module does not run.
+- `TerminalDocument.astro` owns the single canonical `/posts/<file>.md` or
+  `/pages/<file>.md` source-path line, article metadata, conditional Terminal
+  tree outline, `.terminal-prose`, reader status/forms, and `<Content />`. The
+  outline remains a semantic `<nav aria-label="Document outline">` containing
+  native links and aria-hidden `├──`/`└──`/`│` prefixes derived from validated
+  `metadata.outline`; it must remain JavaScript-free and keyboard navigable.
+  The component no longer renders a body breadcrumb or a separate current
+  filename item. Shared `ReaderStatus.astro` imports only the bounded
+  `terminal-reader.ts` controller, never the home command runtime. The document
+  remains complete when that module does not run.
 - `TerminalHome.astro` owns the server-rendered recovery navigation, one inert
   build-rendered document template per public entry, the hidden-until-ready shell
   session, continuous transcript/prompt, completion hint, and announcer.
@@ -140,9 +144,9 @@ routes.
   them, editable/selected content, links, and local-scroll regions.
 - The Terminal reader region is one focusable named region with active-unit and
   status feedback; its search/command forms are labeled native inputs. It does
-  not put every reading unit in the Tab order. Breadcrumb parents are native
-  links; the current filename is underlined but remains unlinked
-  `aria-current="page"` text.
+  not put every reading unit in the Tab order. Document source paths and tree
+  outline entries remain readable native text/links; tree prefixes are
+  decorative and hidden from assistive technology.
 - Decorative visuals cannot be the sole carrier of page meaning.
 - Do not claim complete accessibility coverage: no automated scanner or
   assistive-technology run is configured.

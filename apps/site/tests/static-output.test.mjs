@@ -318,10 +318,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /<p data-reader-search-status hidden><\/p>/u);
   assert.match(terminalArticle, /data-reader-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
-  assert.match(nestedArticle, /guest@f1refly:~\/blog \$/u);
-  assert.ok(nestedArticle.includes('<li data-breadcrumb-token="root"><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span><a href="/">/</a></li><li data-breadcrumb-token="posts"><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span><a href="/posts/">posts</a>'));
-  assert.match(nestedArticle, /data-breadcrumb-token="current"><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;<\/span><span class="terminal-breadcrumb-separator" aria-hidden="true">\/<\/span><span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;<\/span><span class="terminal-document-current" aria-current="page">nahida\.md<\/span>/u);
-  assert.doesNotMatch(nestedArticle, />cd\s|\/ \/posts|<a[^>]*>nahida\.md<\/a>/u);
+  assert.match(nestedArticle, /<p class="terminal-path">\/posts\/characters\/nahida\.md<\/p>/u);
+  assert.equal((nestedArticle.match(/class="terminal-path"/gu) ?? []).length, 1);
+  assert.doesNotMatch(nestedArticle, /Document path|data-breadcrumb-token|terminal-document-nav|terminal-breadcrumb/u);
+  assert.doesNotMatch(nestedArticle, /<a[^>]*>nahida\.md<\/a>/u);
 });
 
 test('ordinary routes contain no Experiment runtime or asset edge', async () => {
@@ -373,7 +373,10 @@ test('Terminal output contains outline targets and localized wide regions', asyn
   assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
   assert.match(post, /data-terminal-reader-entry="always"/u);
   assert.doesNotMatch(post, /data-terminal-reader-status[^>]*hidden/u);
-  assert.match(post, /aria-labelledby="terminal-outline-title"/u);
+  assert.match(post, /<nav class="terminal-outline" aria-label="Document outline"><ul>/u);
+  assert.doesNotMatch(post, /On this page|<ol\b/u);
+  assert.match(post, /class="terminal-outline-prefix" aria-hidden="true">└── <\/span>/u);
+  assert.match(post, /class="terminal-outline-prefix" aria-hidden="true">    └── <\/span>/u);
   assert.match(post, /href="#markdown-to-durable-html"/u);
   assert.match(post, /id="markdown-to-durable-html"/u);
   assert.match(post, /data-terminal-wide="code"/u);

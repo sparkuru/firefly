@@ -37,8 +37,9 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
 
   await page.goto('/posts/characters/nahida/');
   const reader = page.getByRole('region', { name: /Read-only Vim reader/u });
-  await expect(page.getByRole('navigation', { name: 'Document path' })).toContainText('nahida.md');
-  await capture('breadcrumb');
+  await expect(page.locator('.terminal-path')).toHaveText('/posts/characters/nahida.md');
+  await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
+  await capture('header-path');
 
   await reader.focus();
   await reader.press('j');

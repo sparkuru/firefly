@@ -14,34 +14,29 @@ const { canonical, document } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
+const outlineRootDepth = metadata.outline[0]?.depth ?? 0;
+
+function hasLaterSibling(index: number, depth: number) {
+  for (const item of metadata.outline.slice(index + 1)) {
+    if (item.depth < depth) return false;
+    if (item.depth === depth) return true;
+  }
+  return false;
+}
+
+function outlinePrefix(index: number, depth: number) {
+  const visibleDepth = Math.max(0, depth - outlineRootDepth);
+  const ancestors = Array.from({ length: visibleDepth }, (_, level) =>
+    hasLaterSibling(index, outlineRootDepth + level) ? '│   ' : '    '
+  ).join('');
+  const branch = hasLaterSibling(index, depth) ? '├── ' : '└── ';
+  return `${ancestors}${branch}`;
+}
 ---
 
 <article class="terminal-document" data-terminal-reader data-terminal-reader-entry="always">
-  <nav class="terminal-document-nav" aria-label="Document path">
-    <span class="terminal-prompt">guest@f1refly:~/blog $</span>
-    <ol>
-      {canonical.breadcrumbs.map((item, index) => (
-        <li data-breadcrumb-token={index === 0 ? 'root' : item.label}>
-          <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
-          {index > 1 && (
-            <>
-              <span class="terminal-breadcrumb-separator" aria-hidden="true">/</span>
-              <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
-            </>
-          )}
-          <a href={item.href}>{item.label}</a>
-        </li>
-      ))}
-      <li data-breadcrumb-token="current">
-        <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
-        <span class="terminal-breadcrumb-separator" aria-hidden="true">/</span>
-        <span class="terminal-breadcrumb-gap" aria-hidden="true">&nbsp;</span>
-        <span class="terminal-document-current" aria-current="page">{canonical.filename}</span>
-      </li>
-    </ol>
-  </nav>
   <header class="terminal-document-header">
-    <p class="terminal-path">{canonical.virtualPath}</p>
+    <p class="terminal-path">/{canonical.virtualPath}</p>
     <h1>{entry.data.title}</h1>
     {
       entry.collection === 'posts' && (
@@ -71,13 +66,15 @@ const showOutline = metadata.outline.length >= 2;
 
   {
     showOutline && (
-      <nav class="terminal-outline" aria-labelledby="terminal-outline-title">
-        <p id="terminal-outline-title" class="terminal-prompt">On this page</p>
-        <ol>
-          {metadata.outline.map((item) => (
-            <li data-depth={item.depth}><a href={`#${item.id}`}>{item.text}</a></li>
+      <nav class="terminal-outline" aria-label="Document outline">
+        <ul>
+          {metadata.outline.map((item, index) => (
+            <li data-depth={item.depth}>
+              <span class="terminal-outline-prefix" aria-hidden="true">{outlinePrefix(index, item.depth)}</span>
+              <a href={`#${item.id}`}>{item.text}</a>
+            </li>
           ))}
-        </ol>
+        </ul>
       </nav>
     )
   }
