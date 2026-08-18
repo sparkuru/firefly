@@ -61,6 +61,14 @@ routes.
   not import a layout, stylesheet, or browser runtime. Its inline stream ends at
   the trusted document content; do not add a redundant prompt-return footer when
   the active command prompt already follows the stream.
+- The current published main-site document corpus (`/pages/about/`,
+  `/posts/hello-static-foundation/`, `/posts/characters/nahida/`, and
+  `/posts/llm-workflow-with-trellis/`) selects `presentation: terminal` as one
+  visual system. The semantic adapter remains an explicit generic package
+  contract for future authorized consumers; `#terminal-reader` selects reader
+  entry behavior only and never changes the document presentation. When the
+  published corpus changes, update the route, static-output, and browser
+  assertions that prove this presentation closure.
 - `ContentDirectoryIndex.astro` owns JavaScript-free immediate-child directory
   and document navigation. `/posts/`, nested post directories, and `/pages/`
   pass only canonical guest-projected directory props.

@@ -550,7 +550,7 @@ test('Terminal document frame keeps its baseline, grows fluidly, and contains th
   }
 });
 
-test('semantic reader keeps committed search status visible while scrolling', async ({ page }) => {
+test('Terminal reader keeps committed search status visible while scrolling', async ({ page }) => {
   await page.goto('/posts/hello-static-foundation/#terminal-reader');
   const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
   await expect(region).toBeFocused();
@@ -578,7 +578,7 @@ test('semantic reader keeps committed search status visible while scrolling', as
   const viewportStatus = await page.evaluate(() => {
     window.scrollTo(0, document.documentElement.scrollHeight / 2);
     const section = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-    if (section === null) throw new Error('Missing semantic reader status section.');
+    if (section === null) throw new Error('Missing Terminal reader status section.');
     const rect = section.getBoundingClientRect();
     return {
       top: rect.top,
@@ -687,14 +687,15 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
   await expect(page).toHaveURL(/\/$/u);
 });
 
-test('vim activates a semantic document reader without changing its presentation', async ({ page }) => {
+test('vim opens a Terminal document reader with the unified presentation', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
   await input.fill('vim ./hello-static-foundation.md');
   await input.press('Enter');
 
   await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
-  await expect(page.locator('.semantic-document')).toHaveCount(1);
+  await expect(page.locator('.terminal-document')).toHaveCount(1);
+  await expect(page.locator('.semantic-document')).toHaveCount(0);
   const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
   await expect(region).toBeFocused();
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
@@ -731,12 +732,12 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
 
 test('direct canonical permalinks keep reader focus and key ownership idle', async ({ page }) => {
   await page.goto('/posts/hello-static-foundation/');
-  const semanticRegion = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
-  await expect(semanticRegion).not.toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeHidden();
-  const semanticPosition = page.locator('[data-reader-position]');
+  const foundationRegion = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await expect(foundationRegion).not.toBeFocused();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+  const foundationPosition = page.locator('[data-reader-position]');
   await page.keyboard.press('G');
-  await expect(semanticPosition).toHaveText(/^1\//u);
+  await expect(foundationPosition).toHaveText(/^1\//u);
 
   await page.goto('/posts/characters/nahida/');
   const terminalRegion = page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u });
