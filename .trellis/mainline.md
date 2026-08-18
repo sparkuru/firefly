@@ -6,7 +6,7 @@
 - **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, migration, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-15 — M5 content-filesystem/Vim-reader and full-content migration are approved, committed, and archived. Authored Markdown bodies, including the 30 local image-like references, are public body text and require no asset follow-up. M5.1 comments are deferred for a later self-built solution. M6 local-TLS staging remains deferred. The separate temporary M7 reverse-tunnel/Nginx rehearsal at `staging.majo.im` passed and was fully rolled back.
+- **Owner decision:** 2026-08-18 — M5 content-filesystem/Vim-reader and full-content migration are approved, committed, and archived. Authored Markdown bodies, including the 30 local image-like references, are public body text and require no asset follow-up. M5.1 comments remain deferred for a later self-built solution. The separate temporary M7 reverse-tunnel/Nginx rehearsal at `staging.majo.im` passed and was fully rolled back, and is accepted as the staging verification; the planned local-TLS M6 task is superseded and removed from the active roadmap.
 
 ## Continuation Policy
 
@@ -27,9 +27,8 @@
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
 | 7 | `.trellis/tasks/archive/2026-08/08-14-full-content-migration` — M5 full content migration | complete | The private importer, 100-document review candidate, memo/comment/identity handoffs, and site schema validation are committed and archived. The 30 local image-like references are public authored Markdown text, not assets or follow-up work. |
 | 8 | M5.1 — dynamic comments and identity service | deferred | Preserve M5's private handoff and the initial planning record for a later self-built service. It is not on the current release path and must not convert the main site to SSR or direct database reads. |
-| 9 | M6 — staging rollout | deferred | Local TLS staging remains deferred. Its former prohibition on remote work is superseded by the separately scoped M7 rehearsal task. |
-| 10 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. |
-| 11 | Production rollout | planned | Requires a future explicit deployment/traffic authorization and does not start automatically. |
+| 9 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
+| 10 | Production rollout | planned | Requires a future explicit deployment/traffic authorization and does not start automatically. |
 
 ## Evidence
 
@@ -69,4 +68,4 @@
 
 ## Next Decision
 
-M5.1 and M6 are deferred. The M7 reverse-tunnel rehearsal is complete and was a temporary staging proof, not a production rollout. A future production rollout still requires explicit deployment/traffic authorization. Historic counters remain private unless a future task separately defines their schema and presentation.
+M5.1 remains deferred. M6 local-TLS staging is superseded by the completed M7 physical rehearsal and is no longer a current task. M7 is staging verification, not a production rollout; production still requires explicit deployment/traffic authorization. Historic counters remain private unless a future task separately defines their schema and presentation.
