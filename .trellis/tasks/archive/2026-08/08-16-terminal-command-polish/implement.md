@@ -6,7 +6,7 @@
 - Confirm `./sam` exists and is executable before package/browser validation.
 - Preserve the unrelated dirty paths already present in the worktree:
   `.trellis/mainline.md`, `.trellis/spec/frontend/development-runtime.md`,
-  `.trellis/tasks/08-14-m6-staging-rollout/prd.md`, `dev.sh`, and
+  `.trellis/tasks/archive/2026-08/08-14-m6-staging-rollout/prd.md`, `dev.sh`, and
   `compose.release.yml`.
 - Run `task.py start` only after the owner approves the final planning summary.
 

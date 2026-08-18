@@ -1,0 +1,31 @@
+{
+  "id": "m6-staging-rollout",
+  "name": "m6-staging-rollout",
+  "title": "M6 staging rollout (superseded by M7)",
+  "description": "Planning record for local TLS staging; superseded after the owner-approved M7 physical staging rehearsal passed.",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-08-14",
+  "completedAt": "2026-08-18",
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Superseded by the completed M7 reverse-tunnel staging rehearsal on 2026-08-15; retained only as historical planning evidence.",
+  "meta": {
+    "deferred": "true",
+    "defer_reason": "Owner removed local TLS staging after M7 provided physical staging verification.",
+    "superseded": "true",
+    "superseded_by": "08-15-m7-reverse-tunnel-staging"
+  }
+}
