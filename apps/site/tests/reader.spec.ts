@@ -17,9 +17,12 @@ async function readerSearchMetrics(page: Page) {
     if (status === null || form === null || prefix === null || input === null) {
       throw new Error('Missing reader search controls.');
     }
+    const article = document.querySelector<HTMLElement>('.terminal-document, .semantic-document');
+    if (article === null) throw new Error('Missing reader article.');
     const formStyle = getComputedStyle(form);
     const inputStyle = getComputedStyle(input);
     const statusStyle = getComputedStyle(status);
+    const articleStyle = getComputedStyle(article);
     const terminalRoot = document.querySelector<HTMLElement>('.terminal-root');
     const canvas = terminalRoot === null
       ? getComputedStyle(document.documentElement).backgroundColor
@@ -51,8 +54,11 @@ async function readerSearchMetrics(page: Page) {
       statusTop: statusRect.top,
       statusBottom: statusRect.bottom,
       statusHeight: statusRect.height,
+      articlePaddingBottom: Number.parseFloat(articleStyle.paddingBlockEnd),
+      statusReserve: articleStyle.getPropertyValue('--reader-status-reserve').trim(),
       documentWidth: document.documentElement.scrollWidth,
-      viewportWidth: window.innerWidth
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight
     };
   });
 }
@@ -72,7 +78,7 @@ test('reader moves by semantic units and honors reduced motion', async ({ page }
   await expect(position).toHaveText(/^1\//u);
 });
 
-test('reader status stays sticky, opaque, contained, and reports reader actions', async ({ page }) => {
+test('reader status stays fixed at the viewport bottom, opaque, contained, and reports reader actions', async ({ page }) => {
   const region = await openReader(page);
   const statusSection = page.locator('[data-terminal-reader-status]');
   const mode = page.locator('[data-reader-mode]');
@@ -80,7 +86,7 @@ test('reader status stays sticky, opaque, contained, and reports reader actions'
   await expect(statusSection).toBeVisible();
 
   const metrics = await readerSearchMetrics(page);
-  expect(metrics.statusPosition).toBe('sticky');
+  expect(metrics.statusPosition).toBe('fixed');
   expect(metrics.statusZIndex).not.toBe('auto');
   expect(metrics.statusBackground).not.toBe('rgba(0, 0, 0, 0)');
   expect(metrics.statusBackground).not.toBe(metrics.canvasBackground);
@@ -88,6 +94,9 @@ test('reader status stays sticky, opaque, contained, and reports reader actions'
   expect(metrics.inputColor).not.toBe(metrics.statusBackground);
   expect(metrics.statusBorder).not.toBe('rgba(0, 0, 0, 0)');
   expect(metrics.statusHeight).toBeGreaterThan(0);
+  expect(metrics.statusBottom).toBeCloseTo(metrics.viewportHeight, 0);
+  expect(metrics.articlePaddingBottom).toBeGreaterThanOrEqual(metrics.statusHeight - 1);
+  expect(metrics.statusReserve).toMatch(/px$/u);
   expect(metrics.statusLeft).toBeGreaterThanOrEqual(0);
   expect(metrics.statusRight).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.statusLeft).toBeCloseTo(0, 0);
@@ -138,9 +147,19 @@ test('reader status stays sticky, opaque, contained, and reports reader actions'
   await expect(message).toHaveText('Cancelled.');
 });
 
-test('reader keeps the active unit visible below the sticky status while scrolling', async ({ page }) => {
+test('reader keeps the active unit visible above the fixed status while scrolling', async ({ page }) => {
   const region = await openReader(page);
   await region.press('G');
+
+  await expect.poll(
+    () => page.evaluate(() => {
+      const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
+      const active = document.querySelector<HTMLElement>('[data-reader-active]');
+      if (status === null || active === null) return false;
+      return active.getBoundingClientRect().bottom <= status.getBoundingClientRect().top + 1;
+    }),
+    { timeout: 2_000 }
+  ).toBe(true);
 
   const geometry = await page.evaluate(() => {
     const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
@@ -159,11 +178,12 @@ test('reader keeps the active unit visible below the sticky status while scrolli
     };
   });
 
-  expect(geometry.statusPosition).toBe('sticky');
+  expect(geometry.statusPosition).toBe('fixed');
   expect(geometry.scrollY).toBeGreaterThan(0);
   expect(geometry.statusTop).toBeGreaterThanOrEqual(0);
-  expect(geometry.activeTop).toBeGreaterThanOrEqual(geometry.statusBottom - 1);
-  expect(geometry.activeBottom).toBeLessThanOrEqual(geometry.viewportHeight + 1);
+  expect(geometry.statusBottom).toBeCloseTo(geometry.viewportHeight, 0);
+  expect(geometry.activeTop).toBeGreaterThanOrEqual(-1);
+  expect(geometry.activeBottom).toBeLessThanOrEqual(geometry.statusTop + 1);
 });
 
 test('reader search, repeat, visual Range, Escape, and unsupported commands are bounded', async ({ page }) => {
@@ -269,7 +289,7 @@ test('reader keeps committed search status visible while scrolling and clears it
   const statusSection = page.locator('[data-terminal-reader-status]');
   const status = page.locator('[data-reader-search-status]');
   await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
-  await expect(statusSection).toHaveCSS('position', 'sticky');
+  await expect(statusSection).toHaveCSS('position', 'fixed');
   const initialStatus = await status.textContent();
   await expect(status).toBeVisible();
   await expect(page.locator('[data-reader-message]')).toBeHidden();
@@ -290,7 +310,7 @@ test('reader keeps committed search status visible while scrolling and clears it
   });
   expect(viewportStatus.scrollY).toBeGreaterThan(0);
   expect(viewportStatus.top).toBeGreaterThanOrEqual(0);
-  expect(viewportStatus.bottom).toBeLessThanOrEqual(viewportStatus.viewportHeight);
+  expect(viewportStatus.bottom).toBeCloseTo(viewportStatus.viewportHeight, 0);
   expect(viewportStatus.height).toBeGreaterThan(0);
 
   await page.keyboard.press('n');
@@ -368,7 +388,7 @@ test('reader search cycles keep transient prompt chrome separate in both directi
       await input.press('Enter');
       await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
       await expect(status).toContainText(`matches for “${route.query}”.`);
-      await expect(statusSection).toHaveCSS('position', 'sticky');
+      await expect(statusSection).toHaveCSS('position', 'fixed');
       const activeMetrics = await page.evaluate(() => {
         const statusNode = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
         if (statusNode === null) throw new Error('Missing reader status section.');
@@ -555,12 +575,14 @@ test('Terminal reader keeps committed search status visible while scrolling', as
   const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
   await expect(region).toBeFocused();
   const initialMetrics = await readerSearchMetrics(page);
-  expect(initialMetrics.statusPosition).toBe('sticky');
+  expect(initialMetrics.statusPosition).toBe('fixed');
   expect(initialMetrics.statusBackground).not.toBe(initialMetrics.canvasBackground);
   expect(initialMetrics.statusColor).not.toBe(initialMetrics.statusBackground);
   expect(initialMetrics.inputColor).not.toBe(initialMetrics.statusBackground);
   expect(initialMetrics.statusLeft).toBeCloseTo(0, 0);
   expect(initialMetrics.statusRight).toBeCloseTo(initialMetrics.viewportWidth, 0);
+  expect(initialMetrics.statusBottom).toBeCloseTo(initialMetrics.viewportHeight, 0);
+  expect(initialMetrics.articlePaddingBottom).toBeGreaterThanOrEqual(initialMetrics.statusHeight - 1);
   expect(initialMetrics.documentWidth).toBeLessThanOrEqual(initialMetrics.viewportWidth);
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
@@ -570,7 +592,7 @@ test('Terminal reader keeps committed search status visible while scrolling', as
   const statusSection = page.locator('[data-terminal-reader-status]');
   const status = page.locator('[data-reader-search-status]');
   await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
-  await expect(statusSection).toHaveCSS('position', 'sticky');
+  await expect(statusSection).toHaveCSS('position', 'fixed');
   await expect(status).toBeVisible();
   await expect(page.locator('[data-reader-message]')).toBeHidden();
   await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
@@ -590,7 +612,7 @@ test('Terminal reader keeps committed search status visible while scrolling', as
   });
   expect(viewportStatus.scrollY).toBeGreaterThan(0);
   expect(viewportStatus.top).toBeGreaterThanOrEqual(0);
-  expect(viewportStatus.bottom).toBeLessThanOrEqual(viewportStatus.viewportHeight);
+  expect(viewportStatus.bottom).toBeCloseTo(viewportStatus.viewportHeight, 0);
   expect(viewportStatus.height).toBeGreaterThan(0);
 });
 
@@ -720,6 +742,7 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
   });
 
   await page.goto('/posts/hello-static-foundation/#terminal-reader');
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id ?? '')).toBe('terminal-reader');
   const result = await page.evaluate(() => ({
     active: document.activeElement?.id,
     hash: window.location.hash,

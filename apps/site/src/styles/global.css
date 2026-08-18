@@ -239,18 +239,22 @@ blockquote {
 }
 
 .reader-status {
-  width: 100vw;
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 30;
+  width: auto;
   max-width: none;
-  margin-block: 1.5rem 0;
-  margin-inline: calc((100% - 100vw) / 2);
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 2;
+  margin: 0;
   border-block: 1px solid var(--border);
-  padding: 0.75rem clamp(1rem, 4vw, 3rem);
+  padding-block: 0.35rem max(0.35rem, env(safe-area-inset-bottom));
+  padding-inline-start: max(1rem, env(safe-area-inset-left));
+  padding-inline-end: max(1rem, env(safe-area-inset-right));
   background-color: var(--text);
   color: var(--surface);
   font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-x: clip;
 }
 
 .reader-status[data-reader-search-active] > [data-reader-message] {
@@ -261,21 +265,27 @@ blockquote {
   display: none;
 }
 
+.reader-status > p,
+.reader-status > [data-reader-search-status] {
+  margin: 0;
+}
+
 .reader-status > p:first-child {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
   color: var(--surface);
 }
 
 .reader-status > [data-reader-search-status] {
-  margin-block: 0.35rem 0;
   color: var(--surface);
   font-weight: 650;
 }
 
 .reader-status form:not([hidden]) {
   display: flex;
+  width: 100%;
   min-width: 0;
   align-items: center;
   min-height: 44px;
@@ -348,6 +358,11 @@ blockquote {
   outline-offset: 0.1875rem;
 }
 
+[data-reader-unit] {
+  scroll-margin-block-start: 25vh;
+  scroll-margin-block-end: max(25vh, var(--reader-status-reserve, 0px));
+}
+
 ::highlight(terminal-reader-search) {
   background-color: #f1d6ad;
   color: var(--text);
@@ -361,6 +376,10 @@ blockquote {
 .semantic-document,
 .prose {
   min-width: 0;
+}
+
+.semantic-document {
+  padding-block-end: var(--reader-status-reserve, 0px);
 }
 
 .document-outline {

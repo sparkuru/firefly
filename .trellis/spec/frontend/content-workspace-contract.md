@@ -504,17 +504,23 @@ startTerminalReader(root: HTMLElement): void
   `data-reader-search-active` on the complete reader status section while the
   reader is not editing a search or command form; opening `/` or `?` removes
   that marker temporarily but preserves the prior committed status text until
-  the form is submitted or cancelled. The status section itself is always
-  sticky whenever it is visible, remains in normal document flow, and uses the
-  presentation's token-backed opaque inverse/contrasting surface so its own
-  height is reserved while the document scrolls. The visible status section
-  may bleed from its centered reader frame to the viewport edges, while the
-  document header, outline, and prose retain their existing readable measure;
-  this full-bleed treatment must not create document-level horizontal overflow.
+  the form is submitted or cancelled. The status section is viewport-fixed to
+  the block-end whenever it is visible, and follows the rendered reader region
+  in source order so the document header, outline, and prose remain continuous.
+  It uses the presentation's token-backed opaque inverse/contrasting surface;
+  the Terminal document provides a conservative no-JavaScript fallback, while
+  reader startup measures the rendered status height and writes the route-local
+  `--reader-status-reserve` value on the article. A `ResizeObserver` refreshes
+  that reservation when search/command chrome or responsive wrapping changes;
+  article bottom padding and reading-unit scroll margins keep active and final
+  content above the fixed edge. The visible status section may bleed from its
+  centered reader frame to the viewport edges, while the document header,
+  outline, and prose retain their existing readable measure; this full-bleed
+  treatment must not create document-level horizontal overflow.
   A non-empty query replaces the query, occurrence records, highlights, and
   committed-search marker as one lifecycle;
   an empty submission or Escape clears the query/highlights without changing
-  the permanent sticky status lifecycle. The mode/position row owns reader
+  the permanent fixed status lifecycle. The mode/position row owns reader
   orientation, `data-reader-search-status` owns committed occurrence context,
   and `data-reader-message` owns the latest visible action feedback. When the
   committed search status owns the current feedback, the generic message is

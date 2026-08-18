@@ -369,7 +369,7 @@ test('Terminal output contains outline targets and localized wide regions', asyn
   const statusIndex = post.indexOf('data-terminal-reader-status');
   const readerIndex = post.indexOf('data-terminal-reader-region');
   assert.ok(statusIndex >= 0);
-  assert.ok(readerIndex > statusIndex);
+  assert.ok(statusIndex > readerIndex);
   assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
   assert.match(post, /data-terminal-reader-entry="always"/u);
   assert.doesNotMatch(post, /data-terminal-reader-status[^>]*hidden/u);
@@ -380,4 +380,38 @@ test('Terminal output contains outline targets and localized wide regions', asyn
   assert.match(post, /data-terminal-wide="table"/u);
   assert.match(post, /<h1>Hello, static foundation<\/h1>/u);
   assert.match(post, /No browser-side parser/u);
+});
+
+test('both reader presentations keep status after content and fixed to the viewport bottom', async () => {
+  const semanticComponent = await readFile(
+    path.join(sourceRoot, 'components/SemanticDocument.astro'),
+    'utf8'
+  );
+  const terminalComponent = await readFile(
+    path.join(sourceRoot, 'components/TerminalDocument.astro'),
+    'utf8'
+  );
+  const semanticStyles = await readFile(path.join(sourceRoot, 'styles/global.css'), 'utf8');
+  const terminalStyles = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
+
+  for (const [component, variant] of [
+    [semanticComponent, 'semantic'],
+    [terminalComponent, 'terminal']
+  ]) {
+    const readerIndex = component.indexOf('data-terminal-reader-region');
+    const statusIndex = component.indexOf(`<ReaderStatus variant="${variant}"`);
+    assert.ok(readerIndex >= 0);
+    assert.ok(statusIndex > readerIndex);
+  }
+
+  for (const [styles, selector] of [
+    [semanticStyles, '.reader-status'],
+    [terminalStyles, '.terminal-reader-status']
+  ]) {
+    const block = new RegExp(`${selector.replace('.', '\\.')}\\s*\\{([\\s\\S]*?)\\n\\}`, 'u').exec(styles)?.[1] ?? '';
+    assert.match(block, /position:\s*fixed;/u);
+    assert.match(block, /inset-inline:\s*0;/u);
+    assert.match(block, /inset-block-end:\s*0;/u);
+    assert.match(block, /env\(safe-area-inset-bottom\)/u);
+  }
 });

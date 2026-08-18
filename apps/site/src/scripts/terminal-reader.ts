@@ -195,9 +195,22 @@ export function startTerminalReader(root: HTMLElement): void {
 
   const motionBehavior = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
+  const updateStatusReserve = () => {
+    const height = Math.ceil(status.getBoundingClientRect().height);
+    if (height > 0) root.style.setProperty('--reader-status-reserve', `${height}px`);
+  };
+
+  const statusResizeObserver = typeof ResizeObserver === 'undefined'
+    ? undefined
+    : new ResizeObserver(updateStatusReserve);
+  statusResizeObserver?.observe(status);
+  window.addEventListener('resize', updateStatusReserve, { passive: true });
+  updateStatusReserve();
+
   const announce = (message: string) => {
     messageNode.textContent = message;
     announcer.textContent = message;
+    updateStatusReserve();
   };
 
   const searchStatusText = () => searchMatches.length === 0
@@ -240,7 +253,11 @@ export function startTerminalReader(root: HTMLElement): void {
   const settleSearchMatch = (range: Range) => {
     const rect = range.getBoundingClientRect();
     const viewportTop = window.innerHeight * 0.25;
-    const viewportBottom = window.innerHeight * 0.75;
+    const statusTop = status.getBoundingClientRect().top;
+    const viewportBottom = Math.max(
+      viewportTop,
+      Math.min(window.innerHeight * 0.75, statusTop - 8)
+    );
     const offset = rect.top < viewportTop
       ? rect.top - viewportTop
       : rect.bottom > viewportBottom
