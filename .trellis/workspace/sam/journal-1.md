@@ -458,3 +458,24 @@ Implemented the reader statusline as viewport-fixed bottom chrome for semantic a
 ### Status
 
 [OK] **Completed**
+
+
+## Session 22: Simplify Terminal document navigation
+
+**Date**: 2026-08-18
+**Task**: Simplify Terminal document navigation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Removed the duplicate Terminal article breadcrumb, kept one canonical /posts or /pages source path, replaced the ordered outline with an accessible tree-shaped navigation, removed the double divider treatment, updated frontend guidance and browser/static tests, and verified site check, build, Playwright, content, x-core, and diff validation.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ae19768` | (see git log) |
+
+### Status
+
+[OK] **Completed**
