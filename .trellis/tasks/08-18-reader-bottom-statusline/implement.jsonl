@@ -1,0 +1,12 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package boundaries, validation profile, Playwright projects, and required site checks."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Astro document composition, shared ReaderStatus ownership, CSS boundaries, accessibility, and native reader markup rules."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Bounded browser-controller ownership, progressive enhancement, focus, key handling, and no-JavaScript fallback constraints."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Route-local reader state and the boundary between server-rendered content and ephemeral browser state."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict TypeScript and DOM/browser-boundary conventions for the reader controller."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Static output, responsive browser, accessibility, reduced-motion, overflow, and build/test quality gates."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Durable read-only Vim reader contract, status lifecycle, native fallback, search behavior, and geometry expectations."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Search-first and shared-selector guidance before changing two presentation styles or adding runtime geometry support."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"DOM state, browser geometry, CSS tokens, and controller-reservation data-flow boundary checks."}
+{"file":".trellis/tasks/08-18-reader-bottom-statusline/prd.md","reason":"Approved scope and observable acceptance criteria for the bottom-anchored statusline."}
+{"file":".trellis/tasks/08-18-reader-bottom-statusline/design.md","reason":"Approved bottom-fixed layout, measured reservation, composition, accessibility, and UUPM decisions."}
+{"file":".trellis/tasks/08-18-reader-bottom-statusline/research/ui-ux-pro-max.md","reason":"Raw UUPM research plus the approved/rejected interpretation for this existing Terminal reader."}
