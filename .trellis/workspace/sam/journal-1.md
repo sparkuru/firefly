@@ -395,3 +395,24 @@ Added structured tree metadata and native document links; public directory links
 ### Status
 
 [OK] **Completed**
+
+
+## Session 19: Make terminal document paths shell-intuitive
+
+**Date**: 2026-08-18
+**Task**: Make terminal document paths shell-intuitive
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented root-only explicit mount resolution for posts/pages/lab with optional ./, actionable experiment and directory cat errors, updated vim wording, regression coverage, and the virtual path contract. Terminal check/build/tests passed (25/25), site build/static tests passed (12/12), and focused Terminal Playwright passed (50/50). Preserved concurrent reader/site/content work outside this task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1e48c77` | (see git log) |
+
+### Status
+
+[OK] **Completed**
