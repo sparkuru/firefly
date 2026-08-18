@@ -114,7 +114,7 @@ export type TerminalEffect =
   | { readonly kind: 'navigation'; readonly experiment: TerminalExperiment }
   | { readonly kind: 'document'; readonly entry: TerminalEntry }
   | { readonly kind: 'document-navigation'; readonly entry: TerminalEntry }
-  | { readonly kind: 'tree'; readonly root: string; readonly lines: readonly string[] }
+  | { readonly kind: 'tree'; readonly root: string; readonly lines: readonly string[]; readonly nodes: readonly import('./vfs/contracts.js').TreeLine[] }
   | { readonly kind: 'clear' };
 
 export interface CommandResult {
@@ -985,7 +985,14 @@ function adaptShellValue(value: NonNullable<ShellProcessResult['value']>, contex
       })))
     };
   }
-  if (value.kind === 'tree') return { kind: 'tree', root: value.root, lines: Object.freeze([...value.lines]) };
+  if (value.kind === 'tree') {
+    return {
+      kind: 'tree',
+      root: value.root,
+      lines: Object.freeze([...value.lines]),
+      nodes: Object.freeze([...value.nodes])
+    };
+  }
   if (value.kind === 'document') {
     const entry = entryAt(value.document.path, context.entries);
     return entry === undefined ? undefined : { kind: 'document', entry };
@@ -1007,11 +1014,13 @@ function adaptShellValue(value: NonNullable<ShellProcessResult['value']>, contex
       .filter((experiment): experiment is TerminalExperiment => experiment !== undefined);
     return { kind: 'experiments', experiments: Object.freeze(experiments) };
   }
-  if (listing.path.startsWith('/posts') || listing.path.startsWith('/pages')) {
+  if (listing.path === '/' || listing.path.startsWith('/posts') || listing.path.startsWith('/pages')) {
     const entries = listing.documents
       .map((document) => entryAt(document.path, context.entries))
       .filter((entry): entry is TerminalEntry => entry !== undefined);
-    const label = listing.path.startsWith('/pages') ? 'pages' : 'posts';
+    const label = listing.path === '/'
+      ? 'root entries'
+      : listing.path.startsWith('/pages') ? 'pages' : 'posts';
     return {
       kind: 'entries',
       directories: Object.freeze([...listing.directories]),

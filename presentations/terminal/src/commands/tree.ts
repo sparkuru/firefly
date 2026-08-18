@@ -1,42 +1,44 @@
 import type { ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
+import type { TreeLine, TreeNode } from '../vfs/contracts.js';
 
 export const TREE_USAGE = 'tree [path]';
 export const TREE_SUMMARY = 'show a public content subtree';
-
-interface TreeChild {
-  readonly name: string;
-  readonly path: string;
-  readonly directory: boolean;
-}
 
 function displayPath(path: string): string {
   return path === '/' ? '~/blog' : `~/blog${path}`;
 }
 
-function children(context: ProcessContext, path: string): readonly TreeChild[] {
+function isDirectoryNode(node: TreeNode): boolean {
+  return node.kind === 'directory';
+}
+
+function children(context: ProcessContext, path: string): readonly TreeNode[] {
   const listing = context.fs.list(path);
   if (listing === undefined) return Object.freeze([]);
   const prefix = path === '/' ? '/' : `${path}/`;
-  const directories: TreeChild[] = listing.directories
+  const directories: TreeNode[] = listing.directories
     .filter((name) => !name.startsWith('.'))
     .map((name) => ({
+      kind: 'directory',
       name,
-      path: `${prefix}${name.slice(0, -1)}`,
-      directory: true
+      path: `${prefix}${name.slice(0, -1)}`
     }));
-  const experiments: TreeChild[] = listing.experiments.map((experiment) => ({
+  const experiments: TreeNode[] = listing.experiments.map((experiment) => ({
+    kind: 'experiment',
     name: `${experiment.id}/`,
     path: `${prefix}${experiment.id}`,
-    directory: true
+    experiment
   }));
   const documents = listing.documents
     .filter((document) => document.path.startsWith(prefix) && !document.path.slice(prefix.length).includes('/'))
-    .map((document) => ({ name: document.filename, path: document.path, directory: false }));
-  const files = listing.files.map((name) => ({ name, path: `${prefix}${name}`, directory: false }));
+    .map((document): TreeNode => ({ kind: 'document', name: document.filename, path: document.path, document }));
+  const files: TreeNode[] = listing.files.map((name) => ({ kind: 'file', name, path: `${prefix}${name}` }));
   return Object.freeze([...directories, ...experiments, ...documents, ...files].sort((left, right) => {
-    if (left.directory !== right.directory) return left.directory ? -1 : 1;
+    const leftDirectory = isDirectoryNode(left) || left.kind === 'experiment';
+    const rightDirectory = isDirectoryNode(right) || right.kind === 'experiment';
+    if (leftDirectory !== rightDirectory) return leftDirectory ? -1 : 1;
     return left.name.localeCompare(right.name);
   }));
 }
@@ -50,15 +52,20 @@ export function executeTree(context: ProcessContext, args: ParsedCommandArgument
   }
 
   const lines: string[] = [];
+  const nodes: TreeLine[] = [];
   const visit = (path: string, prefix: string): void => {
     const items = children(context, path);
     items.forEach((item, index) => {
       const last = index === items.length - 1;
-      lines.push(`${prefix}${last ? '└──' : '├──'} ${item.name}`);
-      if (item.directory) visit(item.path, `${prefix}${last ? '    ' : '│   '}`);
+      const linePrefix = `${prefix}${last ? '└──' : '├──'} `;
+      lines.push(`${linePrefix}${item.name}`);
+      nodes.push(Object.freeze({ prefix: linePrefix, node: Object.freeze(item) }));
+      if (isDirectoryNode(item)) visit(item.path, `${prefix}${last ? '    ' : '│   '}`);
     });
   };
   visit(resolution.path, '');
   const root = displayPath(resolution.path);
-  return successResult([root, ...lines], { value: { kind: 'tree', root, lines: Object.freeze(lines) } });
+  return successResult([root, ...lines], {
+    value: { kind: 'tree', root, lines: Object.freeze(lines), nodes: Object.freeze(nodes) }
+  });
 }

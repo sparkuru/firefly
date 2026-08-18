@@ -32,6 +32,18 @@ export interface DirectoryListing {
   readonly files: readonly string[];
 }
 
+export type TreeNode =
+  | { readonly kind: 'directory'; readonly name: string; readonly path: VirtualPath }
+  | { readonly kind: 'document'; readonly name: string; readonly path: VirtualPath; readonly document: PublicDocument }
+  | { readonly kind: 'experiment'; readonly name: string; readonly path: VirtualPath; readonly experiment: PublicExperiment }
+  | { readonly kind: 'file'; readonly name: string; readonly path: VirtualPath };
+
+export interface TreeLine {
+  /** The exact branch glyph and indentation preceding the visible node name. */
+  readonly prefix: string;
+  readonly node: TreeNode;
+}
+
 export type VfsNode =
   | { readonly kind: 'directory'; readonly path: VirtualPath }
   | { readonly kind: 'document'; readonly path: VirtualPath; readonly document: PublicDocument }

@@ -214,9 +214,11 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.deepEqual(posts?.kind === 'entries' ? posts.entries : [], []);
   assert.deepEqual(pages?.kind === 'entries' ? pages.entries : [], [entries[1]]);
   assert.deepEqual(run('ls /').effect, {
-    kind: 'lines',
-    tone: 'normal',
-    lines: ['lab/', 'pages/', 'posts/']
+    kind: 'entries',
+    directories: ['lab/', 'pages/', 'posts/'],
+    entries: [],
+    label: 'root entries',
+    directory: '/'
   });
   const charactersState = run('cd characters').state;
   assert.equal(charactersState.cwd, '~/blog/posts/characters');
@@ -252,26 +254,47 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.equal(vimNavigation?.kind, 'document-navigation');
   assert.equal(vimNavigation?.kind === 'document-navigation' ? vimNavigation.entry.href : null, '/posts/characters/alpha/');
   const postsTree = run('tree').effect;
-  assert.deepEqual(postsTree, {
-    kind: 'tree',
-    root: '~/blog/posts',
-    lines: ['└── characters/', '    └── alpha.md']
-  });
+  assert.equal(postsTree?.kind, 'tree');
+  if (postsTree?.kind !== 'tree') return;
+  assert.deepEqual(postsTree.lines, ['└── characters/', '    └── alpha.md']);
+  assert.deepEqual(postsTree.nodes.map(({ prefix, node }) => ({
+    prefix,
+    kind: node.kind,
+    name: node.name,
+    path: node.path
+  })), [
+    { prefix: '└── ', kind: 'directory', name: 'characters/', path: '/posts/characters' },
+    { prefix: '    └── ', kind: 'document', name: 'alpha.md', path: '/posts/characters/alpha.md' }
+  ]);
+  assert.equal(postsTree.nodes[1]?.node.kind === 'document' ? postsTree.nodes[1].node.document.href : null, '/posts/characters/alpha/');
   const fullTree = run('tree /').effect;
-  assert.deepEqual(fullTree, {
-    kind: 'tree',
-    root: '~/blog',
-    lines: [
-      '├── lab/',
-      '│   ├── nerv/',
-      '│   └── quiet-lab/',
-      '├── pages/',
-      '│   └── about.md',
-      '└── posts/',
-      '    └── characters/',
-      '        └── alpha.md'
-    ]
-  });
+  assert.equal(fullTree?.kind, 'tree');
+  if (fullTree?.kind !== 'tree') return;
+  assert.deepEqual(fullTree.lines, [
+    '├── lab/',
+    '│   ├── nerv/',
+    '│   └── quiet-lab/',
+    '├── pages/',
+    '│   └── about.md',
+    '└── posts/',
+    '    └── characters/',
+    '        └── alpha.md'
+  ]);
+  assert.deepEqual(fullTree.nodes.map(({ prefix, node }) => ({
+    prefix,
+    kind: node.kind,
+    name: node.name,
+    path: node.path
+  })), [
+    { prefix: '├── ', kind: 'directory', name: 'lab/', path: '/lab' },
+    { prefix: '│   ├── ', kind: 'experiment', name: 'nerv/', path: '/lab/nerv' },
+    { prefix: '│   └── ', kind: 'experiment', name: 'quiet-lab/', path: '/lab/quiet-lab' },
+    { prefix: '├── ', kind: 'directory', name: 'pages/', path: '/pages' },
+    { prefix: '│   └── ', kind: 'document', name: 'about.md', path: '/pages/about.md' },
+    { prefix: '└── ', kind: 'directory', name: 'posts/', path: '/posts' },
+    { prefix: '    └── ', kind: 'directory', name: 'characters/', path: '/posts/characters' },
+    { prefix: '        └── ', kind: 'document', name: 'alpha.md', path: '/posts/characters/alpha.md' }
+  ]);
   for (const operand of ['../alpha.md', './nested/../alpha.md', '/alpha.md', 'https://example.com/alpha.md', '/etc/passwd', 'characters\\alpha.md']) {
     assert.match(JSON.stringify(run(`cat ${operand}`).effect), /No readable rshell resource/u, operand);
   }

@@ -47,6 +47,8 @@ interface RenderResult {
   readonly navigationHref?: string;
 }
 
+type TerminalTreeNode = Extract<TerminalEffect, { kind: 'tree' }>['nodes'][number]['node'];
+
 const protectedTypingTargetSelector = [
   'a',
   'button',
@@ -339,6 +341,26 @@ function appendGrepMatch(parent: HTMLElement, match: TerminalGrepMatch): void {
   parent.append(item);
 }
 
+function childDirectoryPath(parent: string, directory: string): string {
+  const name = directory.endsWith('/') ? directory.slice(0, -1) : directory;
+  if (name.length === 0) {
+    throw new TypeError('Terminal directory links require a non-empty child name.');
+  }
+  return parent === '/' ? `/${name}` : `${parent}/${name}`;
+}
+
+function directoryHref(path: string): string {
+  return path === '/' ? '/' : `${path}/`;
+}
+
+function createDirectoryLink(path: string, label: string): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.href = directoryHref(path);
+  link.dataset.terminalCdPath = path;
+  link.textContent = label;
+  return link;
+}
+
 function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>, record: HTMLElement): void {
   if (effect.directories.length === 0 && effect.entries.length === 0) {
     appendTextLine(record, `No public ${effect.label}.`);
@@ -352,7 +374,7 @@ function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>
     row.dataset.terminalEntryKind = 'directory';
     const label = document.createElement('code');
     label.className = 'terminal-entry-directory';
-    label.textContent = directory;
+    label.append(createDirectoryLink(childDirectoryPath(effect.directory, directory), directory));
     row.append(label);
     listing.append(row);
   }
@@ -433,6 +455,28 @@ function renderGrepEffect(effect: Extract<TerminalEffect, { kind: 'grep' }>, rec
     grep.append(notice);
   }
   record.append(grep);
+}
+
+function appendTreeNode(parent: HTMLElement, node: TerminalTreeNode): void {
+  if (node.kind === 'directory') {
+    parent.append(createDirectoryLink(node.path, node.name));
+    return;
+  }
+  if (node.kind === 'document') {
+    const link = document.createElement('a');
+    link.href = node.document.href;
+    link.textContent = node.name;
+    parent.append(link);
+    return;
+  }
+  if (node.kind === 'experiment') {
+    const link = document.createElement('a');
+    link.href = node.experiment.href;
+    link.textContent = node.name;
+    parent.append(link);
+    return;
+  }
+  parent.append(document.createTextNode(node.name));
 }
 
 function renderEffect(
@@ -522,7 +566,14 @@ function renderEffect(
     case 'tree': {
       const pre = document.createElement('pre');
       pre.className = 'terminal-tree';
-      pre.textContent = [effect.root, ...effect.lines].join('\n');
+      if (effect.nodes.length !== effect.lines.length) {
+        throw new TypeError('Terminal tree lines and nodes must remain aligned.');
+      }
+      pre.append(document.createTextNode(effect.root));
+      effect.nodes.forEach(({ prefix, node }) => {
+        pre.append(document.createTextNode(`\n${prefix}`));
+        appendTreeNode(pre, node);
+      });
       record.append(pre);
       return { focusTarget: null };
     }
@@ -607,6 +658,15 @@ function isEligibleTypingTarget(event: KeyboardEvent): boolean {
   }
   const selection = window.getSelection();
   return selection === null || selection.isCollapsed;
+}
+
+function isUnmodifiedPrimaryClick(event: MouseEvent): boolean {
+  return !event.defaultPrevented &&
+    event.button === 0 &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey;
 }
 
 function renderAmbiguousCompletion(node: HTMLElement, candidates: readonly string[]): void {
@@ -707,6 +767,18 @@ export function startTerminalHome(
     if (!composing) {
       submit();
     }
+  });
+  nodes.transcript.addEventListener('click', (event) => {
+    if (!isUnmodifiedPrimaryClick(event)) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest('a[data-terminal-cd-path]');
+    if (!(link instanceof HTMLAnchorElement) || !nodes.transcript.contains(link)) return;
+    const path = link.dataset.terminalCdPath;
+    if (path === undefined) return;
+    event.preventDefault();
+    nodes.input.value = `cd ${path === '/' ? '/' : `${path}/`}`;
+    submit();
   });
   document.addEventListener('compositionstart', () => {
     composing = true;

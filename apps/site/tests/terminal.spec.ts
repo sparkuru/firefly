@@ -171,7 +171,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   const postsListing = transcript.locator('.terminal-entry-list').last();
   await expect(postsListing.locator('.terminal-entry-row')).toHaveCount(3);
   await expect(postsListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(1);
-  await expect(postsListing.locator('[data-terminal-entry-kind="directory"] code')).toHaveText('characters/');
+  await expect(postsListing.getByRole('link', { name: 'characters/' })).toHaveAttribute('href', '/posts/characters/');
   await expect(postsListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(2);
   await expect(postsListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
   await expect(postsListing).toHaveCSS('padding-left', '0px');
@@ -203,6 +203,32 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript).toContainText('No listed experiment named "lab/unlisted"');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
   await expect(rootInput).toBeFocused();
+});
+
+test('ls and tree entries expose document links and safe directory cd links', async ({ page }) => {
+  await page.goto('/');
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await submit(page, 'ls posts');
+  const lsListing = transcript.locator('.terminal-record').last().locator('.terminal-entry-list');
+  const lsDirectory = lsListing.getByRole('link', { name: 'characters/' });
+  await expect(lsDirectory).toHaveAttribute('href', '/posts/characters/');
+  await expect(lsDirectory).toHaveAttribute('data-terminal-cd-path', '/posts/characters');
+  await lsDirectory.click();
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/characters $');
+  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/characters/');
+  await expect(page).toHaveURL(/\/$/u);
+
+  await submit(page, 'cd /');
+  await submit(page, 'tree /');
+  const tree = transcript.locator('.terminal-record').last().locator('.terminal-tree');
+  await expect(tree.getByRole('link', { name: 'posts/' })).toHaveAttribute('href', '/posts/');
+  await expect(tree.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
+  const treeDirectory = tree.getByRole('link', { name: 'characters/' });
+  await treeDirectory.focus();
+  await treeDirectory.press('Enter');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/characters $');
+  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/characters/');
 });
 
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {

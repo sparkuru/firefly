@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Review the implementation against DOM ownership, validated native-link navigation, keyboard handling, and Terminal controller boundaries."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review the affected package/site checks, browser coverage, accessibility, static fallback, and diff hygiene requirements."}
