@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 18
+- **Total Sessions**: 19
 - **Last Active**: 2026-08-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~397 | Active |
+| `journal-1.md` | ~418 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 19 | 2026-08-18 | Make terminal document paths shell-intuitive | `1e48c77` | `anti-entropy-loss-syndrome` |
 | 18 | 2026-08-18 | Make ls and tree entries clickable | `2d3e59f` | `anti-entropy-loss-syndrome` |
 | 17 | 2026-08-18 | Reader sticky contrast and full-width layout | `9ee0aff` | `anti-entropy-loss-syndrome` |
 | 16 | 2026-08-17 | Reader persistent sticky status panel | `7015f48` | `anti-entropy-loss-syndrome` |
