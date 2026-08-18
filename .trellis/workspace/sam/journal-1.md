@@ -416,3 +416,24 @@ Implemented root-only explicit mount resolution for posts/pages/lab with optiona
 ### Status
 
 [OK] **Completed**
+
+
+## Session 20: Unify public document presentation
+
+**Date**: 2026-08-18
+**Task**: Unify public document presentation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Unified all four current public document routes on the Terminal presentation by migrating About and Hello metadata, updated static and browser contracts for Terminal ownership and #terminal-reader entry behavior, preserved the semantic adapter and no-JS navigation, and passed content, X Core, Astro/build, focused, and full Playwright checks.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8c63b61` | (see git log) |
+
+### Status
+
+[OK] **Completed**

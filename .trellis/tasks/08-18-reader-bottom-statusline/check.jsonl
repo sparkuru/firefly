@@ -1,0 +1,12 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Project validation profile and browser evidence requirements for the quality check."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review Astro composition order, CSS ownership, semantic markup, focus, and reader accessibility contracts."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Review reader controller lifecycle, key ownership, focus, progressive enhancement, and fallback behavior."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Verify the new measured geometry variable remains route-local and does not leak into application state."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Review ResizeObserver/DOM typing and strict browser-boundary implementation."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Run and assess static output, responsive Playwright, accessibility, overflow, reduced-motion, build, and diff gates."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check the implementation against the durable reader status, search, active-unit, and no-JavaScript contracts."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Check for duplicated status geometry or theme rules and missed selectors after the batch change."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Review CSS/runtime geometry ownership, focus/scroll behavior, and browser-observable contracts."}
+{"file":".trellis/tasks/08-18-reader-bottom-statusline/prd.md","reason":"Check every acceptance criterion and scope boundary."}
+{"file":".trellis/tasks/08-18-reader-bottom-statusline/design.md","reason":"Check visual and technical implementation against approved decisions and rejected UUPM suggestions."}
+{"file":".trellis/tasks/08-18-reader-bottom-statusline/research/ui-ux-pro-max.md","reason":"Validate responsive, focus, contrast, motion, and content-first UI decisions against the recorded research."}
