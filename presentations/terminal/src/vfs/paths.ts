@@ -2,6 +2,7 @@ import type { PathResolution, VirtualPath } from './contracts.js';
 
 const shellRoot = '~/blog';
 const unsafeSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
+const resourceMounts = Object.freeze(['posts', 'pages', 'lab']);
 
 function isSafeSegment(segment: string, allowWildcard: boolean): boolean {
   return segment.length > 0 &&
@@ -24,6 +25,14 @@ function isKnownRoot(path: string): boolean {
     path.startsWith('/pages/') ||
     path.startsWith('/lab/') ||
     path.startsWith('/.rshell/');
+}
+
+function rootResourceMount(input: string, cwd: VirtualPath, mode: 'directory' | 'resource' | 'pattern'): string | undefined {
+  if (cwd !== '/' || mode !== 'resource') return undefined;
+  const operand = input.startsWith('./') ? input.slice(2) : input;
+  return resourceMounts.some((mount) => operand === mount || operand.startsWith(`${mount}/`))
+    ? operand
+    : undefined;
 }
 
 export function displayVirtualPath(path: VirtualPath): string {
@@ -77,9 +86,12 @@ export function resolveVirtualPath(
   } else if (input.startsWith('/')) {
     base = input;
   } else {
-    base = cwd === '/'
-      ? mode === 'resource' ? `/posts/${input}` : `/${input}`
-      : `${cwd}/${input}`;
+    const rootMount = rootResourceMount(input, cwd, mode);
+    base = rootMount !== undefined
+      ? `/${rootMount}`
+      : cwd === '/'
+        ? mode === 'resource' ? `/posts/${input}` : `/${input}`
+        : `${cwd}/${input}`;
   }
 
   const segments: string[] = [];

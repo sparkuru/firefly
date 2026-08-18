@@ -322,8 +322,11 @@ startTerminalReader(root: HTMLElement): void
 - `/` is the canonical VFS root and `~/blog` is only its prompt/display alias.
   Directory-mode `resolve('.', '/')` must produce `/` rather than `//.`; after
   `cd ../` from `~/blog/posts`, no-operand `ls` therefore has the same listing
-  as `ls /`. Resource-relative documents retain the posts-relative rule, while
-  pages continue to require `/pages/<path>.md`.
+  as `ls /`. Resource-mode operands retain the posts-default rule for bare and
+  non-mount-qualified relative paths, but at `/` explicit `posts/<path>`,
+  `pages/<path>`, and `lab/<path>` operands resolve from the virtual root; one
+  leading `./` before an explicit mount is equivalent. Absolute paths retain
+  their canonical behavior, and resource-mode `..` traversal remains rejected.
 - When the prompt input is focused, the controller prevents the default action
   for every Tab event, including modifiers and IME/composition events. Only an
   unmodified, non-composing Tab may rewrite input through completion. Safe `cd`
@@ -334,7 +337,8 @@ startTerminalReader(root: HTMLElement): void
 - Entry-list display is an executable operand view, not an internal-path dump:
   posts use cwd-relative paths such as `characters/nahida.md`; pages use virtual
   absolute paths such as `/pages/about.md`. Help and not-found errors state that
-  relative paths resolve under posts and pages require `/pages/<path>.md`.
+  bare relative paths resolve under posts, explicit mount-qualified paths may be
+  used from the virtual root, and `tree /` exposes the available public mounts.
 - A standalone `ls` entries effect carries the canonical public `directory` it
   resolved and contains only that directory's immediate children. The browser
   renders directories and documents as one flat shell-style list: directory
@@ -391,10 +395,14 @@ startTerminalReader(root: HTMLElement): void
   normalized directory candidates `pages/` and `posts/`, while prompt Tab is
   still prevented by the controller. A unique prefix such as `ls pa` completes
   to `ls pages/`.
-- `cat` and `vim` share one resolver and segment-aware completer. Relative paths
-  resolve under posts and may have one exact `./`; virtual absolute operands may
-  start only `/posts/` or `/pages/`. Hidden/dot/traversal/percent/backslash/URL/
-  control/non-NFC/unknown-root/directory operands never resolve or consume Tab.
+- `cat` and `vim` share one resolver and segment-aware completer. Bare and
+  non-mount-qualified relative paths resolve under posts; at the virtual root,
+  `posts/<path>`, `pages/<path>`, and `lab/<path>` may be explicit root-relative
+  operands with one optional leading `./`. Readable document absolute operands
+  start only `/posts/` or `/pages/`; experiments are navigated with
+  `open lab/<id>` rather than read as documents. Hidden/dot/traversal/percent/
+  backslash/URL/control/non-NFC/unknown-root operands never resolve or consume
+  Tab, and directory/experiment operands return actionable command errors.
 - `cat` returns a validated `document` effect for trusted template cloning.
   `vim` returns `document-navigation` containing the decoded canonical entry;
   the DOM controller uses `entry.href` directly and never concatenates raw input.

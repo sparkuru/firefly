@@ -190,10 +190,18 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(rootInput).toBeFocused();
   await rootInput.press('Enter');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
+  await submit(page, 'cat pages/about.md');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
   await submit(page, 'cat ./pages/about.md');
-  await expect(transcript).toContainText('No readable rshell resource named "./pages/about.md".');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
+  await submit(page, 'cat posts/hello-static-foundation.md');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Hello, static foundation');
+  await submit(page, 'grep -i about pages/about.md');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('/pages/about.md:');
   await submit(page, 'cat /pages/about.md');
-  await expect(transcript.getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
+  await expect(transcript.locator('.terminal-record').last().getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
+  await submit(page, 'cat lab/nerv');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Try "open lab/nerv".');
 
   await submit(page, 'ls lab');
   await expect(transcript.locator('.terminal-record').last().getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');

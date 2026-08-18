@@ -201,7 +201,7 @@ export function executeVim(context: ProcessContext, args: ParsedCommandArguments
   const resolution = context.fs.resolve(operands[0]!, context.cwd, 'resource');
   const node = resolution.ok ? context.fs.stat(resolution.path) : undefined;
   if (node?.kind !== 'document') {
-    return failureResult(`No public document named "${operands[0]}". Relative paths resolve under posts; pages require /pages/<path>.md. Try "tree" or "tree /".`);
+    return failureResult(`No public document named "${operands[0]}". Try "tree" or "tree /".`);
   }
   return successResult([], { controls: [{ kind: 'open-document', path: node.document.path }] });
 }

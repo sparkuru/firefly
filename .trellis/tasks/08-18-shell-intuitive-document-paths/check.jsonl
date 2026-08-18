@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check the shared VFS path contract, safe virtual namespace, resource-mode traversal restrictions, and Terminal command consistency."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check required Terminal package, site browser, accessibility, and diff validation gates before completion."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check that all Node and Playwright validation uses ./sam and the approved browser/build lifecycle."}
