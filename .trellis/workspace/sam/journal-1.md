@@ -374,3 +374,24 @@ Completed the reader search chrome refinement: opaque sticky contrast surfaces, 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 18: Make ls and tree entries clickable
+
+**Date**: 2026-08-18
+**Task**: Make ls and tree entries clickable
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added structured tree metadata and native document links; public directory links now execute safe in-session cd on unmodified activation while preserving native modified-link behavior. Updated terminal/site tests and frontend contract guidance. Terminal tests, site checks, and full Playwright passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2d3e59f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
