@@ -2,26 +2,26 @@
 
 ## Ordered checklist
 
-1. [ ] Read the approved PRD/design, UUPM research, and curated frontend
+1. [x] Read the approved PRD/design, UUPM research, and curated frontend
        context; inspect the current reader selectors/tests and preserve the
        unrelated active-task changes.
-2. [ ] Move the shared `ReaderStatus` composition after the rendered reader
+2. [x] Move the shared `ReaderStatus` composition after the rendered reader
        region in both document components.
-3. [ ] Convert semantic and Terminal status CSS from top sticky flow to fixed
+3. [x] Convert semantic and Terminal status CSS from top sticky flow to fixed
        bottom chrome. Preserve token-backed contrast, full-viewport containment,
        native form behavior, focus treatment, and responsive no-overflow rules;
        add safe-area and compact paragraph/reserve styling.
-4. [ ] Add route-local status-height observation in the existing reader
+4. [x] Add route-local status-height observation in the existing reader
        controller so the article reserves the measured fixed-bar height and
        active/search settlement remains above it through state and viewport
        changes.
-5. [ ] Update reader/static-output browser assertions for post-content markup,
+5. [x] Update reader/static-output browser assertions for post-content markup,
        fixed bottom geometry, initial/mid-scroll persistence, reserved final
        content, search/command expansion, semantic fragment visibility, and
        desktop/mobile containment. Keep behavior assertions unchanged.
-6. [ ] Update the durable frontend reader contract only where the layout
+6. [x] Update the durable frontend reader contract only where the layout
        contract changes; do not modify generic semantic or shell-path rules.
-7. [ ] Run focused static/type/build and reader/browser checks through `./sam`,
+7. [x] Run focused static/type/build and reader/browser checks through `./sam`,
        then the relevant site suites and `git diff --check`. Review the final
        diff for active-worktree preservation.
 

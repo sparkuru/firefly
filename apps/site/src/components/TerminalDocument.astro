@@ -82,8 +82,6 @@ const showOutline = metadata.outline.length >= 2;
     )
   }
 
-  <ReaderStatus variant="terminal" />
-
   <div
     id="terminal-reader"
     class="terminal-prose"
@@ -92,4 +90,6 @@ const showOutline = metadata.outline.length >= 2;
     role="region"
     aria-label={`Read-only Vim reader for ${entry.data.title}`}
   ><Content /></div>
+
+  <ReaderStatus variant="terminal" />
 </article>

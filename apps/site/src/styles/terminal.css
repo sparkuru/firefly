@@ -541,6 +541,8 @@
 
 .terminal-document {
   max-width: var(--terminal-measure-stream);
+  --reader-status-reserve: 10rem;
+  padding-block-end: var(--reader-status-reserve);
 }
 
 .terminal-document-header {
@@ -614,17 +616,21 @@
 }
 
 .terminal-reader-status {
-  width: 100vw;
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 30;
+  width: auto;
   max-width: none;
-  margin-block: var(--terminal-space-record) 0;
-  margin-inline: calc((100% - 100vw) / 2);
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 2;
+  margin: 0;
   border-block: 1px solid var(--terminal-color-border);
-  padding: calc(var(--terminal-space-record) * 0.5) clamp(1rem, 4vw, 3rem);
+  padding-block: calc(var(--terminal-space-record) * 0.25) max(0.35rem, env(safe-area-inset-bottom));
+  padding-inline-start: max(1rem, env(safe-area-inset-left));
+  padding-inline-end: max(1rem, env(safe-area-inset-right));
   background-color: var(--terminal-color-text);
   color: var(--terminal-color-canvas);
+  line-height: 1.4;
+  overflow-x: clip;
 }
 
 .terminal-reader-status[data-reader-search-active] > [data-reader-message] {
@@ -633,19 +639,25 @@
 
 .terminal-reader-status > p:first-child {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--terminal-space-record);
+  gap: 1rem;
   color: var(--terminal-color-canvas);
 }
 
+.terminal-reader-status > p,
 .terminal-reader-status > [data-reader-search-status] {
-  margin-block: 0.35rem 0;
+  margin: 0;
+}
+
+.terminal-reader-status > [data-reader-search-status] {
   color: var(--terminal-color-canvas);
   font-weight: 500;
 }
 
 .terminal-reader-status form:not([hidden]) {
   display: flex;
+  width: 100%;
   min-width: 0;
   align-items: center;
   min-height: 44px;
@@ -719,7 +731,8 @@
 }
 
 [data-reader-unit] {
-  scroll-margin-block: 25vh;
+  scroll-margin-block-start: 25vh;
+  scroll-margin-block-end: max(25vh, var(--reader-status-reserve, 0px));
 }
 
 ::highlight(terminal-reader-search) {
