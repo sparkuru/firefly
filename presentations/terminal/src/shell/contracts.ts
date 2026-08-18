@@ -84,7 +84,12 @@ export type CommandValue =
   | { readonly kind: 'document'; readonly document: import('../vfs/contracts.js').PublicDocument }
   | { readonly kind: 'grep-report'; readonly report: GrepReport }
   | { readonly kind: 'help'; readonly groups: readonly HelpGroup[] }
-  | { readonly kind: 'tree'; readonly root: string; readonly lines: readonly string[] };
+  | {
+      readonly kind: 'tree';
+      readonly root: string;
+      readonly lines: readonly string[];
+      readonly nodes: readonly import('../vfs/contracts.js').TreeLine[];
+    };
 
 export interface ProcessResult {
   readonly status: number;

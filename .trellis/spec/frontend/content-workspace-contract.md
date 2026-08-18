@@ -278,6 +278,12 @@ startTerminalReader(root: HTMLElement): void
   filesystem, shell, dynamic imports, or unchecked URLs. The compatibility
   adapter is the only place that projects neutral values/control events into
   `TerminalEffect` navigation, document, clear, or structured list/grep output.
+- The neutral `tree` value carries both its stable text projection and aligned
+  navigation metadata: `{ kind: 'tree', root, lines, nodes }`, where each
+  `TreeLine` is `{ prefix, node }` and each public `TreeNode` is a validated
+  directory, document, experiment, or session file with its virtual `path`.
+  `lines` remains the only stdout/pipeline projection; the runtime adapter
+  carries `nodes` to the browser without parsing tree glyphs back into paths.
 - The closed effect union includes structured `help` groups and structured
   `grep` results. `help` carries command metadata for semantic group rendering;
   `grep` carries the original matched line, canonical source path, optional
@@ -333,11 +339,24 @@ startTerminalReader(root: HTMLElement): void
   resolved and contains only that directory's immediate children. The browser
   renders directories and documents as one flat shell-style list: directory
   rows come first, followed by direct document rows, with no synthetic `/`
-  heading, nested indentation, or directory divider. Document rows keep stable
-  name, date, and title columns on wide screens; the mobile layout keeps the
-  name/date pair and moves the title below them. The bounded plain `stdout`
-  projection remains one deterministic entry per line so pipes and substitutions
-  do not consume layout text.
+  heading, nested indentation, or directory divider. Directory rows use a
+  canonical trailing-slash native href plus a `data-terminal-cd-path` carrying
+  the already validated virtual directory. An unmodified primary activation is
+  intercepted by the home controller and submits the equivalent safe `cd
+  <absolute-path>/`; modified activations remain native browser links. Document
+  rows keep stable name, date, and title columns on wide screens; the mobile
+  layout keeps the name/date pair and moves the title below them. The bounded
+  plain `stdout` projection remains one deterministic entry per line so pipes
+  and substitutions do not consume layout text. Root listings use this same
+  structured link boundary.
+- The browser renders a structured `tree` by appending each `TreeLine.prefix` as
+  text and the node as a native link or text node: documents use their decoded
+  canonical `href`, experiments use their validated listed `href`, directories
+  use the same `data-terminal-cd-path`/safe-click contract as `ls`, and files
+  remain text. The visible root, branch glyphs, ordering, and `lines` stdout
+  must remain unchanged. The delegated click handler owns only unmodified
+  primary clicks inside the transcript; it never constructs a destination from
+  raw command input or exposes a host path.
 - Direct-listing contract: the structured effect carries immediate
   `directories`; `documents` contains only files whose parent is the current
   directory. Descendant documents do not appear until that directory is
@@ -524,6 +543,9 @@ startTerminalReader(root: HTMLElement): void
 | duplicate hardcoded command dispatch or help metadata | implementation review failure; definitions must be the single execution/help source |
 | invalid `tree`, `cat`, or `vim` operand | usage/not-found effect or no completion; no host access/navigation |
 | direct-child `ls` projection | root and public mounts expose only immediate directory names and documents; descendant documents appear only after entering the child directory |
+| structured `tree` metadata drift | `root`, `lines`, and `nodes` stay aligned; stdout remains the exact text tree while browser links consume only validated node metadata |
+| unmodified public directory link activation | submit safe `cd <virtual-path>/`, update cwd/prompt, retain the transcript, and keep the URL on the Terminal home |
+| modified directory-link activation or document/experiment link activation | do not intercept; preserve the canonical native browser link |
 | mixed-depth `ls` result | keep only immediate children in one flat directory-first list, align document name/date/title columns, and keep pipeline stdout unchanged |
 | `ls` option, visible-path prefix, or empty-operand Tab | `-h`/`--help` show usage; a unique safe directory prefix adds `/`, a unique document prefix does not, and either completion retains focus; every Tab is prevented in the focused prompt, while ordinary ambiguous `ls p` leaves input unchanged |
 | option ordering/cluster/terminator | the command parser accepts options before or after operands, short clusters such as `-inF`, and `--` for dash-prefixed operands; invalid options stop before execution |
@@ -586,6 +608,10 @@ startTerminalReader(root: HTMLElement): void
   `grep -- -pattern` keeps the dash-prefixed value as an operand.
 - Good: after `cd ../` reaches `~/blog`, `ls` and `ls /` produce the same
   immediate root mount listing without exposing a synthetic `//.` path.
+- Good: `ls posts` and `tree /` expose canonical document/experiment links;
+  clicking a public directory with an unmodified primary activation submits a
+  safe `cd /posts/characters/`, updates the prompt, and leaves the home URL
+  unchanged. Ctrl/Cmd/Alt/Shift activation remains a native directory link.
 - Base: omitted `F1REFLY_CONTENT_ROOT` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
 - Bad: mount `$HOME`, let Astro follow the authored link directly, serialize all
@@ -609,7 +635,8 @@ startTerminalReader(root: HTMLElement): void
   direct-child list projections and recursive grep discovery, ls prefix/option/
   wildcard execution and empty-operand completion/focus ownership,
   final-pipeline grep effects plus downstream plain stdout, shared nested `cat`/`vim` resolver/completion ownership,
-  cwd-relative `cd`/`ls`/`cat` behavior,
+  cwd-relative `cd`/`ls`/`cat` behavior, structured tree node paths/kinds with
+  unchanged line/stdout projections, and safe directory-link path derivation,
   mount aliases, trailing-slash normalization, document-prefix rejection, and
   listed-experiment leaf handling, cancellation state, Ctrl+L transcript
   clearing, built-in `l`/`ll`/`cls` plus session alias resolution/query/output, and
@@ -621,7 +648,8 @@ startTerminalReader(root: HTMLElement): void
   exact route-owned scripts/styles/fonts/licenses, guest-only templates/indexes,
   no source/private sentinel, no maps/symlinks/unknown files.
 - Site Playwright at `1440x900` and `375x812`: static/no-JS route and breadcrumb
-  coverage; tree/cat/vim; grouped-help usage readability; root ambiguous `cd`
+  coverage; tree/cat/vim plus native document/experiment links and directory
+  link-to-`cd` prompt/cwd updates; grouped-help usage readability; root ambiguous `cd`
   Tab focus; inline `cat` prompt adjacency; Ctrl+C and modifier/IME exclusions;
   safe ambiguous and zero-result path Tab focus plus prompt-wide Tab prevention;
   repeated help settlement; all reader modes/keys; Ctrl+L clear and `ls lab`
@@ -671,6 +699,19 @@ if (effect.kind === 'grep') {
 }
 ```
 
+```ts
+// Wrong: reconstruct a path by parsing branch glyphs and executing visible text.
+const path = line.replaceAll('├──', '').trim();
+```
+
+```ts
+// Correct: preserve aligned metadata and let the existing safe cd command
+// validate the absolute virtual path again at execution time.
+const { prefix, node } = effect.nodes[index];
+pre.append(document.createTextNode(`\n${prefix}`));
+appendTreeNode(pre, node);
+```
+
 ### Design Decision: Definition-Owned Command Execution
 
 **Context**: Help grouping, aliases, execution policy, and built-in behavior had
@@ -700,6 +741,29 @@ plain-text projection for Rshell composition.
 **Extensibility**: A new structured effect must update the exhaustive runtime
 effect union, stdout/announcement projection, DOM renderer, CSS, unit tests, and
 browser tests together.
+
+### Design Decision: Structured Navigable Tree Lines
+
+**Context**: `tree` already knew each child's virtual path, but reducing those
+children to display strings made browser links impossible and tempted the DOM
+layer to parse branch glyphs back into paths.
+
+**Options Considered**:
+1. Parse the rendered tree strings in the browser.
+2. Carry aligned node metadata alongside the stable text/stdout projection.
+
+**Decision**: Use option 2. The neutral command returns `{ root, lines, nodes }`;
+`nodes` carries validated VFS paths and document/experiment metadata, while
+`lines` remains the sole pipeline/stdout representation. The browser renders
+`prefix` as text and chooses native links from the node kind. Public directory
+links carry canonical route hrefs for recovery, but an unmodified primary click
+is delegated to the existing safe `cd` command so the Terminal cwd remains the
+source of truth.
+
+**Extensibility**: Any future structured Terminal output that needs browser
+navigation must add a closed typed payload, retain a deterministic plain
+projection for pipelines, and update the runtime adapter, DOM renderer, safe
+native-link boundary, unit tests, and browser tests together.
 
 ## Reference Files
 

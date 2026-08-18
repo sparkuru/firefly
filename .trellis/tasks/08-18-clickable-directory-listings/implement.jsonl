@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Defines the boundary between pure Terminal runtime effects and DOM-owned link rendering, focus, navigation, and recovery behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Defines required Terminal/site checks, native-link accessibility expectations, path safety review, and browser evidence for interactive changes."}
