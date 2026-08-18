@@ -550,47 +550,11 @@
   border-bottom: 1px solid var(--terminal-color-border);
 }
 
-.terminal-document-nav,
 .terminal-outline {
   margin-block: 1.25rem;
   padding-block: 1rem;
-  border-block: 1px solid var(--terminal-color-border);
 }
 
-.terminal-document-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem 0;
-}
-
-.terminal-document-nav ol {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.terminal-document-nav li {
-  display: inline-flex;
-  align-items: baseline;
-  white-space: nowrap;
-}
-
-.terminal-breadcrumb-gap {
-  display: inline-block;
-  flex: 0 0 1ch;
-  width: 1ch;
-}
-
-.terminal-breadcrumb-separator {
-  display: inline-block;
-  flex: 0 0 auto;
-}
-
-.terminal-document-nav a,
-.terminal-document-current,
 .terminal-directory a,
 .terminal-directory-list a {
   text-decoration: underline;
@@ -767,19 +731,28 @@
   font-size: clamp(1.3rem, 3vw, 1.7rem);
 }
 
-.terminal-outline ol {
+.terminal-outline ul {
   display: grid;
   gap: 0.3rem;
   margin: 0;
-  padding-left: 1.4rem;
+  padding: 0;
+  list-style: none;
 }
 
-.terminal-outline li[data-depth='3'] {
-  margin-left: 1rem;
+.terminal-outline li {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
 }
 
-.terminal-outline li[data-depth='4'] {
-  margin-left: 2rem;
+.terminal-outline-prefix {
+  flex: 0 0 auto;
+  white-space: pre;
+}
+
+.terminal-outline li a {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .terminal-prose {

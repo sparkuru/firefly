@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Main-site package boundaries and required validation profile for reviewing Terminal document output."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Static-output, browser, accessibility, and diff validation gates for the site."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Review conventions for Terminal component structure and presentation isolation."}
+{"file": ".trellis/tasks/08-18-adjust-post-reader-navigation/research/ui-ux-pro-max.md", "reason": "UI review constraints for dark Terminal contrast, focus, density, and responsive behavior."}
+{"file": ".trellis/tasks/08-18-adjust-post-reader-navigation/design.md", "reason": "Acceptance-level design decisions for checking the Terminal document presentation."}

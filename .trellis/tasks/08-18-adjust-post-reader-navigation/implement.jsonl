@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Main-site package boundaries and required validation profile for Terminal document changes."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Astro component and presentation-dispatch conventions for editing TerminalDocument.astro."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Strict TypeScript/Astro data-flow rules for outline metadata and typed component props."}
+{"file": ".trellis/tasks/08-18-adjust-post-reader-navigation/research/ui-ux-pro-max.md", "reason": "Approved UUPM design research and applicable Terminal visual constraints."}
+{"file": ".trellis/tasks/08-18-adjust-post-reader-navigation/design.md", "reason": "Approved header, divider, tree outline, responsive, and accessibility decisions."}

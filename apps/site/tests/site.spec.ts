@@ -40,7 +40,8 @@ async function expectTerminalDocument(page: Page) {
   await expect(page.locator('.terminal-document')).toHaveCount(1);
   await expect(page.locator('.semantic-document')).toHaveCount(0);
   await expect(page.locator('.terminal-titlebar')).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Document path' })).toBeVisible();
+  await expect(page.locator('.terminal-document-nav')).toHaveCount(0);
+  await expect(page.locator('.terminal-path')).toHaveCount(1);
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
 }
 
@@ -119,8 +120,11 @@ test('post deep link renders Markdown in the unified Terminal theme', async ({ p
   ).toBeVisible();
   await expect(article).toContainText('No browser-side parser');
 
-  const outline = page.getByRole('navigation', { name: 'On this page' });
+  const outline = page.getByRole('navigation', { name: 'Document outline' });
   await expect(outline).toBeVisible();
+  await expect(outline.locator('ul')).toHaveCount(1);
+  await expect(outline.locator('ol')).toHaveCount(0);
+  await expect(outline.getByText('On this page', { exact: true })).toHaveCount(0);
   await expect(
     outline.getByRole('link', { name: 'Markdown to durable HTML' })
   ).toHaveAttribute('href', '#markdown-to-durable-html');
@@ -131,6 +135,25 @@ test('post deep link renders Markdown in the unified Terminal theme', async ({ p
   await outline.getByRole('link', { name: 'Stable boundaries' }).click();
   await expect(page).toHaveURL(/#stable-boundaries$/u);
   await expectHeadingLevels(page, [1, 2, 3]);
+  await expect(outline.locator('.terminal-outline-prefix').first()).toHaveAttribute('aria-hidden', 'true');
+  expect(await outline.locator('.terminal-outline-prefix').allTextContents()).toEqual([
+    '└── ',
+    '    └── '
+  ]);
+  await expect(outline.locator('ul')).toHaveCSS('list-style-type', 'none');
+  expect(await article.evaluate((element) => {
+    const header = element.querySelector('.terminal-document-header');
+    const outline = element.querySelector('.terminal-outline');
+    return {
+      headerBottom: header === null ? null : getComputedStyle(header).borderBottom,
+      outlineTop: outline === null ? null : getComputedStyle(outline).borderTopStyle,
+      outlineBottom: outline === null ? null : getComputedStyle(outline).borderBottomStyle
+    };
+  })).toEqual({
+    headerBottom: expect.stringContaining('1px'),
+    outlineTop: 'none',
+    outlineBottom: 'none'
+  });
 
   const codeRegion = page.getByRole('region', { name: /^Code content:/u });
   const tableRegion = page.getByRole('region', { name: /^Table content:/u });
@@ -166,7 +189,7 @@ test('post deep link renders Markdown in the unified Terminal theme', async ({ p
   await expectNoHorizontalOverflow(page);
 });
 
-test('Terminal article remains complete and exposes a linked canonical breadcrumb', async ({ page }) => {
+test('Terminal article remains complete and exposes one canonical source path', async ({ page }) => {
   await page.goto('/posts/llm-workflow-with-trellis/');
 
   await expectTerminalDocument(page);
@@ -177,8 +200,11 @@ test('Terminal article remains complete and exposes a linked canonical breadcrum
   await expect(article.getByRole('link', { name: 'Trellis repository' })).toHaveAttribute('href', 'https://github.com/mindfold-ai/Trellis.git');
   await expect(article.getByRole('table').first()).toBeVisible();
   await expect(article.getByText('flowchart TD')).toBeVisible();
-  const outline = page.getByRole('navigation', { name: 'On this page' });
+  const outline = page.getByRole('navigation', { name: 'Document outline' });
   await expect(outline.locator('li')).toHaveCount(21);
+  await expect(outline.locator('ol')).toHaveCount(0);
+  await expect(outline.getByText('On this page', { exact: true })).toHaveCount(0);
+  await expect(outline.locator('.terminal-outline-prefix').filter({ hasText: '│' }).first()).toBeVisible();
   const codeRegion = article.getByRole('region', { name: /^Code content:/u }).first();
   const tableRegion = article.getByRole('region', { name: /^Table content:/u }).first();
   await expect(codeRegion).toHaveAttribute('tabindex', '0');
@@ -188,10 +214,9 @@ test('Terminal article remains complete and exposes a linked canonical breadcrum
   await codeRegion.focus();
   await expect(codeRegion).toBeFocused();
   expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
-  const breadcrumb = page.getByRole('navigation', { name: 'Document path' });
-  await expect(breadcrumb.getByRole('link', { name: '/' })).toHaveAttribute('href', '/');
-  await expect(breadcrumb.getByRole('link', { name: 'posts' })).toHaveAttribute('href', '/posts/');
-  await expect(breadcrumb.getByText('llm-workflow-with-trellis.md')).toHaveAttribute('aria-current', 'page');
+  await expect(article.locator('.terminal-path')).toHaveText('/posts/llm-workflow-with-trellis.md');
+  await expect(article.locator('.terminal-path')).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expect(page.getByRole('textbox')).toHaveCount(0);
   await expectHeadingLevels(page, [1, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
   await expectNoHorizontalOverflow(page);
@@ -214,43 +239,9 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await page.goto('/posts/characters/nahida/');
   await expectTerminalDocument(page);
   await expect(page.getByRole('heading', { level: 1, name: 'Notes on Nahida' })).toBeVisible();
-  const breadcrumb = page.getByRole('navigation', { name: 'Document path' });
-  expect((await breadcrumb.textContent())?.replace(/\s+/gu, ' ').trim()).toBe(
-    'guest@f1refly:~/blog $ / posts / characters / nahida.md'
-  );
-  await expect(breadcrumb).not.toContainText('cd');
-  await expect(breadcrumb).not.toContainText('/ /posts');
-  const rootLink = breadcrumb.getByRole('link', { name: '/', exact: true });
-  const postsLink = breadcrumb.getByRole('link', { name: 'posts', exact: true });
-  const charactersLink = breadcrumb.getByRole('link', { name: 'characters', exact: true });
-  await expect(rootLink).toHaveAttribute('href', '/');
-  await expect(postsLink).toHaveAttribute('href', '/posts/');
-  await expect(charactersLink).toHaveAttribute('href', '/posts/characters/');
-  await expect(rootLink).toHaveCSS('text-decoration-line', 'underline');
-  await expect(postsLink).toHaveCSS('text-decoration-line', 'underline');
-  await expect(charactersLink).toHaveCSS('text-decoration-line', 'underline');
-  await rootLink.focus();
-  await expect(rootLink).toBeFocused();
-  expect(await rootLink.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
-  const current = breadcrumb.getByText('nahida.md', { exact: true });
-  await expect(current).toHaveAttribute('aria-current', 'page');
-  await expect(current).toHaveCSS('text-decoration-line', 'underline');
-  await expect(breadcrumb.getByRole('link', { name: 'nahida.md', exact: true })).toHaveCount(0);
-  await expect(breadcrumb.getByRole('listitem')).toHaveCount(4);
-  expect(await breadcrumb.getByRole('link').evaluateAll((links) => links.map((link) => ({
-    href: link.getAttribute('href'),
-    text: link.textContent
-  })))).toEqual([
-    { href: '/', text: '/' },
-    { href: '/posts/', text: 'posts' },
-    { href: '/posts/characters/', text: 'characters' }
-  ]);
-  const gapWidths = await breadcrumb.locator('.terminal-breadcrumb-gap').evaluateAll(
-    (gaps) => gaps.map((gap) => gap.getBoundingClientRect().width)
-  );
-  expect(gapWidths).toHaveLength(6);
-  for (const width of gapWidths) expect(width).toBeGreaterThan(0);
-  await expect(breadcrumb.locator('.terminal-breadcrumb-separator')).toHaveCount(2);
+  await expect(page.locator('.terminal-path')).toHaveText('/posts/characters/nahida.md');
+  await expect(page.locator('.terminal-path')).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/pages/');
@@ -274,7 +265,7 @@ test('page deep link renders readable Markdown', async ({ page }) => {
     article.getByRole('heading', { level: 2, name: 'What remains constant' })
   ).toBeVisible();
   await expect(article).toContainText('Future presentations can change how the site looks');
-  await expect(page.getByRole('navigation', { name: 'On this page' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Document outline' })).toBeVisible();
   await expectHeadingLevels(page, [1, 2, 2]);
 
   await expectNoHorizontalOverflow(page);
