@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check the revised TerminalHome progressive-enhancement and accessibility contract against the implementation."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check startup, DOM-ready fallback, successful reveal, and fatal recovery transitions."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check required static-output, Astro, build, JavaScript-disabled, interactive, and responsive evidence."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check that the DOM state additions preserve strict local ownership and do not cross the runtime data boundary."}
+{"file":".trellis/tasks/08-19-hide-no-js-fallback-flash/research/ui-ux-pro-max.md","reason":"Check the implemented boot-log visual direction, motion restraint, responsive breakpoints, contrast, and accessibility against the approved UUPM interpretation."}
+{"file":".trellis/tasks/08-19-hide-no-js-fallback-flash/design.md","reason":"Check startup states, failure recovery, no-JavaScript behavior, and the bounded boot-log contract."}
