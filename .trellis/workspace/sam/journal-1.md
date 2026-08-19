@@ -479,3 +479,24 @@ Removed the duplicate Terminal article breadcrumb, kept one canonical /posts or 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 23: Stabilize Terminal startup and clear layout
+
+**Date**: 2026-08-19
+**Task**: Stabilize Terminal startup and clear layout
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented delayed startup prompt, centered empty-session prompt after clear/cls/Ctrl+L, updated regression coverage and frontend specs. Astro check/build passed; focused desktop/mobile Terminal tests 12/12 passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1e666bd` | (see git log) |
+
+### Status
+
+[OK] **Completed**
