@@ -115,12 +115,12 @@ ignored. Never put authored source in them.
   time. `/lab/` uses default-entry `entryHref`; Terminal uses canonical mount
   `href`. Neither route imports or preloads Experiment source/assets.
 
-The default M5 site output is exactly ten HTML files: home, three public posts,
-`/posts/`, `/posts/characters/`, About, `/pages/`, `/lab/`, and `404.html`.
-Post documents and directory indexes preserve nested virtual paths; pages remain
-`/pages/<slug>/` in this milestone. Do not create placeholder
-`timeline`, `files`, or `tags` routes before their milestone supplies real
-semantics.
+The default M5 site output includes home, every guest-visible post and page
+document, each non-empty post/page directory index, `/lab/`, and `404.html`.
+Post documents and directory indexes preserve their nested virtual paths;
+front-matter slugs provide canonical post routes while pages remain
+`/pages/<slug>/`. Do not create placeholder `timeline`, `files`, or `tags`
+routes before their milestone supplies real semantics.
 
 ## Experiment Boundaries
 
@@ -179,9 +179,11 @@ semantics.
   `[slug].astro`, and the posts catch-all `[...path].astro` that consumes only
   prevalidated canonical route props.
 - Browser tests use lowercase `*.spec.ts`; Node schema tests use `*.test.mjs`.
-- Post routes come from validated workspace-relative Markdown paths; optional
-  legacy post `slug` only asserts the filename stem. Page routes retain their
-  validated front-matter slug. Titles never determine routes.
+- Post source paths come from validated workspace-relative Markdown paths; an
+  optional post `slug` supplies the stable route segment and otherwise the
+  physical filename stem is used. Page source paths are physical Markdown paths
+  while page routes retain their validated front-matter slug. Titles determine
+  migration filenames for readability, never canonical routes.
 
 ## Avoid
 

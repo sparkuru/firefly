@@ -9,8 +9,8 @@ test('capture canonical reader entry and idle states', async ({ page }, testInfo
     animations: 'disabled'
   });
 
-  await page.goto('/posts/hello-static-foundation/#terminal-reader');
-  const semanticReader = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await page.goto('/posts/main/379/#terminal-reader');
+  const semanticReader = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(semanticReader).toBeFocused();
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
   await capture('semantic-reader-entry');
@@ -19,13 +19,13 @@ test('capture canonical reader entry and idle states', async ({ page }, testInfo
   await page.getByRole('searchbox', { name: /Search document forward/u }).fill('reader');
   await capture('semantic-reader-search');
 
-  await page.goto('/posts/characters/nahida/');
-  const terminalReader = page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u });
+  await page.goto('/pages/about/');
+  const terminalReader = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
   await expect(terminalReader).not.toBeFocused();
   await capture('terminal-reader-idle');
 
-  await page.goto('/posts/characters/nahida/#terminal-reader');
+  await page.goto('/pages/about/#terminal-reader');
   await expect(terminalReader).toBeFocused();
   await capture('terminal-reader-entry');
 });

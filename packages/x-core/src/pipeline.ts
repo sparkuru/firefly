@@ -12,6 +12,7 @@ import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
 import type { VFile } from 'vfile';
 import {
+  DEFAULT_PRESENTATION_ID,
   X_CORE_METADATA_VERSION,
   type DiagnosticDocument,
   type DocumentContext,
@@ -133,7 +134,7 @@ function contextFromResolver(
   let presentation: string;
 
   try {
-    presentation = normalizeAdapterId(resolved.presentation || 'semantic');
+    presentation = normalizeAdapterId(resolved.presentation || DEFAULT_PRESENTATION_ID);
   } catch (error) {
     throw xCoreError(
       'XCORE_INVALID_CONTEXT',

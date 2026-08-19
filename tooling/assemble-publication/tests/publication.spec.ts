@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('assembled release preserves cross-application navigation and mounted 404 ownership', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('main')).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'phosphor');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'f1refly');
   expect((await page.request.get('/fonts/JetBrainsMono-Regular-v2.304.woff2')).status()).toBe(200);
   expect((await page.request.get('/fonts/JetBrainsMono-Medium-v2.304.woff2')).status()).toBe(200);
   expect((await page.request.get('/licenses/JetBrainsMono-OFL-1.1.txt')).status()).toBe(200);
@@ -12,16 +12,11 @@ test('assembled release preserves cross-application navigation and mounted 404 o
   await expect(provenance.text()).resolves.toContain(
     'a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2'
   );
-  await page.goto('/posts/characters/');
-  await expect(page.getByRole('link', { name: 'nahida.md' })).toHaveAttribute(
-    'href',
-    '/posts/characters/nahida/'
-  );
-  await page.goto('/posts/characters/nahida/');
-  await expect(page.getByRole('heading', { level: 1, name: 'Notes on Nahida' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Document path' })).toContainText('nahida.md');
-  const readerScript = await page.locator('script[src*="TerminalDocument"]').getAttribute('src');
-  expect(readerScript).toMatch(/^\/_astro\/TerminalDocument[^/]+\.js$/u);
+  await page.goto('/posts/main/379/');
+  await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
+  await expect(page.locator('[data-terminal-reader]')).toBeVisible();
+  const readerScript = await page.locator('script[src*="ReaderStatus"]').getAttribute('src');
+  expect(readerScript).toMatch(/^\/_astro\/ReaderStatus[^/]+\.js$/u);
   expect((await page.request.get(readerScript!)).status()).toBe(200);
   await page.goto('/lab/');
   await expect(page.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();

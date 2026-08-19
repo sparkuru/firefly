@@ -153,8 +153,11 @@ commands, and only then assembles the release.
   only those document HTML files are exempt from this signature scan. Their
   HTML/SVG/CSS references are still decoded and resolved. HTML/SVG attributes
   and HTML/SVG/CSS `url(...)` references elsewhere are decoded and resolved;
-  local Experiment references cannot leave the mount and every local target must
-  exist. Validation reports errors but never rewrites output.
+  local Experiment references cannot leave the mount. A safe local reference
+  whose target is not emitted produces a warning containing the source and raw
+  reference, but does not block promotion or rewrite output. Required site,
+  entry, license, and mounted error files remain hard requirements. Validation
+  reports errors and warnings but never rewrites output.
 - `artifacts/` and `dist/` are promoted together. Existing targets move to unique
   backups, both candidates move into place, and any failure rolls back every
   moved/prepared target. Backups are deleted only after complete success.
@@ -198,7 +201,8 @@ commands, and only then assembles the release.
 | lexical or realpath escape through Experiment root/output/license | fail; never copy or execute the escaped target |
 | build command exits non-zero or receives a signal | stop in sorted build phase and propagate actionable status |
 | symlink, source map, source/dev/private artifact, unsafe name, case collision | reject staged candidate before promotion |
-| missing entry/license/local reference or mount-escaping URL | reject release candidate without rewriting it |
+| missing required entry/license or mount-escaping URL | reject release candidate without rewriting it |
+| safe local reference has no emitted target | warn with source and raw reference; preserve output and promote |
 | first or second target promotion fails | restore all prior `artifacts/` and `dist/`; clean candidates |
 | unknown/unlisted Terminal experiment | error-line effect; no navigation |
 | JavaScript disabled or Terminal startup fails | native document and lab recovery links remain available |

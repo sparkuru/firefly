@@ -2,6 +2,7 @@ import type {
   DocumentContext,
   PresentationAdapter
 } from './contracts.js';
+import { DEFAULT_PRESENTATION_ID } from './contracts.js';
 import { XCoreError, xCoreError } from './diagnostics.js';
 
 const adapterIdPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
@@ -30,7 +31,7 @@ export class PresentationRegistry {
   readonly #adapters = new Map<string, PresentationAdapter>();
   readonly #defaultId: string;
 
-  constructor(defaultId = 'semantic') {
+  constructor(defaultId = DEFAULT_PRESENTATION_ID) {
     this.#defaultId = normalizeAdapterId(defaultId);
   }
 

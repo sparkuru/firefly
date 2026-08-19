@@ -289,6 +289,13 @@ function isCanonicalVirtualPath(value: string, kind: TerminalEntryKind): boolean
   return filename !== undefined && filename.endsWith('.md') && filename.length > 3;
 }
 
+function isCanonicalRoute(value: string, kind: TerminalEntryKind): boolean {
+  if (!value.startsWith('/') || !value.endsWith('/') || value.includes('?') || value.includes('#')) return false;
+  const segments = value.slice(1, -1).split('/');
+  const expectedMount = kind === 'post' ? 'posts' : 'pages';
+  return segments.length >= 2 && segments.shift() === expectedMount && segments.every(isSafePathSegment);
+}
+
 function decodeEntry(value: unknown, index: number): TerminalEntry {
   if (typeof value !== 'object' || value === null || (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) {
     throw new TypeError(`Terminal entry ${index} must be a plain object.`);
@@ -311,7 +318,7 @@ function decodeEntry(value: unknown, index: number): TerminalEntry {
   const filename = requireSafeText(readDataField(descriptors, 'filename'), 'filename');
   if (filename !== relativePath.split('/').at(-1)) throw new TypeError(`Terminal entry ${index} has a non-canonical filename.`);
   const href = requireSafeText(readDataField(descriptors, 'href'), 'href');
-  if (href !== `/${virtualPath.slice(0, -3)}/`) throw new TypeError(`Terminal entry ${index} has a non-canonical href.`);
+  if (!isCanonicalRoute(href, kind)) throw new TypeError(`Terminal entry ${index} has a non-canonical href.`);
   const date = requireSafeText(readDataField(descriptors, 'date'), 'date');
   if (!isCalendarDate(date)) throw new TypeError(`Terminal entry ${index} has an invalid date.`);
   return Object.freeze({

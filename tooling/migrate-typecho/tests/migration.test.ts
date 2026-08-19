@@ -59,9 +59,14 @@ test('parses checked gzip SQL into deterministic private inventory and handoffs'
     exceptions: 0
   });
   assert.deepEqual(result.articles.map((article) => article.publicPath), [
-    'pages/about.md',
-    'posts/engineering/first-post.md',
-    'posts/engineering/second-post.md'
+    'pages/About-Fixture.md',
+    'posts/engineering/First-Synthetic-Post.md',
+    'posts/engineering/Second-Synthetic-Post.md'
+  ]);
+  assert.deepEqual(result.articles.map((article) => article.canonicalRoute), [
+    '/pages/about/',
+    '/posts/engineering/first-post/',
+    '/posts/engineering/second-post/'
   ]);
   assert.equal(result.articles.find((article) => article.slug === 'first-post')?.description, 'A reviewed synthetic summary.');
   assert.match(result.articles.find((article) => article.slug === 'second-post')?.description ?? '', /^Second authored paragraph becomes the derived description/u);
@@ -124,14 +129,16 @@ test('materializes reviewed Markdown under category folders with a deterministic
     expectedPages: 1
   } as const;
   const result = await migrateTypecho(options);
-  const firstPost = await readFile(path.join(options.outputRoot, 'posts/engineering/first-post.md'), 'utf8');
-  const secondPost = await readFile(path.join(options.outputRoot, 'posts/engineering/second-post.md'), 'utf8');
-  const page = await readFile(path.join(options.outputRoot, 'pages/about.md'), 'utf8');
+  const firstPost = await readFile(path.join(options.outputRoot, 'posts/engineering/First-Synthetic-Post.md'), 'utf8');
+  const secondPost = await readFile(path.join(options.outputRoot, 'posts/engineering/Second-Synthetic-Post.md'), 'utf8');
+  const page = await readFile(path.join(options.outputRoot, 'pages/About-Fixture.md'), 'utf8');
   assert.match(firstPost, /description: "A reviewed synthetic summary\."/u);
+  assert.doesNotMatch(firstPost, /^presentation:/mu);
   assert.match(firstPost, /!\[\]\(\/assets\/migrated\/[a-f0-9]{20}-picture\.png\)/u);
   assert.doesNotMatch(firstPost, /<!--markdown-->|<img|<center|<span/u);
   assert.match(secondPost, /description: "Second authored paragraph becomes the derived description\./u);
   assert.match(page, /slug: "about"/u);
+  assert.doesNotMatch(page, /^presentation:/mu);
   assert.match(page, /\*\*About\*\* this entirely synthetic fixture\./u);
   const managedPath = result.resourceDecisions[0]?.publicPath;
   assert.ok(managedPath);
@@ -139,6 +146,88 @@ test('materializes reviewed Markdown under category folders with a deterministic
   const firstHashes = await treeHashes(options.outputRoot);
   await migrateTypecho(options);
   assert.deepEqual(await treeHashes(options.outputRoot), firstHashes);
+});
+
+test('derives filename stems from the title after the first pipe without changing routes', async (context) => {
+  const fixture = await sandbox(context);
+  const source = parseTypechoSql(await readFile(fixturePath, 'utf8'));
+  const titled = {
+    ...source,
+    contents: source.contents.map((content) => content.sourceId === '11'
+      ? { ...content, title: 'legacy category | First | Synthetic Post' }
+      : content.sourceId === '12'
+        ? { ...content, title: 'legacy category |' }
+        : content)
+  };
+  const adapterPath = path.join(fixture.root, '.private/title-adapter.mjs');
+  await writeFile(adapterPath, `#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on('end',()=>process.stdout.write(${JSON.stringify(JSON.stringify(titled))}));\n`, { mode: 0o700 });
+  const result = await migrateTypecho({
+    repositoryRoot: fixture.root,
+    dumpPath: fixture.dumpPath,
+    expectedSha256: fixture.checksum,
+    ledgerRoot: path.join(fixture.root, '.private/title-migration'),
+    adapterCommand: adapterPath,
+    expectedPosts: 2,
+    expectedPages: 1
+  });
+  assert.deepEqual(Object.fromEntries(result.articles.map((article) => [article.slug, {
+    title: article.title,
+    publicPath: article.publicPath,
+    canonicalRoute: article.canonicalRoute
+  }])), {
+    about: {
+      title: 'About Fixture',
+      publicPath: 'pages/About-Fixture.md',
+      canonicalRoute: '/pages/about/'
+    },
+    'first-post': {
+      title: 'legacy category | First | Synthetic Post',
+      publicPath: 'posts/engineering/First-Synthetic-Post.md',
+      canonicalRoute: '/posts/engineering/first-post/'
+    },
+    'second-post': {
+      title: 'legacy category |',
+      publicPath: 'posts/engineering/legacy-category.md',
+      canonicalRoute: '/posts/engineering/second-post/'
+    }
+  });
+});
+
+test('keeps four-space-indented fence content from corrupting authored HTML examples', async (context) => {
+  const fixture = await sandbox(context);
+  const source = parseTypechoSql(await readFile(fixturePath, 'utf8'));
+  const authoredBody = [
+    '   ```diff',
+    '   <div>literal</div>',
+    '    ```python',
+    '    print("still code")',
+    '    ```',
+    '## <center>visible heading</center>',
+    '<div>',
+    '<p align="right">visible paragraph</p>',
+    '</div>'
+  ].join('\n');
+  const authored = {
+    ...source,
+    contents: source.contents.map((content, index) => index === 0 ? { ...content, text: authoredBody } : content)
+  };
+  const adapterPath = path.join(fixture.root, '.private/fence-adapter.mjs');
+  await writeFile(adapterPath, `#!/usr/bin/env node\nprocess.stdin.resume();process.stdin.on('end',()=>process.stdout.write(${JSON.stringify(JSON.stringify(authored))}));\n`, { mode: 0o700 });
+  const result = await migrateTypecho({
+    repositoryRoot: fixture.root,
+    dumpPath: fixture.dumpPath,
+    expectedSha256: fixture.checksum,
+    ledgerRoot: path.join(fixture.root, '.private/fence-migration'),
+    adapterCommand: adapterPath,
+    materializePublic: true,
+    outputRoot: path.join(fixture.root, 'content/fence-release'),
+    expectedPosts: 2,
+    expectedPages: 1
+  });
+  assert.deepEqual(result.exceptions, []);
+  const body = result.articles.find((article) => article.slug === 'first-post')?.body ?? '';
+  assert.match(body, /```diff[\s\S]*## <center>visible heading<\/center>[\s\S]*<div>/u);
+  assert.doesNotMatch(body, /```\n## visible heading/u);
 });
 
 test('materializes an isolated review candidate while local resources remain deferred', async (context) => {
@@ -157,7 +246,7 @@ test('materializes an isolated review candidate while local resources remain def
   });
   assert.equal(result.inventory.resourceDeferred, 1);
   assert.equal(result.inventory.resourceExceptions, 0);
-  assert.match(await readFile(path.join(outputRoot, 'posts/engineering/first-post.md'), 'utf8'), /\/usr\/uploads\/picture\.png/u);
+  assert.match(await readFile(path.join(outputRoot, 'posts/engineering/First-Synthetic-Post.md'), 'utf8'), /\/usr\/uploads\/picture\.png/u);
   const reviewReport = JSON.parse(await readFile(path.join(ledgerRoot, 'review-report.json'), 'utf8')) as {
     resources: { exceptionsByReason: Array<{ reason: string; count: number }>; documentsWithExceptions: number };
     publicPromotion: { blocked: boolean; reasons: string[] };
@@ -226,7 +315,7 @@ test('preserves authored path-like body text and allows clean public materializa
   });
   assert.deepEqual(result.exceptions, []);
   assert.match(result.articles.find((article) => article.slug === 'first-post')?.body ?? '', new RegExp(`${authoredPath}\\n?$`, 'u'));
-  assert.match(await readFile(path.join(outputRoot, 'posts/engineering/first-post.md'), 'utf8'), new RegExp(`${authoredPath}\\n?`, 'u'));
+  assert.match(await readFile(path.join(outputRoot, 'posts/engineering/First-Synthetic-Post.md'), 'utf8'), new RegExp(`${authoredPath}\\n?`, 'u'));
   const reviewReport = JSON.parse(await readFile(path.join(ledgerRoot, 'review-report.json'), 'utf8')) as {
     migrationExceptionsByCode: Array<{ code: string; count: number }>;
     publicPromotion: { blocked: boolean; reasons: string[] };
@@ -265,8 +354,8 @@ test('defers safe relative assets without blocking a clean public candidate', as
   assert.deepEqual(result.resourceDecisions.map(({ disposition, reason }) => ({ disposition, reason })), [
     { disposition: 'deferred', reason: 'Local asset awaits OSS upload.' }
   ]);
-  const firstPost = await readFile(path.join(outputRoot, 'posts/engineering/first-post.md'), 'utf8');
-  assert.match(firstPost, /!\[\]\(assets\/pending\.png\)/u);
+  const firstPost = await readFile(path.join(outputRoot, 'posts/engineering/First-Synthetic-Post.md'), 'utf8');
+  assert.ok(firstPost.includes('\\!\\[](assets/pending.png)'));
   const reviewReport = JSON.parse(await readFile(path.join(ledgerRoot, 'review-report.json'), 'utf8')) as {
     resources: { byDisposition: Array<{ disposition: string; count: number }>; exceptionsByReason: unknown[]; documentsWithExceptions: number };
     publicPromotion: { blocked: boolean; reasons: string[] };

@@ -22,12 +22,18 @@ publication artifact.
 
 ## Corpus projection
 
-- Published Typecho posts become `posts/<category-slug>/<slug>.md`; published
-  pages become `pages/<slug>.md`. Unsafe, ambiguous, nested, or colliding
-  identities are exceptions and cannot be promoted.
+- Published Typecho posts and pages use a safe, readable filename derived from
+  the source title. When a title contains `|`, the filename stem uses the
+  trimmed text after the first pipe; an empty suffix falls back through the
+  original title and then the source slug using the same safety normalization,
+  truncation, and collision rules. The original Typecho slug is retained in
+  front matter and drives the canonical `/posts/<category-slug>/<slug>/` or
+  `/pages/<slug>/` route. Unsafe, ambiguous, nested, or colliding physical
+  paths/routes are exceptions and cannot be promoted.
 - The public front matter allowlist is title, dates, description, tags, draft,
-  layout, presentation, and a page slug. `customSummary` is a description
-  candidate; missing summaries use a deterministic prose fallback.
+  layout, optional presentation, and the source slug. Omitted presentation uses
+  the site default `f1refly`; `customSummary` is a description candidate, and
+  missing summaries use a deterministic prose fallback.
 - CMS templates, IDs, counters, access flags, passwords, and unreviewed custom
   fields remain private/deferred. Body wrappers are converted to safe Markdown;
   active or unhandled HTML never enters public Markdown.

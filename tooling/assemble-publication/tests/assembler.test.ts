@@ -37,6 +37,20 @@ async function fixture(context: test.TestContext) {
   return { root, manifest };
 }
 
+async function captureWarnings(action: () => Promise<void>): Promise<readonly string[]> {
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: Parameters<typeof console.warn>) => {
+    warnings.push(args.map((argument) => String(argument)).join(' '));
+  };
+  try {
+    await action();
+  } finally {
+    console.warn = originalWarn;
+  }
+  return warnings;
+}
+
 test('safe walker rejects symlinks and source maps', async (context) => {
   const { root } = await fixture(context);
   const tree = path.join(root, 'tree');
@@ -56,7 +70,7 @@ test('safe walker rejects symlinks and source maps', async (context) => {
   await assert.rejects(walkSafeTree(tree), /unsafe segment/u);
 });
 
-test('release validation rejects missing references, escaping mount URLs, and prohibited text', async (context) => {
+test('release validation warns for missing references but rejects escapes and prohibited text', async (context) => {
   const { root, manifest } = await fixture(context);
   const release = path.join(root, 'release');
   await mkdir(path.join(release, 'lab/alpha/assets'), { recursive: true });
@@ -66,7 +80,19 @@ test('release validation rejects missing references, escaping mount URLs, and pr
   await writeFile(path.join(release, 'lab/alpha/index.html'), '<img src="missing.svg">');
   await writeFile(path.join(release, 'lab/alpha/404.html'), '<h1>Missing</h1>');
   await writeFile(path.join(release, 'lab/alpha/license'), 'fixture');
-  await assert.rejects(validateRelease(release, [manifest]), /does not resolve/u);
+  const missingWarnings = await captureWarnings(async () => {
+    await assert.doesNotReject(validateRelease(release, [manifest]));
+  });
+  assert.equal(missingWarnings.length, 1);
+  assert.match(missingWarnings[0] ?? '', /lab\/alpha\/index\.html.*missing\.svg.*does not resolve/u);
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<a href="../../../../outside.html">escape</a>');
+  await assert.rejects(validateRelease(release, [manifest]), /escapes the release/u);
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<img src="//cdn.example.test/image.svg">');
+  await assert.rejects(validateRelease(release, [manifest]), /protocol-relative/u);
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<img src="%E0%A4%A">');
+  await assert.rejects(validateRelease(release, [manifest]), /malformed reference/u);
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<img src="../unsafe\\name.svg">');
+  await assert.rejects(validateRelease(release, [manifest]), /unsafe reference/u);
   await writeFile(path.join(release, 'lab/alpha/index.html'), '<a href="/posts/private/">escape</a>');
   await assert.rejects(validateRelease(release, [manifest]), /escapes \/lab\/alpha/u);
   await writeFile(path.join(release, 'lab/alpha/index.html'), '<a href="../../index.html">escape</a>');
@@ -106,7 +132,11 @@ test('allows path-like authored post/page bodies but rejects the same text in an
   await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
   await assert.doesNotReject(validateRelease(release, [manifest]));
   await rm(path.join(release, 'pages/about/asset.txt'));
-  await assert.rejects(validateRelease(release, [manifest]), /does not resolve/u);
+  const missingWarnings = await captureWarnings(async () => {
+    await assert.doesNotReject(validateRelease(release, [manifest]));
+  });
+  assert.equal(missingWarnings.length, 1);
+  assert.match(missingWarnings[0] ?? '', /pages\/about\/index\.html.*asset\.txt.*does not resolve/u);
 });
 
 test('fresh assembly is deterministic, excludes stale files, and preserves a prior release on failure', async (context) => {
@@ -128,7 +158,17 @@ test('fresh assembly is deterministic, excludes stale files, and preserves a pri
   await writeFile(path.join(root, 'dist/sentinel.txt'), 'preserve me');
   await writeFile(path.join(root, 'artifacts/sentinel.txt'), 'preserve artifacts');
   await writeFile(path.join(root, 'experiments/alpha/dist/index.html'), '<img src="missing.svg">');
-  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery }), /does not resolve/u);
+  const missingWarnings = await captureWarnings(async () => {
+    await assert.doesNotReject(assemblePublication({ repositoryRoot: root, discovery }));
+  });
+  assert.equal(missingWarnings.length, 1);
+  assert.match(missingWarnings[0] ?? '', /\/lab\/alpha\/index\.html.*missing\.svg.*does not resolve/u);
+  assert.equal(await readFile(path.join(root, 'dist/lab/alpha/index.html'), 'utf8'), '<img src="missing.svg">');
+
+  await writeFile(path.join(root, 'dist/sentinel.txt'), 'preserve me');
+  await writeFile(path.join(root, 'artifacts/sentinel.txt'), 'preserve artifacts');
+  await writeFile(path.join(root, 'experiments/alpha/dist/index.html'), '<a href="/posts/private/">escape</a>');
+  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery }), /escapes \/lab\/alpha/u);
   assert.equal(await readFile(path.join(root, 'dist/sentinel.txt'), 'utf8'), 'preserve me');
   assert.equal(await readFile(path.join(root, 'artifacts/sentinel.txt'), 'utf8'), 'preserve artifacts');
 });

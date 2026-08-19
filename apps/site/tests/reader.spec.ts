@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function openReader(page: Page) {
-  await page.goto('/posts/characters/nahida/');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u });
+  await page.goto('/posts/main/379/#terminal-reader');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await region.focus();
   await expect(region).toBeFocused();
   return region;
@@ -189,9 +189,9 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await expect(search).toBeFocused();
-  await search.fill('reader');
+  await search.fill('trellis');
   await search.press('Enter');
-  await expect(page.locator('[data-reader-search-status]')).toContainText('matches for “reader”');
+  await expect(page.locator('[data-reader-search-status]')).toContainText('matches for “trellis”');
   await expect(page.locator('[data-reader-message]')).toBeHidden();
   await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
   expect(await page.evaluate(() => !('highlights' in CSS) || CSS.highlights.has('terminal-reader-search'))).toBe(true);
@@ -223,8 +223,8 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
 });
 
 test('reader searches exact repeated occurrences from the canonical fragment entry', async ({ page }) => {
-  await page.goto('/posts/llm-workflow-with-trellis/#terminal-reader');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for llm workflow with trellis/u });
+  await page.goto('/posts/main/379/#terminal-reader');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
 
   await region.press('?');
@@ -276,8 +276,8 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
 });
 
 test('reader keeps committed search status visible while scrolling and clears it on cancellation', async ({ page }) => {
-  await page.goto('/posts/llm-workflow-with-trellis/');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for llm workflow with trellis/u });
+  await page.goto('/posts/main/379/#terminal-reader');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await region.focus();
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
@@ -337,14 +337,14 @@ test('reader keeps committed search status visible while scrolling and clears it
 test('reader search cycles keep transient prompt chrome separate in both directions', async ({ page }) => {
   const routes = [
     {
-      path: '/posts/llm-workflow-with-trellis/',
-      regionName: /Read-only Vim reader for llm workflow with trellis/u,
+      path: '/posts/main/379/#terminal-reader',
+      regionName: /Read-only Vim reader for llm-workflow-with-trellis/u,
       query: 'trellis'
     },
     {
-      path: '/posts/hello-static-foundation/#terminal-reader',
-      regionName: /Read-only Vim reader for Hello, static foundation/u,
-      query: 'reader'
+      path: '/pages/about/#terminal-reader',
+      regionName: /Read-only Vim reader for About this foundation/u,
+      query: 'foundation'
     }
   ];
 
@@ -484,12 +484,12 @@ test('reader command input also leaves committed search chrome while editing', a
 test('reader search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
   const routes = [
     {
-      path: '/posts/llm-workflow-with-trellis/',
-      regionName: /Read-only Vim reader for llm workflow with trellis/u
+      path: '/posts/main/379/#terminal-reader',
+      regionName: /Read-only Vim reader for llm-workflow-with-trellis/u
     },
     {
-      path: '/posts/hello-static-foundation/#terminal-reader',
-      regionName: /Read-only Vim reader for Hello, static foundation/u
+      path: '/pages/about/#terminal-reader',
+      regionName: /Read-only Vim reader for About this foundation/u
     }
   ];
 
@@ -539,7 +539,7 @@ test('Terminal document frame keeps its baseline, grows fluidly, and contains th
 
   for (const width of viewports) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('/posts/llm-workflow-with-trellis/');
+    await page.goto('/pages/about/');
     const metrics = await page.evaluate(() => {
       const shell = document.querySelector<HTMLElement>('.terminal-shell');
       const article = document.querySelector<HTMLElement>('.terminal-document');
@@ -569,8 +569,8 @@ test('Terminal document frame keeps its baseline, grows fluidly, and contains th
 });
 
 test('Terminal reader keeps committed search status visible while scrolling', async ({ page }) => {
-  await page.goto('/posts/hello-static-foundation/#terminal-reader');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await page.goto('/pages/about/#terminal-reader');
+  const region = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
   await expect(region).toBeFocused();
   const initialMetrics = await readerSearchMetrics(page);
   expect(initialMetrics.statusPosition).toBe('fixed');
@@ -584,7 +584,7 @@ test('Terminal reader keeps committed search status visible while scrolling', as
   expect(initialMetrics.documentWidth).toBeLessThanOrEqual(initialMetrics.viewportWidth);
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
-  await search.fill('reader');
+  await search.fill('foundation');
   await search.press('Enter');
 
   const statusSection = page.locator('[data-terminal-reader-status]');
@@ -617,11 +617,11 @@ test('Terminal reader keeps committed search status visible while scrolling', as
 test('reader preserves links, local-scroll regions, modifier keys, IME, and manual selection', async ({ page }) => {
   const region = await openReader(page);
   const initialPosition = await page.locator('[data-reader-position]').textContent();
-  const link = page.getByRole('link', { name: 'A nested document' });
+  const link = page.getByRole('link', { name: 'https://github.com/mindfold-ai/Trellis.git' });
   await link.focus();
   await page.keyboard.press('j');
   await expect(link).toBeFocused();
-  const code = page.getByRole('region', { name: /^Code content:/u });
+  const code = page.getByRole('region', { name: /^Code content:/u }).first();
   await code.focus();
   await page.keyboard.press('j');
   await expect(code).toBeFocused();
@@ -693,10 +693,10 @@ test('reader never treats a user-replaced visual Range as its owned selection', 
 test('vim resolves a closed canonical destination and :q exits directly to home', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
-  await input.fill('vim ./characters/nahida.md');
+  await input.fill('vim ./main/llm-workflow-with-trellis.md');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/posts\/characters\/nahida\/#terminal-reader$/u);
-  const region = page.getByRole('region', { name: /Read-only Vim reader/u });
+  await expect(page).toHaveURL(/\/posts\/main\/379\/#terminal-reader$/u);
+  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
   await region.press('G');
   await expect(page.locator('[data-reader-position]')).not.toHaveText(/^1\//u);
@@ -710,13 +710,13 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
 test('vim opens a Terminal document reader with the unified presentation', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
-  await input.fill('vim ./hello-static-foundation.md');
+  await input.fill('vim /pages/about.md');
   await input.press('Enter');
 
-  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
   await expect(page.locator('.terminal-document')).toHaveCount(1);
   await expect(page.locator('.semantic-document')).toHaveCount(0);
-  const region = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  const region = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
   await expect(region).toBeFocused();
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
   await region.press('G');
@@ -739,7 +739,7 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
     };
   });
 
-  await page.goto('/posts/hello-static-foundation/#terminal-reader');
+  await page.goto('/posts/main/379/#terminal-reader');
   await expect.poll(() => page.evaluate(() => document.activeElement?.id ?? '')).toBe('terminal-reader');
   const result = await page.evaluate(() => ({
     active: document.activeElement?.id,
@@ -752,38 +752,38 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
 });
 
 test('direct canonical permalinks keep reader focus and key ownership idle', async ({ page }) => {
-  await page.goto('/posts/hello-static-foundation/');
-  const foundationRegion = page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u });
+  await page.goto('/posts/main/379/');
+  const foundationRegion = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(foundationRegion).not.toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeHidden();
   const foundationPosition = page.locator('[data-reader-position]');
   await page.keyboard.press('G');
   await expect(foundationPosition).toHaveText(/^1\//u);
 
-  await page.goto('/posts/characters/nahida/');
-  const terminalRegion = page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u });
+  await page.goto('/pages/about/');
+  const terminalRegion = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
   await expect(terminalRegion).not.toBeFocused();
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
   const terminalPosition = page.locator('[data-reader-position]');
   await page.keyboard.press('G');
   await expect(terminalPosition).toHaveText(/^1\//u);
 
-  await page.goto('/posts/characters/nahida/#terminal-reader');
-  await expect(page.getByRole('region', { name: /Read-only Vim reader for Notes on Nahida/u })).toBeFocused();
+  await page.goto('/pages/about/#terminal-reader');
+  await expect(page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u })).toBeFocused();
 });
 
 test('reader entry keeps native Back and Forward route boundaries', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
-  await input.fill('vim ./hello-static-foundation.md');
+  await input.fill('vim /pages/about.md');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
 
   await page.goBack();
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u })).toBeVisible();
 
   await page.goForward();
-  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
-  await expect(page.getByRole('region', { name: /Read-only Vim reader for Hello, static foundation/u })).toBeFocused();
+  await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
+  await expect(page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u })).toBeFocused();
 });

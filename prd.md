@@ -306,7 +306,7 @@ tags:
   - Notes
 draft: false
 layout: post
-presentation: terminal
+presentation: f1refly
 aliases:
   - /archives/123/
 ---
@@ -322,7 +322,7 @@ aliases:
 | `tags` | 否 | 语义标签 |
 | `draft` | 是 | 草稿不进入生产构建 |
 | `layout` | 是 | 当前公开迁移使用 `post`、`page`；`timeline`、`files` 仅保留为未来扩展能力 |
-| `presentation` | 否 | `semantic` 或已注册 Presentation |
+| `presentation` | 否 | 省略时默认使用 `f1refly`；也可以显式指定 `semantic` 或其他已注册 Presentation |
 | `aliases` | 否 | 旧 URL 和历史路径 |
 
 Experiment 不通过文章 Front Matter 声明。主站实验索引从 `experiment.json` 生成，避免内容 schema 与独立构建系统耦合。

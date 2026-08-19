@@ -5,6 +5,7 @@ import { semanticPresentation } from '@f1refly/presentation-semantic';
 import { terminalPresentation } from '@f1refly/presentation-terminal';
 import {
   createXCorePlugins,
+  DEFAULT_PRESENTATION_ID,
   parseXCoreMetadata,
   PresentationRegistry,
   XCoreError
@@ -35,7 +36,7 @@ function contextResolver(file) {
     collection: 'posts',
     slug: frontmatter.slug,
     layout: frontmatter.layout,
-    presentation: frontmatter.presentation ?? 'semantic'
+    presentation: frontmatter.presentation ?? DEFAULT_PRESENTATION_ID
   };
 }
 
@@ -88,6 +89,26 @@ wide content
   assert.doesNotMatch(first.code, /<script/u);
 });
 
+test('omitted presentation selects f1refly while explicit semantic remains available', async () => {
+  const processor = await createProcessor();
+  const frontmatter = postSchema.parse({
+    title: 'Default integration fixture',
+    slug: 'default',
+    date: '2026-08-12',
+    description: 'Exercises the default presentation.',
+    draft: false,
+    layout: 'post'
+  });
+  const rendered = await processor.render('## Default document\n\nA default body.\n\n```text\nwide content\n```', {
+    fileURL: new URL('file:///repo/content/posts/default.md'),
+    frontmatter
+  });
+  const metadata = parseXCoreMetadata(rendered.metadata.frontmatter.xCore);
+
+  assert.equal(metadata.presentation, DEFAULT_PRESENTATION_ID);
+  assert.match(rendered.code, /data-terminal-wide/u);
+});
+
 test('the same schema-validated Markdown selects deterministic semantic and fixture presentations', async () => {
   const fixtureAdapter = {
     id: 'fixture',
@@ -133,7 +154,7 @@ test('the same schema-validated Markdown selects deterministic semantic and fixt
   assert.equal(fixtureMetadata.presentation, 'fixture');
 });
 
-test('the production registry selects both real semantic and Terminal presentations', async () => {
+test('the production registry selects explicit semantic and f1refly presentations', async () => {
   const processor = await createProcessor();
   const markdown = '## Wide content\n\n| Name | Value |\n| --- | --- |\n| adapter | selected |';
   const semantic = await processor.render(markdown, {
@@ -142,14 +163,14 @@ test('the production registry selects both real semantic and Terminal presentati
   });
   const terminal = await processor.render(markdown, {
     fileURL: new URL('file:///repo/content/posts/terminal.md'),
-    frontmatter: { ...validFrontmatter, slug: 'terminal', presentation: 'terminal' }
+    frontmatter: { ...validFrontmatter, slug: 'f1refly', presentation: DEFAULT_PRESENTATION_ID }
   });
   assert.match(semantic.code, /data-wide-content="table"/u);
   assert.doesNotMatch(semantic.code, /data-terminal-wide/u);
   assert.match(terminal.code, /data-terminal-wide="table"/u);
   assert.doesNotMatch(terminal.code, /data-wide-content/u);
   assert.equal(parseXCoreMetadata(semantic.metadata.frontmatter.xCore).presentation, 'semantic');
-  assert.equal(parseXCoreMetadata(terminal.metadata.frontmatter.xCore).presentation, 'terminal');
+  assert.equal(parseXCoreMetadata(terminal.metadata.frontmatter.xCore).presentation, DEFAULT_PRESENTATION_ID);
 });
 
 test('Astro surfaces unknown adapters with owning document context', async () => {

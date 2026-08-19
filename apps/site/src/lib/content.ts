@@ -66,15 +66,19 @@ function collisionKey(value: string) {
     .replaceAll('\u03c2', '\u03c3');
 }
 
-function normalizePostPath(id: string) {
-  if (id.normalize('NFC') !== id || !markdownPath.test(id) || id.split('/').some((segment) => segment.startsWith('.') || segment === '..')) {
-    throw new Error(`Invalid staged post path: ${id}`);
+function normalizeMarkdownPath(id: string) {
+  const relativePath = id.endsWith('.md') ? id : `${id}.md`;
+  if (id.normalize('NFC') !== id || !markdownPath.test(relativePath) || relativePath.split('/').some((segment) => segment.startsWith('.') || segment === '..')) {
+    throw new Error(`Invalid staged Markdown path: ${id}`);
   }
-  return id;
+  return relativePath;
 }
 
-function routeFromVirtualPath(virtualPath: string) {
-  return `/${virtualPath.slice(0, -3)}/`;
+function routeFromRelativePath(collection: 'posts' | 'pages', relativePath: string, slug: string) {
+  if (collection === 'pages') return `/pages/${slug}/`;
+  const segments = relativePath.split('/');
+  const parentSegments = segments.slice(0, -1);
+  return `/posts/${[...parentSegments, slug].join('/')}/`;
 }
 
 function directoryHref(segments: readonly string[]) {
@@ -83,18 +87,14 @@ function directoryHref(segments: readonly string[]) {
 
 export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDocument {
   const collection = entry.collection;
-  const relativePath = collection === 'posts'
-    ? normalizePostPath(entry.id)
-    : `${entry.data.slug}.md`;
+  const relativePath = normalizeMarkdownPath(entry.id);
   const pathSegments = relativePath.split('/');
   const filename = pathSegments.at(-1);
   if (filename === undefined || !filename.endsWith('.md')) {
     throw new Error(`Invalid Markdown identity for ${collection}/${entry.id}.`);
   }
   const stem = filename.slice(0, -3);
-  if (collection === 'posts' && entry.data.slug !== undefined && entry.data.slug !== stem) {
-    throw new Error(`Legacy slug "${entry.data.slug}" must equal filename stem "${stem}" for posts/${relativePath}.`);
-  }
+  const routeSlug = entry.data.slug ?? stem;
   const virtualPath = `${collection}/${relativePath}`;
   const parentSegments = [collection, ...pathSegments.slice(0, -1)];
   const directoryHrefs = parentSegments.map((_, index) => directoryHref(parentSegments.slice(0, index + 1)));
@@ -111,7 +111,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     relativePath,
     virtualPath,
     filename: filename as `${string}.md`,
-    href: routeFromVirtualPath(virtualPath),
+    href: routeFromRelativePath(collection, relativePath, routeSlug),
     directoryHrefs: Object.freeze(directoryHrefs),
     breadcrumbs,
     aliases: Object.freeze([...(entry.data.aliases ?? [])])
