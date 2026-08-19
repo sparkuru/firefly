@@ -75,7 +75,7 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   await expect(page.getByRole('link', { name: 'about.md' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
-  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'main/Learning-with-LLM.md' })).toBeVisible();
   await expect(
     page.locator('template[data-terminal-template][data-terminal-template-path="posts/main/llm-workflow-with-trellis.md"]')

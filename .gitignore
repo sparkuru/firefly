@@ -16,3 +16,4 @@ presentations/terminal/dist/
 .private/
 .DS_Store
 *.log
+tooling/sync-server/

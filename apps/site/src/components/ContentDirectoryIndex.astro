@@ -1,4 +1,8 @@
 ---
+import {
+  DEFAULT_TERMINAL_IDENTITY,
+  formatTerminalPrompt
+} from '@f1refly/presentation-terminal/runtime';
 import type { ContentDirectory } from '../lib/content';
 
 interface Props {
@@ -6,6 +10,7 @@ interface Props {
 }
 
 const { directory } = Astro.props;
+const directoryPrompt = formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, { cwd: '~/blog' });
 const parentHref = directory.virtualPath.includes('/')
   ? `/${directory.virtualPath.split('/').slice(0, -1).join('/')}/`
   : '/';
@@ -13,7 +18,7 @@ const parentHref = directory.virtualPath.includes('/')
 
 <section class="terminal-directory">
   <nav aria-label="Directory navigation"><a href="/">~/blog</a><span aria-hidden="true"> / </span><a href={parentHref}>..</a></nav>
-  <p class="terminal-prompt">guest@f1refly:~/blog$ tree /{directory.virtualPath}</p>
+  <p class="terminal-prompt">{directoryPrompt} tree /{directory.virtualPath}</p>
   <h1>{directory.virtualPath}/</h1>
   {
     directory.children.length === 0 ? (

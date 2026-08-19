@@ -692,7 +692,7 @@ test('reader never treats a user-replaced visual Range as its owned selection', 
 
 test('vim resolves a closed canonical destination and :q exits directly to home', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
+  const input = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
   await input.fill('vim ./main/llm-workflow-with-trellis.md');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/posts\/main\/379\/#terminal-reader$/u);
@@ -709,7 +709,7 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
 
 test('vim opens a Terminal document reader with the unified presentation', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
+  const input = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
   await input.fill('vim /pages/about.md');
   await input.press('Enter');
 
@@ -755,7 +755,7 @@ test('direct canonical permalinks keep reader focus and key ownership idle', asy
   await page.goto('/posts/main/379/');
   const foundationRegion = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(foundationRegion).not.toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeHidden();
+  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
   const foundationPosition = page.locator('[data-reader-position]');
   await page.keyboard.press('G');
   await expect(foundationPosition).toHaveText(/^1\//u);
@@ -774,14 +774,14 @@ test('direct canonical permalinks keep reader focus and key ownership idle', asy
 
 test('reader entry keeps native Back and Forward route boundaries', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u });
+  const input = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
   await input.fill('vim /pages/about.md');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
 
   await page.goBack();
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u })).toBeVisible();
 
   await page.goForward();
   await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);

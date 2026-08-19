@@ -93,7 +93,9 @@ export function executePwd(context: ProcessContext, args: ParsedCommandArguments
 export function executeAbout(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
   const invalid = invalidOperands(args, ABOUT_USAGE);
   const current = identity(context);
-  return invalid ?? (current === undefined ? failureResult('Identity is unavailable.') : successResult([current.about]));
+  return invalid ?? (current === undefined
+    ? failureResult('Identity is unavailable.')
+    : successResult(current.about.split(/\r?\n/u)));
 }
 
 export function executeWhoami(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
