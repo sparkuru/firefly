@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"TerminalHome owns the server-rendered recovery, startup landing, and hidden-until-ready session contract."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"The home controller owns the synchronous startup state, DOM-ready recovery guard, and fatal restoration behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"The main-site static-output, JavaScript-disabled, interactive, and failure-recovery checks define the required evidence."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"The Terminal browser-boundary contract requires recovery when startup validation fails and preserves route-local DOM ownership."}
+{"file":".trellis/tasks/08-19-hide-no-js-fallback-flash/research/ui-ux-pro-max.md","reason":"Approved UUPM research and project interpretation for the phosphor Terminal boot-log landing, motion, responsive, and accessibility decisions."}
+{"file":".trellis/tasks/08-19-hide-no-js-fallback-flash/design.md","reason":"Approved task design for startup states, boot-log markup, no-JavaScript recovery, and failure behavior."}
