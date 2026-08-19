@@ -8,6 +8,7 @@ import {
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 import { terminalHomeAssetsInlineLimit } from './src/lib/assets-inline-limit.mjs';
+import { createSiteSeoIntegration } from './src/lib/site-seo.mjs';
 import { resolveDocumentContext } from './src/lib/x-core-context';
 
 export const presentationRegistry = new PresentationRegistry()
@@ -21,6 +22,7 @@ const xCorePlugins = createXCorePlugins({
 export default defineConfig({
   output: 'static',
   trailingSlash: 'always',
+  integrations: [createSiteSeoIntegration()],
   markdown: {
     processor: unified({
       remarkPlugins: [xCorePlugins.remarkPlugin],

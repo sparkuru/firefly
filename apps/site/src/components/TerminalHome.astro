@@ -1,10 +1,11 @@
 ---
 import {
-  DEFAULT_TERMINAL_PROMPT,
+  formatTerminalPrompt,
   type TerminalEntry,
   type TerminalExperiment
 } from '@f1refly/presentation-terminal/runtime';
 import type { PublicDocument, renderDocument } from '../lib/render-document';
+import { SITE_CONFIG, terminalIdentityFromConfig } from '../lib/site-config.mjs';
 import TerminalStreamDocument from './TerminalStreamDocument.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
@@ -21,6 +22,9 @@ interface Props {
 }
 
 const { documents, experiments } = Astro.props;
+const identity = terminalIdentityFromConfig();
+const prompt = formatTerminalPrompt(identity, { cwd: identity.workingDirectory });
+const encodedAbout = encodeURIComponent(identity.about);
 const posts = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'post');
 const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'page');
 const TERMINAL_HOME_STARTUP_LOG_LINES = [
@@ -44,7 +48,14 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
   TERMINAL_HOME_STARTUP_LINE_DURATION_MS;
 ---
 
-<section class="terminal-home" data-terminal-home>
+<section
+  class="terminal-home"
+  data-terminal-home
+  data-terminal-identity-user={identity.user}
+  data-terminal-identity-host={identity.host}
+  data-terminal-identity-cwd={identity.workingDirectory}
+  data-terminal-identity-about={encodedAbout}
+>
   <script is:inline data-terminal-startup-marker>
     (() => {
       const root = document.querySelector('[data-terminal-home]');
@@ -65,7 +76,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
       }
     })();
   </script>
-  <h1 class="terminal-visually-hidden">f1refly content terminal</h1>
+  <h1 class="terminal-visually-hidden">{SITE_CONFIG.site.name} content terminal</h1>
 
   <section
     class="terminal-startup"
@@ -74,7 +85,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
   >
     <div class="terminal-boot-surface" data-terminal-boot-log>
       <h2 id="terminal-startup-heading" class="terminal-visually-hidden">
-        Starting f1refly content terminal
+        Starting {SITE_CONFIG.site.name} content terminal
       </h2>
       <div class="terminal-boot-lines" aria-hidden="true">
         {TERMINAL_HOME_STARTUP_LOG_LINES.map((line, index) => (
@@ -90,7 +101,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
         style={`--terminal-boot-prompt-delay: ${TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS}ms;`}
         aria-hidden="true"
       >
-        <span class="terminal-prompt">{DEFAULT_TERMINAL_PROMPT}</span>
+        <span class="terminal-prompt">{prompt}</span>
         <span class="terminal-boot-input-space"></span>
       </div>
     </div>
@@ -101,7 +112,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
     data-terminal-fallback
     aria-labelledby="terminal-recovery-heading"
   >
-    <p class="terminal-path"><span class="terminal-prompt">{DEFAULT_TERMINAL_PROMPT}</span> ls</p>
+    <p class="terminal-path"><span class="terminal-prompt">{prompt}</span> ls</p>
     <h2 id="terminal-recovery-heading" tabindex="-1">Browse public documents</h2>
     <p>
       The interactive shell is optional. These native links remain available
@@ -221,7 +232,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
     <div id="terminal-transcript" class="terminal-transcript" data-terminal-transcript></div>
     <form class="terminal-command-form" data-terminal-form>
       <label class="terminal-visually-hidden" for="terminal-command" data-terminal-command-label>
-        Command for {DEFAULT_TERMINAL_PROMPT}
+        Command for {prompt}
       </label>
       <p id="terminal-command-help" class="terminal-visually-hidden">
         Type help for commands. Use Arrow keys for history. Control+C cancels
@@ -229,7 +240,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
         candidates keep focus when ambiguous, while other Tab presses stay native.
       </p>
       <div class="terminal-command-row">
-        <span class="terminal-prompt" aria-hidden="true" data-terminal-prompt>{DEFAULT_TERMINAL_PROMPT}</span>
+        <span class="terminal-prompt" aria-hidden="true" data-terminal-prompt>{prompt}</span>
         <input
           class="terminal-command-input"
           id="terminal-command"

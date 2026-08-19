@@ -1,0 +1,9 @@
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Preserves the configured Markdown workspace, guest projection, canonical routes, and source/private boundary while adding document metadata."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Defines whole-page layout ownership, shared document dispatch, Terminal home/browser boundaries, and safe Astro props."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Requires build-time immutable configuration and forbids introducing runtime stores/fetches for static site metadata."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Defines strict content metadata, unknown-key rejection, Terminal identity contracts, and required schema tests."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Defines static-output inventory, privacy scans, accessibility, browser coverage, and ./sam validation gates."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Defines the Docker-only command boundary, build order, preview ownership, and publication/runtime checks."}
+{"file":".trellis/tasks/08-19-site-config-and-seo/prd.md","reason":"Approved task requirements and acceptance criteria for build-time configuration, article titles, SEO, and clone documentation."}
+{"file":".trellis/tasks/08-19-site-config-and-seo/design.md","reason":"Task data flow, config/schema contracts, Terminal identity seam, SEO hook, compatibility, and test design."}
+{"file":".trellis/tasks/08-19-site-config-and-seo/research/ui-ux-pro-max.md","reason":"UUPM raw research and the project-specific decision to preserve the existing visual system because this task changes metadata/text/build output only."}

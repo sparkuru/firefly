@@ -1,0 +1,8 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review all required unit, Astro, static-output, browser, privacy, inventory, and diff checks before completion."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review shared head/layout ownership, Terminal fallback, and component boundary compliance."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Check that site config is build-time immutable and no client fetch/store or cross-layer state leak was introduced."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Review strict config/content validation, safe public text, injected identity types, and negative regression coverage."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Review that validation used ./sam, correct browser image/IPC, build order, and exact teardown/runtime paths."}
+{"file":".trellis/tasks/08-19-site-config-and-seo/prd.md","reason":"Check every acceptance criterion, including clone docs, metadata fallback, public-only sitemap, and no-origin behavior."}
+{"file":".trellis/tasks/08-19-site-config-and-seo/design.md","reason":"Check implementation against the approved config flow, layout boundary, Terminal seam, and SEO route filtering design."}
+{"file":".trellis/tasks/08-19-site-config-and-seo/research/ui-ux-pro-max.md","reason":"Confirm no visual-system regression or unjustified redesign was introduced while adding user-visible metadata and identity text."}

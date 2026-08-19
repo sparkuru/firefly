@@ -24,11 +24,34 @@ if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {
 
 {
   presentation === 'semantic' ? (
-    <DocumentLayout title={entry.data.title} description={entry.data.description}>
+    <DocumentLayout
+      title={entry.data.title}
+      description={entry.data.description}
+      pathname={canonical.href}
+      htmlTitle={entry.data.htmlTitle}
+      canonical={entry.data.canonical}
+      seoImage={entry.data.seoImage}
+      noindex={entry.data.noindex}
+      collection={canonical.collection}
+      date={entry.data.date}
+      updated={entry.data.updated}
+    >
       <SemanticDocument entry={entry} document={document} />
     </DocumentLayout>
   ) : (
-    <TerminalLayout title={entry.data.title} description={entry.data.description} path={`~/${canonical.virtualPath}`}>
+    <TerminalLayout
+      title={entry.data.title}
+      description={entry.data.description}
+      path={`~/${canonical.virtualPath}`}
+      pathname={canonical.href}
+      htmlTitle={entry.data.htmlTitle}
+      canonical={entry.data.canonical}
+      seoImage={entry.data.seoImage}
+      noindex={entry.data.noindex}
+      collection={canonical.collection}
+      date={entry.data.date}
+      updated={entry.data.updated}
+    >
       <TerminalDocument canonical={canonical} document={document} />
     </TerminalLayout>
   )

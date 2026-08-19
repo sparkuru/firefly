@@ -1,0 +1,63 @@
+---
+import { resolveSiteMetadata } from '../lib/site-meta.mjs';
+
+interface Props {
+  title?: string;
+  description?: string;
+  pathname?: string;
+  home?: boolean;
+  htmlTitle?: string;
+  canonical?: string;
+  seoImage?: string;
+  noindex?: boolean;
+  collection?: 'posts' | 'pages';
+  date?: Date;
+  updated?: Date;
+}
+
+const {
+  title,
+  description,
+  pathname = Astro.url.pathname,
+  home = false,
+  htmlTitle,
+  canonical,
+  seoImage,
+  noindex = false,
+  collection,
+  date,
+  updated
+} = Astro.props;
+const metadata = resolveSiteMetadata({
+  title,
+  description,
+  pathname,
+  home,
+  htmlTitle,
+  canonical,
+  seoImage,
+  noindex,
+  collection,
+  date,
+  updated
+});
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content={metadata.description} />
+<meta name="robots" content={metadata.robots} />
+<meta property="og:title" content={metadata.openGraph.title} />
+<meta property="og:description" content={metadata.openGraph.description} />
+<meta property="og:type" content={metadata.openGraph.type} />
+{metadata.openGraph.url && <meta property="og:url" content={metadata.openGraph.url} />}
+{metadata.openGraph.image && <meta property="og:image" content={metadata.openGraph.image} />}
+<meta name="twitter:card" content={metadata.twitter.card} />
+<meta name="twitter:title" content={metadata.twitter.title} />
+<meta name="twitter:description" content={metadata.twitter.description} />
+{metadata.twitter.image && <meta name="twitter:image" content={metadata.twitter.image} />}
+{metadata.canonical && <link rel="canonical" href={metadata.canonical} />}
+{metadata.article && <meta property="article:published_time" content={metadata.article.publishedTime} />}
+{metadata.article?.modifiedTime && <meta property="article:modified_time" content={metadata.article.modifiedTime} />}
+{metadata.article?.author && <meta property="article:author" content={metadata.article.author} />}
+<title>{metadata.htmlTitle}</title>

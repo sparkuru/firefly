@@ -1,13 +1,15 @@
 ---
 import DocumentLayout from '../../layouts/DocumentLayout.astro';
 import { getPublicExperiments } from '../../lib/experiments';
+import { SITE_CONFIG } from '../../lib/site-config.mjs';
 
 const experiments = await getPublicExperiments();
 ---
 
 <DocumentLayout
   title="Experiments"
-  description="Autonomous static experiments published beside the f1refly site."
+  description={'Autonomous static experiments published beside ' + SITE_CONFIG.site.name + '.'}
+  pathname="/lab/"
 >
   <section class="content-column" aria-labelledby="lab-title">
     <p class="eyebrow">Lab index</p>

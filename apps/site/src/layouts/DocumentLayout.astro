@@ -1,29 +1,36 @@
 ---
 import semanticStylesheetUrl from '../styles/global.css?url';
+import SiteHead from '../components/SiteHead.astro';
+import { SITE_CONFIG } from '../lib/site-config.mjs';
 
 interface Props {
-  title: string;
+  title?: string;
   description: string;
+  pathname?: string;
+  home?: boolean;
+  htmlTitle?: string;
+  canonical?: string;
+  seoImage?: string;
+  noindex?: boolean;
+  collection?: 'posts' | 'pages';
+  date?: Date;
+  updated?: Date;
 }
 
-const { title, description } = Astro.props;
-const documentTitle = title === 'f1refly' ? title : `${title} | f1refly`;
+const { title, description, ...headProps } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={SITE_CONFIG.site.language}>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description} />
+    <SiteHead title={title} description={description} {...headProps} />
     <link rel="stylesheet" href={semanticStylesheetUrl} />
-    <title>{documentTitle}</title>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="site-bar">
-        <a class="site-name" href="/">f1refly</a>
+        <a class="site-name" href="/">{SITE_CONFIG.site.name}</a>
         <nav class="site-nav" aria-label="Primary navigation">
           <ul>
             <li><a href="/">Home</a></li>
@@ -37,7 +44,7 @@ const documentTitle = title === 'f1refly' ? title : `${title} | f1refly`;
       <slot />
     </main>
     <footer class="site-footer">
-      <p>Static content, rendered at build time.</p>
+      <p>{SITE_CONFIG.site.name} — static content, rendered at build time.</p>
     </footer>
   </body>
 </html>

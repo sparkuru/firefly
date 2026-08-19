@@ -4,6 +4,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mjs';
+import { SITE_CONFIG } from '../src/lib/site-config.mjs';
+import { createRobotsText } from '../src/lib/site-seo.mjs';
 
 const siteRoot = path.resolve(import.meta.dirname, '..');
 const distRoot = path.join(siteRoot, 'dist');
@@ -88,9 +90,43 @@ test('static build emits only the implemented route surface', async () => {
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
     'fonts/JetBrainsMono-Regular-v2.304.woff2',
     'licenses/JetBrainsMono-OFL-1.1.txt',
-    'licenses/JetBrainsMono-PROVENANCE.txt'
+    'licenses/JetBrainsMono-PROVENANCE.txt',
+    'robots.txt',
+    ...(SITE_CONFIG.site.url === null ? [] : ['sitemap.xml'])
   ]);
+  assert.equal(files.includes('sitemap.xml'), SITE_CONFIG.site.url !== null);
   assert.equal(files.some((file) => file.endsWith('.map')), false);
+});
+
+test('shared head metadata and public discovery files follow site configuration', async () => {
+  const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
+  const article = await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8');
+  const robots = await readFile(path.join(distRoot, 'robots.txt'), 'utf8');
+  assert.match(home, new RegExp('<html lang="' + SITE_CONFIG.site.language + '"', 'u'));
+  assert.match(home, new RegExp('<title>' + SITE_CONFIG.site.name + '</title>', 'u'));
+  assert.match(home, new RegExp('<meta name="description" content="' + SITE_CONFIG.site.description.replace('.', '\\.') + '">', 'u'));
+  assert.match(home, new RegExp('<meta name="robots" content="' + SITE_CONFIG.seo.robots.replace(', ', ',\\s*') + '">', 'u'));
+  if (SITE_CONFIG.site.url === null) {
+    assert.doesNotMatch(home, /rel="canonical"/u);
+    assert.doesNotMatch(home, /property="og:url"/u);
+  } else {
+    const homeUrl = `${SITE_CONFIG.site.url}/`;
+    const articleUrl = `${SITE_CONFIG.site.url}/posts/main/379/`;
+    assert.ok(home.includes(`rel="canonical" href="${homeUrl}"`));
+    assert.ok(home.includes(`property="og:url" content="${homeUrl}"`));
+    assert.ok(article.includes(`property="og:url" content="${articleUrl}"`));
+  }
+  assert.match(article, /property="og:type" content="article"/u);
+  assert.match(article, /property="article:published_time"/u);
+  assert.match(article, /property="article:modified_time"/u);
+  if (SITE_CONFIG.site.url === null) assert.doesNotMatch(article, /property="og:url"/u);
+  if (SITE_CONFIG.seo.image === null) {
+    assert.doesNotMatch(home, /property="og:image"/u);
+  } else {
+    assert.match(home, /property="og:image"/u);
+    assert.match(home, /name="twitter:image"/u);
+  }
+  assert.equal(robots, createRobotsText(SITE_CONFIG));
 });
 
 test('only the exact generated Terminal home script bypasses asset inlining', () => {
@@ -385,7 +421,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.doesNotMatch(home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.doesNotMatch(home.match(/<section\b[^>]*data-terminal-fallback[^>]*>/u)?.[0] ?? '', /\bhidden\b/u);
   assert.match(home, /<section\b[^>]*data-terminal-session[^>]*\bhidden\b[^>]*>/u);
-  assert.match(home, /<h1 class="terminal-visually-hidden">f1refly content terminal<\/h1>/u);
+  assert.match(home, new RegExp('<h1 class="terminal-visually-hidden">' + SITE_CONFIG.site.name + ' content terminal<\\/h1>', 'u'));
   assert.match(home, /enterkeyhint="send"/u);
   assert.doesNotMatch(home, /<button\b/iu);
   assert.match(terminalArticle, /<h1>About this foundation<\/h1>/u);

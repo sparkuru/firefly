@@ -1,0 +1,21 @@
+site:
+  name: f1refly
+  description: Fly Me 2 The Star.
+  language: en
+  url: null
+  author: null
+
+terminal:
+  user: guest
+  host: firefly
+  cwd: ~/blog/posts
+  about: |
+    A personal space for notes, experiments, and technical things I don't want to figure out twice.
+    Mostly about things I've worked on, broken, fixed, or found interesting.
+    Source: https://github.com/sparkuru/f1refly.git
+
+seo:
+  titleSuffix: " | f1refly"
+  robots: "index, follow"
+  twitterCard: summary_large_image
+  image: null
