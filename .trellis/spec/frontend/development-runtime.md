@@ -57,10 +57,10 @@ WEB_HOST_PORT=4322 ./dev.sh down
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
 
-./sam npm run check:m5
-./sam npm run test:m5
-./sam npm run build:m5
-./sam npm run publication:m5
+./sam npm run check:m4
+./sam npm run test:m4
+./sam npm run build:m4
+./sam npm run publication:m4
 ./package-runtime.sh
 ```
 
@@ -80,11 +80,11 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `F1REFLY_CONTENT_ROOT` | Optional absolute readable posts workspace; defaults to `<repo>/content/posts`. `sam` resolves and passes it into the container. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
-| Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit M5 build + assembled publication server path. |
+| Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit assembled-publication server path. |
 | Package-local development | `npm run dev:nerv` is the autonomous NERV hot-development entry at `/lab/nerv/`; it must not be presented as the root publication because its Astro base does not own `/` or `/lab/`. |
 | Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
-| M5 dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
-| Runtime packaging | `package-runtime.sh` runs the M5 build, requires exact manifest/release equality, creates a minimal context containing only Dockerfile/Nginx/release, then probes the non-root read-only image and tears down its exact labeled container. |
+| Publication dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
+| Runtime packaging | `package-runtime.sh` runs the assembled publication build, requires exact manifest/release equality, creates a minimal context containing only Dockerfile/Nginx/release, then probes the non-root read-only image and tears down its exact labeled container. |
 | Main-site browser server | Run the site build/static scan first. Playwright owns `astro preview` of that same `dist/` at `/`; `start:e2e` must not rebuild or run `astro dev`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
 | Publication browser server | Build/assemble first; assembler Playwright owns a static server for unchanged root `dist/`. |

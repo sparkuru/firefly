@@ -9,7 +9,7 @@ const validPost = {
   slug: '379',
   date: '2026-05-28',
   updated: '2026-07-03',
-  description: 'A migrated semantic post.',
+  description: 'A semantic post.',
   tags: ['trellis'],
   draft: false,
   layout: 'post',
@@ -138,7 +138,7 @@ test('the real Terminal page keeps strict metadata and representative Markdown',
   assert.match(page, /Future presentations can change how the site looks/u);
 });
 
-test('a migrated article keeps source metadata and Markdown content', async () => {
+test('a source article keeps metadata and Markdown content', async () => {
   const article = await readFile(
     new URL('../../../content/posts/main/llm-workflow-with-trellis.md', import.meta.url),
     'utf8'

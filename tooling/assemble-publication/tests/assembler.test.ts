@@ -107,7 +107,7 @@ test('release validation warns for missing references but rejects escapes and pr
 test('allows path-like authored post/page bodies but rejects the same text in an Experiment', async (context) => {
   const { root, manifest } = await fixture(context);
   const release = path.join(root, 'release');
-  const authoredBody = '<img src="asset.txt">\n/srv/typecho/public-example.txt';
+  const authoredBody = '<img src="asset.txt">\n/srv/uploads/public-example.txt';
   await mkdir(path.join(release, 'posts/example/article'), { recursive: true });
   await mkdir(path.join(release, 'pages/about'), { recursive: true });
   await mkdir(path.join(release, 'lab/alpha'), { recursive: true });

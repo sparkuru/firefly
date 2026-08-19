@@ -61,8 +61,8 @@ SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
 SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
   ./sam npm --prefix apps/site run test:e2e
 ./sam npm --prefix tooling/assemble-publication run test:e2e
-./sam npm run check:m5
-./sam npm run test:m5
+./sam npm run check:m4
+./sam npm run test:m4
 git diff --check
 ```
 

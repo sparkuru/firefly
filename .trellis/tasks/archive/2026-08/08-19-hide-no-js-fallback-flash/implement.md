@@ -47,5 +47,5 @@
   `connecting`.
 - Inspect emitted `dist/index.html` ordering and ensure no other route receives
   home-only behavior.
-- Confirm the direct `dev.sh` path reaches Astro without invoking `build:m5`,
+- Confirm the direct `dev.sh` path reaches Astro without invoking `build:m4`,
   while explicit preview mode still builds and serves the assembled publication.

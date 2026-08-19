@@ -183,7 +183,7 @@ routes before their milestone supplies real semantics.
   optional post `slug` supplies the stable route segment and otherwise the
   physical filename stem is used. Page source paths are physical Markdown paths
   while page routes retain their validated front-matter slug. Titles determine
-  migration filenames for readability, never canonical routes.
+  physical filenames for readability, never canonical routes.
 
 ## Avoid
 

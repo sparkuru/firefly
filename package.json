@@ -2,11 +2,6 @@
   "name": "f1refly",
   "private": true,
   "scripts": {
-    "install:migrate-typecho": "npm --prefix tooling/migrate-typecho ci",
-    "check:migrate-typecho": "npm --prefix tooling/migrate-typecho run check",
-    "test:migrate-typecho": "npm --prefix tooling/migrate-typecho run test",
-    "build:migrate-typecho": "npm --prefix tooling/migrate-typecho run build",
-    "migrate:typecho": "npm --prefix tooling/migrate-typecho run migrate -- --repository-root ../..",
     "install:validator": "npm --prefix tooling/validate-experiments ci",
     "check:validator": "npm --prefix tooling/validate-experiments run check",
     "test:validator": "npm --prefix tooling/validate-experiments run test",
@@ -51,15 +46,10 @@
     "assemble:publication": "npm --prefix tooling/assemble-publication run assemble -- --root ../..",
     "test:e2e:publication": "npm --prefix tooling/assemble-publication run test:e2e",
     "install:m4": "npm run install:validator && npm run install:x-core && npm run install:semantic && npm run install:terminal && npm run install:assembler && npm run install:site && npm run install:nerv",
-    "install:m5": "npm run install:m4 && npm run install:migrate-typecho",
     "build:m4": "npm run build:validator && npm run validate:experiments && npm run build:x-core && npm run build:semantic && npm run build:terminal && npm run build:assembler && npm run build:site && npm run build:experiments && npm run assemble:publication",
     "check:m4": "npm run check:validator && npm run check:x-core && npm run check:semantic && npm run check:terminal && npm run check:assembler && npm run check:site && npm run check:nerv",
     "test:m4": "npm run test:validator && npm run test:x-core && npm run test:semantic && npm run test:terminal && npm run test:assembler && npm run test:content:site && npm run test:x-core:site",
     "publication:m4": "npm run install:m4 && npm run build:m4",
-    "build:m5": "npm run build:m4 && npm run build:migrate-typecho",
-    "check:m5": "npm run check:m4 && npm run check:migrate-typecho",
-    "test:m5": "npm run test:m4 && npm run test:migrate-typecho",
-    "publication:m5": "npm run install:m5 && npm run build:m5",
-    "package:runtime:m5": "./package-runtime.sh"
+    "package:runtime": "./package-runtime.sh"
   }
 }

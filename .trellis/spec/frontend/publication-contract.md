@@ -90,8 +90,7 @@ assemble-publication [--root <repository-root>] [--build-experiments]
 ./sam npm run build:experiments
 ./sam npm run assemble:publication
 ./sam npm run publication:m4
-./sam npm run build:m5
-./sam npm run publication:m5
+./sam npm run build:m4
 ./package-runtime.sh
 ```
 
@@ -229,7 +228,7 @@ commands, and only then assembles the release.
   deterministic listed/unlisted discovery; root/directory realpath escapes.
 - Assembler Node tests: unsafe node/source/map/name/content/reference rejection;
   output/license symlinked-parent escapes; file/directory case collisions;
-  deterministic 23-file M5 clean assembly, including nested routes, two
+  deterministic clean assembly, including nested routes, two
   route-owned site scripts, semantic/NERV styles, the two pinned Terminal fonts,
   complete OFL, and provenance record; stale-file exclusion; coordinated prior-
   target preservation and rollback.

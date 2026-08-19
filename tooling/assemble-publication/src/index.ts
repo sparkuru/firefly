@@ -52,7 +52,7 @@ const PROHIBITED_SOURCE_PATH_TEXT = [
   /\/home\/[^/\s"']+\//u,
   /\/Users\/[^/\s"']+\//u,
   /[A-Z]:\\Users\\[^\\\s"']+\\/u,
-  /\/(?:srv\/(?:typecho|uploads)|var\/www|usr\/(?:local\/)?uploads)\//iu,
+  /\/(?:srv\/(?:uploads|backups)|var\/www|usr\/(?:local\/)?uploads)\//iu,
   /\/app\//u,
   /(?:^|[\\/])\.private(?:[\\/]|$)/imu
 ];

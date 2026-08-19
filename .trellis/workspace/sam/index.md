@@ -44,7 +44,6 @@
 | 11 | 2026-08-17 | Polish Terminal command workflow | `ec62f96` | `anti-entropy-loss-syndrome` |
 | 10 | 2026-08-15 | Read-only rshell knowledge browser | `7b1a54e` | `anti-entropy-loss-syndrome` |
 | 9 | 2026-08-15 | M7 reverse-tunnel staging rehearsal | `eb3916f` | `anti-entropy-loss-syndrome` |
-| 8 | 2026-08-14 | M5 full content migration | `3e36dad`, `04746a6` | `anti-entropy-loss-syndrome` |
 | 7 | 2026-08-13 | M5 content filesystem and Vim reader | `58ab2d9`, `4433b6a` | `anti-entropy-loss-syndrome` |
 | 6 | 2026-08-13 | M4 experiment publication and Terminal refinement | `9da459e`, `d739493` | `anti-entropy-loss-syndrome` |
 | 5 | 2026-08-13 | Complete M3 shell-first Terminal interface | `f85fb9f`, `696898b`, `8bad2d1` | `anti-entropy-loss-syndrome` |

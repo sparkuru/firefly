@@ -3,10 +3,10 @@
 ## Initiative
 
 - **Title:** f1refly MVP
-- **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, migration, staging, and production rollout.
+- **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-18 — M5 content-filesystem/Vim-reader and full-content migration are approved, committed, and archived. Authored Markdown bodies, including the 30 local image-like references, are public body text and require no asset follow-up. M5.1 comments remain deferred for a later self-built solution. The separate temporary M7 reverse-tunnel/Nginx rehearsal at `staging.majo.im` passed and was fully rolled back, and is accepted as the staging verification; the planned local-TLS M6 task is superseded and removed from the active roadmap.
+- **Owner decision:** 2026-08-18 — M5 content-filesystem/Vim-reader is approved, committed, and archived. M5.1 comments remain deferred for a later self-built solution. The separate temporary M7 reverse-tunnel/Nginx rehearsal at `staging.majo.im` passed and was fully rolled back, and is accepted as the staging verification; the planned local-TLS M6 task is superseded and removed from the active roadmap.
 
 ## Continuation Policy
 
@@ -25,10 +25,9 @@
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
-| 7 | `.trellis/tasks/archive/2026-08/08-14-full-content-migration` — M5 full content migration | complete | The private importer, 100-document review candidate, memo/comment/identity handoffs, and site schema validation are committed and archived. The 30 local image-like references are public authored Markdown text, not assets or follow-up work. |
-| 8 | M5.1 — dynamic comments and identity service | deferred | Preserve M5's private handoff and the initial planning record for a later self-built service. It is not on the current release path and must not convert the main site to SSR or direct database reads. |
-| 9 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
-| 10 | Production rollout | planned | Requires a future explicit deployment/traffic authorization and does not start automatically. |
+| 7 | M5.1 — dynamic comments and identity service | deferred | The planning record remains available for a later self-built service. It is not on the current release path and must not convert the main site to SSR or direct database reads. |
+| 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
+| 9 | Production rollout | planned | Requires a future explicit deployment/traffic authorization and does not start automatically. |
 
 ## Evidence
 
@@ -60,11 +59,9 @@
 - M5 second owner-review follow-up makes syntactically safe zero-result cat/vim completion an exhaustive Terminal-owned `no-match` state (`No matches.` without focus loss), while unsafe/control/non-NFC/modifier/IME cases remain native. It also locks permalink grammar to `guest@f1refly:~/blog $ / posts / characters / nahida.md`, with linked root/parents and an underlined non-link current filename. Independent review fixed the control-character boundary and found no remaining issue; focused breadcrumb is 2/2 and the full site remains 68/68.
 - M5 final owner refinement replaces collapsible breadcrumb whitespace with six explicit `1ch` gap boxes around real slash tokens. Independent review changed browser coverage to measure the gap boxes directly across valid wrapping; site check/build/static, focused breadcrumb 2/2, and full site 68/68 remain green. The owner approved commit after this refinement.
 - M5 durable contract: `.trellis/spec/frontend/content-workspace-contract.md` records workspace/link/materializer/access/path/registry/reader signatures, validation matrix, cases, tests, and wrong/correct patterns; adjacent frontend specs were reconciled from the flat M4 route/index assumptions.
-- M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, full migration, staging, and production remain later milestones.
-- M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The active M5 full-content-migration task begins from this clean, archived baseline.
-- M5 planning evidence: `.trellis/tasks/08-14-full-content-migration/research/sql-source-analysis.md` records the MariaDB-validated source table map, category-folder route evidence, custom-field candidates, memo export boundary, and private identity/comment handoff. It contains aggregate facts only.
-- M5 implementation evidence: `tooling/migrate-typecho/` now performs checksum-verified `.sql`/`.sql.gz` intake, strict adapter decoding, safe wrapper normalization, category-folder/page projection, private SQLite/JSONL handoff, owner-confirmed public-body preservation, aggregate private review reporting, and guarded candidate/public materialization. The real ignored candidate contains 93 posts and 7 pages; schema checking passes with 0 errors/warnings. Its resource inventory is 961 references: 931 credential-free HTTPS references and 30 local image-like references treated as public authored Markdown text; there are 0 document/count/resource exceptions, and no body signature scan. `./sam npm run check:m5`, `test:m5`, and `build:m5` pass; migration tests are 8/8. The existing main-site Playwright matrix is 68/68, and `package-runtime.sh` passes the exact 23-file non-root/read-only runtime probes.
-- M5.1 is deferred: its private handoff and planning record remain available for a later self-built comment/identity service. It is neither authorized nor on the current release path; M5 does not publicly render historical comments.
+- M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, staging, and production remain later milestones.
+- M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The content workspace and reader remain the approved Markdown authoring boundary.
+- M5.1 is deferred: its planning record remains available for a later self-built comment/identity service. It is neither authorized nor on the current release path.
 
 ## Next Decision
 

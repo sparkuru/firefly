@@ -19,10 +19,10 @@ Build and packaging entry points:
 
 ```bash
 F1REFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm --prefix apps/site run build:workspace
-F1REFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm run build:m5
-./sam npm run check:m5
-./sam npm run test:m5
-./sam npm run build:m5
+F1REFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm run build:m4
+./sam npm run check:m4
+./sam npm run test:m4
+./sam npm run build:m4
 ./package-runtime.sh
 ```
 
@@ -263,7 +263,7 @@ startTerminalReader(root: HTMLElement): void
   stderr/status handling, state-patch application, and bounded session scratch
   redirects. Its `runRshellInput` wrapper delegates to `parseRshell`; it must
   not introduce a second tokenizer or expose structured values/control events
-  as stdin. Until migration finishes, the runtime may select this runner only
+  as stdin. Until all legacy handlers are retired, the runtime may select this runner only
   for the default fully-neutral core path and must preserve custom/legacy
   registry dispatch.
 - Neutral session commands receive command metadata and identity through the
