@@ -19,6 +19,10 @@ import {
 } from '@f1refly/presentation-terminal/runtime';
 
 interface TerminalNodes {
+  readonly root: HTMLElement;
+  readonly startup: HTMLElement;
+  readonly bootLog: HTMLElement;
+  readonly bootPrompt: HTMLElement;
   readonly fallback: HTMLElement;
   readonly session: HTMLElement;
   readonly form: HTMLFormElement;
@@ -31,6 +35,8 @@ interface TerminalNodes {
   readonly failure: HTMLElement;
   readonly fallbackHeading: HTMLElement;
 }
+
+type TerminalStartupState = 'connecting' | 'ready' | 'failed';
 
 interface TerminalTemplates {
   readonly byPath: ReadonlyMap<string, HTMLTemplateElement>;
@@ -133,6 +139,10 @@ function requireElement<T extends Element>(
 
 function readNodes(root: HTMLElement): TerminalNodes {
   return {
+    root,
+    startup: requireElement(root, '[data-terminal-startup]', HTMLElement),
+    bootLog: requireElement(root, '[data-terminal-boot-log]', HTMLElement),
+    bootPrompt: requireElement(root, '[data-terminal-boot-prompt]', HTMLElement),
     fallback: requireElement(root, '[data-terminal-fallback]', HTMLElement),
     session: requireElement(root, '[data-terminal-session]', HTMLElement),
     form: requireElement(root, '[data-terminal-form]', HTMLFormElement),
@@ -145,6 +155,28 @@ function readNodes(root: HTMLElement): TerminalNodes {
     failure: requireElement(root, '[data-terminal-failure]', HTMLElement),
     fallbackHeading: requireElement(root, '#terminal-recovery-heading', HTMLElement)
   };
+}
+
+function setStartupState(root: HTMLElement, state: TerminalStartupState): void {
+  root.dataset.terminalStartupState = state;
+}
+
+function markSessionEmpty(nodes: TerminalNodes): void {
+  nodes.session.dataset.terminalSessionEmpty = '';
+}
+
+function clearSessionEmpty(nodes: TerminalNodes): void {
+  delete nodes.session.dataset.terminalSessionEmpty;
+}
+
+function preserveBootLog(nodes: TerminalNodes): void {
+  const record = document.createElement('section');
+  record.className = 'terminal-record terminal-boot-record';
+  record.setAttribute('aria-labelledby', 'terminal-startup-heading');
+  nodes.bootPrompt.remove();
+  record.append(nodes.bootLog);
+  nodes.transcript.append(record);
+  nodes.startup.remove();
 }
 
 function readEntries(root: HTMLElement): readonly TerminalEntry[] {
@@ -597,6 +629,7 @@ function appendCommandLine(record: HTMLElement, command: string, promptValue: st
 }
 
 function showFatalFailure(nodes: TerminalNodes): void {
+  setStartupState(nodes.root, 'failed');
   nodes.session.hidden = true;
   nodes.failure.hidden = false;
   nodes.fallback.hidden = false;
@@ -605,6 +638,7 @@ function showFatalFailure(nodes: TerminalNodes): void {
 
 function clearTranscript(nodes: TerminalNodes, announcement: string): void {
   nodes.transcript.replaceChildren();
+  markSessionEmpty(nodes);
   nodes.input.value = '';
   nodes.completion.textContent = '';
   nodes.announcer.textContent = announcement;
@@ -698,6 +732,7 @@ export function startTerminalHome(
     experiments = readExperiments(root);
     templates = readTemplates(root, entries);
   } catch {
+    setStartupState(root, 'failed');
     return;
   }
 
@@ -746,6 +781,7 @@ export function startTerminalHome(
         instance: outputInstance
       });
       nodes.transcript.append(record);
+      clearSessionEmpty(nodes);
       nodes.input.value = '';
       nodes.announcer.textContent = result.announcement;
       if (rendered.navigationHref !== undefined) {
@@ -886,7 +922,14 @@ export function startTerminalHome(
     settleViewport(nodes.input, 'center');
   });
 
-  nodes.fallback.hidden = true;
-  nodes.session.hidden = false;
-  updatePrompt();
+  try {
+    preserveBootLog(nodes);
+    nodes.fallback.hidden = true;
+    nodes.session.hidden = false;
+    updatePrompt();
+  } catch {
+    fail();
+    return;
+  }
+  setStartupState(nodes.root, 'ready');
 }

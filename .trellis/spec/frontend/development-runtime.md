@@ -16,9 +16,10 @@ direct host npm, and raw Docker are not project validation paths.
 
 ```bash
 ./sam <command> [arguments...]
-./dev.sh [start|up|down|stop]
+./dev.sh [start|up|preview|build|down|stop]
 
 WEB_HOST_PORT=4322 ./dev.sh
+WEB_HOST_PORT=4322 ./dev.sh preview
 WEB_HOST_PORT=4322 ./dev.sh down
 
 ./sam npm --prefix apps/site ci
@@ -79,7 +80,7 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `F1REFLY_CONTENT_ROOT` | Optional absolute readable posts workspace; defaults to `<repo>/content/posts`. `sam` resolves and passes it into the container. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
-| Root development entry | `dev.sh start` validates M5 dependency binaries, materializes the configured workspace, builds a fresh complete M5 publication, then serves unchanged root `dist/` at `/`, including nested content, `/lab/`, and NERV. It is restart-to-refresh, not hot reload. |
+| Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit M5 build + assembled publication server path. |
 | Package-local development | `npm run dev:nerv` is the autonomous NERV hot-development entry at `/lab/nerv/`; it must not be presented as the root publication because its Astro base does not own `/` or `/lab/`. |
 | Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
 | M5 dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
@@ -102,10 +103,11 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | invalid/empty `SAM_IPC` | accepted values to stderr; exit `2` before Docker |
 | unsupported `SAM_SERVICE` | fail before publishing a port |
 | wrapped command fails | preserve output and exit code |
+| generated Astro dev lock is stale after a container stop | remove only `apps/site/.astro/dev.json` before starting and during teardown; do not pass `astro dev --force`, because a container PID can collide with the stale PID and terminate the new Astro process |
 | `dev.sh down` finds no labeled container | report none and succeed |
 | a required M5 package binary is missing | fail before building and name the locked install delegate as recovery |
 | root publication build fails | preserve the wrapped failure, do not start the web service, and allow exact `sam.scope=dev.sh` cleanup |
-| a developer expects source hot reload from `dev.sh` | restart `dev.sh` to rebuild the immutable snapshot, or use the explicit package-local development command when only that package is in scope |
+| a developer needs immutable publication evidence | use `dev.sh preview`/`build`; the default `dev.sh` Astro server is for fast visual review and is not build/static-output evidence |
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
 | browser image/server/fixture cannot start | record exact unavailable error; never report pass |
 | browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
@@ -126,22 +128,25 @@ so Playwright owns and terminates that preview process.
 - Good: the site build/static scan passes, then focused Playwright uses the
   matching Noble image, host IPC, and an owned preview of the unchanged artifact.
 - Good: `F1REFLY_CONTENT_ROOT=/absolute/notebook WEB_HOST_PORT=4322 ./dev.sh`
-  uses exact read-only content mounts, rebuilds the M5 release, and the same
-  loopback origin returns `200` for `/`, `/lab/`, and `/lab/nerv/`; the matching
-  `down` command stops only the exact repository/scope containers.
-- Good: `SAM_BIND_HOST=127.0.0.1 WEB_HOST_PORT=4322 ./dev.sh` keeps a preview
-  loopback-only when LAN access is not wanted; the default `dev.sh` binding is
-  `0.0.0.0` for review from another host on the development network.
+  uses exact read-only content mounts and starts the Astro development server;
+  the same host port can be checked for `/` and native content links while
+  source changes hot-reload.
+- Good: `SAM_BIND_HOST=127.0.0.1 WEB_HOST_PORT=4322 ./dev.sh preview` keeps the
+  assembled publication preview loopback-only when LAN access is not wanted;
+  the default `dev.sh` binding is `0.0.0.0` for review from another host.
 - Base: site or NERV check/build uses plain `./sam`, private IPC, no published
   port, UID mapping, and repository-local HOME.
 - Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,
-  `astro dev`, build-inside-`start:e2e`, `reuseExistingServer: true`, an unmanaged
-  server, or broad command approval.
+  using `astro dev` as static/browser-isolation evidence, build-inside-`start:e2e`,
+  `reuseExistingServer: true`, an unmanaged server, or broad command approval.
 - Bad: root `dev.sh` launches only NERV's package-local Astro server. The
   `/lab/nerv` base may work, but `/` and `/lab/` are outside that application and
   cannot satisfy the root publication contract.
 - Bad: mounting `$HOME`, `/`, or a broad ancestor so an authored link happens to
   resolve, or building a runtime image from a stale/unmanifested site `dist/`.
+- Bad: adding `--force` to the containerized Astro dev command while retaining a
+  stale `.astro/dev.json`; the old container PID can equal the new Astro PID,
+  causing Astro to terminate itself with exit `143`.
 
 ### 6. Tests Required
 
@@ -160,7 +165,10 @@ bash -n sam dev.sh package-runtime.sh
 shellcheck sam dev.sh package-runtime.sh
 shfmt -d sam dev.sh package-runtime.sh
 ./sam node --version
+# Fast visual review; no M5 build.
 WEB_HOST_PORT=4322 ./dev.sh
+# Immutable assembled-publication preview; performs the M5 build.
+WEB_HOST_PORT=4322 ./dev.sh preview
 # From another shell: assert 200 and expected titles/links at /, /lab/, /lab/nerv/.
 WEB_HOST_PORT=4322 ./dev.sh down
 ./dev.sh down
@@ -170,7 +178,9 @@ Verify invalid IPC cases, executable modes, ignored `.devhome/`, and no stale
 `hako` / `HAKO_*` reference. For the root development entry, also verify the
 exact `sam.repo`, `sam.scope=dev.sh`, and `sam.service=web` labels, the configured
 host binding (default `0.0.0.0`), closed port after teardown, and zero matching
-containers.
+containers. The Astro dev lock must be absent after teardown and a subsequent
+start with a pre-existing stale lock must reach `astro ... ready` without
+passing `--force`.
 For workspace changes, also prove chained file/directory mounts are read-only,
 broad/broken/FIFO inputs fail, the generated stage has zero symlinks, and host
 paths/private sentinels do not enter output. For packaging, compare the manifest,

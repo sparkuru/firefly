@@ -23,10 +23,76 @@ interface Props {
 const { documents, experiments } = Astro.props;
 const posts = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'post');
 const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'page');
+const TERMINAL_HOME_STARTUP_LOG_LINES = [
+  '[  OK  ] loading public document index',
+  '[  OK  ] checking native recovery links',
+  '[  OK  ] mounting public posts',
+  '[  OK  ] mounting public pages',
+  '[  OK  ] validating document templates',
+  '[  OK  ] preparing terminal session',
+  '[  OK  ] initializing shell',
+  '[ WARN ] I dreamed of a scorched earth. A new shoot broke through the soil, blooming toward the rising sun, whispering softly to me.',
+  '[ WARN ] I will live for myself, and I will die as \'Firefly\'.',
+  '[  OK  ] awaiting command prompt ...',
+] as const;
+const TERMINAL_HOME_STARTUP_LINE_DELAY_MS = 55;
+const TERMINAL_HOME_STARTUP_LINE_DURATION_MS = 120;
+const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
+  (TERMINAL_HOME_STARTUP_LOG_LINES.length - 1) * TERMINAL_HOME_STARTUP_LINE_DELAY_MS +
+  TERMINAL_HOME_STARTUP_LINE_DURATION_MS;
 ---
 
 <section class="terminal-home" data-terminal-home>
+  <script is:inline data-terminal-startup-marker>
+    (() => {
+      const root = document.querySelector('[data-terminal-home]');
+      if (!(root instanceof HTMLElement)) {
+        return;
+      }
+
+      root.dataset.terminalStartupState = 'connecting';
+      const markUnstartedAsFailed = () => {
+        if (root.dataset.terminalStartupState === 'connecting') {
+          root.dataset.terminalStartupState = 'failed';
+        }
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', markUnstartedAsFailed, { once: true });
+      } else {
+        markUnstartedAsFailed();
+      }
+    })();
+  </script>
   <h1 class="terminal-visually-hidden">f1refly content terminal</h1>
+
+  <section
+    class="terminal-startup"
+    data-terminal-startup
+    aria-labelledby="terminal-startup-heading"
+  >
+    <div class="terminal-boot-surface" data-terminal-boot-log>
+      <h2 id="terminal-startup-heading" class="terminal-visually-hidden">
+        Starting f1refly content terminal
+      </h2>
+      <div class="terminal-boot-lines" aria-hidden="true">
+        {TERMINAL_HOME_STARTUP_LOG_LINES.map((line, index) => (
+          <p
+            class="terminal-boot-line"
+            style={`--terminal-boot-delay: ${index * TERMINAL_HOME_STARTUP_LINE_DELAY_MS}ms;`}
+          >{line}</p>
+        ))}
+      </div>
+      <div
+        class="terminal-command-row terminal-boot-prompt"
+        data-terminal-boot-prompt
+        style={`--terminal-boot-prompt-delay: ${TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS}ms;`}
+        aria-hidden="true"
+      >
+        <span class="terminal-prompt">{DEFAULT_TERMINAL_PROMPT}</span>
+        <span class="terminal-boot-input-space"></span>
+      </div>
+    </div>
+  </section>
 
   <section
     class="terminal-recovery"
