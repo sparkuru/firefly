@@ -18,3 +18,5 @@ presentations/terminal/dist/
 *.log
 tooling/sync-server/
 content/
+
+config/site.toml

@@ -520,3 +520,24 @@ Implemented public YAML site configuration for identity, Terminal prompt/about, 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 26: 完成友链与站点配置改造
+
+**Date**: 2026-08-20
+**Task**: 完成友链与站点配置改造
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+完成友链内置命令与 desc 描述、TOML 站点配置、文章 SEO 配置、content 私有化及历史清理；将 Compose 入口统一为 compose.yml，删除无用 compose.release.yml 与 dev.md，更新 README 终端式入口；通过 check:m4、test:m4 和 Compose 配置校验。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4aecf04` | (see git log) |
+
+### Status
+
+[OK] **Completed**
