@@ -8,6 +8,7 @@ import TerminalLayout from '../layouts/TerminalLayout.astro';
 import { getCanonicalContent } from '../lib/content';
 import { getPublicExperiments } from '../lib/experiments';
 import { renderDocument } from '../lib/render-document';
+import { SITE_CONFIG } from '../lib/site-config.mjs';
 
 const { documents: canonicalDocuments } = await getCanonicalContent();
 const publicExperiments = await getPublicExperiments();
@@ -43,8 +44,9 @@ const documents = await Promise.all(
 ---
 
 <TerminalLayout
-  title="f1refly"
-  description="Fly Me 2 The Star."
+  title={SITE_CONFIG.site.name}
+  description={SITE_CONFIG.site.description}
+  pathname="/"
   path="~/blog/posts"
   home
 >

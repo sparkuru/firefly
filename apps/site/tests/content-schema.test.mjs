@@ -6,10 +6,14 @@ import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
 
 const validPost = {
   title: 'llm-workflow-with-trellis',
+  htmlTitle: 'LLM workflow with Trellis',
   slug: '379',
   date: '2026-05-28',
   updated: '2026-07-03',
   description: 'A semantic post.',
+  canonical: 'https://example.test/posts/379/',
+  seoImage: '/images/trellis.png',
+  noindex: false,
   tags: ['trellis'],
   draft: false,
   layout: 'post',
@@ -44,6 +48,8 @@ test('omitted presentation defaults to f1refly while semantic remains explicit',
 
   assert.equal(omitted.presentation, DEFAULT_PRESENTATION_ID);
   assert.equal(postSchema.parse(validPost).presentation, 'semantic');
+  assert.equal(postSchema.parse(validPost).htmlTitle, 'LLM workflow with Trellis');
+  assert.equal(postSchema.parse(validPost).noindex, false);
 });
 
 test('used tag metadata stays a strict public string list', () => {
@@ -77,6 +83,22 @@ test('invalid slug is rejected', () => {
   for (const slug of ['nested/post', '.hidden', '..', 'encoded%2fpath', 'back\\slash', 'not normalized e\u0301']) {
     assert.equal(postSchema.safeParse({ ...validPost, slug }).success, false, slug);
   }
+});
+
+test('SEO front matter is strict and safe', () => {
+  for (const value of [
+    { ...validPost, canonical: '/relative/' },
+    { ...validPost, canonical: 'javascript:alert(1)' },
+    { ...validPost, canonical: 'https://example.test/#fragment' },
+    { ...validPost, seoImage: 'relative.png' },
+    { ...validPost, seoImage: '//cdn.example.test/card.png' },
+    { ...validPost, seoImage: '/images/../secret.png' },
+    { ...validPost, htmlTitle: 'unsafe\nline' },
+    { ...validPost, noindex: 'true' }
+  ]) {
+    assert.equal(postSchema.safeParse(value).success, false);
+  }
+  assert.equal(postSchema.parse({ ...validPost, noindex: undefined }).noindex, false);
 });
 
 test('aliases require canonical safe directory routes', () => {

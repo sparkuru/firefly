@@ -16,6 +16,7 @@ import {
   completeCommand,
   createTerminalCommandRegistry,
   createTerminalState,
+  decodeTerminalIdentity,
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
@@ -49,6 +50,26 @@ const experiments = decodeTerminalExperiments([
 test('default prompt stays derived from the default identity', () => {
   assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #');
   assert.equal(formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, createTerminalState()), DEFAULT_TERMINAL_PROMPT);
+});
+
+test('configured identity initializes the prompt and rejects unsafe browser payloads', () => {
+  const identity = decodeTerminalIdentity({
+    user: 'reader',
+    host: 'station',
+    workingDirectory: '~/blog/notes',
+    about: 'First line.\nSecond line.'
+  });
+  assert.equal(formatTerminalPrompt(identity, createTerminalState(identity)), 'reader(.ᗜ ᴗ ᗜ.)station:~/blog/notes #');
+  assert.equal(Object.isFrozen(identity), true);
+  for (const value of [
+    { ...identity, user: 'reader name' },
+    { ...identity, host: 'station/' },
+    { ...identity, workingDirectory: '~/blog/../private' },
+    { ...identity, about: 'line\u0000' },
+    { ...identity, extra: 'unknown' }
+  ]) {
+    assert.throws(() => decodeTerminalIdentity(value), /Terminal identity/u);
+  }
 });
 
 function input(tree: HastRoot): NormalizedDocumentInput {

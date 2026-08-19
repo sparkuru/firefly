@@ -1,9 +1,9 @@
 import {
-  DEFAULT_TERMINAL_IDENTITY,
   DEFAULT_TERMINAL_COMMAND_REGISTRY,
   cancelCommandInput,
   completeCommand,
   createTerminalState,
+  decodeTerminalIdentity,
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
@@ -14,6 +14,7 @@ import {
   type TerminalEntry,
   type TerminalExperiment,
   type TerminalGrepMatch,
+  type TerminalIdentity,
   type TerminalState,
   type TerminalTextDocument
 } from '@f1refly/presentation-terminal/runtime';
@@ -207,6 +208,25 @@ function readExperiments(root: HTMLElement): readonly TerminalExperiment[] {
     });
   }
   return decodeTerminalExperiments(raw);
+}
+
+function readIdentity(root: HTMLElement): TerminalIdentity {
+  const encodedAbout = root.dataset.terminalIdentityAbout;
+  if (encodedAbout === undefined) {
+    throw new TypeError('Terminal identity about text is missing.');
+  }
+  let about: string;
+  try {
+    about = decodeURIComponent(encodedAbout);
+  } catch {
+    throw new TypeError('Terminal identity about text is not valid encoding.');
+  }
+  return decodeTerminalIdentity({
+    user: root.dataset.terminalIdentityUser,
+    host: root.dataset.terminalIdentityHost,
+    workingDirectory: root.dataset.terminalIdentityCwd,
+    about
+  });
 }
 
 function readTemplateTextLines(node: HTMLElement): readonly string[] {
@@ -726,8 +746,10 @@ export function startTerminalHome(
   let entries: readonly TerminalEntry[];
   let experiments: readonly TerminalExperiment[];
   let templates: TerminalTemplates;
+  let identity: TerminalIdentity;
   try {
     nodes = readNodes(root);
+    identity = readIdentity(root);
     entries = readEntries(root);
     experiments = readExperiments(root);
     templates = readTemplates(root, entries);
@@ -736,14 +758,14 @@ export function startTerminalHome(
     return;
   }
 
-  let state: TerminalState = createTerminalState();
+  let state: TerminalState = createTerminalState(identity);
   let composing = false;
   let failed = false;
   let outputInstance = 0;
   const execute = seams.execute ?? executeCommand;
   const render = seams.render ?? renderEffect;
   const updatePrompt = (): void => {
-    const prompt = formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, state);
+    const prompt = formatTerminalPrompt(identity, state);
     nodes.prompt.textContent = prompt;
     nodes.commandLabel.textContent = `Command for ${prompt}`;
   };
@@ -759,8 +781,8 @@ export function startTerminalHome(
   const submit = (): void => {
     try {
       const command = nodes.input.value;
-      const submittedPrompt = formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, state);
-      const result = execute({ state, input: command, entries, experiments, documents: templates.documents });
+      const submittedPrompt = formatTerminalPrompt(identity, state);
+      const result = execute({ state, input: command, entries, experiments, documents: templates.documents, identity });
       state = result.state;
       updatePrompt();
       nodes.completion.textContent = '';

@@ -1,7 +1,20 @@
 import { z } from 'astro/zod';
 import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
+import { isSafeHttpUrl, isSafeImageReference } from './site-config.mjs';
 
 const requiredText = z.string().trim().min(1);
+const htmlTitle = requiredText.refine(
+  (value) => !/[\u0000-\u001f\u007f-\u009f]/u.test(value),
+  'HTML title must be one safe line of text'
+);
+const canonical = requiredText.refine(
+  isSafeHttpUrl,
+  'Canonical URL must be an absolute http(s) URL without credentials or fragments'
+);
+const seoImage = requiredText.refine(
+  isSafeImageReference,
+  'SEO image must be an absolute http(s) URL or a safe root-relative path'
+);
 const unsafeRouteSegment = /[\\/?#%\s\u0000-\u001f\u007f]/u;
 const isSafeRouteSegment = (segment) => segment.length > 0 &&
   segment !== '.' &&
@@ -34,9 +47,13 @@ const access = z.discriminatedUnion('visibility', [
 
 const sharedMetadata = {
   title: requiredText,
+  htmlTitle: htmlTitle.optional(),
   date,
   updated: date.optional(),
   description: requiredText,
+  canonical: canonical.optional(),
+  seoImage: seoImage.optional(),
+  noindex: z.boolean().optional().default(false),
   tags: z.array(requiredText).optional(),
   draft: z.boolean(),
   presentation: presentation.optional().default(DEFAULT_PRESENTATION_ID),

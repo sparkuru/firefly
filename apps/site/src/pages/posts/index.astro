@@ -7,6 +7,6 @@ const directory = (await getCanonicalContent()).directories.find(({ virtualPath 
 if (directory === undefined) throw new Error('Missing public posts directory.');
 ---
 
-<TerminalLayout title="posts" description="Public post directories and documents." path="~/blog/posts">
+<TerminalLayout title="posts" description="Public post directories and documents." pathname="/posts/" path="~/blog/posts">
   <ContentDirectoryIndex directory={directory} />
 </TerminalLayout>

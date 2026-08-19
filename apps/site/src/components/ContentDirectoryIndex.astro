@@ -1,16 +1,16 @@
 ---
 import {
-  DEFAULT_TERMINAL_IDENTITY,
   formatTerminalPrompt
 } from '@f1refly/presentation-terminal/runtime';
 import type { ContentDirectory } from '../lib/content';
+import { terminalIdentityFromConfig } from '../lib/site-config.mjs';
 
 interface Props {
   directory: ContentDirectory;
 }
 
 const { directory } = Astro.props;
-const directoryPrompt = formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, { cwd: '~/blog' });
+const directoryPrompt = formatTerminalPrompt(terminalIdentityFromConfig(), { cwd: '~/blog' });
 const parentHref = directory.virtualPath.includes('/')
   ? `/${directory.virtualPath.split('/').slice(0, -1).join('/')}/`
   : '/';

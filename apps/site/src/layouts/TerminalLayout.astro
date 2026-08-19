@@ -1,24 +1,30 @@
 ---
 import terminalCss from '../styles/terminal.css?raw';
+import SiteHead from '../components/SiteHead.astro';
+import { SITE_CONFIG } from '../lib/site-config.mjs';
 
 interface Props {
-  title: string;
+  title?: string;
   description: string;
   path: string;
   home?: boolean;
+  pathname?: string;
+  htmlTitle?: string;
+  canonical?: string;
+  seoImage?: string;
+  noindex?: boolean;
+  collection?: 'posts' | 'pages';
+  date?: Date;
+  updated?: Date;
 }
 
-const { title, description, path, home = false } = Astro.props;
-const documentTitle = title === 'f1refly' ? title : `${title} | f1refly`;
+const { title, description, path, home = false, ...headProps } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en" class="terminal-root" data-terminal-theme="f1refly">
+<html lang={SITE_CONFIG.site.language} class="terminal-root" data-terminal-theme="f1refly">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description} />
-    <title>{documentTitle}</title>
+    <SiteHead title={title} description={description} home={home} {...headProps} />
     <link
       rel="preload"
       href="/fonts/JetBrainsMono-Regular-v2.304.woff2"
@@ -41,7 +47,7 @@ const documentTitle = title === 'f1refly' ? title : `${title} | f1refly`;
       {
         !home && (
           <div class="terminal-titlebar" aria-hidden="true">
-            <span>f1refly / content terminal</span>
+            <span>{SITE_CONFIG.site.name} / content terminal</span>
             <span>{path}</span>
           </div>
         )

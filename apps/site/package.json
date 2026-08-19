@@ -11,7 +11,7 @@
     "check": "npm run prepare:content && astro check",
     "build": "npm run prepare:content && astro check && astro build && node --test tests/static-output.test.mjs",
     "build:workspace": "npm run prepare:content && astro check && astro build",
-    "test:content": "node --test --test-concurrency=1 tests/content-access.test.mjs tests/content-materializer.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs",
+    "test:content": "node --test --test-concurrency=1 tests/content-access.test.mjs tests/content-materializer.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs tests/site-config.test.mjs",
     "test:x-core": "node --test tests/x-core-integration.test.mjs",
     "test:e2e": "playwright test",
     "review:m5": "playwright test --config playwright.review.config.ts",
@@ -20,11 +20,12 @@
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.2.2",
-    "@f1refly/validate-experiments": "file:../../tooling/validate-experiments",
     "@f1refly/presentation-semantic": "file:../../presentations/semantic",
     "@f1refly/presentation-terminal": "file:../../presentations/terminal",
+    "@f1refly/validate-experiments": "file:../../tooling/validate-experiments",
     "@f1refly/x-core": "file:../../packages/x-core",
-    "astro": "7.1.6"
+    "astro": "7.1.6",
+    "yaml": "2.9.0"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",

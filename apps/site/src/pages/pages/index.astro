@@ -7,6 +7,6 @@ const directory = (await getCanonicalContent()).directories.find(({ virtualPath 
 if (directory === undefined) throw new Error('Missing public pages directory.');
 ---
 
-<TerminalLayout title="pages" description="Public standalone pages." path="~/blog/pages">
+<TerminalLayout title="pages" description="Public standalone pages." pathname="/pages/" path="~/blog/pages">
   <ContentDirectoryIndex directory={directory} />
 </TerminalLayout>

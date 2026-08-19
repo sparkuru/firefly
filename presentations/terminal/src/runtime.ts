@@ -216,12 +216,12 @@ function isTerminalCommandGroup(value: unknown): value is TerminalCommandGroup {
   return typeof value === 'string' && terminalCommandGroups.includes(value as TerminalCommandGroup);
 }
 
-export function createTerminalState(): TerminalState {
+export function createTerminalState(identity: TerminalIdentity = DEFAULT_TERMINAL_IDENTITY): TerminalState {
   return Object.freeze({
     history: Object.freeze([]),
     historyCursor: null,
     draftInput: '',
-    cwd: DEFAULT_TERMINAL_IDENTITY.workingDirectory,
+    cwd: identity.workingDirectory,
     scratch: Object.freeze([]),
     aliases: Object.freeze([])
   });
@@ -260,6 +260,20 @@ function requireSafeText(value: unknown, field: string): string {
   return value;
 }
 
+function requireIdentityText(value: unknown, field: string, multiline = false): string {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    value !== value.trim() ||
+    (multiline
+      ? /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)
+      : /[\u0000-\u001f\u007f]/u.test(value))
+  ) {
+    throw new TypeError('Terminal identity "' + field + '" must be safe text.');
+  }
+  return value;
+}
+
 function isCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -281,6 +295,44 @@ function isSafePathSegment(segment: string): boolean {
     !segment.startsWith('.') &&
     segment.normalize('NFC') === segment &&
     !unsafePathSegment.test(segment);
+}
+
+export function decodeTerminalIdentity(value: unknown): TerminalIdentity {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
+  ) {
+    throw new TypeError('Terminal identity must be a plain object.');
+  }
+  const descriptors = ownDataDescriptors(value);
+  const expected = ['user', 'host', 'workingDirectory', 'about'];
+  const keys = [...descriptors.keys()];
+  if (
+    keys.some((key) => typeof key !== 'string' || !expected.includes(key)) ||
+    expected.some((key) => !descriptors.has(key)) ||
+    keys.length !== expected.length
+  ) {
+    throw new TypeError('Terminal identity contains unknown or missing fields.');
+  }
+  const user = requireIdentityText(readDataField(descriptors, 'user'), 'user');
+  const host = requireIdentityText(readDataField(descriptors, 'host'), 'host');
+  const workingDirectory = requireIdentityText(readDataField(descriptors, 'workingDirectory'), 'workingDirectory');
+  if (
+    !/^[^\\/?#%\s\u0000-\u001f\u007f]+$/u.test(user) ||
+    !/^[^\\/?#%\s\u0000-\u001f\u007f]+$/u.test(host)
+  ) {
+    throw new TypeError('Terminal identity user and host must be safe prompt tokens.');
+  }
+  if (
+    !workingDirectory.startsWith('~/blog') ||
+    (workingDirectory.length > '~/blog'.length && !workingDirectory.startsWith('~/blog/')) ||
+    workingDirectory.slice('~/blog'.length).split('/').some((segment) => segment.length > 0 && !isSafePathSegment(segment))
+  ) {
+    throw new TypeError('Terminal identity workingDirectory must be a safe ~/blog path.');
+  }
+  const about = requireIdentityText(readDataField(descriptors, 'about'), 'about', true);
+  return Object.freeze({ user, host, workingDirectory, about });
 }
 
 function isSafeCommandToken(value: string): boolean {
