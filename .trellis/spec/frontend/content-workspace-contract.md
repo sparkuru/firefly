@@ -189,9 +189,11 @@ startTerminalReader(root: HTMLElement): void
   future `admin` sees every non-draft document. Production calls only the frozen
   `GUEST_PRINCIPAL`; environment variables, URLs, storage, and browser input do
   not select identity.
-- Post identity derives from the staged relative Markdown path. Optional legacy
-  post `slug` must equal the current filename stem and cannot override a route.
-  Pages remain repository-local and use `pages/<slug>.md` in this milestone.
+- The staged relative Markdown path is the physical source identity shown in the
+  content tree. A post's optional `slug`, when present, is its canonical route
+  segment and may differ from the physical filename stem; without it, the stem
+  remains the route segment. Pages use their physical staged path for the tree
+  and their required front-matter `slug` for the canonical route.
 - `posts/characters/nahida.md` maps to
   `/posts/characters/nahida/`; its directory routes are `/posts/` and
   `/posts/characters/`. `index.md` remains `/.../index/` rather than replacing
@@ -547,7 +549,7 @@ startTerminalReader(root: HTMLElement): void
 | source changes to a symlink or different inode after scan | `Content source changed during materialization`; prior stage restored |
 | private entry without owner, public entry with owner, or unknown access key | schema failure |
 | draft/private guest entry | valid authored input but absent from every public artifact |
-| legacy post slug differs from filename stem | canonical-model build failure |
+| unsafe or colliding canonical slug/route | canonical-model build failure |
 | alias collides with root, directory, document, or alias | route-reservation build failure |
 | permalink breadcrumb contains `cd`, duplicate/glued slash, dead parent, or current self-link | static/browser failure |
 | breadcrumb normalized text is correct but gap boxes collapse to zero | browser geometry failure at both viewports |

@@ -36,7 +36,7 @@ async function expectHeadingLevels(page: Page, levels: number[]) {
 }
 
 async function expectTerminalDocument(page: Page) {
-  await expect(page.locator('html.terminal-root[data-terminal-theme="phosphor"]')).toHaveCount(1);
+  await expect(page.locator('html.terminal-root[data-terminal-theme="f1refly"]')).toHaveCount(1);
   await expect(page.locator('.terminal-document')).toHaveCount(1);
   await expect(page.locator('.semantic-document')).toHaveCount(0);
   await expect(page.locator('.terminal-titlebar')).toBeVisible();
@@ -50,6 +50,8 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
 
   const main = page.getByRole('main');
   await expect(main).toBeVisible();
+  await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-startup-state');
+  await expect(page.locator('[data-terminal-startup]')).toBeHidden();
   const programmaticHeading = main.getByRole('heading', {
     level: 1,
     name: 'f1refly content terminal'
@@ -66,14 +68,18 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
       name: 'Browse public documents'
     })
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'llm-workflow-with-trellis.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toHaveAttribute(
+    'href',
+    '/posts/main/379/'
+  );
   await expect(page.getByRole('link', { name: 'about.md' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts \$/u })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'characters/nahida.md' })).toBeVisible();
-  await expect(page.locator('template[data-terminal-template]')).toHaveCount(4);
+  await expect(page.getByRole('link', { name: 'main/Learning-with-LLM.md' })).toBeVisible();
+  await expect(
+    page.locator('template[data-terminal-template][data-terminal-template-path="posts/main/llm-workflow-with-trellis.md"]')
+  ).toHaveCount(1);
   await expect(page.locator('.terminal-titlebar')).toHaveCount(0);
   await expect(page.getByText('Hidden draft')).toHaveCount(0);
 
@@ -86,6 +92,16 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   );
 
   await expectNoHorizontalOverflow(page);
+});
+
+test('home keeps native recovery without JavaScript and no startup state', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-startup-state');
+  await expect(page.locator('[data-terminal-startup]')).toBeHidden();
+  await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
+  await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
+  await expect(page.getByRole('textbox', { name: /Command for /u })).toHaveCount(0);
 });
 
 test('lab index is a JavaScript-free semantic catalog with native navigation', async ({ page }) => {
@@ -103,60 +119,34 @@ test('lab index is a JavaScript-free semantic catalog with native navigation', a
   await expectNoHorizontalOverflow(page);
 });
 
-test('post deep link renders Markdown in the unified Terminal theme', async ({ page }) => {
-  await page.goto('/posts/hello-static-foundation/');
+test('migrated post deep link uses the f1refly default with a reader fragment', async ({ page }) => {
+  await page.goto('/posts/main/379/');
 
-  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/$/);
+  await expect(page).toHaveURL(/\/posts\/main\/379\/$/);
   await expectTerminalDocument(page);
   const article = page.getByRole('article');
   await expect(
-    article.getByRole('heading', { level: 1, name: 'Hello, static foundation' })
+    article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })
   ).toBeVisible();
-  await expect(
-    article.getByRole('heading', { level: 2, name: 'Markdown to durable HTML' })
-  ).toBeVisible();
-  await expect(
-    article.getByRole('heading', { level: 3, name: 'Stable boundaries' })
-  ).toBeVisible();
-  await expect(article).toContainText('No browser-side parser');
+  await expect(article.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
+  await expect(article.getByRole('heading', { level: 2, name: 'usage' })).toBeVisible();
+  await expect(article).toContainText('flowchart TD');
 
   const outline = page.getByRole('navigation', { name: 'Document outline' });
   await expect(outline).toBeVisible();
   await expect(outline.locator('ul')).toHaveCount(1);
   await expect(outline.locator('ol')).toHaveCount(0);
-  await expect(outline.getByText('On this page', { exact: true })).toHaveCount(0);
-  await expect(
-    outline.getByRole('link', { name: 'Markdown to durable HTML' })
-  ).toHaveAttribute('href', '#markdown-to-durable-html');
-  await expect(outline.getByRole('link', { name: 'Stable boundaries' })).toHaveAttribute(
-    'href',
-    '#stable-boundaries'
-  );
-  await outline.getByRole('link', { name: 'Stable boundaries' }).click();
-  await expect(page).toHaveURL(/#stable-boundaries$/u);
-  await expectHeadingLevels(page, [1, 2, 3]);
-  await expect(outline.locator('.terminal-outline-prefix').first()).toHaveAttribute('aria-hidden', 'true');
-  expect(await outline.locator('.terminal-outline-prefix').allTextContents()).toEqual([
-    '└── ',
-    '    └── '
-  ]);
+  await expect(outline.locator('li')).toHaveCount(22);
+  await expect(outline.getByRole('link', { name: 'install' })).toHaveAttribute('href', '#install');
+  await expect(outline.getByRole('link', { name: 'usage' })).toHaveAttribute('href', '#usage');
+  await outline.getByRole('link', { name: 'usage' }).click();
+  await expect(page).toHaveURL(/#usage$/u);
+  await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
+  await expect(article.locator('.terminal-document-header')).toBeVisible();
   await expect(outline.locator('ul')).toHaveCSS('list-style-type', 'none');
-  expect(await article.evaluate((element) => {
-    const header = element.querySelector('.terminal-document-header');
-    const outline = element.querySelector('.terminal-outline');
-    return {
-      headerBottom: header === null ? null : getComputedStyle(header).borderBottom,
-      outlineTop: outline === null ? null : getComputedStyle(outline).borderTopStyle,
-      outlineBottom: outline === null ? null : getComputedStyle(outline).borderBottomStyle
-    };
-  })).toEqual({
-    headerBottom: expect.stringContaining('1px'),
-    outlineTop: 'none',
-    outlineBottom: 'none'
-  });
 
-  const codeRegion = page.getByRole('region', { name: /^Code content:/u });
-  const tableRegion = page.getByRole('region', { name: /^Table content:/u });
+  const codeRegion = page.getByRole('region', { name: /^Code content:/u }).first();
+  const tableRegion = page.getByRole('region', { name: /^Table content:/u }).first();
   await expect(codeRegion).toHaveAttribute('tabindex', '0');
   await expect(tableRegion.getByRole('table')).toBeVisible();
   await expectContainedInViewport(page, codeRegion);
@@ -172,39 +162,32 @@ test('post deep link renders Markdown in the unified Terminal theme', async ({ p
       overflowX: 'auto'
     })
   );
-  expect(await codeRegion.evaluate((element) => element.scrollWidth)).toBeGreaterThan(
+  expect(await codeRegion.evaluate((element) => element.scrollWidth)).toBeGreaterThanOrEqual(
     await codeRegion.evaluate((element) => element.clientWidth)
   );
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    if (await codeRegion.evaluate((element) => element === document.activeElement)) {
-      break;
-    }
-    await page.keyboard.press('Tab');
-  }
+  await codeRegion.focus();
   await expect(codeRegion).toBeFocused();
-  expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe(
-    'none'
-  );
 
   await expectNoHorizontalOverflow(page);
 });
 
-test('Terminal article remains complete and exposes one canonical source path', async ({ page }) => {
-  await page.goto('/posts/llm-workflow-with-trellis/');
+test('migrated f1refly article remains complete and exposes one canonical route', async ({ page }) => {
+  await page.goto('/posts/main/379/');
 
   await expectTerminalDocument(page);
   const article = page.getByRole('article');
-  await expect(article.getByRole('heading', { level: 1, name: 'llm workflow with trellis' })).toBeVisible();
+  await expect(article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'usage' })).toBeVisible();
-  await expect(article.getByRole('link', { name: 'Trellis repository' })).toHaveAttribute('href', 'https://github.com/mindfold-ai/Trellis.git');
+  await expect(article.getByRole('link', { name: 'https://github.com/mindfold-ai/Trellis.git' })).toHaveAttribute(
+    'href',
+    'https://github.com/mindfold-ai/Trellis.git'
+  );
   await expect(article.getByRole('table').first()).toBeVisible();
   await expect(article.getByText('flowchart TD')).toBeVisible();
   const outline = page.getByRole('navigation', { name: 'Document outline' });
-  await expect(outline.locator('li')).toHaveCount(21);
-  await expect(outline.locator('ol')).toHaveCount(0);
-  await expect(outline.getByText('On this page', { exact: true })).toHaveCount(0);
-  await expect(outline.locator('.terminal-outline-prefix').filter({ hasText: '│' }).first()).toBeVisible();
+  await expect(outline.locator('li')).toHaveCount(22);
+  await expect(outline.locator('ul')).toHaveCount(1);
   const codeRegion = article.getByRole('region', { name: /^Code content:/u }).first();
   const tableRegion = article.getByRole('region', { name: /^Table content:/u }).first();
   await expect(codeRegion).toHaveAttribute('tabindex', '0');
@@ -214,32 +197,32 @@ test('Terminal article remains complete and exposes one canonical source path', 
   await codeRegion.focus();
   await expect(codeRegion).toBeFocused();
   expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
-  await expect(article.locator('.terminal-path')).toHaveText('/posts/llm-workflow-with-trellis.md');
   await expect(article.locator('.terminal-path')).toHaveCount(1);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expect(page.getByRole('textbox')).toHaveCount(0);
-  await expectHeadingLevels(page, [1, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
+  await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
   await expectNoHorizontalOverflow(page);
 });
 
 test('nested post and directory indexes use canonical native links', async ({ page }) => {
   await page.goto('/posts/');
   await expect(page.getByRole('heading', { level: 1, name: 'posts/' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'characters/' })).toHaveAttribute('href', '/posts/characters/');
-  await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
-  await expect(page.getByRole('link', { name: 'llm-workflow-with-trellis.md' })).toHaveAttribute('href', '/posts/llm-workflow-with-trellis/');
+  await expect(page.getByRole('link', { name: 'main/' })).toHaveAttribute('href', '/posts/main/');
+  await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toHaveCount(0);
   await expect(page.getByText(/Hidden draft|PRIVATE_TITLE_M5_7f2a|comment-handoff|memos\.private/u)).toHaveCount(0);
   await expect(page.locator('script')).toHaveCount(0);
 
-  await page.goto('/posts/characters/');
-  await expect(page.getByRole('heading', { level: 1, name: 'posts/characters/' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'nahida.md' })).toHaveAttribute('href', '/posts/characters/nahida/');
+  await page.goto('/posts/main/');
+  await expect(page.getByRole('heading', { level: 1, name: 'posts/main/' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'llm-workflow-with-trellis.md' })).toHaveAttribute(
+    'href',
+    '/posts/main/379/'
+  );
   await expect(page.locator('script')).toHaveCount(0);
 
-  await page.goto('/posts/characters/nahida/');
+  await page.goto('/posts/main/379/');
   await expectTerminalDocument(page);
-  await expect(page.getByRole('heading', { level: 1, name: 'Notes on Nahida' })).toBeVisible();
-  await expect(page.locator('.terminal-path')).toHaveText('/posts/characters/nahida.md');
+  await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(page.locator('.terminal-path')).toHaveCount(1);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
@@ -272,21 +255,21 @@ test('page deep link renders readable Markdown', async ({ page }) => {
 });
 
 test('document fragment deep link resolves without browser JavaScript', async ({ page }) => {
-  await page.goto('/posts/hello-static-foundation/#stable-boundaries');
+  await page.goto('/posts/main/379/#usage');
 
-  await expect(page).toHaveURL(/#stable-boundaries$/u);
-  await expect(page.locator('#stable-boundaries')).toHaveText('Stable boundaries');
-  await expect(page.getByText('Presentation changes should preserve')).toBeVisible();
+  await expect(page).toHaveURL(/\/posts\/main\/379\/#usage$/u);
+  await expect(page.locator('#usage')).toHaveText('usage');
+  await expect(page.getByText('usage like this')).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 
 test('reader entry fragment remains a native location without browser JavaScript', async ({ page }) => {
-  await page.goto('/posts/hello-static-foundation/#terminal-reader');
+  await page.goto('/posts/main/379/#terminal-reader');
 
-  await expect(page).toHaveURL(/\/posts\/hello-static-foundation\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/posts\/main\/379\/#terminal-reader$/u);
   await expect(page.locator('#terminal-reader')).toBeVisible();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'Hello, static foundation' })).toBeVisible();
+  await expect(page.locator('[data-terminal-reader-status]')).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 

@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import type { Root as HastRoot } from 'hast';
-import type { DocumentContext, NormalizedDocumentInput } from '@f1refly/x-core';
+import {
+  DEFAULT_PRESENTATION_ID,
+  type DocumentContext,
+  type NormalizedDocumentInput
+} from '@f1refly/x-core';
 import { terminalPresentation } from '../src/index.js';
 import {
   DEFAULT_TERMINAL_IDENTITY,
@@ -28,7 +32,7 @@ const context: DocumentContext = {
   collection: 'posts',
   slug: 'example',
   layout: 'post',
-  presentation: 'terminal'
+  presentation: DEFAULT_PRESENTATION_ID
 };
 
 const rawEntries = [
@@ -78,6 +82,7 @@ function runShell(command: string, state = createTerminalState()) {
 }
 
 test('terminal adapter supports posts/pages and preserves input identities immutably', () => {
+  assert.equal(terminalPresentation.id, DEFAULT_PRESENTATION_ID);
   assert.equal(terminalPresentation.supports(context), true);
   assert.equal(terminalPresentation.supports({ ...context, collection: 'pages', layout: 'page' }), true);
   assert.equal(terminalPresentation.supports({ ...context, layout: 'timeline' }), false);

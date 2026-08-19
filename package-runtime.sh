@@ -82,6 +82,7 @@ assert_no_non_authored_private_data() {
 		rg --quiet \
 			--glob '!posts/**/index.html' \
 			--glob '!pages/**/index.html' \
+			--glob '!index.html' \
 			'PRIVATE_(TITLE|BODY)_M5_7f2a|private-owner|owner-fixture|hidden-draft|F1REFLY_CONTENT_ROOT|/home/|/tmp/f1refly-|/(srv/(typecho|uploads)|var/www|usr/(local/)?uploads)/|memos\.private\.jsonl|comment-handoff\.json|identity-handoff\.json|migration\.sqlite|resource-decisions\.json' \
 			.
 	); then
@@ -98,7 +99,6 @@ main() {
 	local asset
 	local expected_type
 	local attempt
-	local index
 	local -a manifest_inventory=()
 	local -a release_inventory=()
 	local -a runtime_inventory=()
@@ -123,16 +123,24 @@ main() {
 	[[ "$(jq -r '.schemaVersion' artifacts/publication.json)" == 1 ]]
 	mapfile -t manifest_inventory < <(jq -r '.inventory[]' artifacts/publication.json)
 	mapfile -t release_inventory < <(find dist -type f -printf '%P\n' | sort)
-	[[ "${#manifest_inventory[@]}" -eq 23 && "${#release_inventory[@]}" -eq 23 ]] || {
-		printf '[package-runtime] publication inventory must contain exactly 23 files\n' >&2
+	[[ "${#manifest_inventory[@]}" -gt 0 && "${#manifest_inventory[@]}" -eq "${#release_inventory[@]}" ]] || {
+		printf '[package-runtime] publication manifest and assembled release must have equal non-empty inventories\n' >&2
 		return 1
 	}
-	for index in "${!manifest_inventory[@]}"; do
-		manifest_files["${manifest_inventory[index]}"]=1
-		release_files["${release_inventory[index]}"]=1
+	for file in "${manifest_inventory[@]}"; do
+		manifest_files["${file}"]=1
 	done
-	for index in "${!manifest_inventory[@]}"; do
-		[[ -n "${release_files[${manifest_inventory[index]}]:-}" && -n "${manifest_files[${release_inventory[index]}]:-}" ]] || {
+	for file in "${release_inventory[@]}"; do
+		release_files["${file}"]=1
+	done
+	for file in "${manifest_inventory[@]}"; do
+		[[ -n "${release_files[${file}]:-}" ]] || {
+			printf '[package-runtime] publication manifest does not match the assembled release\n' >&2
+			return 1
+		}
+	done
+	for file in "${release_inventory[@]}"; do
+		[[ -n "${manifest_files[${file}]:-}" ]] || {
 			printf '[package-runtime] publication manifest does not match the assembled release\n' >&2
 			return 1
 		}
@@ -178,24 +186,28 @@ main() {
 	[[ "$(docker inspect --format '{{index .Config.Labels "sam.repo"}}' "${CONTAINER_ID}")" == "${REPO_ROOT}" ]]
 	[[ "$(docker inspect --format '{{index .Config.Labels "sam.scope"}}' "${CONTAINER_ID}")" == package-runtime-m5 ]]
 	mapfile -t runtime_inventory < <(docker exec "${CONTAINER_ID}" find /usr/share/nginx/html -type f | sed 's#^/usr/share/nginx/html/##' | sort)
-	[[ "${#runtime_inventory[@]}" -eq 23 ]] || {
-		printf '[package-runtime] runtime image must contain exactly 23 publication files\n' >&2
+	[[ "${#runtime_inventory[@]}" -eq "${#manifest_inventory[@]}" ]] || {
+		printf '[package-runtime] runtime image inventory must match the publication manifest size\n' >&2
 		return 1
 	}
-	for index in "${!runtime_inventory[@]}"; do
-		runtime_files["${runtime_inventory[index]}"]=1
+	for file in "${runtime_inventory[@]}"; do
+		runtime_files["${file}"]=1
 	done
-	for index in "${!manifest_inventory[@]}"; do
-		[[ -n "${runtime_files[${manifest_inventory[index]}]:-}" && -n "${manifest_files[${runtime_inventory[index]}]:-}" ]] || {
+	for file in "${manifest_inventory[@]}"; do
+		[[ -n "${runtime_files[${file}]:-}" ]] || {
+			printf '[package-runtime] runtime image inventory differs from publication manifest\n' >&2
+			return 1
+		}
+	done
+	for file in "${runtime_inventory[@]}"; do
+		[[ -n "${manifest_files[${file}]:-}" ]] || {
 			printf '[package-runtime] runtime image inventory differs from publication manifest\n' >&2
 			return 1
 		}
 	done
 	probe_status 200 /
 	probe_status 200 /posts/
-	probe_status 301 /posts/characters
-	probe_status 200 /posts/characters/
-	probe_status 200 /posts/characters/nahida/
+	probe_status 200 /posts/main/379/
 	probe_status 200 /lab/
 	probe_status 301 /lab/nerv
 	probe_status 200 /lab/nerv/
@@ -216,9 +228,9 @@ main() {
 		printf '[package-runtime] HTML headers expose a server version or immutable cache policy\n' >&2
 		return 1
 	fi
-	mapfile -t reader_assets < <(find dist/_astro -maxdepth 1 -type f -name 'TerminalDocument*.js' -printf '%f\n' | sort)
+	mapfile -t reader_assets < <(find dist/_astro -maxdepth 1 -type f -name 'ReaderStatus*.js' -printf '%f\n' | sort)
 	[[ "${#reader_assets[@]}" -eq 1 ]] || {
-		printf '[package-runtime] expected exactly one Terminal reader asset\n' >&2
+		printf '[package-runtime] expected exactly one ReaderStatus asset\n' >&2
 		return 1
 	}
 	reader_asset=${reader_assets[0]}
@@ -228,8 +240,8 @@ main() {
 		printf '[package-runtime] site and NERV must each publish immutable runtime assets\n' >&2
 		return 1
 	}
-	assert_header "/posts/characters/nahida/" '^content-type: text/html'
-	assert_no_header "/posts/characters/nahida/" '^cache-control: .*immutable'
+	assert_header "/posts/main/379/" '^content-type: text/html'
+	assert_no_header "/posts/main/379/" '^cache-control: .*immutable'
 	assert_header "/_astro/${reader_asset}" '^content-type: application/javascript'
 	for asset in "${site_assets[@]}"; do
 		assert_header "/_astro/${asset}" '^cache-control: public, max-age=31536000, immutable'
@@ -248,7 +260,7 @@ main() {
 	assert_header '/fonts/JetBrainsMono-Regular-v2.304.woff2' '^cache-control: public, max-age=31536000, immutable'
 	assert_header '/fonts/JetBrainsMono-Medium-v2.304.woff2' '^cache-control: public, max-age=31536000, immutable'
 
-	printf '[package-runtime] image %s passed exact 23-file publication, route, header, 404, non-root, and read-only probes\n' "${IMAGE_NAME}"
+	printf '[package-runtime] image %s passed publication, route, header, 404, non-root, and read-only probes\n' "${IMAGE_NAME}"
 }
 
 main "$@"

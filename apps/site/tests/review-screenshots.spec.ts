@@ -31,13 +31,13 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   await expect(page.locator('[data-terminal-completion]')).toHaveText('No matches.');
   await capture('path-completion');
 
-  await page.goto('/posts/characters/');
-  await expect(page.getByRole('heading', { name: 'posts/characters/' })).toBeVisible();
+  await page.goto('/posts/main/');
+  await expect(page.getByRole('heading', { name: 'posts/main/' })).toBeVisible();
   await capture('nested-directory');
 
-  await page.goto('/posts/characters/nahida/');
+  await page.goto('/pages/about/');
   const reader = page.getByRole('region', { name: /Read-only Vim reader/u });
-  await expect(page.locator('.terminal-path')).toHaveText('/posts/characters/nahida.md');
+  await expect(page.locator('.terminal-path')).toHaveText('/pages/about.md');
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await capture('header-path');
 

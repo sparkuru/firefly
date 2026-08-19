@@ -1,4 +1,5 @@
 import { z } from 'astro/zod';
+import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
 
 const requiredText = z.string().trim().min(1);
 const unsafeRouteSegment = /[\\/?#%\s\u0000-\u001f\u007f]/u;
@@ -38,7 +39,7 @@ const sharedMetadata = {
   description: requiredText,
   tags: z.array(requiredText).optional(),
   draft: z.boolean(),
-  presentation: presentation.optional(),
+  presentation: presentation.optional().default(DEFAULT_PRESENTATION_ID),
   aliases: z.array(alias).optional(),
   access: access.optional().default({ visibility: 'public' })
 };

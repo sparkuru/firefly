@@ -9,6 +9,7 @@ import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 import {
   createXCorePlugins,
+  DEFAULT_PRESENTATION_ID,
   parseXCoreMetadata,
   PresentationRegistry,
   validateJsonValue,
@@ -34,6 +35,11 @@ const passThroughAdapter: PresentationAdapter = {
   supports: () => true,
   transform: ({ tree }) => tree,
   enhancements: () => []
+};
+
+const defaultPresentationAdapter: PresentationAdapter = {
+  ...passThroughAdapter,
+  id: DEFAULT_PRESENTATION_ID
 };
 
 async function processMarkdown(
@@ -62,6 +68,17 @@ async function processMarkdown(
     metadata: parseXCoreMetadata(astro.frontmatter?.xCore)
   };
 }
+
+test('the pipeline resolves omitted context presentation through the shared default', async () => {
+  const result = await processMarkdown(
+    'A default presentation paragraph.',
+    defaultPresentationAdapter,
+    semanticContext,
+    { ...semanticContext, presentation: undefined } as never
+  );
+
+  assert.equal(result.metadata.presentation, DEFAULT_PRESENTATION_ID);
+});
 
 function expectXCoreError(
   action: () => unknown,
@@ -112,6 +129,17 @@ test('registry normalizes IDs and reports duplicate, unknown, and unsupported ad
     'XCORE_UNSUPPORTED_CONTEXT',
     semanticContext.route
   );
+});
+
+test('the shared default presentation is f1refly and explicit semantic remains selectable', () => {
+  const registry = new PresentationRegistry().register(defaultPresentationAdapter).register(passThroughAdapter);
+
+  assert.equal(DEFAULT_PRESENTATION_ID, 'f1refly');
+  assert.equal(
+    registry.resolve({ ...semanticContext, presentation: '' }).id,
+    DEFAULT_PRESENTATION_ID
+  );
+  assert.equal(registry.resolve(semanticContext).id, 'semantic');
 });
 
 test('plain JSON validation rejects non-finite, cyclic, class, and forbidden-key values', () => {

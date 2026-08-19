@@ -38,9 +38,10 @@ interface PresentationAdapter {
 
 ### 3. Contracts
 
-- Adapter IDs are normalized lowercase kebab-case; omission selects `semantic`.
+- Adapter IDs are normalized lowercase kebab-case; omission selects the shared
+  `DEFAULT_PRESENTATION_ID` (`f1refly`).
 - `DocumentContext` contains document ID, optional safe virtual source, canonical
-  route, collection, filename-stem slug, layout, and selected presentation. The
+  route, collection, canonical slug, layout, and selected presentation. The
   app resolves it from the guest-projected `CanonicalDocument`; no host workspace
   path enters context or diagnostics.
 - Remark rejects authored raw HTML, derives the first substantive prose summary,
@@ -62,7 +63,8 @@ interface PresentationAdapter {
   page/page contexts, clone without mutating input, preserve headings/node IDs,
   recursively wrap `pre`/`table` in presentation-owned named focusable
   local-scroll regions, and emit empty enhancement manifests.
-- The Astro registry registers semantic first as default and Terminal second.
+- The Astro registry registers the `f1refly` Terminal adapter as default and
+  semantic second; explicit `semantic` remains supported.
   `DocumentPresentation.astro` dispatches the exact validated metadata; the
   canonical routes and every inert Terminal-home document template pass through
   `renderDocument()` and the selected X Core adapter at build time. The browser
@@ -94,8 +96,9 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   processor and the same production registry; semantic, Terminal, and a fixture
   adapter produce deterministic adapter-specific output without changing the
   Markdown or stable identities.
-- Base: omitted presentation selects semantic, emits static native HTML and an
-  empty enhancement list, and remains complete with JavaScript disabled.
+- Base: omitted presentation selects `f1refly`, emits Terminal static native
+  HTML and an empty enhancement list, and remains complete with JavaScript
+  disabled.
 - Bad: route code calls `render(entry)` directly, asserts plugin metadata, trusts
   adapter return values, stores AST/functions in frontmatter, mutates generated
   identities, or adds a browser Markdown/enhancement runtime.

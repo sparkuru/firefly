@@ -117,7 +117,10 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const RAW_HTML_PATTERN = /<\/?[a-z][^>]*>/iu;
 const IMAGE_HTML_PATTERN = /<img\b[^>]*\bsrc=(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>/giu;
 const MARKDOWN_IMAGE_PATTERN = /!\[[^\]\r\n]*\]\(([^\s)\r\n]+)(?:\s+["'][^"'\r\n]*["'])?\)/gu;
+const FENCE_MARKER_PATTERN = /^ {0,3}(?:```|~~~)/u;
 const SAFE_SEGMENT_FORBIDDEN = /[\u0000-\u001f\u007f\\/%?#\s]/u;
+const TITLE_FILENAME_FORBIDDEN = /[<>:"/\\|?*%#\u0000-\u001f\u007f]/gu;
+const MAX_TITLE_FILENAME_BYTES = 180;
 
 interface ManagedResource {
   readonly reference: string;
@@ -189,6 +192,63 @@ function safeText(value: string, owner: string): string {
   return result;
 }
 
+function truncateUtf8(value: string, maxBytes: number): string {
+  let result = value;
+  while (Buffer.byteLength(result, 'utf8') > maxBytes) {
+    result = [...result].slice(0, -1).join('');
+  }
+  return result;
+}
+
+function titleFilenameStem(title: string, fallback: string, owner: string): string {
+  const firstPipe = title.indexOf('|');
+  const suffix = firstPipe < 0 ? title : title.slice(firstPipe + 1).trim();
+  const source = suffix.length === 0 ? title : suffix;
+  const normalized = source
+    .normalize('NFC')
+    .replace(TITLE_FILENAME_FORBIDDEN, '-')
+    .replace(/\s+/gu, '-')
+    .replace(/-+/gu, '-')
+    .replace(/^[.\-]+|[.\-]+$/gu, '');
+  const candidate = truncateUtf8(normalized.length === 0 ? fallback : normalized, MAX_TITLE_FILENAME_BYTES);
+  return safeSegment(candidate.length === 0 ? fallback : candidate, owner);
+}
+
+function publicPathFor(kind: ArticleCandidate['kind'], categorySlug: string | undefined, stem: string): string {
+  if (kind === 'post') {
+    if (categorySlug === undefined) throw new TypeError('post requires a category folder.');
+    return `posts/${categorySlug}/${stem}.md`;
+  }
+  return `pages/${stem}.md`;
+}
+
+function allocatePublicPath(
+  kind: ArticleCandidate['kind'],
+  categorySlug: string | undefined,
+  title: string,
+  slug: string,
+  sourceId: string,
+  documentRef: string,
+  pathOwners: Map<string, string>
+): string {
+  const baseStem = titleFilenameStem(title, slug, `Document ${documentRef} title`);
+  const stems = [
+    baseStem,
+    titleFilenameStem(`${baseStem}--${slug}`, `${slug}--${sourceId}`, `Document ${documentRef} filename`),
+    titleFilenameStem(`${baseStem}--${slug}--${sourceId}`, `${slug}--${sourceId}`, `Document ${documentRef} filename`)
+  ];
+  for (const stem of stems) {
+    const publicPath = publicPathFor(kind, categorySlug, stem);
+    const key = collisionKey(publicPath);
+    const owner = pathOwners.get(key);
+    if (owner === undefined) {
+      pathOwners.set(key, documentRef);
+      return publicPath;
+    }
+  }
+  throw new TypeError(`public path collides with existing documents for ${documentRef}.`);
+}
+
 function sourceDate(value: number, owner: string): string {
   const date = new Date(value * 1000);
   if (!Number.isSafeInteger(value) || Number.isNaN(date.getTime())) throw new TypeError(`${owner} is not a valid Unix timestamp.`);
@@ -234,6 +294,57 @@ function normalizeHtmlBlock(value: string): string {
   return result;
 }
 
+function normalizeHeadingLevels(value: string): string {
+  let previousDepth = 1;
+  let fenced = false;
+  const lines = value.split('\n');
+  const normalized: string[] = [];
+  for (const line of lines) {
+    if (FENCE_MARKER_PATTERN.test(line)) {
+      fenced = !fenced;
+      normalized.push(line);
+      continue;
+    }
+    if (fenced) {
+      normalized.push(line);
+      continue;
+    }
+
+    const indentedSetext = /^([ \t]{4,})(=+[ \t]*)$/u.exec(line);
+    if (indentedSetext !== null) {
+      normalized.push(`${indentedSetext[1] ?? ''}\\${indentedSetext[2] ?? ''}`);
+      continue;
+    }
+
+    if (/^ {0,3}=+[ \t]*$/u.test(line)) {
+      const source = normalized.at(-1);
+      if (
+        source !== undefined &&
+        source.trim().length > 0 &&
+        !/^ {0,3}#{1,6}(?:[ \t]+.*|[ \t]*)$/u.test(source)
+      ) {
+        normalized[normalized.length - 1] = `## ${source.trim().replace(/\s+/gu, ' ')}`;
+        previousDepth = 2;
+        continue;
+      }
+    }
+
+    const match = /^( {0,3})(#{1,6})([ \t]*)(.*)$/u.exec(line);
+    if (match === null) {
+      normalized.push(line);
+      continue;
+    }
+    const sourceDepth = match[2]?.length ?? 1;
+    const depth = previousDepth === 1
+      ? 2
+      : Math.min(Math.max(2, sourceDepth), previousDepth + 1);
+    previousDepth = depth;
+    const headingText = (match[4] ?? '').replace(/\s+/gu, ' ').trim();
+    normalized.push(`${match[1] ?? ''}${'#'.repeat(depth)}${match[3] ?? ''}${headingText}`);
+  }
+  return normalized.join('\n');
+}
+
 function normalizeBody(value: string): string {
   let body = value.replace(/^\uFEFF/u, '').replace(/^\s*<!--\s*markdown\s*-->\s*/iu, '');
   const lines = body.split(/\r?\n/u);
@@ -245,9 +356,9 @@ function normalizeBody(value: string): string {
     outside = [];
   };
   for (const line of lines) {
-    if (/^\s*(?:```|~~~)/u.test(line)) {
+    if (FENCE_MARKER_PATTERN.test(line)) {
       if (!fenced) flushOutside();
-      normalized.push(line);
+      normalized.push(line.replace(/^ {0,3}/u, ''));
       fenced = !fenced;
     } else if (fenced) {
       normalized.push(line);
@@ -257,8 +368,8 @@ function normalizeBody(value: string): string {
   }
   if (!fenced) flushOutside();
   else normalized.push('```');
-  body = normalized.join('\n');
-  if (RAW_HTML_PATTERN.test(body.split(/^\s*(?:```|~~~).*$/gmu).filter((_part, index) => index % 2 === 0).join('\n'))) throw new TypeError('body contains unsupported raw HTML after wrapper normalization.');
+  body = normalizeHeadingLevels(normalized.join('\n'));
+  if (RAW_HTML_PATTERN.test(body.split(/^ {0,3}(?:```|~~~).*$/gmu).filter((_part, index) => index % 2 === 0).join('\n'))) throw new TypeError('body contains unsupported raw HTML after wrapper normalization.');
   body = body.replace(/\r\n?/gu, '\n').trim();
   return body.length === 0 ? '' : `${body}\n`;
 }
@@ -267,7 +378,7 @@ function bodyReferences(body: string): readonly string[] {
   const references = new Set<string>();
   let fenced = false;
   for (const line of body.split('\n')) {
-    if (/^\s*(?:```|~~~)/u.test(line)) { fenced = !fenced; continue; }
+    if (FENCE_MARKER_PATTERN.test(line)) { fenced = !fenced; continue; }
     if (fenced) continue;
     for (const match of line.matchAll(MARKDOWN_IMAGE_PATTERN)) {
       const reference = match[1];
@@ -275,6 +386,12 @@ function bodyReferences(body: string): readonly string[] {
     }
   }
   return [...references].sort((left, right) => left.localeCompare(right, 'en'));
+}
+
+function preserveDeferredImageAsText(body: string, reference: string): string {
+  return body.replace(MARKDOWN_IMAGE_PATTERN, (match, target: string) => (
+    target === reference ? `\\!\\${match.slice(1)}` : match
+  ));
 }
 
 function isDeferredLocalAssetReference(reference: string): boolean {
@@ -352,6 +469,7 @@ function deriveArticles(snapshot: SourceSnapshot, checksum: string, managedResou
   const exceptions: MigrationException[] = [];
   const sourceIds = new Set<string>();
   const pathOwners = new Map<string, string>();
+  const routeOwners = new Map<string, string>();
   for (const content of [...snapshot.contents].sort((left, right) => left.sourceId.localeCompare(right.sourceId, 'en'))) {
     if (sourceIds.has(content.sourceId)) throw new TypeError('Source contains a duplicate content identifier.');
     sourceIds.add(content.sourceId);
@@ -366,16 +484,20 @@ function deriveArticles(snapshot: SourceSnapshot, checksum: string, managedResou
       const category = categories[0];
       if (category !== undefined && category.parentId !== '' && category.parentId !== '0') throw new TypeError('nested source categories require an explicit reviewed folder decision.');
       const categorySlug = category === undefined ? undefined : safeSegment(category.slug, `Document ${documentRef} category slug`);
-      const publicPath = content.type === 'post' ? `posts/${categorySlug}/${slug}.md` : `pages/${slug}.md`;
-      const key = collisionKey(publicPath);
-      const owner = pathOwners.get(key);
-      if (owner !== undefined) throw new TypeError(`public path collides with ${owner}.`);
-      pathOwners.set(key, documentRef);
       let body = normalizeBody(content.text);
       const customSummary = preferredField(groupedFields.get(content.sourceId), 'customSummary');
       const description = normalizeSummary(customSummary ?? (body.trim() === '' ? content.title : body));
       const date = sourceDate(content.created, `Document ${documentRef} created`);
       const modified = sourceDate(content.modified, `Document ${documentRef} modified`);
+      const title = safeText(content.title, `Document ${documentRef} title`);
+      const canonicalRoute = content.type === 'post'
+        ? `/posts/${categorySlug}/${slug}/`
+        : `/pages/${slug}/`;
+      const routeKey = collisionKey(canonicalRoute);
+      const routeOwner = routeOwners.get(routeKey);
+      if (routeOwner !== undefined) throw new TypeError(`canonical route collides with ${routeOwner}.`);
+      routeOwners.set(routeKey, documentRef);
+      const publicPath = allocatePublicPath(content.type, categorySlug, title, slug, content.sourceId, documentRef, pathOwners);
       const article = Object.freeze({
         documentRef,
         sourceId: content.sourceId,
@@ -385,8 +507,8 @@ function deriveArticles(snapshot: SourceSnapshot, checksum: string, managedResou
         ...(categorySlug === undefined ? {} : { categorySlug, categoryName: safeText(category?.name ?? '', `Document ${documentRef} category`) }),
         template: content.template,
         publicPath,
-        canonicalRoute: `/${publicPath.slice(0, -3)}/`,
-        title: safeText(content.title, `Document ${documentRef} title`),
+        canonicalRoute,
+        title,
         description,
         date,
         ...(content.modified > content.created ? { updated: modified } : {}),
@@ -400,6 +522,7 @@ function deriveArticles(snapshot: SourceSnapshot, checksum: string, managedResou
         const decision = classifyResource(documentRef, reference, managedResources);
         resources.push(decision);
         if (decision.disposition === 'managed' && decision.publicPath !== undefined) body = body.replaceAll(reference, decision.publicPath);
+        if (decision.disposition === 'deferred') body = preserveDeferredImageAsText(body, reference);
       }
       articles.push(Object.freeze({ ...article, body }));
     } catch (error: unknown) {
@@ -534,8 +657,7 @@ function markdown(article: ArticleCandidate): string {
     tags: article.tags,
     draft: false,
     layout: article.kind,
-    presentation: 'semantic',
-    ...(article.kind === 'page' ? { slug: article.slug } : {})
+    slug: article.slug
   };
   const lines = Object.entries(frontmatter).map(([key, value]) => `${key}: ${JSON.stringify(value)}`);
   return `---\n${lines.join('\n')}\n---\n\n${article.body}`;

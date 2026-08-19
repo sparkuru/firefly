@@ -1,4 +1,5 @@
 import {
+  DEFAULT_PRESENTATION_ID,
   xCoreError,
   type DocumentContext,
   type DocumentContextResolver
@@ -76,13 +77,18 @@ export const resolveDocumentContext: DocumentContextResolver = (file) => {
   const collection = metadata.layout === 'post' ? 'posts' : 'pages';
   const relativePostPath = collection === 'posts' ? postRelativePath(file.path) : undefined;
   const slug = collection === 'posts'
-    ? relativePostPath?.split('/').at(-1)?.replace(/\.md$/u, '')
+    ? metadata.slug ?? relativePostPath?.split('/').at(-1)?.replace(/\.md$/u, '')
     : metadata.slug;
   if (slug === undefined) {
     throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
   }
   const relativeRoute = collection === 'posts'
-    ? relativePostPath?.replace(/\.md$/u, '')
+    ? (() => {
+        const physicalPath = relativePostPath?.replace(/\.md$/u, '');
+        if (physicalPath === undefined || slug === undefined) return undefined;
+        const parent = physicalPath.slice(0, physicalPath.lastIndexOf('/'));
+        return parent.length === 0 ? slug : `${parent}/${slug}`;
+      })()
     : slug;
   if (relativeRoute === undefined) {
     throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
@@ -95,6 +101,6 @@ export const resolveDocumentContext: DocumentContextResolver = (file) => {
     collection,
     slug,
     layout: metadata.layout,
-    presentation: metadata.presentation ?? 'semantic'
+    presentation: metadata.presentation ?? DEFAULT_PRESENTATION_ID
   };
 };

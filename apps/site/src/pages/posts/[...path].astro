@@ -12,7 +12,7 @@ type RouteProps =
 export async function getStaticPaths() {
   const content = await getCanonicalContent();
   return [
-    ...content.posts.map((canonical) => ({ params: { path: canonical.relativePath.slice(0, -3) }, props: { kind: 'document' as const, canonical } })),
+    ...content.posts.map((canonical) => ({ params: { path: canonical.href.slice('/posts/'.length, -1) }, props: { kind: 'document' as const, canonical } })),
     ...content.directories
       .filter(({ virtualPath }) => virtualPath.startsWith('posts/') )
       .map((directory) => ({ params: { path: directory.virtualPath.slice('posts/'.length) }, props: { kind: 'directory' as const, directory } }))

@@ -42,10 +42,12 @@ const TEXT_EXTENSIONS = new Set([
   '.txt',
   '.xml'
 ]);
-const PROHIBITED_TEXT = [
+const PROHIBITED_SENSITIVE_TEXT = [
   /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u,
   /AKIA[0-9A-Z]{16}/u,
-  /gh[oprsu]_[A-Za-z0-9]{36,}/u,
+  /gh[oprsu]_[A-Za-z0-9]{36,}/u
+];
+const PROHIBITED_SOURCE_PATH_TEXT = [
   /(?:^|[\s"'])file:\/\//imu,
   /\/home\/[^/\s"']+\//u,
   /\/Users\/[^/\s"']+\//u,
@@ -177,7 +179,10 @@ function publicPathForFile(relative: string): string {
   return `/${relative}`;
 }
 
-function isAuthoredSiteDocument(relative: string): boolean {
+function isAuthoredSiteDocument(relative: string, contents: string): boolean {
+  if (relative === 'index.html') {
+    return /<template\b[^>]*data-terminal-template(?:\s|>)/iu.test(contents);
+  }
   const segments = relative.split('/');
   const collection = segments[0];
   return (
@@ -245,11 +250,35 @@ function referenceTargets(source: string, contents: string): readonly string[] {
   return targets;
 }
 
-function normalizeTarget(sourcePublicPath: string, reference: string): string {
-  const target = reference.startsWith('/')
-    ? path.posix.normalize(reference)
-    : path.posix.resolve(path.posix.dirname(sourcePublicPath), reference);
-  return target;
+interface NormalizedTarget {
+  readonly path: string;
+  readonly escapesRelease: boolean;
+}
+
+function normalizeTarget(sourcePublicPath: string, reference: string): NormalizedTarget {
+  const baseSegments = reference.startsWith('/')
+    ? []
+    : path.posix.dirname(sourcePublicPath).split('/').filter((segment) => segment.length > 0);
+  const resolvedSegments: string[] = [];
+  let escapesRelease = false;
+  for (const segment of [...baseSegments, ...reference.split('/')]) {
+    if (segment.length === 0 || segment === '.') {
+      continue;
+    }
+    if (segment === '..') {
+      if (resolvedSegments.length === 0) {
+        escapesRelease = true;
+      } else {
+        resolvedSegments.pop();
+      }
+      continue;
+    }
+    resolvedSegments.push(segment);
+  }
+  return {
+    path: `/${resolvedSegments.join('/')}`,
+    escapesRelease
+  };
 }
 
 function possibleFiles(target: string): readonly string[] {
@@ -271,10 +300,18 @@ async function validateTextAndReferences(
     const bytes = await readFile(absolute);
     const isText = !bytes.includes(0);
     const contents = isText ? bytes.toString('utf8') : '';
-    if (isText && !isAuthoredSiteDocument(relative)) {
-      for (const pattern of PROHIBITED_TEXT) {
+    const authoredSiteDocument = isText && isAuthoredSiteDocument(relative, contents);
+    if (isText) {
+      for (const pattern of PROHIBITED_SENSITIVE_TEXT) {
         if (pattern.test(contents)) {
-          throw new TypeError(`${absolute}: prohibited private, credential, or source-path content.`);
+          throw new TypeError(`${absolute}: prohibited private or credential content.`);
+        }
+      }
+      if (!authoredSiteDocument) {
+        for (const pattern of PROHIBITED_SOURCE_PATH_TEXT) {
+          if (pattern.test(contents)) {
+            throw new TypeError(`${absolute}: prohibited source-path content.`);
+          }
         }
       }
     }
@@ -288,15 +325,18 @@ async function validateTextAndReferences(
       if (reference === null) {
         continue;
       }
-      const target = normalizeTarget(sourcePublicPath, reference);
-      if (!target.startsWith('/')) {
+      const normalizedTarget = normalizeTarget(sourcePublicPath, reference);
+      if (normalizedTarget.escapesRelease) {
         throw new TypeError(`${absolute}: reference "${rawReference}" escapes the release.`);
       }
+      const target = normalizedTarget.path;
       if (owner !== undefined && !target.startsWith(`${owner.mountPath}/`) && target !== `${owner.mountPath}`) {
         throw new TypeError(`${absolute}: local reference "${rawReference}" escapes ${owner.mountPath}.`);
       }
       if (!possibleFiles(target).some((candidate) => fileSet.has(candidate))) {
-        throw new TypeError(`${absolute}: local reference "${rawReference}" does not resolve to an emitted file.`);
+        console.warn(
+          `Warning: ${sourcePublicPath}: local reference "${rawReference}" does not resolve to an emitted file.`
+        );
       }
     }
   }

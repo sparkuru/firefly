@@ -1,4 +1,5 @@
 ---
+import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
 import type { CanonicalDocument } from '../lib/content';
 import type { renderDocument } from '../lib/render-document';
 import SemanticDocument from './SemanticDocument.astro';
@@ -16,7 +17,7 @@ interface Props {
 const { canonical, document } = Astro.props;
 const { entry } = canonical;
 const presentation = document.metadata.presentation;
-if (presentation !== 'semantic' && presentation !== 'terminal') {
+if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {
   throw new Error(`Unsupported site presentation "${presentation}".`);
 }
 ---

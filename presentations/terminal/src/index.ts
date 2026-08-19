@@ -2,6 +2,7 @@ import type {
   NormalizedDocumentInput,
   PresentationAdapter
 } from '@f1refly/x-core';
+import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
 import type {
   Element,
   ElementContent,
@@ -77,7 +78,7 @@ function transformTerminalDocument(input: NormalizedDocumentInput): HastRoot {
 }
 
 export const terminalPresentation: PresentationAdapter = {
-  id: 'terminal',
+  id: DEFAULT_PRESENTATION_ID,
   supports: (context) =>
     (context.collection === 'posts' && context.layout === 'post') ||
     (context.collection === 'pages' && context.layout === 'page'),

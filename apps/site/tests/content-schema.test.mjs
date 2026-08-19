@@ -1,28 +1,30 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
 import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
 
 const validPost = {
-  title: 'Hello, static foundation',
-  slug: 'hello-static-foundation',
-  date: '2026-08-12',
-  updated: '2026-08-13',
-  description: 'A valid post.',
-  tags: ['foundation'],
+  title: 'llm-workflow-with-trellis',
+  slug: '379',
+  date: '2026-05-28',
+  updated: '2026-07-03',
+  description: 'A migrated semantic post.',
+  tags: ['trellis'],
   draft: false,
   layout: 'post',
   presentation: 'semantic',
-  aliases: ['/hello-static-foundation/']
+  aliases: ['/posts/main/379-alias/']
 };
 
 const validPage = {
-  title: 'About',
+  title: 'About this foundation',
   slug: 'about',
   date: '2026-08-12',
-  description: 'A valid page.',
+  description: 'Why this site starts with a small and dependable content pipeline.',
   draft: false,
-  layout: 'page'
+  layout: 'page',
+  presentation: DEFAULT_PRESENTATION_ID
 };
 
 test('valid metadata parses and coerces dates', () => {
@@ -33,8 +35,15 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(post.updated instanceof Date);
   assert.ok(page.date instanceof Date);
   assert.deepEqual(post.access, { visibility: 'public' });
-  assert.deepEqual(post.tags, ['foundation']);
+  assert.deepEqual(post.tags, ['trellis']);
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
+});
+
+test('omitted presentation defaults to f1refly while semantic remains explicit', () => {
+  const omitted = postSchema.parse({ ...validPost, presentation: undefined });
+
+  assert.equal(omitted.presentation, DEFAULT_PRESENTATION_ID);
+  assert.equal(postSchema.parse(validPost).presentation, 'semantic');
 });
 
 test('used tag metadata stays a strict public string list', () => {
@@ -103,7 +112,7 @@ test('syntactically valid adapter IDs reach registry validation', () => {
 
 test('an update before publication is rejected', () => {
   assert.equal(
-    postSchema.safeParse({ ...validPost, updated: '2026-08-01' }).success,
+    postSchema.safeParse({ ...validPost, updated: '2026-05-01' }).success,
     false
   );
 });
@@ -115,28 +124,33 @@ test('unknown front matter is rejected', () => {
   );
 });
 
-test('the real Terminal article keeps strict metadata and representative Markdown', async () => {
-  const article = await readFile(
-    new URL('../../../content/posts/llm-workflow-with-trellis.md', import.meta.url),
+test('the real Terminal page keeps strict metadata and representative Markdown', async () => {
+  const page = await readFile(
+    new URL('../../../content/pages/about.md', import.meta.url),
     'utf8'
   );
-  assert.match(article, /^---\ntitle: llm workflow with trellis\nslug: llm-workflow-with-trellis\ndate: 2026-05-28\nupdated: 2026-07-03/mu);
-  assert.match(article, /draft: false\nlayout: post\npresentation: terminal/u);
+  assert.match(page, /^---\ntitle: About this foundation\nslug: about\ndate: 2026-08-12/mu);
+  assert.match(page, /draft: false\nlayout: page\n---/u);
+  assert.doesNotMatch(page, /^presentation:/mu);
+  assert.equal((page.match(/^# /gmu) ?? []).length, 0);
+  assert.match(page, /^## A deliberately small beginning$/mu);
+  assert.match(page, /^## What remains constant$/mu);
+  assert.match(page, /Future presentations can change how the site looks/u);
+});
+
+test('a migrated article keeps source metadata and Markdown content', async () => {
+  const article = await readFile(
+    new URL('../../../content/posts/main/llm-workflow-with-trellis.md', import.meta.url),
+    'utf8'
+  );
+  assert.match(article, /^---\ntitle: "llm-workflow-with-trellis"\ndescription: "和 LLM 沟通比和人打交道简单多了。"\ndate: "2026-05-28T03:48:00.000Z"/mu);
+  assert.match(article, /draft: false\nlayout: "post"\nslug: "379"/u);
+  assert.doesNotMatch(article, /^presentation:/mu);
   assert.equal((article.match(/^# /gmu) ?? []).length, 0);
-  assert.match(article, /^## install$/mu);
+  assert.match(article, /^## llm workflow with trellis$/mu);
   assert.match(article, /^### Phase 1 — Plan$/mu);
   assert.match(article, /^\| Spec 系统/mu);
   assert.match(article, /^> trellis 的工作流/mu);
   assert.match(article, /^```mermaid\nflowchart TD/mu);
-  assert.match(article, /\[Trellis repository\]\(https:\/\/github\.com\/mindfold-ai\/Trellis\.git\)/u);
-  assert.doesNotMatch(article, /trellis-spec-bootstarp/u);
-});
-
-test('the nested fixture keeps explicit category-like tags without CMS metadata', async () => {
-  const article = await readFile(
-    new URL('../../../content/posts/characters/nahida.md', import.meta.url),
-    'utf8'
-  );
-  assert.match(article, /^tags:\n  - genshin\n  - characters$/mu);
-  assert.doesNotMatch(article, /(?:typecho|cid|mid|template|comments):/iu);
+  assert.match(article, /https:\/\/github\.com\/mindfold-ai\/Trellis\.git/u);
 });

@@ -8,6 +8,8 @@ import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mj
 const siteRoot = path.resolve(import.meta.dirname, '..');
 const distRoot = path.join(siteRoot, 'dist');
 const sourceRoot = path.join(siteRoot, 'src');
+const pagesRoot = path.resolve(siteRoot, '../../content/pages');
+const generatedPostsRoot = path.join(siteRoot, '.generated-content/posts');
 
 async function listFiles(directory, prefix = '') {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -27,22 +29,56 @@ async function listFiles(directory, prefix = '') {
   return files.sort();
 }
 
+async function collectContentRoutes(directory, prefix, includeDirectories) {
+  const routes = [];
+
+  async function walk(current, relative = '') {
+    const entries = await readdir(current, { withFileTypes: true });
+    let hasPublicContent = false;
+    for (const entry of entries) {
+      const childRelative = path.posix.join(relative, entry.name);
+      const child = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        const childHasPublicContent = await walk(child, childRelative);
+        if (includeDirectories && childHasPublicContent) {
+          routes.push(`${prefix}/${childRelative}/index.html`);
+        }
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const source = await readFile(child, 'utf8');
+        const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n/u)?.[1] ?? '';
+        if (/^draft:\s*true\s*$/mu.test(frontmatter) || /^\s+visibility:\s*private\s*$/mu.test(frontmatter)) {
+          continue;
+        }
+        const physicalRoute = childRelative.slice(0, -3);
+        const slugMatch = /^slug:\s*(?:"([^"]+)"|([^\s]+))\s*$/mu.exec(frontmatter);
+        const routeSlug = slugMatch?.[1] ?? slugMatch?.[2] ?? path.posix.basename(physicalRoute);
+        const parent = path.posix.dirname(physicalRoute);
+        const route = prefix === 'posts' && parent !== '.' ? `${parent}/${routeSlug}` : routeSlug;
+        routes.push(`${prefix}/${route}/index.html`);
+        hasPublicContent = true;
+      }
+    }
+    return hasPublicContent || routes.some((route) => route.startsWith(`${prefix}/${relative}/`));
+  }
+
+  await walk(directory);
+  return routes;
+}
+
 test('static build emits only the implemented route surface', async () => {
   const files = await listFiles(distRoot);
   const htmlFiles = files.filter((file) => file.endsWith('.html'));
-
-  assert.deepEqual(htmlFiles, [
+  const expectedHtmlFiles = [
     '404.html',
     'index.html',
     'lab/index.html',
-    'pages/about/index.html',
     'pages/index.html',
-    'posts/characters/index.html',
-    'posts/characters/nahida/index.html',
-    'posts/hello-static-foundation/index.html',
     'posts/index.html',
-    'posts/llm-workflow-with-trellis/index.html'
-  ]);
+    ...(await collectContentRoutes(pagesRoot, 'pages', false)),
+    ...(await collectContentRoutes(generatedPostsRoot, 'posts', true))
+  ].sort();
+
+  assert.deepEqual(htmlFiles, expectedHtmlFiles);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
   assert.equal(scripts.length, 2);
   assert.equal(scripts.filter((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
@@ -75,12 +111,14 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
       textFiles.map(async (file) => `${file}\n${await readFile(path.join(distRoot, file), 'utf8')}`)
     )
   ).join('\n');
-  const forbidden = [
-    /astro-island/iu,
-    /client:(?:load|idle|visible|only)/iu,
-    /fonts\.(?:googleapis|gstatic)\.com/iu,
-    /@import\s+(?:url\()?\s*["']?https?:/iu,
-    /url\(\s*["']?https?:/iu,
+  const runtimeArtifacts = (
+    await Promise.all(
+      textFiles
+        .filter((file) => file !== 'index.html' && !/^(?:pages|posts)\//u.test(file))
+        .map(async (file) => `${file}\n${await readFile(path.join(distRoot, file), 'utf8')}`)
+    )
+  ).join('\n');
+  const forbiddenInAllArtifacts = [
     /hidden draft/iu,
     /this should remain private/iu,
     /PRIVATE_(?:TITLE|BODY)_M5_7f2a/u,
@@ -88,6 +126,14 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
     /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u,
     /AKIA[0-9A-Z]{16}/u,
     /gh[oprsu]_[A-Za-z0-9]{36,}/u,
+    /memos\.private\.jsonl|comment-handoff\.json|identity-handoff\.json|migration\.sqlite|resource-decisions\.json/iu
+  ];
+  const forbiddenInRuntimeArtifacts = [
+    /astro-island/iu,
+    /client:(?:load|idle|visible|only)/iu,
+    /fonts\.(?:googleapis|gstatic)\.com/iu,
+    /@import\s+(?:url\()?\s*["']?https?:/iu,
+    /url\(\s*["']?https?:/iu,
     /(?:^|[\s"'./_-])xterm(?:[\s"'./_-]|$)/imu,
     /logo-container/iu,
     /warning-stripe/iu,
@@ -100,8 +146,11 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
     /\/app\//u
   ];
 
-  for (const pattern of forbidden) {
+  for (const pattern of forbiddenInAllArtifacts) {
     assert.doesNotMatch(artifacts, pattern);
+  }
+  for (const pattern of forbiddenInRuntimeArtifacts) {
+    assert.doesNotMatch(runtimeArtifacts, pattern);
   }
 });
 
@@ -169,11 +218,11 @@ test('route closures keep public documents in Terminal styles and isolate home J
     lab: await readFile(path.join(distRoot, 'lab/index.html'), 'utf8'),
     notFound: await readFile(path.join(distRoot, '404.html'), 'utf8'),
     about: await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8'),
-    hello: await readFile(path.join(distRoot, 'posts/hello-static-foundation/index.html'), 'utf8'),
-    nahida: await readFile(path.join(distRoot, 'posts/characters/nahida/index.html'), 'utf8'),
-    terminal: await readFile(path.join(distRoot, 'posts/llm-workflow-with-trellis/index.html'), 'utf8')
+    migrated: await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8'),
+    markdown: await readFile(path.join(distRoot, 'pages/markdown/index.html'), 'utf8')
   };
-  const terminalDocumentRoutes = [routes.about, routes.hello, routes.nahida, routes.terminal];
+  const terminalDocumentRoutes = [routes.about, routes.migrated, routes.markdown];
+  const semanticDocumentRoutes = [];
   const staticRoutes = [routes.notFound, routes.lab];
 
   assert.match(routes.home, /data-terminal-home/u);
@@ -212,6 +261,14 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
   }
+  for (const html of semanticDocumentRoutes) {
+    assert.match(html, /class="semantic-document"/u);
+    assert.doesNotMatch(html, /class="terminal-root"/u);
+    assert.match(html, new RegExp(`href="/${stylesheet.replaceAll('.', '\\.')}`));
+    assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
+    assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
+    assert.doesNotMatch(html, /data-terminal-theme="f1refly"/u);
+  }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/nerv\/"/u);
   assert.doesNotMatch(routes.lab, /<script\b|logo-container|warning-stripe/iu);
@@ -223,6 +280,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, /<script\b/iu);
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(readerScript.replaceAll('.', '\\.')));
+    assert.doesNotMatch(html, /data-terminal-(?:home|startup|boot-log|startup-marker)/u);
   }
 });
 
@@ -292,10 +350,11 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.ok(scriptPath);
   const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
-  const terminalArticle = await readFile(path.join(distRoot, 'posts/llm-workflow-with-trellis/index.html'), 'utf8');
-  const nestedArticle = await readFile(path.join(distRoot, 'posts/characters/nahida/index.html'), 'utf8');
+  const terminalArticle = await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8');
+  const migratedArticle = await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8');
+  assert.match(home, /data-terminal-entry-virtual-path="posts\/main\/llm-workflow-with-trellis\.md"/u);
   assert.match(home, /data-terminal-entry-filename="llm-workflow-with-trellis\.md"/u);
-  assert.match(home, /data-terminal-entry-href="\/posts\/llm-workflow-with-trellis\/"/u);
+  assert.match(home, /data-terminal-entry-href="\/posts\/main\/379\/"/u);
   assert.match(home, /data-terminal-entry-date="2026-05-28"/u);
   assert.doesNotMatch(home, /data-terminal-entry-(?:description|body|draft|source|presentation)/u);
   assert.match(home, /data-terminal-experiment-id="nerv"/u);
@@ -305,20 +364,15 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   const entryPaths = [...home.matchAll(/data-terminal-entry-virtual-path="([^"]+)"/gu)].map((match) => match[1]);
   const templatePaths = [...home.matchAll(/data-terminal-template-path="([^"]+)"/gu)].map((match) => match[1]);
   assert.deepEqual([...templatePaths].sort(), [...entryPaths].sort());
-  assert.deepEqual(templatePaths, [
-    'pages/about.md',
-    'posts/characters/nahida.md',
-    'posts/hello-static-foundation.md',
-    'posts/llm-workflow-with-trellis.md'
-  ]);
+  assert.ok(templatePaths.includes('pages/about.md'));
+  assert.ok(templatePaths.includes('posts/main/llm-workflow-with-trellis.md'));
   const templateBodies = [...home.matchAll(/<template\b[^>]*data-terminal-template[^>]*>([\s\S]*?)<\/template>/gu)].map((match) => match[1] ?? '');
-  assert.equal(templateBodies.length, 4);
-  assert.match(templateBodies.join('\n'), /No browser-side parser/u);
+  assert.equal(templateBodies.length, entryPaths.length);
   assert.match(templateBodies.join('\n'), /data-language="mermaid"/u);
   assert.match(templateBodies.join('\n'), /Future presentations can change how the site looks/u);
   const withoutTemplates = home.replace(/<template\b[^>]*>[\s\S]*?<\/template>/gu, '');
-  assert.doesNotMatch(withoutTemplates, /No browser-side parser|data-language="mermaid"|Future presentations can change how the site looks/u);
-  assert.doesNotMatch(script, /No browser-side parser|data-language="mermaid"|Future presentations can change how the site looks/u);
+  assert.doesNotMatch(withoutTemplates, /data-language="mermaid"|Future presentations can change how the site looks/u);
+  assert.doesNotMatch(script, /data-language="mermaid"|Future presentations can change how the site looks/u);
   assert.match(home, /<section\b[^>]*data-terminal-fallback[^>]*>/u);
   const marker = /<script\b[^>]*data-terminal-startup-marker[^>]*>[\s\S]*?<\/script>/u.exec(home)?.[0] ?? '';
   assert.match(marker, /terminalStartupState\s*=\s*['"]connecting['"]/u);
@@ -334,25 +388,24 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /<h1 class="terminal-visually-hidden">f1refly content terminal<\/h1>/u);
   assert.match(home, /enterkeyhint="send"/u);
   assert.doesNotMatch(home, /<button\b/iu);
-  assert.match(terminalArticle, /<h1>llm workflow with trellis<\/h1>/u);
-  assert.match(terminalArticle, /data-language="mermaid"/u);
+  assert.match(terminalArticle, /<h1>About this foundation<\/h1>/u);
   assert.match(terminalArticle, /data-terminal-reader-region/u);
   assert.equal((terminalArticle.match(/id="terminal-reader"/gu) ?? []).length, 1);
   assert.match(terminalArticle, /<p data-reader-search-status hidden><\/p>/u);
   assert.match(terminalArticle, /data-reader-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
-  assert.match(nestedArticle, /<p class="terminal-path">\/posts\/characters\/nahida\.md<\/p>/u);
-  assert.equal((nestedArticle.match(/class="terminal-path"/gu) ?? []).length, 1);
-  assert.doesNotMatch(nestedArticle, /Document path|data-breadcrumb-token|terminal-document-nav|terminal-breadcrumb/u);
-  assert.doesNotMatch(nestedArticle, /<a[^>]*>nahida\.md<\/a>/u);
+  assert.match(migratedArticle, /<h1>llm-workflow-with-trellis<\/h1>/u);
+  assert.match(migratedArticle, /data-language="mermaid"/u);
+  assert.match(migratedArticle, /class="terminal-document"/u);
+  assert.match(migratedArticle, /class="terminal-root"/u);
 });
 
 test('ordinary routes contain no Experiment runtime or asset edge', async () => {
   const ordinaryRoutes = [
     '404.html',
     'pages/about/index.html',
-    'posts/hello-static-foundation/index.html',
-    'posts/llm-workflow-with-trellis/index.html'
+    'posts/main/379/index.html',
+    'pages/markdown/index.html'
   ];
   for (const route of ordinaryRoutes) {
     const html = await readFile(path.join(distRoot, route), 'utf8');
@@ -383,9 +436,9 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
   }
 });
 
-test('Terminal output contains outline targets and localized wide regions', async () => {
+test('default f1refly output contains reader boundaries and localized wide regions', async () => {
   const post = await readFile(
-    path.join(distRoot, 'posts/hello-static-foundation/index.html'),
+    path.join(distRoot, 'posts/main/379/index.html'),
     'utf8'
   );
 
@@ -396,16 +449,13 @@ test('Terminal output contains outline targets and localized wide regions', asyn
   assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
   assert.match(post, /data-terminal-reader-entry="always"/u);
   assert.doesNotMatch(post, /data-terminal-reader-status[^>]*hidden/u);
-  assert.match(post, /<nav class="terminal-outline" aria-label="Document outline"><ul>/u);
-  assert.doesNotMatch(post, /On this page|<ol\b/u);
-  assert.match(post, /class="terminal-outline-prefix" aria-hidden="true">└── <\/span>/u);
-  assert.match(post, /class="terminal-outline-prefix" aria-hidden="true">    └── <\/span>/u);
-  assert.match(post, /href="#markdown-to-durable-html"/u);
-  assert.match(post, /id="markdown-to-durable-html"/u);
+  assert.match(post, /class="terminal-outline"/u);
+  assert.match(post, /<ul\b/u);
+  assert.doesNotMatch(post, /class="document-outline"/u);
   assert.match(post, /data-terminal-wide="code"/u);
   assert.match(post, /data-terminal-wide="table"/u);
-  assert.match(post, /<h1>Hello, static foundation<\/h1>/u);
-  assert.match(post, /No browser-side parser/u);
+  assert.match(post, /data-language="mermaid"/u);
+  assert.match(post, /<h1>llm-workflow-with-trellis<\/h1>/u);
 });
 
 test('both reader presentations keep status after content and fixed to the viewport bottom', async () => {

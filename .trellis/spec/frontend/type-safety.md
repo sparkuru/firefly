@@ -43,7 +43,7 @@ exercise. Do not create a test-only schema.
 | Field | Contract |
 | --- | --- |
 | `title`, `description` | required, trimmed, non-empty strings |
-| post `slug` | optional legacy assertion; when present equals the filename stem |
+| post `slug` | optional canonical safe URL segment; when absent, the physical filename stem is used |
 | page `slug` | required canonical safe URL segment; NFC, non-hidden, no whitespace, slash, percent, backslash, query, fragment, control, or dot segment |
 | `date` | required valid `Date` or non-empty string coercible to a valid date |
 | `updated` | optional same input boundary; cannot precede `date` |
@@ -51,7 +51,7 @@ exercise. Do not create a test-only schema.
 | `draft` | required boolean |
 | post `layout` | exactly `post` |
 | page `layout` | schema accepts `page`, `timeline`, `files`; current public projection accepts only `page` |
-| `presentation` | optional lowercase kebab-case adapter ID; omission resolves to `semantic`; registry membership is a build-time X Core check |
+| `presentation` | optional lowercase kebab-case adapter ID; omission resolves to the shared `DEFAULT_PRESENTATION_ID` (`f1refly`); explicit `semantic` remains available; registry membership is a build-time X Core check |
 | `aliases` | optional canonical absolute trailing-slash directory routes; every segment passes the safe route-segment gate |
 | `access` | optional exact public/private-owner union; omission defaults public; private requires a safe subject owner |
 | unknown keys | rejected by strict schemas |
@@ -80,8 +80,9 @@ non-empty string, then pipe to date coercion.
 
 ### 5. Good / Base / Bad Cases
 
-- Good: valid framework-neutral post Markdown gains identity from its safe staged
-  relative path; a page uses its explicit stable slug; both become typed routes.
+- Good: valid framework-neutral Markdown keeps a safe staged relative path for
+  physical identity; a post may use an explicit safe route slug and a page uses
+  its required stable slug; both become typed routes.
 - Base: a valid draft parses but is absent from the public projection.
 - Bad: using raw `z.coerce.date()`, deriving a route from title/filename, or
   filtering drafts independently in each page.
@@ -314,8 +315,9 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
 ### 3. Contracts
 
 - `TerminalEntry` contains exactly `kind`, `virtualPath`, `relativePath`,
-  `filename`, `title`, `href`, and `date`; href is derived from the canonical
-  `.md` virtual path. `TerminalExperiment` remains exact `{ id, title, href }`.
+  `filename`, `title`, `href`, and `date`; the virtual/relative fields identify
+  the physical `.md` source while `href` is the independently validated
+  canonical route. `TerminalExperiment` remains exact `{ id, title, href }`.
 - Decoders inspect only own data descriptors in plain dense arrays and exact
   plain/null-prototype objects. They reject accessors, unknown fields, hidden/
   traversal/percent/backslash/non-NFC paths, route drift, and Unicode/case-folded

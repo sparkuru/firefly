@@ -214,33 +214,33 @@ test('commands render continuous typed results, lab discovery, and latest announ
 
   await submit(page, 'alias l');
   await expect(transcript.locator('.terminal-record').last()).toContainText('l=ls');
-  await submit(page, 'l');
-  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(2);
-  await submit(page, 'll');
-  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(2);
+  await submit(page, 'l main/llm-workflow-with-trellis.md');
+  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(1);
+  await submit(page, 'll main/llm-workflow-with-trellis.md');
+  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(1);
 
-  await input.fill('ls he');
+  await input.fill('ls main/llm-w');
   await input.press('Tab');
-  await expect(input).toHaveValue('ls hello-static-foundation.md');
+  await expect(input).toHaveValue('ls main/llm-workflow-with-trellis.md');
   await expect(input).toBeFocused();
   await input.press('Enter');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Hello, static foundation');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm workflow with trellis');
 
-  await input.fill('ls charac');
+  await input.fill('ls ma');
   await input.press('Tab');
-  await expect(input).toHaveValue('ls characters/');
+  await expect(input).toHaveValue('ls main/');
   await expect(input).toBeFocused();
   await input.press('Enter');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('nahida.md');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm-workflow-with-trellis.md');
 
-  await submit(page, 'ls cha');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Did you mean "characters/"? Press Tab to complete.');
-  await submit(page, 'ls cha*');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('nahida.md');
-  await submit(page, 'ls *cha*');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('nahida.md');
-  await submit(page, 'ls characters/');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Notes on Nahida');
+  await submit(page, 'ls ma');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Did you mean "main/"? Press Tab to complete.');
+  await submit(page, 'ls main*');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm-workflow-with-trellis.md');
+  await submit(page, 'ls *main*');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm-workflow-with-trellis.md');
+  await submit(page, 'ls main/');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm workflow with trellis');
   await submit(page, 'ls --help');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Usage: ls [path|pattern]');
 
@@ -254,32 +254,32 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'ls /lab/nerv/');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Use "open lab/nerv" to enter this experiment.');
 
-  await input.fill('cd charac');
+  await input.fill('cd ma');
   await input.press('Tab');
-  await expect(input).toHaveValue('cd characters/');
+  await expect(input).toHaveValue('cd main/');
   await expect(input).toBeFocused();
   await input.press('Enter');
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/characters $');
-  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts\/characters \$/u })).toBeFocused();
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/main $');
+  await expect(page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts\/main \$/u })).toBeFocused();
   await submit(page, 'ls');
   const nestedListing = transcript.locator('.terminal-entry-list').last();
-  await expect(nestedListing.locator('.terminal-entry-row')).toHaveCount(1);
+  await expect(nestedListing.locator('.terminal-entry-row--document')).toHaveCount(47);
   await expect(nestedListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(0);
-  await expect(nestedListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(1);
+  await expect(nestedListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(47);
   await expect(nestedListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
-  await expect(nestedListing).toContainText('2026-08-13');
-  const nestedInput = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts\/characters \$/u });
-  await nestedInput.fill('cat n');
+  await expect(nestedListing).toContainText('2026-05-28');
+  const nestedInput = page.getByRole('textbox', { name: /Command for guest@f1refly:~\/blog\/posts\/main \$/u });
+  await nestedInput.fill('cat l');
   await nestedInput.press('Tab');
-  await expect(nestedInput).toHaveValue('cat nahida.md');
+  await expect(nestedInput).toHaveValue('cat llm-workflow-with-trellis.md');
   await expect(nestedInput).toBeFocused();
   await nestedInput.press('Enter');
-  await expect(transcript).toContainText('Notes on Nahida');
-  await submit(page, 'cd /posts');
+  await expect(transcript).toContainText('llm workflow with trellis');
+  await submit(page, 'cd /posts/main');
   await submit(page, 'ls *.md');
   const wildcardListing = transcript.locator('.terminal-entry-list').last();
-  await expect(wildcardListing.locator('.terminal-entry-row--document')).toHaveCount(2);
-  await expect(wildcardListing).toContainText('Hello, static foundation');
+  await expect(wildcardListing.locator('.terminal-entry-row--document')).toHaveCount(47);
+  await expect(wildcardListing).toContainText('llm-workflow-with-trellis.md');
   await expect(wildcardListing).toContainText('llm workflow with trellis');
 
   await submit(page, 'cd ../');
@@ -303,18 +303,16 @@ test('commands render continuous typed results, lab discovery, and latest announ
 
   await submit(page, 'ls posts');
   const postsListing = transcript.locator('.terminal-entry-list').last();
-  await expect(postsListing.locator('.terminal-entry-row')).toHaveCount(3);
-  await expect(postsListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(1);
-  await expect(postsListing.getByRole('link', { name: 'characters/' })).toHaveAttribute('href', '/posts/characters/');
-  await expect(postsListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(2);
+  await expect(postsListing.locator('.terminal-entry-row')).toHaveCount(7);
+  await expect(postsListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(7);
+  await expect(postsListing.getByRole('link', { name: 'main/' })).toHaveAttribute('href', '/posts/main/');
+  await expect(postsListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(0);
   await expect(postsListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
   await expect(postsListing).toHaveCSS('padding-left', '0px');
-  await expect(postsListing.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
-  await expect(postsListing.getByRole('link', { name: 'characters/nahida.md' })).toHaveCount(0);
-  await expect(postsListing).toContainText('2026-05-28');
+  await expect(postsListing.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toHaveCount(0);
   const listingColumns = await postsListing.locator('[data-terminal-entry-kind="document"]').evaluateAll((rows) => rows.map((row) => getComputedStyle(row).gridTemplateColumns));
   expect(new Set(listingColumns).size).toBe(1);
-  await expect(announcer).toHaveText('3 posts listed.');
+  await expect(announcer).toHaveText('7 posts listed.');
 
   await submit(page, 'ls pages');
   await expect(transcript.getByRole('link', { name: '/pages/about.md' })).toHaveAttribute('href', '/pages/about/');
@@ -328,8 +326,8 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
   await submit(page, 'cat ./pages/about.md');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
-  await submit(page, 'cat posts/hello-static-foundation.md');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Hello, static foundation');
+  await submit(page, 'cat posts/main/llm-workflow-with-trellis.md');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm workflow with trellis');
   await submit(page, 'grep -i about pages/about.md');
   await expect(transcript.locator('.terminal-record').last()).toContainText('/pages/about.md:');
   await submit(page, 'cat /pages/about.md');
@@ -353,24 +351,23 @@ test('ls and tree entries expose document links and safe directory cd links', as
 
   await submit(page, 'ls posts');
   const lsListing = transcript.locator('.terminal-record').last().locator('.terminal-entry-list');
-  const lsDirectory = lsListing.getByRole('link', { name: 'characters/' });
-  await expect(lsDirectory).toHaveAttribute('href', '/posts/characters/');
-  await expect(lsDirectory).toHaveAttribute('data-terminal-cd-path', '/posts/characters');
+  const lsDirectory = lsListing.getByRole('link', { name: 'main/' });
+  await expect(lsDirectory).toHaveAttribute('href', '/posts/main/');
+  await expect(lsDirectory).toHaveAttribute('data-terminal-cd-path', '/posts/main');
   await lsDirectory.click();
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/characters $');
-  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/characters/');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/main $');
+  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/main/');
   await expect(page).toHaveURL(/\/$/u);
 
   await submit(page, 'cd /');
   await submit(page, 'tree /');
   const tree = transcript.locator('.terminal-record').last().locator('.terminal-tree');
   await expect(tree.getByRole('link', { name: 'posts/' })).toHaveAttribute('href', '/posts/');
-  await expect(tree.getByRole('link', { name: 'hello-static-foundation.md' })).toHaveAttribute('href', '/posts/hello-static-foundation/');
-  const treeDirectory = tree.getByRole('link', { name: 'characters/' });
+  const treeDirectory = tree.getByRole('link', { name: 'main/' });
   await treeDirectory.focus();
   await treeDirectory.press('Enter');
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/characters $');
-  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/characters/');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest@f1refly:~/blog/posts/main $');
+  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/main/');
 });
 
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {
@@ -380,8 +377,8 @@ test('user aliases are session-local and disappear after refresh', async ({ page
 
   await submit(page, 'alias la=ls');
   await expect(transcript.locator('.terminal-record').last()).toContainText('la=ls');
-  await submit(page, 'la');
-  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(2);
+  await submit(page, 'la main/llm-workflow-with-trellis.md');
+  await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(1);
   await submit(page, 'help');
   await expect(transcript.locator('.terminal-record').last()).toContainText('la');
 
@@ -410,7 +407,7 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await expect(transcript.locator('.terminal-record').last()).toContainText('About');
   await expect(transcript.locator('[data-terminal-stream-document]')).toHaveCount(0);
   await submit(page, 'cd /posts');
-  await submit(page, 'cat characters/nahida.md | grep a');
+  await submit(page, 'cat main/llm-workflow-with-trellis.md | grep a');
   const pipedGrep = transcript.locator('.terminal-record').last();
   await expect(pipedGrep.locator('.terminal-grep-line mark').first()).toHaveText('a');
   await submit(page, 'grep -inF about /pages/about.md');
@@ -420,7 +417,7 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
   await submit(page, 'grep -F definitely-not-in-the-public-corpus');
   await expect(transcript.locator('.terminal-grep-summary').last()).toHaveText('No matches for "definitely-not-in-the-public-corpus".');
-  await submit(page, 'grep -nF "# " /posts/llm-workflow-with-trellis.md');
+  await submit(page, 'grep -nF "# " /posts/main/llm-workflow-with-trellis.md');
   const sourceMatches = transcript.locator('.terminal-record').last().locator('.terminal-grep-line');
   await expect.poll(async () => sourceMatches.count()).toBeGreaterThan(1);
   expect((await sourceMatches.allTextContents()).every((line) => line.length < 5000)).toBe(true);
@@ -455,7 +452,7 @@ test('history preserves a draft and clear returns a fresh prompt with history in
 
   await input.fill('ls p');
   await input.press('Tab');
-  await expect(completion).toContainText('Matches: pages/, posts/');
+  await expect(completion).toContainText('Matches: pages/, penetration/, posts/');
   await expect(completion.locator('.terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
   await input.focus();
   await submit(page, 'history');
@@ -525,7 +522,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   await expect(input).toHaveValue('whoami');
   await input.fill('vim ./');
   await input.press('Tab');
-  await expect(completion).toContainText('Matches: ./characters/');
+  await expect(completion).toContainText('Matches: ./main/');
   await expect(input).toBeFocused();
   const modifiedVariants = await input.evaluate((element) => [
     { altKey: true, ctrlKey: true },
@@ -539,13 +536,13 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   }))));
   expect(modifiedVariants).toEqual([true, true, true]);
   await expect(input).toHaveValue('vim ./');
-  await expect(completion).toContainText('Matches: ./characters/');
+  await expect(completion).toContainText('Matches: ./main/');
   await input.press('Control+c');
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
   await expect(completion).toBeEmpty();
   await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command cancelled.');
-  await expect(transcript.locator('.terminal-record')).toHaveCount(2);
+  await expect(transcript.locator('.terminal-record')).toHaveCount(3);
   await input.press('ArrowUp');
   await expect(input).toHaveValue('whoami');
   await input.press('ArrowDown');
@@ -570,7 +567,7 @@ test('the prompt owns every Tab while completion only rewrites safe unmodified m
   await input.fill('ls p');
   await input.press('Tab');
   await expect(input).toHaveValue('ls p');
-  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches: pages/, posts/');
+  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches: pages/, penetration/, posts/');
   await expect(page.locator('[data-terminal-completion] .terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
   await expect(input).toBeFocused();
 
@@ -591,23 +588,23 @@ test('the prompt owns every Tab while completion only rewrites safe unmodified m
     await expect(page.locator('[data-terminal-completion]')).toHaveText('No matches.');
   }
 
-  await input.fill('cat llm-w');
+  await input.fill('cat main/llm-w');
   await input.press('Tab');
-  await expect(input).toHaveValue('cat llm-workflow-with-trellis.md');
+  await expect(input).toHaveValue('cat main/llm-workflow-with-trellis.md');
 
-  await input.fill('cat cha');
+  await input.fill('cat ma');
   await input.press('Tab');
-  await expect(input).toHaveValue('cat characters/');
+  await expect(input).toHaveValue('cat main/');
   await input.fill('vim /pages/abo');
   await input.press('Tab');
   await expect(input).toHaveValue('vim /pages/about.md');
 
-  await input.fill('cat ./llm-w');
+  await input.fill('cat ./main/llm-w');
   await input.press('Tab');
-  await expect(input).toHaveValue('cat ./llm-workflow-with-trellis.md');
+  await expect(input).toHaveValue('cat ./main/llm-workflow-with-trellis.md');
   await expect(input).toBeFocused();
 
-  for (const unsafe of ['cat ../llm-w', 'cat ./nested/../llm-w', 'cat /llm-w', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat cafe\u0301.md', 'cat control\u0001path']) {
+  for (const unsafe of ['cat ../main/llm-w', 'cat ./nested/../main/llm-w', 'cat /main/llm-w', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat cafe\u0301.md', 'cat control\u0001path']) {
     await input.fill(unsafe);
     await input.press('Tab');
     await expect(input).toHaveValue(unsafe);
@@ -686,7 +683,7 @@ test('short output settles the active prompt and document output settles its rea
   await expect(reducedHelp.getByText('show this command list')).toBeVisible();
   await expectInViewport(input, 0, 1);
 
-  await submit(page, 'cat ./llm-workflow-with-trellis.md');
+  await submit(page, 'cat ./main/llm-workflow-with-trellis.md');
   const title = page
     .locator('[data-terminal-stream-document]')
     .last()
@@ -698,7 +695,7 @@ test('short output settles the active prompt and document output settles its rea
 test('eligible printable typing returns to the prompt while protected interactions stay native', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
-  await submit(page, 'cat llm-workflow-with-trellis.md');
+  await submit(page, 'cat main/llm-workflow-with-trellis.md');
   const streamedDocument = page.locator('[data-terminal-stream-document]').last();
   const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm workflow with trellis' });
   await expect(title).toBeFocused();
@@ -811,7 +808,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   await page.goto('/');
   await page.evaluate(() => {
     const template = [...document.querySelectorAll<HTMLTemplateElement>('[data-terminal-template]')]
-      .find((candidate) => candidate.dataset.terminalTemplatePath === 'posts/llm-workflow-with-trellis.md');
+      .find((candidate) => candidate.dataset.terminalTemplatePath === 'posts/main/llm-workflow-with-trellis.md');
     const article = template?.content.querySelector<HTMLElement>('[data-terminal-stream-document]');
     const firstHeading = article?.querySelector<HTMLElement>('[id="install"]');
     const firstHeader = article?.querySelector<HTMLElement>('th');
@@ -844,14 +841,14 @@ test('cat appends trusted inline documents without navigation and scopes repeate
     labelled.setAttribute('aria-labelledby', 'install scoped-field external-label');
     const externalFragment = document.createElement('a');
     externalFragment.dataset.externalFragment = '';
-    externalFragment.href = '/posts/llm-workflow-with-trellis/#install';
+    externalFragment.href = '/posts/main/379/#install';
     externalFragment.textContent = 'external install fragment';
     firstHeader.id = 'scoped-column';
     firstCell.dataset.scopedCell = '';
     firstCell.setAttribute('headers', 'scoped-column');
     article.append(localLink, label, field, labelled, externalFragment);
   });
-  await submit(page, 'cat llm-workflow-with-trellis.md');
+  await submit(page, 'cat main/llm-workflow-with-trellis.md');
 
   await expect(page).toHaveURL(/\/$/u);
   const documents = page.locator('[data-terminal-stream-document]');
@@ -860,7 +857,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   const title = first.getByRole('heading', { level: 2, name: 'llm workflow with trellis' });
   await expect(title).toBeVisible();
   await expect(title).toBeFocused();
-  await expect(first.getByRole('link', { name: 'permalink' })).toHaveAttribute('href', '/posts/llm-workflow-with-trellis/');
+  await expect(first.getByRole('link', { name: 'permalink' })).toHaveAttribute('href', '/posts/main/379/');
   await expect(first.getByRole('link', { name: 'Return to prompt' })).toHaveCount(0);
   await expect(first.locator('[data-scoped-link]')).toHaveAttribute('href', '#terminal-output-1-install');
   await expect(first.locator('[data-scoped-label]')).toHaveAttribute('for', 'terminal-output-1-scoped-field');
@@ -872,7 +869,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   );
   await expect(first.locator('[data-external-fragment]')).toHaveAttribute(
     'href',
-    '/posts/llm-workflow-with-trellis/#install'
+    '/posts/main/379/#install'
   );
   await expect(first.getByRole('region', { name: /^Code content:/u }).first()).toHaveAttribute('tabindex', '0');
   await expect(first.getByRole('region', { name: /^Table content:/u }).first()).toHaveAttribute('tabindex', '0');
@@ -893,7 +890,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   expect(longDocumentGeometry.articleRight).toBeLessThanOrEqual(longDocumentGeometry.viewportWidth);
   expect(longDocumentGeometry.scrollHeight).toBeGreaterThan(longDocumentGeometry.viewportHeight);
 
-  await submit(page, 'cat llm-workflow-with-trellis.md');
+  await submit(page, 'cat main/llm-workflow-with-trellis.md');
   await expect(documents).toHaveCount(2);
   const identityEvidence = await page.evaluate(() => {
     const ids = [...document.querySelectorAll<HTMLElement>('[id]')].map((element) => element.id);
@@ -914,18 +911,18 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   }
   expect(identityEvidence.returnControls).toEqual([0, 0]);
   expect(identityEvidence.permalinks).toEqual([
-    '/posts/llm-workflow-with-trellis/',
-    '/posts/llm-workflow-with-trellis/'
+    '/posts/main/379/',
+    '/posts/main/379/'
   ]);
   await expectNoHorizontalOverflow(page);
 });
 
 test('cat respects semantic and page adapter output in the home stream', async ({ page }) => {
   await page.goto('/');
-  await submit(page, 'cat hello-static-foundation.md');
+  await submit(page, 'cat main/llm-workflow-with-trellis.md');
   const semanticDocument = page.locator('[data-terminal-stream-document]').first();
-  await expect(semanticDocument.getByRole('heading', { level: 2, name: 'Hello, static foundation' })).toBeFocused();
-  await expect(semanticDocument.getByRole('heading', { level: 2, name: 'Markdown to durable HTML' })).toBeVisible();
+  await expect(semanticDocument.getByRole('heading', { level: 2, name: 'llm workflow with trellis' })).toBeFocused();
+  await expect(semanticDocument.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
   await expect(semanticDocument.getByRole('region', { name: /^Code content:/u })).toBeVisible();
   await submit(page, 'cat /pages/about.md');
   await expect(page.getByRole('heading', { level: 2, name: 'About this foundation' })).toBeFocused();
@@ -952,7 +949,7 @@ test('malformed startup preserves the untouched native recovery product', async 
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
 });
 
@@ -1061,7 +1058,7 @@ test('post-start renderer failure restores one focused recovery target', async (
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.locator('[data-terminal-failure] .terminal-status-label')).toHaveCount(1);
-  await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
 });
@@ -1077,7 +1074,7 @@ test('post-start executor failure restores the same native recovery product', as
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
 });
 

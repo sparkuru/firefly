@@ -50,14 +50,14 @@ test('negative builds preserve public invariants and X Core diagnostics', async 
       filename: 'x-core-negative-duplicate.md',
       source: `---
 title: Duplicate fixture
-slug: hello-static-foundation
+slug: x-core-negative-duplicate
 date: 2026-08-12
 description: Must fail the route reservation invariant.
 draft: false
 layout: page
 presentation: semantic
 aliases:
-  - /posts/hello-static-foundation/
+  - /posts/main/379/
 ---
 
 ## Duplicate fixture
@@ -66,8 +66,8 @@ This content must never be published.
 `,
       patterns: [
         /Route collision/u,
-        /document posts\/hello-static-foundation\.md/u,
-        /alias for pages\/hello-static-foundation\.md/u
+        /document posts\/main\/llm-workflow-with-trellis\.md/u,
+        /alias for pages\/x-core-negative-duplicate\.md/u
       ]
     });
   });
