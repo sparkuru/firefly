@@ -19,6 +19,7 @@ import {
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
+  formatTerminalPrompt,
   formatDocumentOperand,
   navigateHistory,
   tokenizeCommand,
@@ -46,7 +47,8 @@ const experiments = decodeTerminalExperiments([
 ]);
 
 test('default prompt stays derived from the default identity', () => {
-  assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest@f1refly:~/blog/posts $');
+  assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #');
+  assert.equal(formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, createTerminalState()), DEFAULT_TERMINAL_PROMPT);
 });
 
 function input(tree: HastRoot): NormalizedDocumentInput {
@@ -332,7 +334,15 @@ test('every command has deterministic output and strict usage errors', () => {
   for (const operand of ['../alpha.md', './nested/../alpha.md', '/alpha.md', 'https://example.com/alpha.md', '/etc/passwd', 'characters\\alpha.md']) {
     assert.match(JSON.stringify(run(`cat ${operand}`).effect), /No readable rshell resource/u, operand);
   }
-  assert.match(JSON.stringify(run('about').effect), /static garden/u);
+  assert.deepEqual(run('about').effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: [
+      'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.',
+      'Mostly about things I\'ve worked on, broken, fixed, or found interesting.',
+      'Source: https://github.com/sparkuru/f1refly.git'
+    ]
+  });
   assert.match(JSON.stringify(run('pwd').effect), /~\/blog\/posts/u);
   assert.match(JSON.stringify(run('whoami').effect), /guest/u);
   assert.match(JSON.stringify(run('date').effect), /2026-08-12 04:05:06 UTC/u);

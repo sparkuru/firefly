@@ -232,7 +232,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.ok(startupMarkerIndex < recoveryIndex);
   assert.match(routes.home, /data-terminal-startup/u);
   assert.match(routes.home, /data-terminal-boot-log/u);
-  assert.equal((routes.home.match(/class="terminal-boot-line"/gu) ?? []).length, 10);
+  assert.equal((routes.home.match(/class="terminal-boot-line"/gu) ?? []).length, 12);
   assert.doesNotMatch(routes.home, /data-terminal-boot-separator|terminal-boot-separator/u);
   assert.doesNotMatch(routes.home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.match(routes.home, /data-terminal-experiment-id="nerv"/u);
@@ -380,7 +380,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.ok(home.indexOf('data-terminal-startup-marker') < home.indexOf('data-terminal-fallback'));
   assert.match(home, /<section\b[^>]*data-terminal-startup[^>]*>/u);
   assert.match(home, /data-terminal-boot-log/u);
-  assert.equal((home.match(/class="terminal-boot-line"/gu) ?? []).length, 10);
+  assert.equal((home.match(/class="terminal-boot-line"/gu) ?? []).length, 12);
   assert.doesNotMatch(home, /data-terminal-boot-separator|terminal-boot-separator/u);
   assert.doesNotMatch(home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.doesNotMatch(home.match(/<section\b[^>]*data-terminal-fallback[^>]*>/u)?.[0] ?? '', /\bhidden\b/u);

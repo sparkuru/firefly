@@ -187,13 +187,19 @@ export interface TerminalCommandRegistry {
 
 export const DEFAULT_TERMINAL_IDENTITY: TerminalIdentity = Object.freeze({
   user: 'guest',
-  host: 'f1refly',
+  host: 'firefly',
   workingDirectory: '~/blog/posts',
-  about: 'A static garden for notes, experiments, and durable web writing.'
+  about: 'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.\nMostly about things I\'ve worked on, broken, fixed, or found interesting.\nSource: https://github.com/sparkuru/f1refly.git'
 });
 
-export const DEFAULT_TERMINAL_PROMPT =
-  `${DEFAULT_TERMINAL_IDENTITY.user}@${DEFAULT_TERMINAL_IDENTITY.host}:${DEFAULT_TERMINAL_IDENTITY.workingDirectory} $`;
+function terminalPrompt(identity: TerminalIdentity, cwd: string): string {
+  return `${identity.user}(.ᗜ ᴗ ᗜ.)${identity.host}:${cwd} #`;
+}
+
+export const DEFAULT_TERMINAL_PROMPT = terminalPrompt(
+  DEFAULT_TERMINAL_IDENTITY,
+  DEFAULT_TERMINAL_IDENTITY.workingDirectory
+);
 
 const commandToken = /^[a-z][a-z0-9-]*$/u;
 const unsafePathSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
@@ -225,7 +231,7 @@ export function formatTerminalPrompt(
   identity: TerminalIdentity,
   state: Pick<TerminalState, 'cwd'>
 ): string {
-  return `${identity.user}@${identity.host}:${state.cwd} $`;
+  return terminalPrompt(identity, state.cwd);
 }
 
 function ownDataDescriptors(value: object): ReadonlyMap<PropertyKey, PropertyDescriptor> {
