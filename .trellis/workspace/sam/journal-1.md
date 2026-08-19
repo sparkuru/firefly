@@ -499,3 +499,24 @@ Updated the Terminal identity, multiline about output, prompt/startup presentati
 ### Status
 
 [OK] **Completed**
+
+
+## Session 25: Build-time site configuration and SEO
+
+**Date**: 2026-08-19
+**Task**: Build-time site configuration and SEO
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented public YAML site configuration for identity, Terminal prompt/about, document title and SEO metadata; added strict front matter overrides, shared head metadata, robots/sitemap generation, clone/build documentation, tests, and frontend code-spec. Verified custom and default builds, package checks, M4 checks/tests, and Terminal identity behavior.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `81eb017` | (see git log) |
+
+### Status
+
+[OK] **Completed**

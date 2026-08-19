@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 24
+- **Total Sessions**: 25
 - **Last Active**: 2026-08-19
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~501 | Active |
+| `journal-1.md` | ~522 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 25 | 2026-08-19 | Build-time site configuration and SEO | `81eb017` | `anti-entropy-loss-syndrome` |
 | 24 | 2026-08-19 | Refresh terminal identity and add local sync workflow | `d957624` | `anti-entropy-loss-syndrome` |
 | 23 | 2026-08-19 | Stabilize Terminal startup and clear layout | `1e666bd` | `anti-entropy-loss-syndrome` |
 | 22 | 2026-08-18 | Simplify Terminal document navigation | `ae19768` | `anti-entropy-loss-syndrome` |
