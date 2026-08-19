@@ -4,18 +4,11 @@
 
 Plan, but do not implement, the first dynamic comment and public-identity
 capability for f1refly. The plan must preserve the existing immutable static
-site and use M5's private, opaque correspondence only as a controlled migration
-input.
+site and keep any future historical-data handling behind an explicit owner
+decision.
 
 ## Confirmed Facts
 
-- M5 is complete and archived. Its owner-local ledger has opaque document,
-  comment, and identity correspondence for 189 approved historical comments;
-  raw email, IP address, user-agent, source IDs, moderation data, and identity
-  values stay private.
-- The source evidence has 187 root comments and 2 replies. It records one
-  content author relation and several comment/source identity relations, but
-  does not authorize a public alias or historic-identity disclosure.
 - The current Astro site, its assembled release, and runtime image are
   static-only. They do not query a database or expose a comment route.
 - M5.1 is planned to own a separately deployed write API/database, consent,
@@ -62,10 +55,9 @@ input.
   parent/child relationships private until moderation approves a public export.
 - R3: Define the compatibility boundary between a dynamic comment service and
   the immutable static site, including read-model export/rebuild and rollback.
-- R4: Retain the private historical-comment handoff without projecting it in
-  the first release. A later historic-comment feature must be separately
-  approved and may never publish source IDs, email, IP, user-agent, or raw
-  source identity by default.
+- R4: Keep historical comments private and out of the first release. A later
+  historic-comment feature must be separately approved and may never publish
+  source IDs, email, IP, user-agent, or raw source identity by default.
 - R5: Produce planning artifacts and evidence sufficient for a later,
   separately authorized implementation task; preserve the no-implementation
   boundary in this task.
@@ -73,13 +65,12 @@ input.
 ## Initial Scope Boundaries
 
 In scope: product decisions, threat/privacy model, service/data-flow design,
-API and schema proposals, migration approach, moderation/abuse policy,
+API and schema proposals, data import/export approach, moderation/abuse policy,
 acceptance criteria, research, and an implementation/validation plan.
 
 Out of scope: source-code changes, database creation or migration, external
 service provisioning, credentials, deployment, public comment UI, public
-historical-comment materialization, SSR conversion, or modifying M5's private
-ledger.
+historical-comment materialization, or SSR conversion.
 
 Also out of scope for the current mainline: completing M5.1 planning, approving
 an implementation plan, or starting this task.

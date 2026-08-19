@@ -131,8 +131,8 @@ start_services() {
 	rm -f -- "${ASTRO_DEV_LOCK_PATH}"
 
 	if [[ "${mode}" == preview ]]; then
-		printf '[dev.sh] building the M5 publication for preview\n' >&2
-		SAM_SCOPE=dev.sh ./sam npm run build:m5
+		printf '[dev.sh] building the assembled publication for preview\n' >&2
+		SAM_SCOPE=dev.sh ./sam npm run build:m4
 		printf '[dev.sh] publication preview: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
 		run_service web \
 			./sam env PUBLICATION_PORT="${WEB_CONTAINER_PORT}" \

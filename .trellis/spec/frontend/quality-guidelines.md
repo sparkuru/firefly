@@ -42,9 +42,9 @@ are not validation contracts.
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
 
-./sam npm run check:m5
-./sam npm run test:m5
-./sam npm run build:m5
+./sam npm run check:m4
+./sam npm run test:m4
+./sam npm run build:m4
 ./package-runtime.sh
 ```
 
@@ -99,7 +99,7 @@ package suite from the single profile in `index.md`.
   repository loader. Both use the shared strict schema.
 - Routes consume the guest canonical projection; draft/access/layout/path checks are not
   scattered across pages.
-- The default M5 site inventory is exactly ten HTML routes, one semantic CSS,
+- The default site inventory is exactly ten HTML routes, one semantic CSS,
   one Terminal-home JS, and one canonical-document reader JS, with zero maps or
   unknown files. Only home references the command script; canonical document
   routes reference the reader, with semantic documents activating it only for

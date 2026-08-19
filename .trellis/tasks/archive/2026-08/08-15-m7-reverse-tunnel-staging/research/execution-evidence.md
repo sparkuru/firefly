@@ -10,7 +10,7 @@ temporary test material remains.
 
 ## Pre-exposure validation
 
-- `./sam npm run check:m5` and `./sam npm run test:m5` passed in the execution
+- `./sam npm run check:m4` and `./sam npm run test:m4` passed in the execution
   preflight.
 - `./package-runtime.sh` passed immediately before the successful exposure. It
   rebuilt the complete publication and verified the exact 23-file runtime,

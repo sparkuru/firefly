@@ -165,28 +165,6 @@ Implemented and independently verified configurable nested Markdown workspaces w
 [OK] **Completed**
 
 
-## Session 8: M5 full content migration
-
-**Date**: 2026-08-14
-**Task**: M5 full content migration
-**Branch**: `anti-entropy-loss-syndrome`
-
-### Summary
-
-Implemented and independently checked the owner-local Typecho-to-Markdown migration workflow, private memo/comment/identity handoffs, aggregate-only migration review evidence, publication/runtime privacy guards, and M5 validation matrix. Public materialization remains an explicit owner action; 30 local image references are recorded as approved deferred OSS-upload work.
-
-### Git Commits
-
-| Hash | Message |
-|------|---------|
-| `3e36dad` | (see git log) |
-| `04746a6` | (see git log) |
-
-### Status
-
-[OK] **Completed**
-
-
 ## Session 9: M7 reverse-tunnel staging rehearsal
 
 **Date**: 2026-08-15

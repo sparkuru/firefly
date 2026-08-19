@@ -121,12 +121,12 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
   const forbiddenInAllArtifacts = [
     /hidden draft/iu,
     /this should remain private/iu,
-    /PRIVATE_(?:TITLE|BODY)_M5_7f2a/u,
+    /PRIVATE_(?:TITLE|BODY)_F1REFLY_7f2a/u,
     /private-owner|owner-fixture|hidden-draft/iu,
     /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u,
     /AKIA[0-9A-Z]{16}/u,
     /gh[oprsu]_[A-Za-z0-9]{36,}/u,
-    /memos\.private\.jsonl|comment-handoff\.json|identity-handoff\.json|migration\.sqlite|resource-decisions\.json/iu
+    /F1REFLY_CONTENT_ROOT|\.generated-content|private-handoff|source-ledger/iu
   ];
   const forbiddenInRuntimeArtifacts = [
     /astro-island/iu,
@@ -218,10 +218,10 @@ test('route closures keep public documents in Terminal styles and isolate home J
     lab: await readFile(path.join(distRoot, 'lab/index.html'), 'utf8'),
     notFound: await readFile(path.join(distRoot, '404.html'), 'utf8'),
     about: await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8'),
-    migrated: await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8'),
+    article: await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8'),
     markdown: await readFile(path.join(distRoot, 'pages/markdown/index.html'), 'utf8')
   };
-  const terminalDocumentRoutes = [routes.about, routes.migrated, routes.markdown];
+  const terminalDocumentRoutes = [routes.about, routes.article, routes.markdown];
   const semanticDocumentRoutes = [];
   const staticRoutes = [routes.notFound, routes.lab];
 
@@ -351,7 +351,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
   const terminalArticle = await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8');
-  const migratedArticle = await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8');
+  const article = await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8');
   assert.match(home, /data-terminal-entry-virtual-path="posts\/main\/llm-workflow-with-trellis\.md"/u);
   assert.match(home, /data-terminal-entry-filename="llm-workflow-with-trellis\.md"/u);
   assert.match(home, /data-terminal-entry-href="\/posts\/main\/379\/"/u);
@@ -394,10 +394,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /<p data-reader-search-status hidden><\/p>/u);
   assert.match(terminalArticle, /data-reader-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
-  assert.match(migratedArticle, /<h1>llm-workflow-with-trellis<\/h1>/u);
-  assert.match(migratedArticle, /data-language="mermaid"/u);
-  assert.match(migratedArticle, /class="terminal-document"/u);
-  assert.match(migratedArticle, /class="terminal-root"/u);
+  assert.match(article, /<h1>llm-workflow-with-trellis<\/h1>/u);
+  assert.match(article, /data-language="mermaid"/u);
+  assert.match(article, /class="terminal-document"/u);
+  assert.match(article, /class="terminal-root"/u);
 });
 
 test('ordinary routes contain no Experiment runtime or asset edge', async () => {
@@ -427,7 +427,7 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
     /\binsertAdjacentHTML\b/u,
     /\bcreateContextualFragment\b/u,
     /\beval\s*\(/u,
-    /F1REFLY_CONTENT_ROOT|\.generated-content|memos\.private|comment-handoff|migration\.sqlite/u
+    /F1REFLY_CONTENT_ROOT|\.generated-content|private-handoff|source-ledger/u
   ];
   for (const text of [sourceScript, builtScript]) {
     for (const pattern of prohibited) {

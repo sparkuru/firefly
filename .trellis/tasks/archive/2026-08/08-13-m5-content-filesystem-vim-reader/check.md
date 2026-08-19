@@ -64,13 +64,13 @@ archive still require explicit owner approval.
 
 ## Automated Evidence
 
-- `./sam npm run check:m5`: all seven package/application checks pass; main site
+- `./sam npm run check:m4`: all seven package/application checks pass; main site
   reports 40 files with 0 errors, warnings, or hints; NERV reports 14 files with
   0 diagnostics.
-- `./sam npm run test:m5`: 58 non-browser tests pass across validator, X Core,
+- `./sam npm run test:m4`: 58 non-browser tests pass across validator, X Core,
   semantic, Terminal, assembler, content/access/materializer/schema/negative
   builds, and site integration.
-- `./sam npm run build:m5`: passes and assembles exactly 23 files.
+- `./sam npm run build:m4`: passes and assembles exactly 23 files.
 - Main-site Playwright: 68/68 across static and interactive desktop/mobile
   projects, including nested routes, breadcrumbs, tree/cat/vim, reader modes,
   Range ownership, native/ARIA exclusions, IME, reduced motion, and recovery.

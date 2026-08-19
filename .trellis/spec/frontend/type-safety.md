@@ -357,7 +357,7 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   It returns the final neutral `ProcessResult`; controls and structured values
   are never serialized into pipe input. `runRshellInput` is only a convenience
   parse-and-run wrapper and must not grow a second grammar.
-- During migration, `runtime.ts` may route only the default registry's fully
+- During legacy-handler retirement, `runtime.ts` may route only the default registry's fully
   neutral core stages through `shell/runner.ts`. Custom registries and stages
   whose commands remain legacy must stay on the compatibility path so custom
   handlers and `tree`/`help`/session behavior do not silently change.

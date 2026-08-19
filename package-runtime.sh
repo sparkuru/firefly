@@ -3,9 +3,9 @@
 set -Eeuo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_NAME="${F1REFLY_RUNTIME_IMAGE:-f1refly:m5-runtime}"
+IMAGE_NAME="${F1REFLY_RUNTIME_IMAGE:-f1refly:runtime}"
 PROJECT_LABEL="sam.repo=${REPO_ROOT}"
-SCOPE_LABEL="sam.scope=package-runtime-m5"
+SCOPE_LABEL="sam.scope=package-runtime"
 CONTEXT_ROOT=""
 CONTAINER_ID=""
 
@@ -83,10 +83,10 @@ assert_no_non_authored_private_data() {
 			--glob '!posts/**/index.html' \
 			--glob '!pages/**/index.html' \
 			--glob '!index.html' \
-			'PRIVATE_(TITLE|BODY)_M5_7f2a|private-owner|owner-fixture|hidden-draft|F1REFLY_CONTENT_ROOT|/home/|/tmp/f1refly-|/(srv/(typecho|uploads)|var/www|usr/(local/)?uploads)/|memos\.private\.jsonl|comment-handoff\.json|identity-handoff\.json|migration\.sqlite|resource-decisions\.json' \
+			'PRIVATE_(TITLE|BODY)_F1REFLY_7f2a|private-owner|owner-fixture|hidden-draft|F1REFLY_CONTENT_ROOT|/home/|/tmp/f1refly-|/(srv/uploads|srv/backups|var/www|usr/(local/)?uploads)/' \
 			.
 	); then
-		printf '[package-runtime] publication contains private data or migration metadata outside authored document bodies\n' >&2
+		printf '[package-runtime] publication contains private data or source metadata outside authored document bodies\n' >&2
 		return 1
 	fi
 }
@@ -119,7 +119,7 @@ main() {
 
 	cd "${REPO_ROOT}"
 	trap cleanup EXIT INT TERM
-	./sam npm run build:m5
+	./sam npm run build:m4
 	[[ "$(jq -r '.schemaVersion' artifacts/publication.json)" == 1 ]]
 	mapfile -t manifest_inventory < <(jq -r '.inventory[]' artifacts/publication.json)
 	mapfile -t release_inventory < <(find dist -type f -printf '%P\n' | sort)
@@ -184,7 +184,7 @@ main() {
 
 	[[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "${CONTAINER_ID}")" == true ]]
 	[[ "$(docker inspect --format '{{index .Config.Labels "sam.repo"}}' "${CONTAINER_ID}")" == "${REPO_ROOT}" ]]
-	[[ "$(docker inspect --format '{{index .Config.Labels "sam.scope"}}' "${CONTAINER_ID}")" == package-runtime-m5 ]]
+	[[ "$(docker inspect --format '{{index .Config.Labels "sam.scope"}}' "${CONTAINER_ID}")" == package-runtime ]]
 	mapfile -t runtime_inventory < <(docker exec "${CONTAINER_ID}" find /usr/share/nginx/html -type f | sed 's#^/usr/share/nginx/html/##' | sort)
 	[[ "${#runtime_inventory[@]}" -eq "${#manifest_inventory[@]}" ]] || {
 		printf '[package-runtime] runtime image inventory must match the publication manifest size\n' >&2

@@ -119,7 +119,7 @@ test('lab index is a JavaScript-free semantic catalog with native navigation', a
   await expectNoHorizontalOverflow(page);
 });
 
-test('migrated post deep link uses the f1refly default with a reader fragment', async ({ page }) => {
+test('post deep link uses the f1refly default with a reader fragment', async ({ page }) => {
   await page.goto('/posts/main/379/');
 
   await expect(page).toHaveURL(/\/posts\/main\/379\/$/);
@@ -171,7 +171,7 @@ test('migrated post deep link uses the f1refly default with a reader fragment', 
   await expectNoHorizontalOverflow(page);
 });
 
-test('migrated f1refly article remains complete and exposes one canonical route', async ({ page }) => {
+test('f1refly article remains complete and exposes one canonical route', async ({ page }) => {
   await page.goto('/posts/main/379/');
 
   await expectTerminalDocument(page);
@@ -209,7 +209,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await expect(page.getByRole('heading', { level: 1, name: 'posts/' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'main/' })).toHaveAttribute('href', '/posts/main/');
   await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toHaveCount(0);
-  await expect(page.getByText(/Hidden draft|PRIVATE_TITLE_M5_7f2a|comment-handoff|memos\.private/u)).toHaveCount(0);
+  await expect(page.getByText(/Hidden draft|PRIVATE_TITLE_F1REFLY_7f2a|private-handoff|source-ledger/u)).toHaveCount(0);
   await expect(page.locator('script')).toHaveCount(0);
 
   await page.goto('/posts/main/');
