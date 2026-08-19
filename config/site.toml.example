@@ -1,0 +1,44 @@
+# Public build-time site configuration. Copy this file to config/site.toml;
+# every value is embedded in the static publication.
+
+[site]
+# The visible brand name and the default home-page <title>.
+name = "f1refly"
+# Used when a route does not provide its own description.
+description = "Fly Me 2 The Star."
+# BCP 47 document language, for example en or zh-CN.
+language = "en"
+# Set this to the public canonical origin before publishing, for example:
+# url = "https://notes.example.com"
+# Optional public author attribution used by article metadata.
+# author = "Your name"
+
+[terminal]
+# Safe single-line prompt identity values.
+user = "guest"
+host = "firefly"
+# The initial virtual working directory. It must begin with ~/blog.
+cwd = "~/blog/posts"
+# Public multi-line output for `about`.
+about = """
+A personal space for notes, experiments, and technical things I don't want to figure out twice.
+Mostly about things I've worked on, broken, fixed, or found interesting.
+Source: https://github.com/sparkuru/f1refly.git
+"""
+# Curated public links shown by the `friends` command and Terminal recovery.
+friends = []
+# Example:
+# [[terminal.friends]]
+# name = "Example"
+# desc = "A short public description."
+# url = "https://example.com"
+
+[seo]
+# Appended to visible document titles unless front matter supplies htmlTitle.
+titleSuffix = " | f1refly"
+# The default HTML robots policy. A document with noindex uses noindex, follow.
+robots = "index, follow"
+# Supported values are summary and summary_large_image.
+twitterCard = "summary_large_image"
+# Optional absolute URL or root-relative public path for social cards.
+# image = "/social-card.png"

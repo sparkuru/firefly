@@ -1,0 +1,14 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Load the frontend package topology, Docker/./sam validation boundary, and browser evidence profile."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Preserve Astro ownership, TerminalHome recovery markup, native links, presentation isolation, and no client framework boundaries."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Preserve Terminal controller ownership, native navigation, keyboard/focus behavior, and progressive enhancement while adding the command effect."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Apply strict TypeScript, immutable runtime data, DOM boundary decoding, and fail-closed validation rules."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Apply static-output, responsive 375/1440 viewport, accessibility, no-JavaScript, browser, and diff validation requirements."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Use the approved ./sam build/test/Playwright lifecycle and preserve the Docker-only static runtime boundary."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Ensure friend links remain outside canonical Markdown content, route reservation, document projection, and the public VFS."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Verify only intended public build-time link data reaches static output and no private/source workspace content leaks."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Extend the existing strict public config contract without weakening unknown-key, no-secret, or build-time immutability rules."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Search for and reuse existing Terminal link/list/focus styles and decoding patterns before adding new selectors or helpers."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Trace config-to-Astro-to-browser-to-terminal-runtime data flow and keep each layer's ownership explicit."}
+{"file":".trellis/tasks/08-19-friend-links/prd.md","reason":"Implement the confirmed static config, Terminal command, recovery fallback, URL policy, and out-of-scope boundary."}
+{"file":".trellis/tasks/08-19-friend-links/design.md","reason":"Follow the approved data contract, structured links effect, neutral-shell parity, DOM safety, and evidence plan."}
+{"file":".trellis/tasks/08-19-friend-links/research/ui-ux-pro-max.md","reason":"Apply the task-specific decision to reuse the existing phosphor Terminal visual system and native-link accessibility constraints."}

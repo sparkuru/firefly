@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-Use this contract whenever changing `config/site.yaml`, the site identity,
+Use this contract whenever changing `config/site.toml`, the site identity,
 Terminal prompt/about output, document head metadata, Markdown SEO front matter,
 or build-generated `robots.txt`/`sitemap.xml`. The configuration is a public,
 repository-tracked build input; it is not a secret store or runtime service.
@@ -30,42 +30,68 @@ consumer for both `DocumentLayout.astro` and `TerminalLayout.astro`.
 
 #### Configuration shape
 
-`config/site.yaml` must contain exactly these nested objects and fields:
+`config/site.toml` must contain these nested objects and fields:
 
-```yaml
-site:
-  name: string
-  description: string
-  language: string       # BCP 47-style tag
-  url: string | null     # absolute http(s) origin only
-  author: string | null
-terminal:
-  user: string           # one prompt token
-  host: string            # one prompt token
-  cwd: string             # ~/blog or ~/blog/<safe-segment>/...
-  about: string           # non-empty public text, may be multiline
-seo:
-  titleSuffix: string
-  robots: index|noindex + follow|nofollow
-  twitterCard: summary | summary_large_image
-  image: string | null    # absolute http(s) URL or safe root-relative path
+```toml
+[site]
+name = "string"
+description = "string"
+language = "en"
+# url = "https://example.com"
+# author = "Public author"
+
+[terminal]
+user = "guest"
+host = "firefly"
+cwd = "~/blog"
+about = "Public text"
+
+[[terminal.friends]]
+name = "Example"
+desc = "A short public description."
+url = "https://example.com"
+
+[seo]
+titleSuffix = " | firefly"
+robots = "index, follow"
+twitterCard = "summary"
+# image = "/social-card.png"
 ```
 
-- `config/site.yaml.example` is the complete commented template. The tracked
-  `config/site.yaml` is the active public input and is loaded at build time.
-- YAML duplicate keys, malformed YAML, unknown keys, missing required fields,
+- `config/site.toml.example` is the complete commented template. The tracked
+  `config/site.toml` is the active public input and is loaded at build time.
+- TOML duplicate keys, malformed TOML, unknown keys, missing required fields,
   control characters, unsafe prompt/path tokens, and unsafe URLs fail with an
   error naming the config source and field.
+- `terminal.friends` is an optional strict array. Each record contains `name`,
+  `url`, and optional `desc`; descriptions are trimmed, non-empty, safe
+  single-line public text. URLs preserve list order, must be absolute `http(s)`
+  URLs without credentials, fragments, whitespace, or controls, and must be
+  unique.
+  The omitted and empty forms both normalize to a deeply frozen empty list.
+- TOML optional values use omission rather than a null literal: omitted
+  `site.url`, `site.author`, or `seo.image` normalize to `null`.
 - Parsed values are normalized where specified and deeply frozen before they
-  cross the site/Terminal boundary. `site.url: null` is supported: automatic
-  canonical URLs, `og:url`, and `sitemap.xml` are omitted, while `robots.txt`
-  is still emitted.
+  cross the site/Terminal boundary. Omitted `site.url` normalizes to `null`:
+  automatic canonical URLs, `og:url`, and `sitemap.xml` are omitted, while
+  `robots.txt` is still emitted.
 - The loader resolves the config from the current repository/build context and
   known source-root fallback paths. Do not replace it with a package-relative
   path that breaks negative Astro builds using an alternate same-filesystem
   `--outDir`.
 - This file may contain public identity and attribution only. Do not add
   credentials, private author data, host filesystem paths, or runtime secrets.
+
+### Design Decision: TOML as the single site-config source
+
+The clone-time site configuration uses `config/site.toml` and
+`config/site.toml.example`. TOML was chosen for hand-editing because it keeps
+comments and explicit scalar types without YAML's indentation/implicit-type
+surprises; JSON remains intentionally unsupported as a second source of truth.
+TOML has no null literal, so omitted optional keys (`site.url`, `site.author`,
+and `seo.image`) are normalized to `null` by the strict schema. Do not add a
+fallback YAML/JSON loader: two editable formats would make build behavior and
+documentation drift.
 
 #### Terminal identity boundary
 
@@ -75,6 +101,16 @@ the same identity into the prompt, `about`, `whoami`, `pwd`, and inert recovery
 markup. `terminal.about` is URL-encoded when placed in a `data-*` attribute;
 `terminal-home.ts` decodes it and then calls strict `decodeTerminalIdentity()`.
 The browser never fetches configuration or Markdown.
+
+`terminal.friends` remains separate from `TerminalIdentity`. `TerminalHome.astro`
+renders the validated records as native recovery links and a strict
+`data-terminal-friend-*` payload; `terminal-home.ts` decodes the payload before
+passing immutable records to `executeCommand({ friendLinks })`. The `friends`
+command is the only interactive consumer and does not add records to the
+content index or virtual filesystem. Direct command/recovery rows use aligned
+name, optional description, and URL columns on wide screens and stack in the
+same order on narrow screens; omitted descriptions reserve an empty cell so
+URLs remain aligned.
 
 `createTerminalState(identity)` initializes the configured virtual cwd, and all
 execution calls receive the same identity. `DEFAULT_TERMINAL_IDENTITY` remains
@@ -119,10 +155,12 @@ not be added manually.
 
 | Condition | Required result |
 | --- | --- |
-| missing/malformed YAML, duplicate key, unknown key, missing field | fail with source and field context before rendering |
+| missing/malformed TOML, duplicate key, unknown key, missing field | fail with source and field context before rendering |
 | control character, empty text, unsafe prompt token, traversal cwd, or non-NFC path | fail config/content validation |
 | non-http(s), origin with path/query/fragment/credentials, or unsafe image | fail validation; never emit it into HTML |
-| `site.url: null` | emit robots only; omit automatic canonical, `og:url`, and sitemap |
+| friend link with non-http(s), credentials, fragment, controls, unknown fields, invalid desc, or duplicate URL | fail `terminal.friends` validation with record/field context |
+| omitted or empty `terminal.friends` | normalize to `[]`; render the bounded `No friend links.` recovery/command state |
+| omitted `site.url` (normalized as `null`) | emit robots only; omit automatic canonical, `og:url`, and sitemap |
 | explicit safe `htmlTitle`/`canonical`/`seoImage` | use the validated override for that document only |
 | `noindex: true` | emit `noindex, follow` for the document |
 | malformed `data-terminal-identity-about` or identity shape | browser enhancement fails closed; native recovery remains usable |
@@ -132,33 +170,35 @@ not be added manually.
 
 ### 5. Good / Base / Bad Cases
 
-- **Good:** copy `config/site.yaml.example` to `config/site.yaml`, set a public
-  origin only when known, customize terminal identity, and add a validated
-  `htmlTitle`/`seoImage` to one article. A static build emits matching escaped
-  head metadata and final discovery files.
-- **Base:** keep `site.url: null`; the clone still builds with relative links,
+- **Good:** copy `config/site.toml.example` to `config/site.toml`, set a public
+  origin only when known, customize terminal identity, add validated friend
+  links, and add a validated `htmlTitle`/`seoImage` to one article. A static
+  build emits matching escaped head metadata and final discovery files.
+- **Base:** omit `site.url`; the clone still builds with relative links,
   robots, configured prompt/about output, and no misleading canonical origin.
-- **Bad:** read config in browser code, put a secret in the YAML, interpolate
+- **Bad:** read config in browser code, put a secret in the TOML, interpolate
   raw about text into an HTML attribute, concatenate arbitrary canonical URLs,
-  include `/lab/nerv/` or `/404` in the sitemap, or derive sitemap entries by
-  walking source Markdown instead of final Astro pages.
+  interpolate friend-link records into HTML strings, include `/lab/nerv/` or
+  `/404` in the sitemap, or derive sitemap entries by walking source Markdown
+  instead of final Astro pages.
 
 ### 6. Tests Required
 
-- `apps/site/tests/site-config.test.mjs`: valid/frozen defaults; strict unknown,
-  duplicate, control, URL, image, cwd, and identity rejection; metadata
-  fallback/override behavior; robots and sitemap normalization/filtering.
+- `apps/site/tests/site-config.test.mjs`: valid/frozen defaults; strict TOML
+  loading and malformed input; strict unknown,
+  duplicate, friend-link, control, URL, image, cwd, and identity rejection;
+  metadata fallback/override behavior; robots and sitemap normalization/filtering.
 - `apps/site/tests/content-schema.test.mjs`: valid and invalid optional SEO
   front matter, unknown-key rejection, safe canonical/image validation, and
   `noindex` default.
 - `./sam npm --prefix apps/site run check`: Astro props and both layouts consume
   the shared head without diagnostics.
 - `./sam npm --prefix apps/site run build`: default output contains robots and
-  omits sitemap when the default origin is null; metadata and terminal prompt
-  match the active YAML.
+  omits sitemap when the default origin is omitted; metadata and terminal prompt
+  match the active TOML.
 - Custom-config smoke: temporarily use a safe non-default origin/identity,
   build, assert `lang`, title, prompt, canonical, OG/Twitter image, robots
-  Sitemap, and non-empty final sitemap, then restore the default YAML and rerun
+  Sitemap, and non-empty final sitemap, then restore the default TOML and rerun
   the default build.
 - Negative content builds use ignored same-filesystem output directories and
   clean them in `finally`; config-path resolution must work in those builds.
@@ -174,6 +214,7 @@ not be added manually.
 // Treat source filenames as final URLs and inject raw config into HTML.
 const sitemap = sourceMarkdownFiles.map((file) => `<loc>${file}</loc>`);
 root.dataset.about = config.terminal.about;
+record.innerHTML = `<a href="${config.terminal.friends[0].url}">${config.terminal.friends[0].name}</a>`;
 ```
 
 #### Correct
@@ -186,12 +227,14 @@ const sitemap = createSitemapXml(paths, config.site.url);
 // Transport multiline public text safely; decode and validate at the browser boundary.
 root.dataset.terminalIdentityAbout = encodeURIComponent(identity.about);
 const identity = decodeTerminalIdentity({ user, host, workingDirectory, about });
+const links = decodeTerminalFriendLinks(friendRecords);
+renderFriendLinksWithNativeAnchors(links);
 ```
 
 ## Reference Files
 
-- `config/site.yaml`
-- `config/site.yaml.example`
+- `config/site.toml`
+- `config/site.toml.example`
 - `apps/site/src/lib/site-config.mjs`
 - `apps/site/src/lib/site-meta.mjs`
 - `apps/site/src/lib/site-seo.mjs`

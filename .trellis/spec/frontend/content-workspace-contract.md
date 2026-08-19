@@ -122,6 +122,7 @@ executeCommand(options: {
   experiments?: readonly TerminalExperiment[];
   documents?: readonly TerminalTextDocument[];
   identity?: TerminalIdentity;
+  friendLinks?: readonly TerminalFriendLink[];
   now?: () => Date;
   registry?: TerminalCommandRegistry;
 }): CommandResult
@@ -290,9 +291,15 @@ startTerminalReader(root: HTMLElement): void
   `grep` results. `help` carries command metadata for semantic group rendering;
   `grep` carries the original matched line, canonical source path, optional
   one-based line number, bounded match ranges, `noResults`, and `truncated`.
-  Plain stdout is derived from those effects only for pipes/substitution; the
-  browser renderer creates text nodes and bounded `<mark>` ranges, never HTML
-  from command output.
+  `links` carries validated `{ name, desc?, url }` friend records for direct
+  browser rendering; its deterministic `name — url` or `name — desc — url`
+  projection is used for pipes and scratch redirects. Plain stdout is derived from those effects only for
+  pipes/substitution; the browser renderer creates text nodes and bounded
+  `<mark>` ranges, never HTML from command output.
+- `friends` is a zero-operand Explore command backed only by injected
+  `friendLinks`. It never probes, fetches, or adds external URLs to the VFS;
+  empty input produces `No friend links.`. Direct output is structured, while
+  pipeline/redirect output is plain bounded text.
 - `completeCommand(..., cwd?, aliases?)` receives the current immutable session
   aliases for command-name and operand completion. The DOM controller prevents
   the default action for every Tab while the prompt is focused, then lets only

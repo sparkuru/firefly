@@ -4,6 +4,7 @@ import {
   completeCommand,
   createTerminalState,
   decodeTerminalIdentity,
+  decodeTerminalFriendLinks,
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
@@ -13,6 +14,7 @@ import {
   type TerminalEffect,
   type TerminalEntry,
   type TerminalExperiment,
+  type TerminalFriendLink,
   type TerminalGrepMatch,
   type TerminalIdentity,
   type TerminalState,
@@ -227,6 +229,15 @@ function readIdentity(root: HTMLElement): TerminalIdentity {
     workingDirectory: root.dataset.terminalIdentityCwd,
     about
   });
+}
+
+function readFriendLinks(root: HTMLElement): readonly TerminalFriendLink[] {
+  const raw = [...root.querySelectorAll<HTMLElement>('[data-terminal-friend]')].map((element) => ({
+    name: element.dataset.terminalFriendName,
+    ...(element.dataset.terminalFriendDesc === undefined ? {} : { desc: element.dataset.terminalFriendDesc }),
+    url: element.dataset.terminalFriendUrl
+  }));
+  return decodeTerminalFriendLinks(raw);
 }
 
 function readTemplateTextLines(node: HTMLElement): readonly string[] {
@@ -487,6 +498,31 @@ function renderHelpEffect(effect: Extract<TerminalEffect, { kind: 'help' }>, rec
   record.append(help);
 }
 
+function renderLinksEffect(effect: Extract<TerminalEffect, { kind: 'links' }>, record: HTMLElement): void {
+  if (effect.links.length === 0) {
+    appendTextLine(record, 'No friend links.');
+    return;
+  }
+  const list = document.createElement('ul');
+  list.className = 'terminal-entry-list';
+  for (const friend of effect.links) {
+    const item = document.createElement('li');
+    item.className = 'terminal-entry-row terminal-entry-row--friend';
+    const link = document.createElement('a');
+    link.href = friend.url;
+    link.textContent = friend.name;
+    const description = document.createElement('span');
+    description.className = 'terminal-entry-title';
+    description.textContent = friend.desc ?? '';
+    const url = document.createElement('span');
+    url.className = 'terminal-link-url';
+    url.textContent = friend.url;
+    item.append(link, description, url);
+    list.append(item);
+  }
+  record.append(list);
+}
+
 function renderGrepEffect(effect: Extract<TerminalEffect, { kind: 'grep' }>, record: HTMLElement): void {
   const grep = document.createElement('div');
   grep.className = 'terminal-grep';
@@ -551,6 +587,9 @@ function renderEffect(
       return { focusTarget: null };
     case 'help':
       renderHelpEffect(effect, record);
+      return { focusTarget: null };
+    case 'links':
+      renderLinksEffect(effect, record);
       return { focusTarget: null };
     case 'grep':
       renderGrepEffect(effect, record);
@@ -745,6 +784,7 @@ export function startTerminalHome(
   let nodes: TerminalNodes;
   let entries: readonly TerminalEntry[];
   let experiments: readonly TerminalExperiment[];
+  let friendLinks: readonly TerminalFriendLink[];
   let templates: TerminalTemplates;
   let identity: TerminalIdentity;
   try {
@@ -752,6 +792,7 @@ export function startTerminalHome(
     identity = readIdentity(root);
     entries = readEntries(root);
     experiments = readExperiments(root);
+    friendLinks = readFriendLinks(root);
     templates = readTemplates(root, entries);
   } catch {
     setStartupState(root, 'failed');
@@ -782,7 +823,7 @@ export function startTerminalHome(
     try {
       const command = nodes.input.value;
       const submittedPrompt = formatTerminalPrompt(identity, state);
-      const result = execute({ state, input: command, entries, experiments, documents: templates.documents, identity });
+      const result = execute({ state, input: command, entries, experiments, friendLinks, documents: templates.documents, identity });
       state = result.state;
       updatePrompt();
       nodes.completion.textContent = '';

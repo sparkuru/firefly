@@ -48,6 +48,12 @@ export interface ShellIdentity {
   readonly about: string;
 }
 
+export interface ShellLink {
+  readonly name: string;
+  readonly desc?: string;
+  readonly url: string;
+}
+
 export type ShellControlEvent =
   | { readonly kind: 'clear-transcript' }
   | { readonly kind: 'open-document'; readonly path: string }
@@ -84,6 +90,7 @@ export type CommandValue =
   | { readonly kind: 'document'; readonly document: import('../vfs/contracts.js').PublicDocument }
   | { readonly kind: 'grep-report'; readonly report: GrepReport }
   | { readonly kind: 'help'; readonly groups: readonly HelpGroup[] }
+  | { readonly kind: 'links'; readonly links: readonly ShellLink[] }
   | {
       readonly kind: 'tree';
       readonly root: string;
@@ -114,4 +121,5 @@ export interface ProcessContext {
   readonly signal: ShellSignal;
   readonly commands?: readonly ShellCommandMetadata[];
   readonly identity?: ShellIdentity;
+  readonly friendLinks?: readonly ShellLink[];
 }

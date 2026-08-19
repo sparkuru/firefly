@@ -49,6 +49,10 @@ function runnerOptions(overrides: Partial<Parameters<typeof runRshellInput>[1]> 
       workingDirectory: '~/blog/posts',
       about: 'A small public foundation.'
     },
+    friendLinks: [
+      { name: 'Example', desc: 'A useful example site.', url: 'https://example.test/blog' },
+      { name: 'Docs', url: 'http://docs.example.test/?from=site' }
+    ],
     ...overrides
   };
 }
@@ -168,6 +172,24 @@ test('neutral runner wires stdout only and keeps final values and controls separ
   const standalone = runRshellInput('cd characters | cat', runnerOptions());
   assert.equal(standalone.status, 1);
   assert.deepEqual(standalone.stderr.lines, ['"cd" is a standalone command and cannot be piped.']);
+});
+
+test('neutral friends preserves descriptions for direct and text projections', () => {
+  const direct = runRshellInput('friends', runnerOptions());
+  assert.deepEqual(direct.stdout.lines, [
+    'Example — A useful example site. — https://example.test/blog',
+    'Docs — http://docs.example.test/?from=site'
+  ]);
+  assert.deepEqual(direct.value, {
+    kind: 'links',
+    links: [
+      { name: 'Example', desc: 'A useful example site.', url: 'https://example.test/blog' },
+      { name: 'Docs', url: 'http://docs.example.test/?from=site' }
+    ]
+  });
+  const piped = runRshellInput('friends | grep useful', runnerOptions());
+  assert.deepEqual(piped.stdout.lines, ['Example — A useful example site. — https://example.test/blog']);
+  assert.equal(piped.value?.kind, 'grep-report');
 });
 
 test('neutral runner applies state patches and bounded scratch redirects', () => {

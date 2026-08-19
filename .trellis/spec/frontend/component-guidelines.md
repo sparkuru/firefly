@@ -135,6 +135,13 @@ routes.
   headings remain visible.
 - Keep headings sequential and use native lists, paragraphs, links, `<time>`,
   and `<article>` where their semantics apply.
+- The Terminal home recovery catalog renders configured friend records as a
+  labelled native-link list. Preserve same-tab anchors, visible focus, and a
+  bounded `No friend links.` empty state; the interactive controller may hide
+  this catalog only after complete startup validation. Friend rows use the
+  `ls`-style aligned name/description/URL columns on wide screens and stack in
+  that same order on narrow screens; keep an empty description cell when the
+  optional field is absent.
 - Native navigation is keyboard reachable whenever exposed in recovery,
   document, or command-output states. The enhanced home may hide recovery only
   after complete startup validation; the marker's internal connecting state

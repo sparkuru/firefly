@@ -1,6 +1,7 @@
 import { CAT_SUMMARY, CAT_USAGE, executeCat } from './cat.js';
 import { CD_SUMMARY, CD_USAGE, executeCd } from './cd.js';
 import { GREP_SUMMARY, GREP_USAGE, executeGrep } from './grep.js';
+import { FRIENDS_SUMMARY, FRIENDS_USAGE, executeFriends } from './links.js';
 import { LS_SUMMARY, LS_USAGE, executeLs } from './ls.js';
 import { TREE_SUMMARY, TREE_USAGE, executeTree } from './tree.js';
 import {
@@ -105,6 +106,10 @@ const sessionCommandSpecs: readonly CommandSpec[] = Object.freeze([
   {
     name: 'tree', aliases: Object.freeze([]), usage: TREE_USAGE, summary: TREE_SUMMARY,
     group: 'Explore', order: 20, policy: structuredTextPolicy, parse: optionalPath(TREE_USAGE), execute: executeTree
+  },
+  {
+    name: 'friends', aliases: Object.freeze([]), usage: FRIENDS_USAGE, summary: FRIENDS_SUMMARY,
+    group: 'Explore', order: 40, policy: textPolicy, parse: noArguments(FRIENDS_USAGE), execute: executeFriends
   },
   {
     name: 'pwd', aliases: Object.freeze([]), usage: PWD_USAGE, summary: PWD_SUMMARY,

@@ -330,7 +330,8 @@
   padding-left: 1.4rem;
 }
 
-.terminal-record .terminal-entry-list {
+.terminal-record .terminal-entry-list,
+.terminal-group .terminal-entry-list {
   display: grid;
   gap: 0.45rem;
   margin: 0.75rem 0 0;
@@ -370,6 +371,16 @@
 
 .terminal-entry-row--experiment .terminal-entry-title {
   grid-column: 3;
+}
+
+.terminal-entry-row--friend {
+  grid-template-columns: minmax(14ch, 22ch) minmax(0, 1.2fr) minmax(18ch, 1fr);
+}
+
+.terminal-link-url {
+  min-width: 0;
+  color: var(--terminal-color-muted);
+  overflow-wrap: anywhere;
 }
 
 .terminal-help {
@@ -965,6 +976,15 @@
 
   .terminal-entry-row--experiment .terminal-entry-title {
     grid-column: 1 / -1;
+  }
+
+  .terminal-entry-row--friend {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+
+  .terminal-entry-row--friend > * {
+    grid-column: 1;
   }
 
   .terminal-help-command {

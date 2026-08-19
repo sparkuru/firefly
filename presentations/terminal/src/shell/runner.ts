@@ -6,6 +6,7 @@ import type {
   ReadonlyShellSession,
   ShellCommandMetadata,
   ShellIdentity,
+  ShellLink,
   ShellSignal,
   ShellStatePatch,
   TextStream
@@ -30,6 +31,7 @@ export interface ShellRunnerOptions {
   readonly signal: ShellSignal;
   readonly registry: CommandSpecRegistry;
   readonly identity?: ShellIdentity;
+  readonly friendLinks?: readonly ShellLink[];
   readonly pure?: boolean;
   readonly depth?: number;
 }
@@ -228,7 +230,8 @@ function executeStage(
     clock: options.clock,
     signal: options.signal,
     commands: commandMetadata(options.registry, state.session),
-    ...(options.identity === undefined ? {} : { identity: options.identity })
+    ...(options.identity === undefined ? {} : { identity: options.identity }),
+    ...(options.friendLinks === undefined ? {} : { friendLinks: options.friendLinks })
   });
   let result: ProcessResult;
   try {

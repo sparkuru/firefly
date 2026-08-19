@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 
 const promptName = /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u;
 
@@ -199,6 +200,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.getByText('filter stdin or public text')).toBeVisible();
   await expect(transcript.getByText('change the virtual directory')).toBeVisible();
   await expect(transcript.getByText('open a listed experiment')).toBeVisible();
+  await expect(transcript.getByText('list curated friend links')).toBeVisible();
   await expect(transcript.getByText('clear the screen')).toBeVisible();
   await expect(transcript).toContainText('alias l, ll');
   const grepUsage = transcript.locator('.terminal-help-command code').filter({ hasText: 'grep [-inF] <pattern> [path ...]' });
@@ -211,6 +213,16 @@ test('commands render continuous typed results, lab discovery, and latest announ
     expect(usageGeometry.height).toBeLessThanOrEqual(usageGeometry.lineHeight * 1.25);
   }
   await expect(input).toBeFocused();
+
+  await submit(page, 'friends');
+  const friendRecord = transcript.locator('.terminal-record').last();
+  if (SITE_CONFIG.terminal.friends.length === 0) {
+    await expect(friendRecord).toContainText('No friend links.');
+    await expect(announcer).toHaveText('No friend links.');
+  } else {
+    await expect(friendRecord.locator('.terminal-entry-row--friend')).toHaveCount(SITE_CONFIG.terminal.friends.length);
+    await expect(announcer).toHaveText(`${SITE_CONFIG.terminal.friends.length} friend links listed.`);
+  }
 
   await submit(page, 'alias l');
   await expect(transcript.locator('.terminal-record').last()).toContainText('l=ls');
@@ -343,6 +355,96 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript).toContainText('No listed experiment named "lab/unlisted"');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
   await expect(rootInput).toBeFocused();
+});
+
+test('friends renders validated configuration records as native anchors', async ({ page }) => {
+  let releaseScript = () => {};
+  let markScriptStarted = () => {};
+  const scriptStarted = new Promise<void>((resolve) => {
+    markScriptStarted = resolve;
+  });
+  const release = new Promise<void>((resolve) => {
+    releaseScript = resolve;
+  });
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    markScriptStarted();
+    await release;
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+  await scriptStarted;
+
+  const friendWithDescription = {
+    name: 'Example <docs>',
+    desc: 'A useful <description>',
+    url: 'https://example.test/?from=terminal'
+  };
+  const friendWithoutDescription = {
+    name: 'Plain example',
+    url: 'https://plain.example.test/'
+  };
+  const friendLinks: Array<{ name: string; desc?: string; url: string }> = [friendWithDescription, friendWithoutDescription];
+  await page.locator('[data-terminal-fallback] nav').evaluate((nav, friends) => {
+    const group = nav.querySelector<HTMLElement>('[aria-labelledby="terminal-friends-heading"]');
+    if (group === null) throw new Error('friend recovery group is missing');
+    for (const existing of group.querySelectorAll('[data-terminal-friend]')) existing.remove();
+    const list = document.createElement('ul');
+    list.className = 'terminal-entry-list';
+    for (const friend of friends) {
+      const item = document.createElement('li');
+      item.className = 'terminal-entry-row terminal-entry-row--friend';
+      item.dataset.terminalFriend = '';
+      item.dataset.terminalFriendName = friend.name;
+      if (friend.desc !== undefined) item.dataset.terminalFriendDesc = friend.desc;
+      item.dataset.terminalFriendUrl = friend.url;
+      const link = document.createElement('a');
+      link.href = friend.url;
+      link.textContent = friend.name;
+      const desc = document.createElement('span');
+      desc.className = 'terminal-entry-title';
+      desc.textContent = friend.desc ?? '';
+      const url = document.createElement('span');
+      url.className = 'terminal-link-url';
+      url.textContent = friend.url;
+      item.append(link, desc, url);
+      list.append(item);
+    }
+    group.append(list);
+  }, friendLinks);
+  const recoveryRows = page.locator('[data-terminal-fallback] [data-terminal-friend]');
+  await expect(recoveryRows).toHaveCount(friendLinks.length);
+  await expect(recoveryRows.nth(0).locator('a')).toHaveText(friendWithDescription.name);
+  await expect(recoveryRows.nth(0).locator('a')).toHaveAttribute('href', friendWithDescription.url);
+  await expect(recoveryRows.nth(0).locator('.terminal-entry-title')).toHaveText(friendWithDescription.desc);
+  await expect(recoveryRows.nth(0).locator('.terminal-link-url')).toHaveText(friendWithDescription.url);
+  await expect(recoveryRows.nth(1).locator('a')).toHaveText(friendWithoutDescription.name);
+  await expect(recoveryRows.nth(1).locator('a')).toHaveAttribute('href', friendWithoutDescription.url);
+  expect(await recoveryRows.nth(1).locator('.terminal-entry-title').textContent()).toBe('');
+  await expect(recoveryRows.nth(1).locator('.terminal-link-url')).toHaveText(friendWithoutDescription.url);
+  releaseScript();
+
+  await expect(page.getByRole('textbox', { name: promptName })).toBeVisible();
+  const transcript = page.locator('[data-terminal-transcript]');
+  await submit(page, 'friends');
+  const record = transcript.locator('.terminal-record').last();
+  const friendRows = record.locator('.terminal-entry-row--friend');
+  await expect(friendRows).toHaveCount(friendLinks.length);
+  const friendGrid = await friendRows.evaluateAll((rows) => rows.map((row) => ({
+    display: getComputedStyle(row).display,
+    columns: getComputedStyle(row).gridTemplateColumns
+  })));
+  expect(new Set(friendGrid.map(({ display }) => display))).toEqual(new Set(['grid']));
+  expect(new Set(friendGrid.map(({ columns }) => columns)).size).toBe(1);
+  expect(friendGrid[0].columns.split(/\s+/u)).toHaveLength(await page.evaluate(() => window.innerWidth <= 640 ? 1 : 3));
+  await expect(friendRows.nth(0).locator('a')).toHaveText(friendWithDescription.name);
+  await expect(friendRows.nth(0).locator('a')).toHaveAttribute('href', friendWithDescription.url);
+  await expect(friendRows.nth(0).locator('.terminal-entry-title')).toHaveText(friendWithDescription.desc);
+  await expect(friendRows.nth(0).locator('.terminal-link-url')).toHaveText(friendWithDescription.url);
+  await expect(friendRows.nth(1).locator('a')).toHaveText(friendWithoutDescription.name);
+  await expect(friendRows.nth(1).locator('a')).toHaveAttribute('href', friendWithoutDescription.url);
+  expect(await friendRows.nth(1).locator('.terminal-entry-title').textContent()).toBe('');
+  await expect(friendRows.nth(1).locator('.terminal-link-url')).toHaveText(friendWithoutDescription.url);
+  await expectNoHorizontalOverflow(page);
 });
 
 test('ls and tree entries expose document links and safe directory cd links', async ({ page }) => {

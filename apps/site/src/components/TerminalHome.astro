@@ -21,12 +21,19 @@ interface Props {
   experiments: readonly TerminalExperiment[];
 }
 
+interface FriendLink {
+  readonly name: string;
+  readonly desc?: string;
+  readonly url: string;
+}
+
 const { documents, experiments } = Astro.props;
 const identity = terminalIdentityFromConfig();
 const prompt = formatTerminalPrompt(identity, { cwd: identity.workingDirectory });
 const encodedAbout = encodeURIComponent(identity.about);
 const posts = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'post');
 const pages = documents.filter(({ terminalEntry }) => terminalEntry.kind === 'page');
+const friendLinks = SITE_CONFIG.terminal.friends as readonly FriendLink[];
 const TERMINAL_HOME_STARTUP_LOG_LINES = [
   '[  OK  ] loading public document index',
   '[  OK  ] checking native recovery links',
@@ -199,6 +206,31 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
                 >
                   <a href={experiment.href}>{experiment.id}/</a>
                   <span> — {experiment.title}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+
+      <section class="terminal-group" aria-labelledby="terminal-friends-heading">
+        <h3 id="terminal-friends-heading">friend links</h3>
+        {
+          friendLinks.length === 0 ? (
+            <p class="terminal-meta">No friend links.</p>
+          ) : (
+            <ul class="terminal-entry-list">
+              {friendLinks.map((friend) => (
+                <li
+                  class="terminal-entry-row terminal-entry-row--friend"
+                  data-terminal-friend
+                  data-terminal-friend-name={friend.name}
+                  data-terminal-friend-desc={friend.desc}
+                  data-terminal-friend-url={friend.url}
+                >
+                  <a href={friend.url}>{friend.name}</a>
+                  <span class="terminal-entry-title">{friend.desc ?? ''}</span>
+                  <span class="terminal-link-url">{friend.url}</span>
                 </li>
               ))}
             </ul>

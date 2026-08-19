@@ -17,3 +17,4 @@ presentations/terminal/dist/
 .DS_Store
 *.log
 tooling/sync-server/
+content/
