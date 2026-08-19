@@ -67,7 +67,9 @@ package suite from the single profile in `index.md`.
   absence, and no document overflow at both viewports.
 - Interactive projects enable JavaScript for Terminal home and Terminal-document
   reader coverage:
-  prompt-only startup, commands/errors, manifest-backed lab listing/navigation, history/draft
+  home-only connecting startup state, persistent first boot-log transcript record,
+  DOM-ready missing-controller fallback, prompt availability after startup, commands/errors,
+  manifest-backed lab listing/navigation, history/draft
   restoration, safe unique/ambiguous/zero-result path completion with retained focus and
   prompt-wide Tab prevention plus native outside-prompt traversal, prompt `Ctrl+C` cancellation,
   IME-safe and mobile soft-keyboard Enter, inline `cat` with unchanged URL,
@@ -75,9 +77,10 @@ package suite from the single profile in `index.md`.
   tree/cat/vim, Vim movement/search/
   visual Range/`:q`, safe printable typing with native/ARIA
   widget and local-scroll exclusions, repeated-clone
-  ID/reference scoping, clear-to-fresh-prompt behavior, validated native links,
-  latest-only announcements, early/late recovery, reduced motion, and responsive
-  checks at `375`, `768`, `1024`, and `1440` widths.
+  ID/reference scoping, clear-to-fresh-prompt behavior with a centered empty
+  session and no overflow, validated native links, latest-only announcements,
+  early/late recovery, reduced motion, and responsive checks at `375`, `768`,
+  `1024`, and `1440` widths.
 - NERV coverage includes title, main/heading semantics, mounted favicon/logo,
   three-click cookie/return, independent 404, reduced CSS/scroll motion, and no
   overflow at both viewports.
@@ -174,7 +177,9 @@ Always run `git diff --check` and avoid reformatting reference-only legacy code.
   graph checks, immutable registry/alias validation, closed command/effect tests,
   shared tree/path resolution, exact entry/template bijection,
   trusted cloning without HTML-string APIs, repeated-clone ID/fragment/ARIA
-  scoping, clear preservation of history/recovery data, prompt-only startup,
+  scoping, clear preservation of history/recovery data, home marker ordering,
+  no-JavaScript boot-log suppression, persistent boot-log history without a
+  second animation after DOM relocation, prompt availability,
   prompt-wide Tab ownership with outside-prompt native traversal and prefix preservation, prompt Ctrl+C cancellation, safe
   global typing exclusions, record/document settlement with reduced motion,
   semantic root-theme purity, pinned font/license

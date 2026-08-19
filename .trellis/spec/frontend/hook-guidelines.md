@@ -29,6 +29,13 @@ Keep this task-defined filename stable, but do not interpret it as evidence that
 
 ## Terminal Home Progressive Enhancement
 
+The home component places a synchronous inline marker before recovery markup.
+When JavaScript runs, the marker sets the home root's
+`data-terminal-startup-state` to `connecting` and registers a DOM-ready guard;
+if the bundled controller has not completed by then, the guard sets `failed` so
+recovery cannot remain suppressed. When JavaScript is disabled, the marker does
+not run and no startup state is added.
+
 Content loading, filtering, Experiment catalog projection, X Core analysis/
 presentation selection, Markdown rendering, index assembly, and route generation
 happen at build time. The home
@@ -58,9 +65,19 @@ ID references, appends it inline, and leaves `/` unchanged. Canonical
 destinations remain native recovery/permalink/output links; the controller does
 not programmatically navigate for `cat`.
 
-- Keep recovery visible initially, without JavaScript, and on early failure.
-  Reveal the hidden shell and hide recovery only after complete node, index, and
-  template validation.
+- Keep recovery visible without JavaScript and after early failure. While the
+  marker has set the internal `connecting` state, the bounded direct boot-log
+  staging view suppresses recovery. Its layout is reserved immediately and any
+  line reveal is non-blocking. The staging log and prompt are
+  decorative/non-interactive and must not be implemented as a separator or
+  separate live status announcement. Keep the staging prompt hidden until the
+  last log-line reveal completes, while reduced motion makes it immediately
+  visible; this visual timing must never gate controller readiness. After
+  complete node, index, and template validation, move that same boot-log node
+  into the first transcript record, force its lines to `opacity: 1` with
+  `animation: none`, reveal the hidden shell, and mark the root `ready`. This
+  prevents DOM relocation from replaying the staged reveal. A fatal runtime path
+  marks the root `failed` before restoring recovery and its focused target.
 - Render text with `textContent`, `createTextNode`, and native `<a>` elements;
   never use `innerHTML` for content or command output.
 - Preserve the latest pre-history draft and cap submissions at 50. When the
@@ -76,7 +93,10 @@ not programmatically navigate for `cat`.
 - Submit through desktop or mobile soft-keyboard Enter using the single-input
   native form. `clear` removes every visible transcript/document/completion
   result while preserving bounded history, inert templates, recovery data, and a
-  fresh prompt. Announce only the latest brief result via the polite atomic node.
+  fresh prompt. When the transcript is empty, set the session's explicit
+  `data-terminal-session-empty` state so CSS centers that prompt even when the
+  document cannot scroll; remove the state when the next output record is
+  appended. Announce only the latest brief result via the polite atomic node.
 - After non-document output, focus the fresh prompt but settle from the current
   record start so long help is not top-clipped; keep the prompt visible when the
   viewport can contain both. After a document effect, focus and settle its title

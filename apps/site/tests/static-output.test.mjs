@@ -177,19 +177,33 @@ test('route closures keep public documents in Terminal styles and isolate home J
   const staticRoutes = [routes.notFound, routes.lab];
 
   assert.match(routes.home, /data-terminal-home/u);
+  const startupMarkerIndex = routes.home.indexOf('data-terminal-startup-marker');
+  const recoveryIndex = routes.home.indexOf('data-terminal-fallback');
+  assert.ok(startupMarkerIndex >= 0);
+  assert.ok(startupMarkerIndex < recoveryIndex);
+  assert.match(routes.home, /data-terminal-startup/u);
+  assert.match(routes.home, /data-terminal-boot-log/u);
+  assert.equal((routes.home.match(/class="terminal-boot-line"/gu) ?? []).length, 10);
+  assert.doesNotMatch(routes.home, /data-terminal-boot-separator|terminal-boot-separator/u);
+  assert.doesNotMatch(routes.home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.match(routes.home, /data-terminal-experiment-id="nerv"/u);
   assert.match(routes.home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
-  assert.match(routes.home, /data-terminal-theme="phosphor"/u);
+  assert.match(routes.home, /data-terminal-theme="f1refly"/u);
   assert.match(routes.home, /--terminal-color-canvas/u);
   assert.match(routes.home, /font-family:\s*'JetBrains Mono'/u);
+  assert.match(routes.home, /font-display:\s*block/u);
+  assert.match(routes.home, /<link rel="preload" href="\/fonts\/JetBrainsMono-Regular-v2\.304\.woff2" as="font"/u);
+  assert.match(routes.home, /<link rel="preload" href="\/fonts\/JetBrainsMono-Medium-v2\.304\.woff2" as="font"/u);
   assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Regular-v2\.304\.woff2'\)/u);
+  assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Medium-v2\.304\.woff2'\)/u);
+  assert.match(routes.home, /--terminal-boot-delay:\s*495ms/u);
   assert.match(routes.home, new RegExp(`src="/${homeScript.replaceAll('.', '\\.')}`));
   assert.doesNotMatch(routes.home, new RegExp(readerScript.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, new RegExp(stylesheet.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, /class="terminal-titlebar"/u);
   for (const html of terminalDocumentRoutes) {
     assert.match(html, /class="terminal-root"/u);
-    assert.match(html, /data-terminal-theme="phosphor"/u);
+    assert.match(html, /data-terminal-theme="f1refly"/u);
     assert.match(html, /class="terminal-titlebar"/u);
     assert.match(html, /class="terminal-document"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
@@ -238,7 +252,7 @@ test('official JetBrains Mono assets retain pinned license and provenance', asyn
 
 test('Terminal components consume the root semantic theme contract', async () => {
   const css = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
-  const theme = /\.terminal-root\[data-terminal-theme='phosphor'\]\s*\{[\s\S]*?\n\}/u.exec(css);
+  const theme = /\.terminal-root\[data-terminal-theme='f1refly'\]\s*\{[\s\S]*?\n\}/u.exec(css);
   assert.ok(theme);
 
   const componentCss = css.replace(theme[0], '');
@@ -306,6 +320,15 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.doesNotMatch(withoutTemplates, /No browser-side parser|data-language="mermaid"|Future presentations can change how the site looks/u);
   assert.doesNotMatch(script, /No browser-side parser|data-language="mermaid"|Future presentations can change how the site looks/u);
   assert.match(home, /<section\b[^>]*data-terminal-fallback[^>]*>/u);
+  const marker = /<script\b[^>]*data-terminal-startup-marker[^>]*>[\s\S]*?<\/script>/u.exec(home)?.[0] ?? '';
+  assert.match(marker, /terminalStartupState\s*=\s*['"]connecting['"]/u);
+  assert.doesNotMatch(marker, /type=["']module["']/u);
+  assert.ok(home.indexOf('data-terminal-startup-marker') < home.indexOf('data-terminal-fallback'));
+  assert.match(home, /<section\b[^>]*data-terminal-startup[^>]*>/u);
+  assert.match(home, /data-terminal-boot-log/u);
+  assert.equal((home.match(/class="terminal-boot-line"/gu) ?? []).length, 10);
+  assert.doesNotMatch(home, /data-terminal-boot-separator|terminal-boot-separator/u);
+  assert.doesNotMatch(home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.doesNotMatch(home.match(/<section\b[^>]*data-terminal-fallback[^>]*>/u)?.[0] ?? '', /\bhidden\b/u);
   assert.match(home, /<section\b[^>]*data-terminal-session[^>]*\bhidden\b[^>]*>/u);
   assert.match(home, /<h1 class="terminal-visually-hidden">f1refly content terminal<\/h1>/u);

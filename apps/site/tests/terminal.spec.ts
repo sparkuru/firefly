@@ -29,7 +29,31 @@ async function submit(page: Page, command: string) {
   await input.press('Enter');
 }
 
-test('successful startup reveals only the shell stream and prompt', async ({ page }) => {
+async function readBootGeometry(page: Page) {
+  return page.locator('[data-terminal-boot-log]').evaluate((log) => {
+    return {
+      lineTops: [...log.querySelectorAll<HTMLElement>('.terminal-boot-line')]
+        .map((line) => line.getBoundingClientRect().top),
+      logTop: log.getBoundingClientRect().top
+    };
+  });
+}
+
+async function expectCenteredEmptySession(page: Page) {
+  await expect.poll(async () => page.evaluate(() => {
+    const row = document.querySelector<HTMLElement>('[data-terminal-session] .terminal-command-row');
+    if (row === null) {
+      return false;
+    }
+    const rect = row.getBoundingClientRect();
+    const viewportCenter = window.innerHeight / 2;
+    const rowCenter = (rect.top + rect.bottom) / 2;
+    return Math.abs(rowCenter - viewportCenter) <= 2 &&
+      document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1;
+  })).toBe(true);
+}
+
+test('successful startup preserves the boot log before the shell prompt', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
 
@@ -37,8 +61,13 @@ test('successful startup reveals only the shell stream and prompt', async ({ pag
   await expect(input).not.toBeFocused();
   await expect(input).toHaveAttribute('enterkeyhint', 'send');
   await expect(input).toHaveAttribute('aria-controls', 'terminal-transcript');
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
+  await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
+  await expect(page.locator('[data-terminal-boot-log] .terminal-boot-line')).toHaveCount(10);
+  await expect(page.locator('[data-terminal-boot-separator]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-boot-status]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
-  await expect(page.locator('[data-terminal-transcript]')).toBeEmpty();
   await expect(page.locator('.terminal-titlebar')).toHaveCount(0);
   await expect(page.getByRole('button')).toHaveCount(0);
   await expect(page.getByText('Browse public documents')).toBeHidden();
@@ -50,6 +79,111 @@ test('successful startup reveals only the shell stream and prompt', async ({ pag
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
   await expectNoHorizontalOverflow(page);
+});
+
+test('pending startup exposes the direct boot log before the shell is ready', async ({ page }) => {
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+
+  const root = page.locator('[data-terminal-home]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  await expect(page.locator('[data-terminal-startup]')).toBeVisible();
+  const bootLines = page.locator('[data-terminal-boot-log] .terminal-boot-line');
+  await expect(bootLines).toHaveCount(10);
+  await expect(bootLines.first()).toHaveCSS('animation-name', 'terminal-boot-line-reveal');
+  expect(await bootLines.evaluateAll((lines) => lines.map((line) => ({
+    delay: line instanceof HTMLElement ? line.style.getPropertyValue('--terminal-boot-delay') : '',
+    animationName: getComputedStyle(line).animationName
+  })))).toEqual(Array.from({ length: 10 }, (_, index) => ({
+    delay: `${index * 55}ms`,
+    animationName: 'terminal-boot-line-reveal'
+  })));
+  await expect(page.locator('[data-terminal-boot-separator]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-boot-status]')).toHaveCount(0);
+  const bootPrompt = page.locator('[data-terminal-boot-prompt]');
+  await expect(bootPrompt).toHaveText('guest@f1refly:~/blog/posts $');
+  expect(await bootPrompt.evaluate((prompt) => {
+    const style = getComputedStyle(prompt);
+    return {
+      animationName: style.animationName,
+      opacity: style.opacity,
+      promptDelay: prompt instanceof HTMLElement
+        ? prompt.style.getPropertyValue('--terminal-boot-prompt-delay')
+        : '',
+      visibility: style.visibility
+    };
+  })).toEqual({
+    animationName: 'terminal-boot-prompt-reveal',
+    opacity: '0',
+    promptDelay: '615ms',
+    visibility: 'hidden'
+  });
+  await expect.poll(() => bootPrompt.evaluate((prompt) => {
+    const style = getComputedStyle(prompt);
+    return { opacity: style.opacity, visibility: style.visibility };
+  })).toEqual({ opacity: '1', visibility: 'visible' });
+  await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
+  await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  const pendingGeometry = await readBootGeometry(page);
+  const pendingPromptHeight = await page.locator('[data-terminal-boot-prompt]').evaluate((prompt) => prompt.getBoundingClientRect().height);
+  expect(pendingPromptHeight).toBeGreaterThanOrEqual(44);
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+  await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
+  const readyGeometry = await readBootGeometry(page);
+  expect(readyGeometry.lineTops).toHaveLength(pendingGeometry.lineTops.length);
+  readyGeometry.lineTops.forEach((top, index) => {
+    expect(Math.abs(top - pendingGeometry.lineTops[index])).toBeLessThanOrEqual(1);
+  });
+  expect(Math.abs(readyGeometry.logTop - pendingGeometry.logTop)).toBeLessThanOrEqual(1);
+  await expect(page.locator('.terminal-command-row')).toHaveCount(1);
+  expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeCloseTo(pendingPromptHeight, 4);
+});
+
+test('boot animation does not restart when the log becomes transcript history', async ({ page }) => {
+  await page.addInitScript(() => {
+    const tracker = window as Window & { __terminalBootAnimationStarts?: number };
+    tracker.__terminalBootAnimationStarts = 0;
+    document.addEventListener('animationstart', (event) => {
+      if ((event as AnimationEvent).animationName === 'terminal-boot-line-reveal') {
+        tracker.__terminalBootAnimationStarts = (tracker.__terminalBootAnimationStarts ?? 0) + 1;
+      }
+    }, true);
+  });
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+
+  const root = page.locator('[data-terminal-home]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+  await page.waitForTimeout(700);
+
+  expect(await page.evaluate(() => {
+    const tracker = window as Window & { __terminalBootAnimationStarts?: number };
+    return tracker.__terminalBootAnimationStarts ?? 0;
+  })).toBe(10);
+  const bootLine = page.locator('[data-terminal-transcript] .terminal-boot-record .terminal-boot-line').first();
+  await expect(bootLine).toHaveCSS('opacity', '1');
+  await expect(bootLine).toHaveCSS('animation-name', 'none');
+});
+
+test('refresh starts a fresh session with the boot log as its first record', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
+
+  await page.reload();
+
+  await expect(page.getByRole('textbox', { name: promptName })).toBeVisible();
+  await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(1);
+  await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
+  await expect(page.locator('[data-terminal-boot-log] .terminal-boot-line')).toHaveCount(10);
 });
 
 test('commands render continuous typed results, lab discovery, and latest announcements', async ({ page }) => {
@@ -336,6 +470,31 @@ test('history preserves a draft and clear returns a fresh prompt with history in
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
 });
 
+test('clear, cls, and Ctrl+L center the empty-session prompt without overflow', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  const session = page.locator('[data-terminal-session]');
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  for (const clearAction of ['clear', 'cls'] as const) {
+    await submit(page, 'pwd');
+    await submit(page, clearAction);
+    await expect(transcript).toBeEmpty();
+    await expect(session).toHaveAttribute('data-terminal-session-empty', '');
+    await expectCenteredEmptySession(page);
+  }
+
+  await submit(page, 'pwd');
+  await input.press('Control+L');
+  await expect(transcript).toBeEmpty();
+  await expect(session).toHaveAttribute('data-terminal-session-empty', '');
+  await expectCenteredEmptySession(page);
+
+  await submit(page, 'pwd');
+  await expect(session).not.toHaveAttribute('data-terminal-session-empty');
+  await expect(transcript).not.toBeEmpty();
+});
+
 test('Ctrl+L clears the transcript without consuming command history and cls aliases clear', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
@@ -494,7 +653,7 @@ test('IME composition leaves text controls native while prompt Tab remains owned
   });
   expect(dispatchResults).toEqual([true, true, true, false, true]);
   await expect(input).toHaveValue('about');
-  await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(1);
+  await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(2);
 
   await input.dispatchEvent('compositionend');
   await input.press('Enter');
@@ -614,7 +773,7 @@ test('eligible printable typing returns to the prompt while protected interactio
   await expect(input).toHaveValue('link-safe');
 });
 
-test('phosphor theme and official JetBrains Mono assets stay same-origin', async ({ page }) => {
+test('f1refly theme and official JetBrains Mono assets stay same-origin', async ({ page }) => {
   const externalRequests: string[] = [];
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4321') {
@@ -622,7 +781,7 @@ test('phosphor theme and official JetBrains Mono assets stay same-origin', async
     }
   });
   await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'phosphor');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'f1refly');
   const styles = await page.locator('.terminal-root').evaluate((element) => {
     const computed = getComputedStyle(element);
     return {
@@ -790,10 +949,21 @@ test('malformed startup preserves the untouched native recovery product', async 
     observer.observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
+});
+
+test('a missing home controller restores recovery at DOM ready', async ({ page }) => {
+  await page.route(/TerminalHome.*\.js$/u, (route) => route.abort());
+  await page.goto('/');
+
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
+  await expect(page.locator('[data-terminal-startup]')).toBeHidden();
+  await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'main/llm-workflow-with-trellis.md' })).toBeVisible();
 });
 
 test('an executable document template prevents startup without disturbing recovery', async ({ page }) => {
@@ -869,6 +1039,7 @@ test('post-start clone-scoping failure restores one focused recovery target', as
   });
   await submit(page, 'cat /pages/about.md');
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
   await expect(page.locator('[data-terminal-stream-document]')).toHaveCount(0);
@@ -887,6 +1058,7 @@ test('post-start renderer failure restores one focused recovery target', async (
   });
   await submit(page, 'help');
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.locator('[data-terminal-failure] .terminal-status-label')).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
@@ -903,6 +1075,7 @@ test('post-start executor failure restores the same native recovery product', as
   });
   await submit(page, 'date');
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.getByRole('link', { name: 'hello-static-foundation.md' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
@@ -913,6 +1086,9 @@ test('reduced motion and responsive checkpoints preserve full-page containment',
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
   expect(await input.evaluate((element) => getComputedStyle(element).animationDuration)).toBe('1e-06s');
+  const bootLine = page.locator('[data-terminal-boot-log] .terminal-boot-line').first();
+  await expect(bootLine).toHaveCSS('opacity', '1');
+  await expect(bootLine).toHaveCSS('animation-name', 'none');
   await submit(page, 'help');
   await expect(input).toBeFocused();
   const reducedPromptGeometry = await input.evaluate((element) => {

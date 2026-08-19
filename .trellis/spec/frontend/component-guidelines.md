@@ -49,12 +49,23 @@ routes.
   filename item. Shared `ReaderStatus.astro` imports only the bounded
   `terminal-reader.ts` controller, never the home command runtime. The document
   remains complete when that module does not run.
-- `TerminalHome.astro` owns the server-rendered recovery navigation, one inert
+- `TerminalHome.astro` owns the synchronous home-only startup marker and direct
+  boot-log staging surface, the server-rendered recovery navigation, one inert
   build-rendered document template per public entry, the hidden-until-ready shell
-  session, continuous transcript/prompt, completion hint, and announcer.
-  Recovery remains visible before startup, without JavaScript, and after early or
-  fatal failure. Only after required-node, index, and exact entry/template
-  validation may the controller hide recovery and reveal the prompt-first session.
+  session, continuous transcript/prompt, completion hint, and announcer. The
+  staging surface contains the bounded startup lines and a non-interactive
+  prompt; it does not render a separator or a separate live `connecting...`
+  status node. The staging prompt reserves the command-row geometry but stays
+  hidden until the final bounded log-line reveal completes; reduced motion
+  reveals it immediately. Without JavaScript, recovery remains visible because
+  the marker does not run. A DOM-ready guard restores recovery when the
+  controller never starts; only after required-node, index, and exact
+  entry/template validation may the controller move the boot log into the first
+  transcript record, mark startup ready, hide recovery, and reveal the live
+  session prompt. The transcript record must force the moved boot lines to their
+  final visible state with animation disabled, so moving the same DOM node cannot
+  replay the startup animation. Fatal runtime errors mark startup failed and
+  restore the same recovery target.
 - `pages/lab/index.astro` is a thin JavaScript-free semantic catalog. It loads the
   frozen listed projection through `lib/experiments.ts`, uses validated default-
   entry links, renders an explicit empty state, and imports no Experiment asset,
@@ -97,9 +108,10 @@ routes.
   add one root token block without changing component rules. M4 ships no picker
   or persistence contract.
 - Terminal typography uses the self-hosted, unmodified JetBrains Mono v2.304
-  Regular/Medium WOFF2 assets with `font-display: swap` and CJK/system monospace
-  fallbacks. The layout may preload only the same-origin Regular face; it must
-  not add a runtime font CDN or cross-origin dependency.
+  Regular/Medium WOFF2 assets with `font-display: block` and CJK/system
+  monospace fallbacks. The layout preloads both same-origin faces so a hard
+  reload does not paint fallback glyphs and then reflow when the Medium face is
+  applied; it must not add a runtime font CDN or cross-origin dependency.
 - Astro dev traverses the shared dispatcher CSS graph differently from a static
   build. Judge presentation-style isolation from built output via `astro preview`,
   not from `astro dev`.
@@ -126,8 +138,13 @@ routes.
   and `<article>` where their semantics apply.
 - Native navigation is keyboard reachable whenever exposed in recovery,
   document, or command-output states. The enhanced home may hide recovery only
-  after complete startup validation. Preserve the skip link and visible focus in
-  every state.
+  after complete startup validation; the marker's internal connecting state
+  exposes the direct boot log and prompt staging view while its
+  bounded lines may reveal with a short non-blocking CSS animation. It does not
+  add a separate live status line. A ready session preserves the boot log as its
+  first transcript record, disables animation on that historical record, and
+  failed startup restores the native recovery links.
+  Preserve the skip link and visible focus in every state.
 - The lab catalog keeps one visible H1, sequential headings, native list/link
   semantics, readable measure, visible focus, and a native home path. It remains
   useful at `375×812` without JavaScript or document-level overflow.
@@ -147,6 +164,10 @@ routes.
   not put every reading unit in the Tab order. Document source paths and tree
   outline entries remain readable native text/links; tree prefixes are
   decorative and hidden from assistive technology.
+- When `clear`, `cls`, or unmodified prompt `Ctrl+L` leaves the transcript empty,
+  the session exposes its explicit empty-state layout and centers the fresh
+  command row within the home viewport without relying on scrollable document
+  height. The first subsequent rendered command result removes that state.
 - Decorative visuals cannot be the sole carrier of page meaning.
 - Do not claim complete accessibility coverage: no automated scanner or
   assistive-technology run is configured.
