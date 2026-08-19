@@ -1,0 +1,14 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Review affected frontend packages, required validation commands, and browser evidence coverage."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check TerminalHome markup, native anchors, static fallback completeness, and presentation/style ownership."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check command input, focus, keyboard, failure recovery, and progressive-enhancement behavior."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check strict config/runtime/browser decoders, immutable records, and fail-closed DOM assumptions."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check package tests, static output, accessibility, no-JavaScript recovery, responsive overflow, and Playwright evidence."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check that all quality commands use ./sam and the approved static build/preview lifecycle."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Confirm no friend links entered canonical content, route, directory, document-template, or VFS inventories."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Check public-only output, safe external URL attributes, deterministic generation, and source/private leakage."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Check strict `terminal.friends` parsing, examples, safe URL policy, duplicate rejection, and no-secret configuration."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Check for duplicated link/list/focus rules and missed existing helpers after the cross-layer change."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Review the complete config-to-renderer-to-runtime data flow and neutral/direct shell parity."}
+{"file":".trellis/tasks/08-19-friend-links/prd.md","reason":"Check every confirmed product decision, acceptance criterion, and out-of-scope boundary."}
+{"file":".trellis/tasks/08-19-friend-links/design.md","reason":"Check implementation against the approved command, config, security, recovery, and compatibility contracts."}
+{"file":".trellis/tasks/08-19-friend-links/research/ui-ux-pro-max.md","reason":"Check that the implementation preserves existing Terminal visuals, responsive density, focus contrast, and reduced-motion expectations."}

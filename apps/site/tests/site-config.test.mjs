@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import test from 'node:test';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
+  loadSiteConfig,
   parseSiteConfig,
   terminalIdentityFromConfig
 } from '../src/lib/site-config.mjs';
@@ -28,7 +33,11 @@ const validConfig = {
     user: 'guest',
     host: 'notes',
     cwd: '~/blog/posts',
-    about: 'A public about line.\nAnother line.'
+    about: 'A public about line.\nAnother line.',
+    friends: [
+      { name: 'Example', desc: 'A useful example site.', url: 'https://example.test/blog' },
+      { name: 'Docs', url: 'http://docs.example.test/?from=site' }
+    ]
   },
   seo: {
     titleSuffix: ' | Example notes',
@@ -42,10 +51,15 @@ test('site config validates, normalizes, and deeply freezes public values', () =
   const config = parseSiteConfig(validConfig, 'fixture');
   assert.equal(config.site.url, 'https://example.test');
   assert.equal(config.terminal.about, 'A public about line.\nAnother line.');
+  assert.deepEqual(config.terminal.friends, validConfig.terminal.friends);
+  assert.equal(Object.hasOwn(config.terminal.friends[0], 'desc'), true);
+  assert.equal(Object.hasOwn(config.terminal.friends[1], 'desc'), false);
   assert.equal(config.seo.robots, 'index, follow');
   assert.ok(Object.isFrozen(config));
   assert.ok(Object.isFrozen(config.site));
   assert.ok(Object.isFrozen(config.terminal));
+  assert.ok(Object.isFrozen(config.terminal.friends));
+  assert.ok(Object.isFrozen(config.terminal.friends[0]));
   assert.deepEqual(terminalIdentityFromConfig(config), {
     user: 'guest',
     host: 'notes',
@@ -54,10 +68,36 @@ test('site config validates, normalizes, and deeply freezes public values', () =
   });
 });
 
+test('site config defaults omitted friend links to an empty list', () => {
+  const { friends: _friends, ...terminalWithoutFriends } = validConfig.terminal;
+  const config = parseSiteConfig({
+    ...validConfig,
+    terminal: terminalWithoutFriends
+  }, 'fixture');
+
+  assert.deepEqual(config.terminal.friends, []);
+  assert.ok(Object.isFrozen(config.terminal.friends));
+});
+
 test('site config rejects unknown keys, unsafe identity text, and malformed origins', () => {
   for (const value of [
     { ...validConfig, unsupported: true },
     { ...validConfig, terminal: { ...validConfig.terminal, about: 'safe\n\u0000' } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', url: 'javascript:alert(1)' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', url: 'https://user:pass@example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', url: 'https://example.test/#fragment' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example\nsite', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: '', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: ' details', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: 'details ', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: 'details\nmore', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: 'details\u0080', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: 'details\u2028more', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', url: 'https://example.test/\u0080' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', description: 'details', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', desc: 42, url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', url: 'https://example.test' }, { name: 'Again', url: 'https://example.test' }] } },
+    { ...validConfig, terminal: { ...validConfig.terminal, friends: [{ name: 'Example', url: 'https://example.test', extra: true }] } },
     { ...validConfig, terminal: { ...validConfig.terminal, cwd: '~/blog/../private' } },
     { ...validConfig, site: { ...validConfig.site, url: 'javascript:alert(1)' } },
     { ...validConfig, site: { ...validConfig.site, url: 'https://example.test/path' } },
@@ -66,6 +106,56 @@ test('site config rejects unknown keys, unsafe identity text, and malformed orig
   ]) {
     assert.throws(() => parseSiteConfig(value, 'fixture'), /Invalid site configuration/u);
   }
+});
+
+test('site config loader uses TOML syntax, preserves multiline about, and rejects malformed TOML', async () => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'f1refly-site-config-'));
+  const filePath = path.join(temporaryRoot, 'site.toml');
+  const source = [
+    '[site]',
+    'name = "Example notes"',
+    'description = "A public static notebook."',
+    'language = "en-GB"',
+    '',
+    '[terminal]',
+    'user = "guest"',
+    'host = "notes"',
+    'cwd = "~/blog/posts"',
+    'about = """',
+    'A public about line.',
+    'Another line.',
+    '"""',
+    'friends = []',
+    '',
+    '[seo]',
+    'titleSuffix = " | Example notes"',
+    'robots = "index, follow"',
+    'twitterCard = "summary"',
+    ''
+  ].join('\n');
+  try {
+    await writeFile(filePath, source);
+    const config = loadSiteConfig(filePath);
+    assert.equal(config.terminal.about, 'A public about line.\nAnother line.');
+    assert.deepEqual(config.terminal.friends, []);
+
+    await writeFile(filePath, `${source}site.unknown = true\n`);
+    assert.throws(() => loadSiteConfig(filePath), /Invalid site configuration.*(?:Unrecognized key|unknown)/u);
+
+    await writeFile(filePath, '[site]\nname = "first"\nname = "second"\n');
+    assert.throws(() => loadSiteConfig(filePath), /Invalid TOML/u);
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('the checked-in TOML example loads with documented optional defaults', () => {
+  const examplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../config/site.toml.example');
+  const config = loadSiteConfig(examplePath);
+  assert.equal(config.site.url, null);
+  assert.equal(config.site.author, null);
+  assert.equal(config.seo.image, null);
+  assert.deepEqual(config.terminal.friends, []);
 });
 
 test('site metadata resolves fallback and explicit document overrides', () => {

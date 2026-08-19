@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 
 async function expectNoHorizontalOverflow(page: Page) {
   const documentWidth = await page.evaluate(() => ({
@@ -54,7 +55,7 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   await expect(page.locator('[data-terminal-startup]')).toBeHidden();
   const programmaticHeading = main.getByRole('heading', {
     level: 1,
-    name: 'f1refly content terminal'
+    name: `${SITE_CONFIG.site.name} content terminal`
   });
   await expect(programmaticHeading).toHaveCSS('position', 'absolute');
   expect(await programmaticHeading.evaluate((heading) => ({
@@ -74,6 +75,16 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   );
   await expect(page.getByRole('link', { name: 'about.md' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
+  await expect(main.getByRole('heading', { level: 3, name: 'friend links' })).toBeVisible();
+  if (SITE_CONFIG.terminal.friends.length === 0) {
+    await expect(main.getByText('No friend links.')).toBeVisible();
+    await expect(page.locator('[data-terminal-friend]')).toHaveCount(0);
+  } else {
+    const friendRows = page.locator('[data-terminal-fallback] [data-terminal-friend]');
+    await expect(friendRows).toHaveCount(SITE_CONFIG.terminal.friends.length);
+    await expect(friendRows.first().locator('a')).toHaveText(SITE_CONFIG.terminal.friends[0].name);
+    await expect(friendRows.first().locator('a')).toHaveAttribute('href', SITE_CONFIG.terminal.friends[0].url);
+  }
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'main/Learning-with-LLM.md' })).toBeVisible();

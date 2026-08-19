@@ -298,6 +298,7 @@ executeCommand(options: {
   experiments?: readonly TerminalExperiment[];
   documents?: readonly TerminalTextDocument[];
   identity?: TerminalIdentity;
+  friendLinks?: readonly TerminalFriendLink[];
   now?: () => Date;
   registry?: TerminalCommandRegistry;
 }): CommandResult
@@ -366,6 +367,17 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   hidden `/.rshell` mount from public output; `help` groups the injected command
   metadata by declared group/order, so adding a command updates its spec and
   tests rather than a formatter switch.
+- `friends` consumes only the immutable `friendLinks` port. Its direct result is
+  a closed `links` effect with exact `{ name, desc?, url }` records; the
+  runtime's stdout projection is `name — url` or `name — desc — url` per line
+  for text pipelines and redirects.
+  The browser decoder revalidates safe `http(s)` URLs, rejects duplicate URLs,
+  unknown fields, accessors, sparse arrays, and decorated objects, and the DOM
+  renderer creates anchors with properties/text nodes rather than HTML strings.
+  Direct link rows use the same aligned responsive grid language as `ls`: the
+  columns are name, optional description, and URL; an absent description still
+  occupies its column so URLs do not shift between rows. The mobile layout
+  stacks those cells without changing the order or native-link semantics.
 - `ls`, `cat`, `grep`, `cd`, `open`, `vim`, and `clear` execute through isolated
   command modules and `commands/registry.ts`. `vfs/public-index.ts` is the only
   adapter from decoded Terminal arrays to `ReadonlyVirtualFs`; command modules
@@ -524,6 +536,11 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   decoded entry; `vim` returns that entry's canonical href.
 - Good: `grep -i a`, `grep a -i`, and `grep -iF a` use the same command parser;
   `grep -- -pattern` treats `-pattern` as an operand rather than an option.
+- Good: a configured `friends` list preserves order and descriptions for direct
+  native-anchor output, while `friends | grep example` and scratch redirection
+  receive the deterministic `name — url` or `name — desc — url` text projection;
+  an empty list announces
+  `No friend links.`.
 - Good: after `cd ../` reaches the display alias `~/blog`, `ls` lists the
   canonical virtual root exactly as `ls /` does.
 - Base: absent JavaScript or validation failure leaves native recovery links.
@@ -543,9 +560,10 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   direct-child list projections and recursive grep discovery, tree variants, history,
   nested/absolute cat/vim completion, cwd-relative `cd`/`ls`/`cat` behavior,
   root ambiguous `cd` Tab ownership and inline `cat` prompt adjacency,
-  mount aliases, trailing-slash normalization, document-prefix rejection, and
-  listed-experiment leaf handling, Ctrl+L/cls and lab-row behavior, and hostile
-  path rejection.
+  mount aliases, trailing-slash normalization, document-prefix rejection,
+  listed-experiment leaf handling, `friends` safe-link decoding/direct-vs-
+  neutral/text projections, Ctrl+L/cls and lab-row behavior, and hostile path
+  rejection.
 - Static output: exact serialized fields/template bijection, canonical nested
   routes, bodies absent from index/JS, home-only command asset, canonical-
   document-only reader asset, and package/style graph closure.

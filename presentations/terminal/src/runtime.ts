@@ -3,6 +3,7 @@ import type {
   ProcessResult as ShellProcessResult,
   ReadonlyShellScratchFile,
   ReadonlyShellSession,
+  ShellLink,
   ShellCommandMetadata
 } from './shell/contracts.js';
 import { textStream } from './shell/streams.js';
@@ -11,6 +12,7 @@ import { parseRshell } from './shell/parser.js';
 import type { RshellStage } from './shell/parser.js';
 import { resolveSessionCommand, runRshell } from './shell/runner.js';
 import type { ParsedCommandArguments } from './commands/arguments.js';
+import { formatFriendLink } from './commands/links.js';
 import { NEUTRAL_COMMAND_REGISTRY, NEUTRAL_COMMAND_SPECS } from './commands/registry.js';
 import { createPublicIndex } from './vfs/public-index.js';
 import type { PublicDocument, ReadonlyVirtualFs } from './vfs/contracts.js';
@@ -40,6 +42,8 @@ export interface TerminalIdentity {
   readonly workingDirectory: string;
   readonly about: string;
 }
+
+export type TerminalFriendLink = ShellLink;
 
 export interface TerminalTextDocument {
   readonly virtualPath: TerminalEntry['virtualPath'];
@@ -96,6 +100,7 @@ export interface TerminalGrepMatch {
 export type TerminalEffect =
   | { readonly kind: 'lines'; readonly tone: TerminalTone; readonly lines: readonly string[] }
   | { readonly kind: 'help'; readonly groups: readonly TerminalHelpGroup[] }
+  | { readonly kind: 'links'; readonly links: readonly TerminalFriendLink[] }
   | {
       readonly kind: 'grep';
       readonly pattern: string;
@@ -140,6 +145,7 @@ export interface TerminalCommandContext {
   readonly experiments: readonly TerminalExperiment[];
   readonly fs: ReadonlyVirtualFs;
   readonly identity: TerminalIdentity;
+  readonly friendLinks: readonly TerminalFriendLink[];
   readonly now: () => Date;
   readonly registry: TerminalCommandRegistry;
   readonly stdin: readonly string[];
@@ -192,6 +198,8 @@ export const DEFAULT_TERMINAL_IDENTITY: TerminalIdentity = Object.freeze({
   about: 'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.\nMostly about things I\'ve worked on, broken, fixed, or found interesting.\nSource: https://github.com/sparkuru/f1refly.git'
 });
 
+export const DEFAULT_TERMINAL_FRIEND_LINKS: readonly TerminalFriendLink[] = Object.freeze([]);
+
 function terminalPrompt(identity: TerminalIdentity, cwd: string): string {
   return `${identity.user}(.ᗜ ᴗ ᗜ.)${identity.host}:${cwd} #`;
 }
@@ -203,6 +211,8 @@ export const DEFAULT_TERMINAL_PROMPT = terminalPrompt(
 
 const commandToken = /^[a-z][a-z0-9-]*$/u;
 const unsafePathSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
+const unsafeControlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
+const unsafeSingleLineCharacters = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
 
 const terminalCommandGroups: readonly TerminalCommandGroup[] = Object.freeze([
   'Explore',
@@ -254,7 +264,7 @@ function readDataField(descriptors: ReadonlyMap<PropertyKey, PropertyDescriptor>
 }
 
 function requireSafeText(value: unknown, field: string): string {
-  if (typeof value !== 'string' || value.length === 0 || value !== value.trim() || /[\u0000-\u001f\u007f]/u.test(value)) {
+  if (typeof value !== 'string' || value.length === 0 || value !== value.trim() || unsafeSingleLineCharacters.test(value)) {
     throw new TypeError(`Terminal entry "${field}" must be non-empty safe text.`);
   }
   return value;
@@ -266,8 +276,8 @@ function requireIdentityText(value: unknown, field: string, multiline = false): 
     value.length === 0 ||
     value !== value.trim() ||
     (multiline
-      ? /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)
-      : /[\u0000-\u001f\u007f]/u.test(value))
+      ? unsafeControlCharacters.test(value)
+      : unsafeSingleLineCharacters.test(value))
   ) {
     throw new TypeError('Terminal identity "' + field + '" must be safe text.');
   }
@@ -295,6 +305,20 @@ function isSafePathSegment(segment: string): boolean {
     !segment.startsWith('.') &&
     segment.normalize('NFC') === segment &&
     !unsafePathSegment.test(segment);
+}
+
+function isSafeExternalUrl(value: string): boolean {
+  if (value.trim() !== value || /[\s\u0000-\u001f\u007f-\u009f\u2028\u2029]/u.test(value)) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return false;
+  }
+  return ['http:', 'https:'].includes(parsed.protocol) &&
+    parsed.username === '' &&
+    parsed.password === '' &&
+    parsed.hash === '';
 }
 
 export function decodeTerminalIdentity(value: unknown): TerminalIdentity {
@@ -419,6 +443,47 @@ export function decodeTerminalEntries(value: unknown): readonly TerminalEntry[] 
     hrefs.add(hrefKey);
   }
   return entries;
+}
+
+function decodeFriendLink(value: unknown, index: number): TerminalFriendLink {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
+  ) {
+    throw new TypeError(`Terminal friend link ${index} must be a plain object.`);
+  }
+  const descriptors = ownDataDescriptors(value);
+  const expected = ['name', 'desc', 'url'];
+  const keys = [...descriptors.keys()];
+  if (
+    keys.some((key) => typeof key !== 'string' || !expected.includes(key)) ||
+    !descriptors.has('name') ||
+    !descriptors.has('url')
+  ) {
+    throw new TypeError(`Terminal friend link ${index} contains unknown or missing fields.`);
+  }
+  const name = requireSafeText(readDataField(descriptors, 'name'), 'name');
+  const url = requireSafeText(readDataField(descriptors, 'url'), 'url');
+  if (!isSafeExternalUrl(url)) throw new TypeError(`Terminal friend link ${index} has an unsafe URL.`);
+  const desc = descriptors.has('desc')
+    ? requireSafeText(readDataField(descriptors, 'desc'), 'desc')
+    : undefined;
+  return Object.freeze({
+    name,
+    ...(desc === undefined ? {} : { desc }),
+    url
+  });
+}
+
+export function decodeTerminalFriendLinks(value: unknown): readonly TerminalFriendLink[] {
+  const links = decodePlainArray(value, 'Terminal friend links', decodeFriendLink);
+  const urls = new Set<string>();
+  for (const link of links) {
+    if (urls.has(link.url)) throw new TypeError('Terminal friend links contain duplicate URLs.');
+    urls.add(link.url);
+  }
+  return links;
 }
 
 function decodeExperiment(value: unknown, index: number): TerminalExperiment {
@@ -926,6 +991,9 @@ function formatGrepMatch(match: TerminalGrepMatch): string {
 function stdoutForEffect(effect: TerminalEffect): readonly string[] {
   if (effect.kind === 'lines') return effect.lines;
   if (effect.kind === 'help') return Object.freeze(effect.groups.flatMap((group) => [group.name, ...group.commands.map(formatHelpCommand)]));
+  if (effect.kind === 'links') return effect.links.length === 0
+    ? Object.freeze(['No friend links.'])
+    : Object.freeze(effect.links.map(formatFriendLink));
   if (effect.kind === 'grep') return Object.freeze(effect.matches.map(formatGrepMatch));
   if (effect.kind === 'entries') return Object.freeze([
     ...effect.directories,
@@ -945,12 +1013,13 @@ function announcementFor(effect: TerminalEffect): string {
   if (effect.kind === 'entries') return `${effect.directories.length + effect.entries.length} ${effect.label} listed.`;
   if (effect.kind === 'tree') return `${effect.lines.length} tree entries listed.`;
   if (effect.kind === 'help') return `${effect.groups.reduce((total, group) => total + group.commands.length, 0)} commands listed.`;
+  if (effect.kind === 'links') return effect.links.length === 0 ? 'No friend links.' : `${effect.links.length} friend link${effect.links.length === 1 ? '' : 's'} listed.`;
   if (effect.kind === 'grep') return effect.noResults ? `No matches for "${effect.pattern}".` : `${effect.matches.length} grep match${effect.matches.length === 1 ? '' : 'es'} listed.`;
   return effect.lines.at(-1) ?? '';
 }
 
 function isTextEffect(effect: TerminalEffect): boolean {
-  return effect.kind === 'lines' || effect.kind === 'help' || effect.kind === 'grep' || effect.kind === 'entries' || effect.kind === 'experiments' || effect.kind === 'tree';
+  return effect.kind === 'lines' || effect.kind === 'help' || effect.kind === 'links' || effect.kind === 'grep' || effect.kind === 'entries' || effect.kind === 'experiments' || effect.kind === 'tree';
 }
 
 function publicDocumentFromEntry(entry: TerminalEntry): PublicDocument {
@@ -1025,7 +1094,8 @@ function shellProcessContext(context: TerminalCommandContext): ShellProcessConte
     clock: context.now,
     signal: Object.freeze({ aborted: false }),
     commands: shellCommandMetadata(context.registry, shellSessionFromState(context.state)),
-    identity: Object.freeze({ ...context.identity })
+    identity: Object.freeze({ ...context.identity }),
+    friendLinks: context.friendLinks
   });
 }
 
@@ -1047,6 +1117,16 @@ function adaptShellValue(value: NonNullable<ShellProcessResult['value']>, contex
       groups: Object.freeze(value.groups.map((group) => Object.freeze({
         name: group.name,
         commands: Object.freeze(group.commands.map((command) => Object.freeze({ ...command })))
+      })))
+    };
+  }
+  if (value.kind === 'links') {
+    return {
+      kind: 'links',
+      links: Object.freeze(value.links.map((link) => Object.freeze({
+        name: link.name,
+        ...(link.desc === undefined ? {} : { desc: link.desc }),
+        url: link.url
       })))
     };
   }
@@ -1148,6 +1228,7 @@ function executeRegisteredStage(
   experiments: readonly TerminalExperiment[],
   documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
+  friendLinks: readonly TerminalFriendLink[],
   now: () => Date,
   registry: TerminalCommandRegistry,
   piped: boolean,
@@ -1161,6 +1242,7 @@ function executeRegisteredStage(
     experiments,
     fs,
     identity,
+    friendLinks,
     now,
     registry,
     stdin,
@@ -1200,6 +1282,7 @@ function executeRshellStage(
   experiments: readonly TerminalExperiment[],
   documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
+  friendLinks: readonly TerminalFriendLink[],
   now: () => Date,
   registry: TerminalCommandRegistry,
   piped: boolean,
@@ -1229,6 +1312,7 @@ function executeRshellStage(
     experiments,
     documents,
     identity,
+    friendLinks,
     now,
     registry,
     piped,
@@ -1255,6 +1339,7 @@ function executeNeutralStages(
   experiments: readonly TerminalExperiment[],
   documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
+  friendLinks: readonly TerminalFriendLink[],
   now: () => Date,
   registry: TerminalCommandRegistry,
   piped: boolean,
@@ -1271,6 +1356,7 @@ function executeNeutralStages(
     signal: Object.freeze({ aborted: false }),
     registry: NEUTRAL_COMMAND_REGISTRY,
     identity: Object.freeze({ ...identity }),
+    friendLinks,
     pure,
     depth
   });
@@ -1281,6 +1367,7 @@ function executeNeutralStages(
     experiments,
     fs,
     identity,
+    friendLinks,
     now,
     registry,
     stdin: Object.freeze([]),
@@ -1302,13 +1389,14 @@ function executeRshellStages(
   experiments: readonly TerminalExperiment[],
   documents: readonly TerminalTextDocument[],
   identity: TerminalIdentity,
+  friendLinks: readonly TerminalFriendLink[],
   now: () => Date,
   registry: TerminalCommandRegistry,
   pure: boolean,
   depth: number
 ): RshellOutput {
   if (canUseNeutralStages(stages, registry, shellSessionFromState(initialState))) {
-    return executeNeutralStages(stages, initialState, entries, experiments, documents, identity, now, registry, stages.length > 1, pure, depth);
+    return executeNeutralStages(stages, initialState, entries, experiments, documents, identity, friendLinks, now, registry, stages.length > 1, pure, depth);
   }
   let state = initialState;
   let stdin: readonly string[] = Object.freeze([]);
@@ -1324,6 +1412,7 @@ function executeRshellStages(
           experiments,
           documents,
           identity,
+          friendLinks,
           now,
           registry,
           true,
@@ -1333,12 +1422,12 @@ function executeRshellStages(
       }
     });
     if (!expanded.ok) return rshellError(state, expanded.message);
-    output = executeRshellStage(expanded.words, stage.redirect, stdin, index > 0, state, entries, experiments, documents, identity, now, registry, stages.length > 1, pure);
+    output = executeRshellStage(expanded.words, stage.redirect, stdin, index > 0, state, entries, experiments, documents, identity, friendLinks, now, registry, stages.length > 1, pure);
     if (output.error) return output;
     state = output.state;
     stdin = output.stdout;
     if (stage.redirect !== undefined) {
-      if (pure || index !== stages.length - 1 || output.effect.kind !== 'lines') return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
+      if (pure || index !== stages.length - 1 || (output.effect.kind !== 'lines' && output.effect.kind !== 'links')) return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
       const target = stage.target === undefined ? undefined : normaliseVirtualPath(stage.target, state.cwd);
       const name = target === undefined ? undefined : scratchName(target);
       if (name === undefined) return rshellError(state, 'Redirect only targets /.rshell/tmp/<safe-name>.');
@@ -1361,6 +1450,7 @@ export function executeCommand(options: {
   readonly experiments?: readonly TerminalExperiment[];
   readonly documents?: readonly TerminalTextDocument[];
   readonly identity?: TerminalIdentity;
+  readonly friendLinks?: readonly TerminalFriendLink[];
   readonly now?: () => Date;
   readonly registry?: TerminalCommandRegistry;
 }): CommandResult {
@@ -1378,6 +1468,7 @@ export function executeCommand(options: {
     options.experiments ?? Object.freeze([]),
     documents,
     options.identity ?? DEFAULT_TERMINAL_IDENTITY,
+    options.friendLinks ?? DEFAULT_TERMINAL_FRIEND_LINKS,
     options.now ?? (() => new Date()),
     registry,
     false,

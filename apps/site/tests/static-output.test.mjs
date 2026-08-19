@@ -104,6 +104,18 @@ test('shared head metadata and public discovery files follow site configuration'
   const robots = await readFile(path.join(distRoot, 'robots.txt'), 'utf8');
   assert.match(home, new RegExp('<html lang="' + SITE_CONFIG.site.language + '"', 'u'));
   assert.match(home, new RegExp('<title>' + SITE_CONFIG.site.name + '</title>', 'u'));
+  assert.match(home, /friend links/u);
+  if (SITE_CONFIG.terminal.friends.length === 0) {
+    assert.match(home, /No friend links\./u);
+    assert.doesNotMatch(home, /data-terminal-friend-name=/u);
+  } else {
+    assert.doesNotMatch(home, /No friend links\./u);
+    assert.equal((home.match(/data-terminal-friend-name=/gu) ?? []).length, SITE_CONFIG.terminal.friends.length);
+    for (const friend of SITE_CONFIG.terminal.friends) {
+      assert.ok(home.includes(friend.name));
+      assert.ok(home.includes(friend.url));
+    }
+  }
   assert.match(home, new RegExp('<meta name="description" content="' + SITE_CONFIG.site.description.replace('.', '\\.') + '">', 'u'));
   assert.match(home, new RegExp('<meta name="robots" content="' + SITE_CONFIG.seo.robots.replace(', ', ',\\s*') + '">', 'u'));
   if (SITE_CONFIG.site.url === null) {

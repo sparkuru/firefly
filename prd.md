@@ -429,7 +429,7 @@ dist/
 
 - `Dockerfile` 使用 Node 22 构建 `experiments/nerv`，运行阶段只保留 Nginx 与静态产物。
 - `nginx.conf` 在容器内监听 `8080`，将 `/` 重定向到 `/lab/nerv/`，并提供静态 404、缓存策略、安全响应头与 `/healthz`。
-- `f1refly.yaml` 默认只发布 `127.0.0.1:8080`，外部 TLS 与公网反向代理由部署环境负责。
+- `compose.yml` 默认只发布 `127.0.0.1:8080`，外部 TLS 与公网反向代理由部署环境负责。
 - 主站尚未落地前，镜像只包含 NERV；Publication Assembler 落地后改为复制完整 `dist/`，Nginx 路由边界不变。
 
 不使用容器时，可采用不可变 release 与原子 symlink：

@@ -1,14 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseDocument } from 'yaml';
 import { z } from 'astro/zod';
+import { parse as parseToml } from 'smol-toml';
 
 const sourceRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const configCandidates = [
-  path.resolve(process.cwd(), 'config/site.yaml'),
-  path.resolve(process.cwd(), '../../config/site.yaml'),
-  path.join(sourceRepositoryRoot, 'config/site.yaml')
+  path.resolve(process.cwd(), 'config/site.toml'),
+  path.resolve(process.cwd(), '../../config/site.toml'),
+  path.join(sourceRepositoryRoot, 'config/site.toml')
 ];
 export const SITE_CONFIG_PATH = configCandidates.find((candidate) => existsSync(candidate)) ?? configCandidates[0];
 
@@ -85,6 +85,31 @@ const image = z.union([z.string(), z.null()]).optional().default(null).refine(
   'SEO image must be an absolute http(s) URL or a safe root-relative path'
 ).transform((value) => value === null ? null : value);
 
+const friendLink = z.object({
+  name: safeText('terminal.friends.name must be non-empty safe text'),
+  desc: safeText('terminal.friends.desc must be non-empty safe single-line text').optional(),
+  url: z.string().refine(
+    isSafeHttpUrl,
+    'terminal.friends.url must be an absolute http(s) URL without credentials or fragments'
+  )
+}).strict();
+
+const friends = z.array(friendLink).optional().default([]).superRefine((links, context) => {
+  const seen = new Map();
+  links.forEach((link, index) => {
+    const previousIndex = seen.get(link.url);
+    if (previousIndex !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: `terminal.friends.url duplicates item ${previousIndex + 1}`,
+        path: [index, 'url']
+      });
+    } else {
+      seen.set(link.url, index);
+    }
+  });
+});
+
 const siteSchema = z.object({
   name: safeText('site.name must be non-empty safe text'),
   description: safeText('site.description must be non-empty safe text'),
@@ -97,7 +122,8 @@ const terminalSchema = z.object({
   user: z.string().trim().min(1).refine((value) => safePromptToken.test(value), 'terminal.user must be one safe prompt token'),
   host: z.string().trim().min(1).refine((value) => safePromptToken.test(value), 'terminal.host must be one safe prompt token'),
   cwd: z.string().trim().min(1).refine((value) => normalizeCwd(value) !== false, 'terminal.cwd must be a safe virtual path beginning with ~/blog').transform(normalizeCwd),
-  about: safeText('terminal.about must be non-empty safe text', { multiline: true }).transform(normalizeAbout)
+  about: safeText('terminal.about must be non-empty safe text', { multiline: true }).transform(normalizeAbout),
+  friends
 }).strict();
 
 const robots = safeText('seo.robots must be a safe robots policy').refine(
@@ -128,7 +154,7 @@ function formatIssues(error) {
   }).join('; ');
 }
 
-export function parseSiteConfig(value, source = 'config/site.yaml') {
+export function parseSiteConfig(value, source = 'config/site.toml') {
   const result = siteConfigSchema.safeParse(value);
   if (!result.success) throw new Error(`Invalid site configuration in ${source}: ${formatIssues(result.error)}`);
   return freezeDeep(result.data);
@@ -141,20 +167,11 @@ export function loadSiteConfig(filePath = SITE_CONFIG_PATH) {
   } catch (error) {
     throw new Error(`Unable to read site configuration at ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
-  let document;
-  try {
-    document = parseDocument(source, { uniqueKeys: true });
-  } catch (error) {
-    throw new Error(`Invalid YAML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  if (document.errors.length > 0) {
-    throw new Error(`Invalid YAML in ${filePath}: ${document.errors.map((error) => error.message).join('; ')}`);
-  }
   let value;
   try {
-    value = document.toJS({ mapAsMap: false });
+    value = parseToml(source);
   } catch (error) {
-    throw new Error(`Invalid YAML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Invalid TOML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
   return parseSiteConfig(value, filePath);
 }

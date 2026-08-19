@@ -16,6 +16,7 @@ import {
   completeCommand,
   createTerminalCommandRegistry,
   createTerminalState,
+  decodeTerminalFriendLinks,
   decodeTerminalIdentity,
   decodeTerminalEntries,
   decodeTerminalExperiments,
@@ -45,6 +46,10 @@ const entries = decodeTerminalEntries(rawEntries);
 const experiments = decodeTerminalExperiments([
   { id: 'nerv', title: 'NERV', href: '/lab/nerv/' },
   { id: 'quiet-lab', title: 'Quiet Lab', href: '/lab/quiet-lab/' }
+]);
+const friendLinks = decodeTerminalFriendLinks([
+  { name: 'Example', desc: 'A useful example site.', url: 'https://example.test/blog' },
+  { name: 'Docs', url: 'http://docs.example.test/?from=site' }
 ]);
 
 test('default prompt stays derived from the default identity', () => {
@@ -82,6 +87,7 @@ function run(command: string, state = createTerminalState()) {
     input: command,
     entries,
     experiments,
+    friendLinks,
     identity: DEFAULT_TERMINAL_IDENTITY,
     now: () => new Date('2026-08-12T04:05:06.000Z')
   });
@@ -98,6 +104,7 @@ function runShell(command: string, state = createTerminalState()) {
     input: command,
     entries,
     experiments,
+    friendLinks,
     documents,
     identity: DEFAULT_TERMINAL_IDENTITY,
     now: () => new Date('2026-08-12T04:05:06.000Z')
@@ -203,6 +210,50 @@ test('strict experiment decoder clones exact canonical listed destinations', () 
   assert.equal(invoked, false);
 });
 
+test('strict friend-link decoder accepts safe records and rejects unsafe payloads', () => {
+  assert.deepEqual(friendLinks, [
+    { name: 'Example', desc: 'A useful example site.', url: 'https://example.test/blog' },
+    { name: 'Docs', url: 'http://docs.example.test/?from=site' }
+  ]);
+  assert.equal(Object.isFrozen(friendLinks), true);
+  assert.equal(Object.isFrozen(friendLinks[0]), true);
+  for (const item of [
+    { name: 'Example', url: 'javascript:alert(1)' },
+    { name: 'Example', url: 'https://user:pass@example.test' },
+    { name: 'Example', url: 'https://example.test/#fragment' },
+    { name: 'Example\nsite', url: 'https://example.test' },
+    { name: 'Example', desc: '', url: 'https://example.test' },
+    { name: 'Example', desc: ' details', url: 'https://example.test' },
+    { name: 'Example', desc: 'details\nmore', url: 'https://example.test' },
+    { name: 'Example', desc: 'details\u0080', url: 'https://example.test' },
+    { name: 'Example', desc: 'details\u2028more', url: 'https://example.test' },
+    { name: 'Example', url: 'https://example.test/\u0080' },
+    { name: 'Example', description: 'details', url: 'https://example.test' },
+    { name: 'Example', url: 'https://example.test', extra: true },
+    Object.assign(Object.create({}), { name: 'Example', url: 'https://example.test' })
+  ]) {
+    assert.throws(() => decodeTerminalFriendLinks([item]), /Terminal (?:friend link|entry|index)/u);
+  }
+  assert.throws(() => decodeTerminalFriendLinks([
+    { name: 'Example', url: 'https://example.test' },
+    { name: 'Again', url: 'https://example.test' }
+  ]), /duplicate/u);
+  const sparse = new Array(1);
+  assert.throws(() => decodeTerminalFriendLinks(sparse), /dense/u);
+  let invoked = false;
+  const accessor = Object.defineProperty({}, 'name', { get() { invoked = true; return 'Example'; } });
+  assert.throws(() => decodeTerminalFriendLinks([accessor]), /data properties/u);
+  assert.equal(invoked, false);
+  let descInvoked = false;
+  const descAccessor = Object.defineProperties({}, {
+    name: { value: 'Example', enumerable: true },
+    desc: { get() { descInvoked = true; return 'details'; }, enumerable: true },
+    url: { value: 'https://example.test', enumerable: true }
+  });
+  assert.throws(() => decodeTerminalFriendLinks([descAccessor]), /data properties/u);
+  assert.equal(descInvoked, false);
+});
+
 test('runtime subpath stays side-effect-free and independent from adapter dependencies', async () => {
   const runtime = await readFile(new URL('../src/runtime.js', import.meta.url), 'utf8');
   const declarations = await readFile(new URL('../src/runtime.d.ts', import.meta.url), 'utf8');
@@ -236,6 +287,7 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.doesNotMatch(help, /dynamic transcript/u);
   assert.match(help, /ls \[path\|pattern\]/u);
   assert.match(help, /open lab\/<id>/u);
+  assert.match(help, /list curated friend links/u);
   assert.equal(run('ls').effect?.kind, 'entries');
   const posts = run('ls posts').effect;
   const pages = run('ls pages').effect;
@@ -364,6 +416,8 @@ test('every command has deterministic output and strict usage errors', () => {
       'Source: https://github.com/sparkuru/f1refly.git'
     ]
   });
+  assert.deepEqual(run('friends').effect, { kind: 'links', links: friendLinks });
+  assert.equal(run('friends').announcement, '2 friend links listed.');
   assert.match(JSON.stringify(run('pwd').effect), /~\/blog\/posts/u);
   assert.match(JSON.stringify(run('whoami').effect), /guest/u);
   assert.match(JSON.stringify(run('date').effect), /2026-08-12 04:05:06 UTC/u);
@@ -408,7 +462,7 @@ test('every command has deterministic output and strict usage errors', () => {
       ]
     }, option);
   }
-  for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'vim', 'tree /private', 'open', 'open other', 'open lab/nerv extra', 'about extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
+  for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'vim', 'tree /private', 'open', 'open other', 'open lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
     assert.match(JSON.stringify(run(command).effect), /Usage:/u, command);
   }
   assert.match(JSON.stringify(run('wat').effect), /Unknown command: wat/u);
@@ -583,8 +637,43 @@ test('grep preserves source lines, reports canonical locations, and exposes safe
   assert.equal(empty.announcement, 'No matches for "absent".');
 });
 
+test('friends stays clickable directly and remains deterministic in text shells', () => {
+  assert.deepEqual(runShell('friends | grep -i example').effect, {
+    kind: 'grep',
+    pattern: 'example',
+    matches: [
+      { path: '-', line: 'Example — A useful example site. — https://example.test/blog', ranges: [[0, 7], [19, 26], [43, 50]] },
+      { path: '-', line: 'Docs — http://docs.example.test/?from=site', ranges: [[19, 26]] }
+    ],
+    noResults: false,
+    truncated: false
+  });
+  const redirected = runShell('friends > /.rshell/tmp/friends.txt');
+  assert.deepEqual(redirected.effect, {
+    kind: 'lines',
+    tone: 'muted',
+    lines: ['Wrote 2 lines to /.rshell/tmp/friends.txt.']
+  });
+  assert.deepEqual(runShell('cat /.rshell/tmp/friends.txt', redirected.state).effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['Example — A useful example site. — https://example.test/blog', 'Docs — http://docs.example.test/?from=site']
+  });
+  const empty = executeCommand({
+    state: createTerminalState(),
+    input: 'friends',
+    entries,
+    experiments,
+    friendLinks: Object.freeze([]),
+    identity: DEFAULT_TERMINAL_IDENTITY
+  });
+  assert.deepEqual(empty.effect, { kind: 'links', links: [] });
+  assert.equal(empty.announcement, 'No friend links.');
+});
+
 test('completion consumes only unique contextual document and lab matches', () => {
   assert.deepEqual(completeCommand('hel', entries, experiments), { kind: 'unique', value: 'help ', candidates: ['help'] });
+  assert.deepEqual(completeCommand('frie', entries, experiments), { kind: 'unique', value: 'friends ', candidates: ['friends'] });
   assert.deepEqual(completeCommand('l', entries, experiments), { kind: 'unique', value: 'l ', candidates: ['l'] });
   assert.equal(completeCommand('', entries, experiments).kind, 'ambiguous');
   const listCompletion = completeCommand('ls p', entries, experiments);

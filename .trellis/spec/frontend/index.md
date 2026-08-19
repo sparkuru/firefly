@@ -43,7 +43,7 @@ All files in this directory are written in English and cite implemented paths.
 | [X Core Contract](./x-core-contract.md) | AST pipeline, presentation registry, diagnostics, JSON metadata, and adapter boundary | Active |
 | [Experiment Publication Contract](./publication-contract.md) | Manifest/catalog signatures, build trust, safe artifacts, coordinated promotion, lab/Terminal/Nginx behavior | Active |
 | [Content Workspace Contract](./content-workspace-contract.md) | Configured Markdown root, authored symlinks, guest projection, virtual paths, command registry, nested routes, and Vim reader | Active |
-| [Site Configuration and SEO Contract](./site-configuration-contract.md) | Public YAML identity, Terminal configuration boundary, document metadata, robots, and sitemap generation | Active |
+| [Site Configuration and SEO Contract](./site-configuration-contract.md) | Public TOML identity, Terminal configuration boundary, document metadata, robots, and sitemap generation | Active |
 
 ### Trellis Plus: Project Validation Profile
 

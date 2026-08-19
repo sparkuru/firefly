@@ -48,7 +48,7 @@ Experiment records. It never fetches content or receives Markdown/HTML strings,
 raw manifests, build commands, filesystem paths, or unlisted metadata.
 
 The default immutable registry recognizes `help`, `ls`, `open`, `cat`, `vim`,
-`tree`, `about`, `pwd`, `whoami`, `date`, `history`, and `clear`. Each definition
+`tree`, `friends`, `about`, `pwd`, `whoami`, `date`, `history`, and `clear`. Each definition
 owns aliases, help/usage, execution, and optional completion. The shipped
 registry has no surprise aliases; tests prove a custom definition and alias.
 `ls lab` returns a closed Experiment-list effect. `open lab/<id>`
@@ -64,6 +64,15 @@ the matching validated `HTMLTemplateElement.content`, scopes clone-owned IDs and
 ID references, appends it inline, and leaves `/` unchanged. Canonical
 destinations remain native recovery/permalink/output links; the controller does
 not programmatically navigate for `cat`.
+
+`friends` receives the separately decoded `terminal.friends` payload. Direct
+output renders a closed `links` effect into native anchors with aligned
+name/description/URL columns, keeping an empty description cell when absent;
+the responsive layout stacks those cells on narrow screens. Pipes and
+redirects receive the bounded `name — url` or `name — desc — url` text
+projection. The controller must not fetch
+or probe the destinations, and malformed friend data follows the same fatal
+recovery path as malformed identity/index/template data.
 
 - Keep recovery visible without JavaScript and after early failure. While the
   marker has set the internal `connecting` state, the bounded direct boot-log
