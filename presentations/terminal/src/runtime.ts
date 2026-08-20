@@ -16,7 +16,12 @@ import { formatFriendLink } from './commands/links.js';
 import { NEUTRAL_COMMAND_REGISTRY, NEUTRAL_COMMAND_SPECS } from './commands/registry.js';
 import { createPublicIndex } from './vfs/public-index.js';
 import type { PublicDocument, ReadonlyVirtualFs } from './vfs/contracts.js';
-import { displayVirtualPath as displayVfsPath, virtualPathFromDisplay as virtualPathFromVfsDisplay } from './vfs/paths.js';
+import {
+  classifyVirtualOperandPrefix,
+  displayVirtualPath as displayVfsPath,
+  resolveVirtualPath,
+  virtualPathFromDisplay as virtualPathFromVfsDisplay
+} from './vfs/paths.js';
 
 export type TerminalEntryKind = 'post' | 'page';
 
@@ -572,79 +577,84 @@ function virtualPathFromCwd(cwd: string): string {
       : '/posts';
 }
 
-function pathCompletion(operand: string, entries: readonly TerminalEntry[], invokedName: string, cwd: string): CompletionResult {
-  const absolute = operand.startsWith('/');
-  const dotted = operand.startsWith('./');
-  const prefix = absolute ? operand.slice(1) : dotted ? operand.slice(2) : operand;
-  if (prefix.normalize('NFC') !== prefix || prefix.includes('%') || prefix.includes('\\') || prefix.includes('?') || prefix.includes('#') || prefix.includes('://') || /[\u0000-\u001f\u007f]/u.test(prefix) || prefix.split('/').some((segment, index, values) => (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'))) return { kind: 'none', candidates: Object.freeze([]) };
-  if (
-    absolute &&
-    prefix.length > 0 &&
-    !['posts', 'pages'].some((mount) => mount.startsWith(prefix) || prefix.startsWith(`${mount}/`))
-  ) {
-    return { kind: 'none', candidates: Object.freeze([]) };
-  }
-  const cwdPath = virtualPathFromCwd(cwd);
-  const candidatePaths = entries.flatMap((entry) => {
-    if (absolute) return [entry.virtualPath];
-    const fullPath = `/${entry.virtualPath}`;
-    const prefixPath = cwdPath === '/' ? '/' : `${cwdPath}/`;
-    return fullPath.startsWith(prefixPath) ? [fullPath.slice(prefixPath.length)] : [];
-  });
+function isSafeCompletionPrefix(prefix: string, allowWildcard = false): boolean {
+  return prefix.normalize('NFC') === prefix &&
+    !prefix.includes('%') &&
+    !prefix.includes('\\') &&
+    !prefix.includes('?') &&
+    !prefix.includes('#') &&
+    !prefix.includes('://') &&
+    !/[\u0000-\u001f\u007f]/u.test(prefix) &&
+    (allowWildcard || !prefix.includes('*')) &&
+    !prefix.split('/').some((segment, index, values) =>
+      (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'));
+}
+
+function visibleChildCandidates(prefix: string, paths: readonly string[]): readonly string[] {
   const slash = prefix.lastIndexOf('/');
   const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
   const segmentPrefix = prefix.slice(slash + 1);
-  const candidates = candidatePaths.flatMap((candidate) => {
+  return paths.flatMap((candidate) => {
     if (!candidate.startsWith(parent)) return [];
     const remaining = candidate.slice(parent.length);
     const nextSlash = remaining.indexOf('/');
     const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
     return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
   });
-  const displayPrefix = absolute ? '/' : dotted ? './' : '';
+}
+
+function relativeCandidate(path: string, cwdPath: string, rootResourceDefault = false): string | undefined {
+  if (path === '/') return undefined;
+  if (cwdPath === '/' && rootResourceDefault && path.startsWith('/posts/')) return path.slice('/posts/'.length);
+  const prefix = cwdPath === '/' ? '/' : `${cwdPath}/`;
+  const pathWithoutTrailingSlash = path.endsWith('/') ? path.slice(0, -1) : path;
+  return path.startsWith(prefix) && pathWithoutTrailingSlash !== cwdPath ? path.slice(prefix.length) : undefined;
+}
+
+function completeVirtualPaths(
+  operand: string,
+  paths: readonly string[],
+  invokedName: string,
+  cwd: string,
+  options: { readonly ownsAmbiguousTab?: boolean; readonly rootResourceDefault?: boolean; readonly extras?: readonly string[] } = {}
+): CompletionResult {
+  const parsed = classifyVirtualOperandPrefix(operand);
+  if (parsed.kind === 'invalid' || !isSafeCompletionPrefix(parsed.prefix)) return { kind: 'none', candidates: Object.freeze([]) };
+  const cwdPath = virtualPathFromCwd(cwd);
+  const candidates = paths.flatMap((path) => {
+    if (parsed.kind === 'absolute') return path === '/' ? [] : [path.slice(1)];
+    if (options.rootResourceDefault && cwdPath === '/' && path.startsWith('/posts/')) {
+      return [path.slice('/posts/'.length), path.slice(1)];
+    }
+    const candidate = relativeCandidate(path, cwdPath, options.rootResourceDefault);
+    return candidate === undefined ? [] : [candidate];
+  });
+  if (parsed.kind === 'relative' && parsed.displayPrefix === '') candidates.push(...(options.extras ?? []));
+  const visible = visibleChildCandidates(parsed.prefix, candidates);
   const completion = completeFrom(
-    prefix,
-    candidates,
-    (candidate) => `${invokedName} ${displayPrefix}${candidate}`,
-    true
+    parsed.prefix,
+    visible,
+    (candidate) => `${invokedName} ${parsed.displayPrefix}${candidate}`,
+    options.ownsAmbiguousTab ?? true
   );
   if (completion.kind === 'none') {
-    return Object.freeze({
-      kind: 'no-match',
-      candidates: Object.freeze([]) as readonly [],
-      ownsTab: true
-    });
+    return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
   }
   if (completion.kind !== 'ambiguous') return completion;
   return Object.freeze({
     ...completion,
-    candidates: Object.freeze(completion.candidates.map((candidate) => `${displayPrefix}${candidate}`))
+    candidates: Object.freeze(completion.candidates.map((candidate) => `${parsed.displayPrefix}${candidate}`))
   });
 }
 
-function wildcardSegmentMatches(pattern: string, value: string): boolean {
-  let patternIndex = 0;
-  let valueIndex = 0;
-  let starIndex = -1;
-  let starValueIndex = -1;
-  while (valueIndex < value.length) {
-    if (patternIndex < pattern.length && pattern[patternIndex] === value[valueIndex]) {
-      patternIndex += 1;
-      valueIndex += 1;
-    } else if (patternIndex < pattern.length && pattern[patternIndex] === '*') {
-      starIndex = patternIndex;
-      starValueIndex = valueIndex;
-      patternIndex += 1;
-    } else if (starIndex !== -1) {
-      patternIndex = starIndex + 1;
-      starValueIndex += 1;
-      valueIndex = starValueIndex;
-    } else {
-      return false;
-    }
-  }
-  while (patternIndex < pattern.length && pattern[patternIndex] === '*') patternIndex += 1;
-  return patternIndex === pattern.length;
+function pathCompletion(operand: string, entries: readonly TerminalEntry[], invokedName: string, cwd: string): CompletionResult {
+  return completeVirtualPaths(
+    operand,
+    entries.map((entry) => `/${entry.virtualPath}`),
+    invokedName,
+    cwd,
+    { rootResourceDefault: true }
+  );
 }
 
 function lsCompletion(
@@ -654,67 +664,17 @@ function lsCompletion(
   invokedName: string,
   cwd: string
 ): CompletionResult {
-  const absolute = operand.startsWith('/');
-  const dotted = operand.startsWith('./');
-  const prefix = absolute ? operand.slice(1) : dotted ? operand.slice(2) : operand;
-  if (
-    prefix.includes('*') ||
-    prefix.normalize('NFC') !== prefix ||
-    prefix.includes('%') ||
-    prefix.includes('\\') ||
-    prefix.includes('?') ||
-    prefix.includes('#') ||
-    prefix.includes('://') ||
-    /[\u0000-\u001f\u007f]/u.test(prefix) ||
-    prefix.split('/').some((segment, index, values) => (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'))
-  ) {
-    return { kind: 'none', candidates: Object.freeze([]) };
-  }
-  if (absolute && prefix.length > 0 && !['posts', 'pages', 'lab'].some((mount) => mount.startsWith(prefix) || prefix.startsWith(`${mount}/`))) {
-    return { kind: 'none', candidates: Object.freeze([]) };
-  }
-
   const directoryPaths = new Set(
     [...knownDirectories(entries, Object.freeze([])), ...experiments.map(({ id }) => `/lab/${id}`)]
       .filter((path) => !path.startsWith('/.rshell'))
   );
   const paths = [
-    ...directoryPaths,
+    ...[...directoryPaths].map((path) => path === '/' ? path : `${path}/`),
     ...entries.map(({ virtualPath }) => `/${virtualPath}`)
   ];
-  const cwdPath = virtualPathFromCwd(cwd);
-  const candidatePaths = paths.flatMap((path) => {
-    const candidate = directoryPaths.has(path) && path !== '/' ? `${path}/` : path;
-    if (absolute) return [candidate === '/' ? '/' : candidate.slice(1)];
-    const prefixPath = cwdPath === '/' ? '/' : `${cwdPath}/`;
-    return path.startsWith(prefixPath) && path !== cwdPath ? [candidate.slice(prefixPath.length)] : [];
-  });
-  const slash = prefix.lastIndexOf('/');
-  const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
-  const segmentPrefix = prefix.slice(slash + 1);
-  const candidates = candidatePaths.flatMap((candidate) => {
-    if (!candidate.startsWith(parent)) return [];
-    const remaining = candidate.slice(parent.length);
-    const nextSlash = remaining.indexOf('/');
-    const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
-    return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
-  });
-  const displayPrefix = absolute ? '/' : dotted ? './' : '';
-  if (!absolute && !dotted) candidates.push('posts/', 'pages/', 'lab/');
-  if (!absolute && !dotted) candidates.push('-h', '--help');
-  const completion = completeFrom(
-    prefix,
-    candidates,
-    (candidate) => `${invokedName} ${displayPrefix}${candidate}`,
-    operand.length === 0
-  );
-  if (completion.kind === 'none') {
-    return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
-  }
-  if (completion.kind !== 'ambiguous') return completion;
-  return Object.freeze({
-    ...completion,
-    candidates: Object.freeze(completion.candidates.map((candidate) => `${displayPrefix}${candidate}`))
+  return completeVirtualPaths(operand, paths, invokedName, cwd, {
+    ownsAmbiguousTab: operand.length === 0,
+    extras: Object.freeze(['-h', '--help'])
   });
 }
 
@@ -727,66 +687,27 @@ function directoryCompletion(
   includeHelpOptions = false,
   experiments: readonly TerminalExperiment[] = Object.freeze([])
 ): CompletionResult {
-  const absolute = operand.startsWith('/');
-  const dotted = operand.startsWith('./');
-  const prefix = absolute ? operand.slice(1) : dotted ? operand.slice(2) : operand;
-  if (
-    prefix.includes('*') ||
-    prefix.normalize('NFC') !== prefix ||
-    prefix.includes('%') ||
-    prefix.includes('\\') ||
-    prefix.includes('?') ||
-    prefix.includes('#') ||
-    prefix.includes('://') ||
-    /[\u0000-\u001f\u007f]/u.test(prefix) ||
-    prefix.split('/').some((segment, index, values) => (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'))
-  ) {
-    return { kind: 'none', candidates: Object.freeze([]) };
-  }
-
   const directories = [...new Set([
     ...knownDirectories(entries, Object.freeze([])),
     ...experiments.map(({ id }) => `/lab/${id}`)
   ])]
     .filter((path) => !path.startsWith('/.rshell'))
     .sort();
-  const cwdPath = virtualPathFromCwd(cwd);
-  const candidatePaths = directories.flatMap((path) => {
-    if (absolute) return [path === '/' ? '/' : `${path.slice(1)}/`];
-    const prefixPath = cwdPath === '/' ? '/' : `${cwdPath}/`;
-    return path.startsWith(prefixPath) && path !== cwdPath ? [`${path.slice(prefixPath.length)}/`] : [];
-  });
-  const slash = prefix.lastIndexOf('/');
-  const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
-  const segmentPrefix = prefix.slice(slash + 1);
-  const candidates = candidatePaths.flatMap((candidate) => {
-    if (!candidate.startsWith(parent)) return [];
-    const remaining = candidate.slice(parent.length);
-    const nextSlash = remaining.indexOf('/');
-    const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
-    return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
-  });
-  const displayPrefix = absolute ? '/' : dotted ? './' : '';
-  if (includeMountAliases && !absolute && !dotted) candidates.push('posts', 'pages', 'lab');
-  if (includeHelpOptions && !absolute && !dotted) candidates.push('-h', '--help');
-  const completion = completeFrom(
-    prefix,
-    candidates,
-    (candidate) => `${invokedName} ${displayPrefix}${candidate}`,
-    true
+  const extras = [
+    ...(includeMountAliases ? ['posts', 'pages', 'lab'] : []),
+    ...(includeHelpOptions ? ['-h', '--help'] : [])
+  ];
+  return completeVirtualPaths(
+    operand,
+    directories.map((path) => path === '/' ? path : `${path}/`),
+    invokedName,
+    cwd,
+    { extras }
   );
-  if (completion.kind === 'none') {
-    return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
-  }
-  if (completion.kind !== 'ambiguous') return completion;
-  return Object.freeze({
-    ...completion,
-    candidates: Object.freeze(completion.candidates.map((candidate) => `${displayPrefix}${candidate}`))
-  });
 }
 
 export function formatDocumentOperand(entry: TerminalEntry): string {
-  return entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
+  return entry.kind === 'post' ? entry.relativePath : `~/blog/${entry.virtualPath}`;
 }
 
 export function createTerminalCommandRegistry(definitions: readonly TerminalCommandDefinition[]): TerminalCommandRegistry {
@@ -851,8 +772,16 @@ function neutralCompletion(name: string): CompletionHandler | undefined {
   if (name === 'ls') return (operand, context, invoked) => lsCompletion(operand, context.entries, context.experiments, invoked, context.cwd);
   if (name === 'cat' || name === 'vim') return (operand, context, invoked) => pathCompletion(operand, context.entries, invoked, context.cwd);
   if (name === 'cd') return (operand, context, invoked) => directoryCompletion(operand, context.entries, invoked, context.cwd);
-  if (name === 'open') return (operand, context, invoked) => completeFrom(operand, context.experiments.map(({ id }) => `lab/${id}`), (candidate) => `${invoked} ${candidate}`);
-  if (name === 'tree') return (operand, _context, invoked) => completeFrom(operand, ['/', '/posts', '/pages', '/lab'], (candidate) => `${invoked} ${candidate}`);
+  if (name === 'open') return (operand, context, invoked) => completeVirtualPaths(
+    operand,
+    context.experiments.map(({ id }) => `/lab/${id}`),
+    invoked,
+    context.cwd
+  );
+  if (name === 'tree') return (operand, context, invoked) => {
+    if (operand === '~/blog') return { kind: 'unique', value: `${invoked} ~/blog`, candidates: Object.freeze(['~/blog']) };
+    return directoryCompletion(operand, context.entries, invoked, context.cwd);
+  };
   return undefined;
 }
 
@@ -921,51 +850,12 @@ function normaliseVirtualPath(
   cwd: string,
   allowParentTraversal = false
 ): string | undefined {
-  if (
-    operand.length === 0 ||
-    operand.normalize('NFC') !== operand ||
-    operand.includes('\\') ||
-    operand.includes('%') ||
-    operand.includes('?') ||
-    operand.includes('#') ||
-    /[\u0000-\u001f\u007f]/u.test(operand)
-  ) {
-    return undefined;
-  }
-
-  let base: string;
-  if (operand === '~' || operand === '~/blog') {
-    base = '/';
-  } else if (operand.startsWith('~/')) {
-    if (!operand.startsWith('~/blog/')) return undefined;
-    base = `/${operand.slice('~/blog/'.length)}`;
-  } else if (operand.startsWith('/')) {
-    base = operand;
-  } else {
-    if (!cwd.startsWith(rshellRoot)) return undefined;
-    base = `${cwd.slice(rshellRoot.length)}/${operand}`;
-  }
-
-  const segments: string[] = [];
-  const rawSegments = base.split('/');
-  for (const [index, segment] of rawSegments.entries()) {
-    const isLeadingOrTrailingSlash = segment === '' && (index === 0 || index === rawSegments.length - 1);
-    if (isLeadingOrTrailingSlash) continue;
-    if (segment === '') return undefined;
-    if (segment === '.') continue;
-    if (segment === '..') {
-      if (!allowParentTraversal || segments.length === 0) return undefined;
-      segments.pop();
-      continue;
-    }
-    if (segment === '.rshell' && segments.length === 0) {
-      segments.push(segment);
-      continue;
-    }
-    if (!isSafePathSegment(segment)) return undefined;
-    segments.push(segment);
-  }
-  return `/${segments.join('/')}` || '/';
+  const resolution = resolveVirtualPath(
+    operand,
+    virtualPathFromVfsDisplay(cwd),
+    allowParentTraversal ? 'directory' : 'resource'
+  );
+  return resolution.ok ? resolution.path : undefined;
 }
 
 function entryAt(path: string, entries: readonly TerminalEntry[]): TerminalEntry | undefined {
@@ -1449,14 +1339,14 @@ function executeRshellStages(
       if (pure || index !== stages.length - 1 || (output.effect.kind !== 'lines' && output.effect.kind !== 'links')) return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
       const target = stage.target === undefined ? undefined : normaliseVirtualPath(stage.target, state.cwd);
       const name = target === undefined ? undefined : scratchName(target);
-      if (name === undefined) return rshellError(state, 'Redirect only targets /.rshell/tmp/<safe-name>.');
+      if (name === undefined) return rshellError(state, 'Redirect only targets ~/blog/.rshell/tmp/<safe-name>.');
       const existing = state.scratch.find((file) => file.name === name);
       if (existing === undefined && state.scratch.length >= maxScratchFiles) return rshellError(state, `Scratch is limited to ${maxScratchFiles} files.`);
       const written = stage.redirect === 'append' && existing !== undefined ? [...existing.lines, ...output.stdout] : [...output.stdout];
       const bytes = written.reduce((total, line) => total + line.length + 1, 0);
       if (written.length > maxRshellLines || bytes > maxScratchBytes) return rshellError(state, 'Scratch output exceeds the session file limit.');
       state = Object.freeze({ ...state, scratch: freezeScratch([...state.scratch.filter((file) => file.name !== name), { name, lines: Object.freeze(written) }]) });
-      output = { state, effect: lines('muted', `Wrote ${written.length} line${written.length === 1 ? '' : 's'} to /.rshell/tmp/${name}.`), stdout: Object.freeze([]), error: false };
+      output = { state, effect: lines('muted', `Wrote ${written.length} line${written.length === 1 ? '' : 's'} to ~/blog/.rshell/tmp/${name}.`), stdout: Object.freeze([]), error: false };
     }
   }
   return output ?? rshellError(initialState, 'A pipeline stage cannot be empty.');

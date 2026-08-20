@@ -371,9 +371,9 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
   else {
     for (const operand of resources) {
       const resolution = context.fs.resolve(operand, context.cwd, 'resource');
-      if (!resolution.ok) return failureResult('grep can search only listed public documents or /.rshell/tmp scratch files.');
+      if (!resolution.ok) return failureResult('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
       const resources = resourcePaths(context, resolution.path);
-      if (resources === undefined) return failureResult('grep can search only listed public documents or /.rshell/tmp scratch files.');
+      if (resources === undefined) return failureResult('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
       sourcePaths.push(...resources);
     }
   }

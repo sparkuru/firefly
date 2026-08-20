@@ -68,6 +68,11 @@ test('public index exposes a bounded virtual namespace, not host paths', () => {
   assert.deepEqual(fs.list('/posts')?.documents, []);
   assert.deepEqual(fs.list('/posts/characters')?.documents.map(({ path }) => path), ['/posts/characters/alpha.md']);
   assert.deepEqual(fs.glob('/pages/*'), ['/pages/about.md']);
+  for (const operand of ['/', '/posts', '/pages/about.md', '/lab/nerv', '/etc/passwd', '~', '~/', '~/other', '~other/path']) {
+    assert.equal(fs.resolve(operand, '/', 'resource').ok, false, operand);
+  }
+  assert.deepEqual(fs.resolve('~/blog/pages/about.md', '/lab', 'resource'), { ok: true, path: '/pages/about.md' });
+  assert.deepEqual(fs.resolve('~/blog/.rshell/tmp/help', '/lab', 'resource'), { ok: true, path: '/.rshell/tmp/help' });
 });
 
 test('each neutral command owns an argv parser and accepts interspersed options', () => {
@@ -118,7 +123,7 @@ test('root resource mounts resolve for reads, search, and navigation without cha
 
   for (const operand of ['lab/nerv', './lab/nerv']) {
     const experiment = executeCat(root, args([operand]));
-    assert.deepEqual(experiment.stderr.lines, [`Cannot read rshell experiment "${operand}" as a document. Try "open lab/nerv".`], operand);
+    assert.deepEqual(experiment.stderr.lines, [`Cannot read rshell experiment "${operand}" as a document. Try "open ${operand}".`], operand);
   }
   const directory = executeCat(root, args(['pages']));
   assert.deepEqual(directory.stderr.lines, ['Cannot read rshell directory "pages" as a document. Try "ls pages".']);
@@ -154,8 +159,13 @@ test('grep and navigation use independent value/control channels', () => {
   const report = executeGrep(context({ stdin: textStream(['nahida keeps the archive']) }), args(['nahida'], { 'line-number': true }));
   assert.equal(report.value?.kind, 'grep-report');
   assert.deepEqual(report.stdout.lines, ['1:nahida keeps the archive']);
-  assert.deepEqual(executeOpen(context(), args(['lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
-  assert.deepEqual(executeVim(context(), args(['/pages/about.md'])).controls, [{ kind: 'open-document', path: '/pages/about.md' }]);
+  assert.deepEqual(executeOpen(context({ cwd: '/' }), args(['lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeOpen(context({ cwd: '/lab' }), args(['nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeOpen(context({ cwd: '/lab' }), args(['./nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeOpen(context({ cwd: '/lab' }), args(['~/blog/lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.equal(executeOpen(context({ cwd: '/lab' }), args(['lab/nerv'])).status, 1);
+  assert.equal(executeOpen(context({ cwd: '/lab' }), args(['/lab/nerv'])).status, 1);
+  assert.deepEqual(executeVim(context(), args(['~/blog/pages/about.md'])).controls, [{ kind: 'open-document', path: '/pages/about.md' }]);
 });
 
 test('neutral runner wires stdout only and keeps final values and controls separate', () => {
@@ -165,7 +175,7 @@ test('neutral runner wires stdout only and keeps final values and controls separ
   assert.deepEqual(piped.stdout.lines, ['2:nahida keeps the archive']);
   assert.equal(piped.value?.kind, 'grep-report');
 
-  const opened = runRshellInput('open lab/nerv', runnerOptions());
+  const opened = runRshellInput('open ~/blog/lab/nerv', runnerOptions());
   assert.deepEqual(opened.controls, [{ kind: 'open-experiment', id: 'nerv' }]);
   assert.deepEqual(opened.stdout.lines, []);
 
@@ -196,7 +206,7 @@ test('neutral runner applies state patches and bounded scratch redirects', () =>
   const changed = runRshellInput('cd characters', runnerOptions());
   assert.deepEqual(changed.statePatch, { kind: 'cwd', cwd: '/posts/characters' });
 
-  const written = runRshellInput('ls --help > /.rshell/tmp/help', runnerOptions());
+  const written = runRshellInput('ls --help > ~/blog/.rshell/tmp/help', runnerOptions());
   assert.equal(written.status, 0);
   assert.deepEqual(written.stdout.lines, []);
   assert.deepEqual(written.statePatch?.kind, 'session');
@@ -220,7 +230,7 @@ test('neutral runner applies state patches and bounded scratch redirects', () =>
     textDocuments: [{ path: '/posts/characters/alpha.md', lines: ['Alpha record', 'nahida keeps the archive'] }],
     scratch: session.scratch
   });
-  const read = runRshellInput('cat /.rshell/tmp/help', runnerOptions({ fs: scratchFs, session }));
+  const read = runRshellInput('cat ~/blog/.rshell/tmp/help', runnerOptions({ fs: scratchFs, session }));
   assert.equal(read.status, 0);
   assert.deepEqual(read.stdout.lines, session.scratch[0]?.lines);
 });
@@ -232,7 +242,7 @@ test('neutral session commands consume injected identity, command metadata, and 
   assert.equal(help.stdout.lines[0], 'Explore');
   assert.ok(help.stdout.lines.some((line) => line.includes('help (?)')));
 
-  const tree = runRshellInput('tree /', runnerOptions());
+  const tree = runRshellInput('tree ~/blog', runnerOptions());
   assert.equal(tree.status, 0);
   assert.deepEqual(tree.stdout.lines, [
     '~/blog',

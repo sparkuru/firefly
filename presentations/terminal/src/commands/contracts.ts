@@ -10,7 +10,13 @@ export type CommandGroup =
 
 export type CompletionResult =
   | { readonly kind: 'unique'; readonly value: string; readonly candidates: readonly string[] }
-  | { readonly kind: 'ambiguous'; readonly candidates: readonly string[]; readonly ownsTab: boolean }
+  | {
+    readonly kind: 'ambiguous';
+    readonly value: string;
+    readonly candidates: readonly string[];
+    readonly candidateValues: readonly string[];
+    readonly ownsTab: boolean;
+  }
   | { readonly kind: 'no-match'; readonly candidates: readonly []; readonly ownsTab: true }
   | { readonly kind: 'none'; readonly candidates: readonly [] };
 

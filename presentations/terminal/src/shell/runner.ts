@@ -170,7 +170,7 @@ function applyRedirect(
   const target = stage.target === undefined ? undefined : fs.resolve(stage.target, state.cwd, 'resource');
   const path = target?.ok === true ? target.path : undefined;
   const name = path === undefined ? undefined : safeScratchName(path);
-  if (name === undefined) return commandFailure('Redirect only targets /.rshell/tmp/<safe-name>.', state, result.stderr.lines);
+  if (name === undefined) return commandFailure('Redirect only targets ~/blog/.rshell/tmp/<safe-name>.', state, result.stderr.lines);
 
   const existing = state.session.scratch.find((file) => file.name === name);
   if (existing === undefined && state.session.scratch.length >= maxScratchFiles) {

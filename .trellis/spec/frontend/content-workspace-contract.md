@@ -320,22 +320,23 @@ startTerminalReader(root: HTMLElement): void
   relative directory and document completion receives the same current cwd:
   `cd characters` followed by `cat n` completes to `cat nahida.md`, and
   `cd charac` completes to `cd characters/` without changing focus. `tree`
-  renders the current public subtree; `tree /` renders `lab/`, `pages/`, and
-  `posts/`; `/posts` and `/pages` narrow it. The optional `TerminalTextDocument`
+  renders the current public subtree; `tree ~/blog` renders `lab/`, `pages/`,
+  and `posts/`; `~/blog/posts` and `~/blog/pages` narrow it. The optional `TerminalTextDocument`
   corpus contains normalized visible title/prose lines from already validated
   public templates; it is never raw Markdown or HTML. Template `<pre>` blocks
   become one document line per source line and retain indentation, blank lines,
   and meaningful spacing. Prose metadata may be normalized to one readable line,
   but a renderer must not flatten a whole source block into one whitespace run.
   Directories precede files and peers use deterministic code-point order.
-- `/` is the canonical VFS root and `~/blog` is only its prompt/display alias.
-  Directory-mode `resolve('.', '/')` must produce `/` rather than `//.`; after
-  `cd ../` from `~/blog/posts`, no-operand `ls` therefore has the same listing
-  as `ls /`. Resource-mode operands retain the posts-default rule for bare and
-  non-mount-qualified relative paths, but at `/` explicit `posts/<path>`,
-  `pages/<path>`, and `lab/<path>` operands resolve from the virtual root; one
-  leading `./` before an explicit mount is equivalent. Absolute paths retain
-  their canonical behavior, and resource-mode `..` traversal remains rejected.
+- `/` is the canonical internal VFS root; `~/blog` is the sole user-visible
+  absolute shell root. A user-entered operand is either relative to the current
+  cwd or `~/blog` / `~/blog/<path>`; reject `/...`, bare `~`, and bare `~/`
+  before resolution. Thus `lab/nerv` is valid from the root cwd, but is not a
+  cross-cwd alias once the cwd is `~/blog/lab`; there the experiment is opened
+  as `open nerv`, `open ./nerv`, or `open ~/blog/lab/nerv`. Internal VFS paths,
+  decoded metadata, and browser hrefs remain slash-rooted. Directory-mode
+  `resolve('.', '/')` must produce `/` rather than `//.`, and resource-mode
+  `..` traversal remains rejected.
 - When the prompt input is focused, the controller prevents the default action
   for every Tab event, including modifiers and IME/composition events. Only an
   unmodified, non-composing Tab may rewrite input through completion. Safe `cd`
@@ -344,10 +345,10 @@ startTerminalReader(root: HTMLElement): void
   `lab/`, `pages/`, and `posts/` rather than nested descendants. Tab outside
   the prompt remains native page/control navigation.
 - Entry-list display is an executable operand view, not an internal-path dump:
-  posts use cwd-relative paths such as `characters/nahida.md`; pages use virtual
-  absolute paths such as `/pages/about.md`. Help and not-found errors state that
-  bare relative paths resolve under posts, explicit mount-qualified paths may be
-  used from the virtual root, and `tree /` exposes the available public mounts.
+  entries in the cwd use relative operands such as `characters/nahida.md`; an
+  entry outside it uses `~/blog/pages/about.md`-style input. Help and not-found
+  errors describe this shell grammar, while internal routes and VFS metadata
+  retain slash-rooted paths.
 - A standalone `ls` entries effect carries the canonical public `directory` it
   resolved and contains only that directory's immediate children. The browser
   renders directories and documents as one flat shell-style list: directory
@@ -356,7 +357,7 @@ startTerminalReader(root: HTMLElement): void
   canonical trailing-slash native href plus a `data-terminal-cd-path` carrying
   the already validated virtual directory. An unmodified primary activation is
   intercepted by the home controller and submits the equivalent safe `cd
-  <absolute-path>/`; modified activations remain native browser links. Document
+  ~/blog<virtual-path>/`; modified activations remain native browser links. Document
   rows keep stable name, date, and title columns on wide screens; the mobile
   layout keeps the name/date pair and moves the title below them. The bounded
   plain `stdout` projection remains one deterministic entry per line so pipes
@@ -375,11 +376,11 @@ startTerminalReader(root: HTMLElement): void
   directory. Descendant documents do not appear until that directory is
   entered. The plain projection includes the direct directory and document lines
   in deterministic order.
-- `ls` accepts at most one safe public/session virtual path operand. Standalone
-  listing, exact operands, completion, and bounded `*` matching share the same
-  visible-path model: `/` exposes only `lab/`, `pages/`, and `posts/`; public
+- `ls` accepts at most one safe public/session operand in the shell grammar.
+  Standalone listing, exact operands, completion, and bounded `*` matching share
+  the same visible-path model: `~/blog` exposes only `lab/`, `pages/`, and `posts/`; public
   mounts expose their immediate directories and decoded documents; and an
-  exact visible document such as `ls /pages/about.md` returns a one-entry
+  exact visible document such as `ls ~/blog/pages/about.md` returns a one-entry
   structured listing using the document's parent directory. A unique directory
   prefix completes to its canonical slash-terminated name, while a unique
   document prefix completes without a slash (`ls he` →
@@ -390,11 +391,11 @@ startTerminalReader(root: HTMLElement): void
   aggregated into one deterministic direct-child listing, so `ls *.md` lists
   every matching document instead of treating multiplicity as an error. A
   submitted partial name reports its suggested completion. Public mount aliases `posts`, `pages`, and `lab` accept one
-  optional trailing slash and resolve to the same virtual mount as `/posts/`,
-  `/pages/`, and `/lab/`. The lab mount lists only the decoded Experiment
+  optional trailing slash and resolve relative to the current cwd. The lab mount
+  lists only the decoded Experiment
   catalog; a listed `/lab/<id>` path does not expose an experiment's host/build
-  files and instead reports that the destination should be entered with
-  `open lab/<id>`. The browser renders lab entries with the same flat,
+  files and instead reports the cwd-correct `open` form, such as `open nerv`
+  from `~/blog/lab`. The browser renders lab entries with the same flat,
   no-marker terminal row treatment as public document listings. Other ambiguous
   command/list completion leaves the input unchanged; prompt Tab is still
   controller-owned.
@@ -404,12 +405,11 @@ startTerminalReader(root: HTMLElement): void
   normalized directory candidates `pages/` and `posts/`, while prompt Tab is
   still prevented by the controller. A unique prefix such as `ls pa` completes
   to `ls pages/`.
-- `cat` and `vim` share one resolver and segment-aware completer. Bare and
-  non-mount-qualified relative paths resolve under posts; at the virtual root,
-  `posts/<path>`, `pages/<path>`, and `lab/<path>` may be explicit root-relative
-  operands with one optional leading `./`. Readable document absolute operands
-  start only `/posts/` or `/pages/`; experiments are navigated with
-  `open lab/<id>` rather than read as documents. Hidden/dot/traversal/percent/
+- `cat` and `vim` share one resolver and segment-aware completer. Bare
+  relative paths resolve from the current cwd; `~/blog/<path>` is the explicit
+  cross-cwd form. Experiments use the same resolver and an exact listed leaf:
+  for example, `open nerv` from `~/blog/lab`, not a special `open lab/<id>`
+  compatibility form. Hidden/dot/traversal/percent/
   backslash/URL/control/non-NFC/unknown-root operands never resolve or consume
   Tab, and directory/experiment operands return actionable command errors.
 - `cat` returns a validated `document` effect for trusted template cloning.
@@ -421,7 +421,8 @@ startTerminalReader(root: HTMLElement): void
   contract.
 - Syntactically safe `cat`/`vim` path completion owns the rewrite decision for
   every result count. Unique completion inserts the next segment; ambiguity
-  keeps prompt focus and shows candidates with the user's `./` or `/` prefix;
+  keeps prompt focus and shows candidates with the user's `./` or `~/blog/`
+  prefix;
   zero candidates returns a distinct exhaustive `no-match` result, retains
   exact input/focus, and shows bounded `No matches.`. Command/list ambiguity
   and unsafe/control/non-NFC paths do not rewrite the input, but their Tab event
@@ -447,7 +448,7 @@ startTerminalReader(root: HTMLElement): void
   in-memory session alias; it may resolve only to a known command/alias, is
   visible to help and alias queries, and disappears when the session refreshes.
 - `grep` accepts only bounded `-i`, `-n`, and `-F` flags, a safe literal/regular
-  subset, and validated public or `/.rshell/tmp` resources. It preserves source
+  subset, and validated public or `~/blog/.rshell/tmp` user operands. It preserves source
   line boundaries, reports `/posts/...`, `/pages/...`, `/.rshell/tmp/...`, or `-`
   for stdin, and returns a safe no-result effect instead of conflating “no
   matches” with an invalid resource. Resource, scanned-line, match-count, and
@@ -564,19 +565,19 @@ startTerminalReader(root: HTMLElement): void
 | command token/alias collision or invalid metadata/handler | registry `TypeError` at creation |
 | missing command argv parser or unsafe option definition | neutral registry rejects the command before execution |
 | duplicate hardcoded command dispatch or help metadata | implementation review failure; definitions must be the single execution/help source |
-| invalid `tree`, `cat`, or `vim` operand | usage/not-found effect or no completion; no host access/navigation |
+| slash-rooted, bare-tilde, invalid `tree`, `cat`, or `vim` operand | usage/not-found effect or no completion; no host access/navigation |
 | direct-child `ls` projection | root and public mounts expose only immediate directory names and documents; descendant documents appear only after entering the child directory |
 | structured `tree` metadata drift | `root`, `lines`, and `nodes` stay aligned; stdout remains the exact text tree while browser links consume only validated node metadata |
-| unmodified public directory link activation | submit safe `cd <virtual-path>/`, update cwd/prompt, retain the transcript, and keep the URL on the Terminal home |
+| unmodified public directory link activation | submit safe `cd ~/blog<virtual-path>/`, update cwd/prompt, retain the transcript, and keep the URL on the Terminal home |
 | modified directory-link activation or document/experiment link activation | do not intercept; preserve the canonical native browser link |
 | mixed-depth `ls` result | keep only immediate children in one flat directory-first list, align document name/date/title columns, and keep pipeline stdout unchanged |
 | `ls` option, visible-path prefix, or empty-operand Tab | `-h`/`--help` show usage; a unique safe directory prefix adds `/`, a unique document prefix does not, and either completion retains focus; every Tab is prevented in the focused prompt, while ordinary ambiguous `ls p` leaves input unchanged |
 | option ordering/cluster/terminator | the command parser accepts options before or after operands, short clusters such as `-inF`, and `--` for dash-prefixed operands; invalid options stop before execution |
-| no-operand directory command at virtual `/` | `.` resolves to `/` exactly once; `ls` equals `ls /` and never reports a `//.` path error |
+| no-operand directory command at virtual root | `.` resolves internally to `/` exactly once; `ls` equals `ls ~/blog` and never reports a `//.` path error |
 | nested cwd command | after `cd`, prompt focus remains usable; `ls` renders entries relative to the resolved directory and `cat`/`vim` completion and execution resolve relative operands under that cwd |
 | safe ambiguous `cd` completion | leave input unchanged, show immediate child directories only, and retain prompt focus at the virtual root and nested cwd; the focused prompt prevents Tab |
 | `ls` wildcard | only bounded `*` matching against known public directory or document paths at the requested segment depth; no match gives a clear bounded diagnostic, while multiple same-directory matches produce one deterministic direct-child listing |
-| `ls` mount alias or experiment leaf | `lab`/`lab/` and `/lab`/`/lab/` list the same validated catalog; `/lab/<listed-id>` with or without one trailing slash gives a bounded `open lab/<id>` hint and never reads host/build files |
+| listed experiment leaf | resolves by cwd; `open nerv` works in `~/blog/lab`, root-relative intent uses `open ~/blog/lab/nerv`, and no compatibility alias bypasses cwd semantics |
 | `ls` question mark or unsafe/document path | reject `?` and unsafe paths; visible document prefixes and wildcard matches use the same bounded public-path model as directory candidates |
 | invalid grep flags/pattern/resource or mixed stdin and operands | bounded error-line effect; no partial grep effect or host access |
 | safe grep with no matches | structured `grep` effect with `noResults: true`, empty matches, and a bounded announcement |
@@ -623,17 +624,17 @@ startTerminalReader(root: HTMLElement): void
 - Good: `cd charac` completes to `cd characters/` and keeps focus; after
   entering that directory, `ls` renders `nahida.md` under `/` with its date and
   title, and `cat n` completes and reads `nahida.md` relative to the cwd.
-- Good: `ls lab/` and `ls /lab/` render the same listed experiment catalog;
-  `ls /lab/nerv` and `ls /lab/nerv/` show the bounded `open lab/nerv` guidance
-  without traversing the experiment's host files, and the catalog row has no
+- Good: from `~/blog/lab`, `ls nerv/`, `open nerv`, and `open ./nerv` resolve
+  the listed experiment; `open lab/nerv` fails rather than acting as a hidden
+  root alias, while `open ~/blog/lab/nerv` remains explicit. The catalog row has no
   default list marker while following the document-list alignment language.
 - Good: `grep -i a`, `grep a -i`, and `grep -inF a` share one argv parser;
   `grep -- -pattern` keeps the dash-prefixed value as an operand.
-- Good: after `cd ../` reaches `~/blog`, `ls` and `ls /` produce the same
+- Good: after `cd ../` reaches `~/blog`, `ls` and `ls ~/blog` produce the same
   immediate root mount listing without exposing a synthetic `//.` path.
-- Good: `ls posts` and `tree /` expose canonical document/experiment links;
+- Good: `ls posts` and `tree ~/blog` expose canonical document/experiment links;
   clicking a public directory with an unmodified primary activation submits a
-  safe `cd /posts/characters/`, updates the prompt, and leaves the home URL
+  safe `cd ~/blog/posts/characters/`, updates the prompt, and leaves the home URL
   unchanged. Ctrl/Cmd/Alt/Shift activation remains a native directory link.
 - Base: omitted `FIREFLY_CONTENT_ROOT` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
@@ -658,7 +659,8 @@ startTerminalReader(root: HTMLElement): void
   direct-child list projections and recursive grep discovery, ls prefix/option/
   wildcard execution and empty-operand completion/focus ownership,
   final-pipeline grep effects plus downstream plain stdout, shared nested `cat`/`vim` resolver/completion ownership,
-  cwd-relative `cd`/`ls`/`cat` behavior, structured tree node paths/kinds with
+  cwd-relative `cd`/`ls`/`cat`/`open` behavior, `~/blog` absolute paths,
+  slash/bare-tilde rejection, structured tree node paths/kinds with
   unchanged line/stdout projections, and safe directory-link path derivation,
   mount aliases, trailing-slash normalization, document-prefix rejection, and
   listed-experiment leaf handling, cancellation state, Ctrl+L transcript

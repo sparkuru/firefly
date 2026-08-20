@@ -6,7 +6,7 @@
 - **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-18 — M5 content-filesystem/Vim-reader is approved, committed, and archived. M5.1 comments remain deferred for a later self-built solution. The separate temporary M7 reverse-tunnel/Nginx rehearsal at `staging.majo.im` passed and was fully rolled back, and is accepted as the staging verification; the planned local-TLS M6 task is superseded and removed from the active roadmap.
+- **Owner decision:** 2026-08-20 — The v1.0.0 static release was built, atomically promoted through the established immutable-release procedure, and publicly verified. M5.1 comments remain deferred for a later self-built solution. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 
@@ -27,7 +27,7 @@
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
 | 7 | M5.1 — dynamic comments and identity service | deferred | The planning record remains available for a later self-built service. It is not on the current release path and must not convert the main site to SSR or direct database reads. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
-| 9 | Production rollout | planned | Requires a future explicit deployment/traffic authorization and does not start automatically. |
+| 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 
 ## Evidence
 
@@ -62,7 +62,15 @@
 - M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, staging, and production remain later milestones.
 - M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The content workspace and reader remain the approved Markdown authoring boundary.
 - M5.1 is deferred: its planning record remains available for a later self-built comment/identity service. It is neither authorized nor on the current release path.
+- Production rollout evidence: P0's guarded release procedure completed on
+  2026-08-20. The promoted publication matched its locally verified candidate;
+  public representative site/content/experiment routes, distinct 404s,
+  required security headers, and immutable static assets passed. Operational
+  identifiers and rollback commands are deliberately excluded from Git.
 
 ## Next Decision
 
-M5.1 remains deferred. M6 local-TLS staging is superseded by the completed M7 physical rehearsal and is no longer a current task. M7 is staging verification, not a production rollout; production still requires explicit deployment/traffic authorization. Historic counters remain private unless a future task separately defines their schema and presentation.
+Production is complete. Next, reconcile the root roadmap and historic planning
+language with the evidence-backed mainline as a documentation task. M5.1
+remains deferred; historic counters remain private unless a future task
+separately defines their schema and presentation.

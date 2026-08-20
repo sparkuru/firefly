@@ -175,10 +175,11 @@ commands, and only then assembles the release.
 - The site `/lab/` index and Terminal recovery are useful without JavaScript and
   do not request or preload Experiment assets.
 - `decodeTerminalExperiments()` accepts only exact `{ id, title, href }` records
-  whose href is `/lab/<id>/`. `ls lab` returns a closed experiment-list effect;
-  `open lab/<id>` returns a navigation effect only for an exact decoded entry.
-  The DOM controller navigates to that effect's href and never constructs a URL
-  from raw command input.
+  whose href is `/lab/<id>/`. Terminal path operands are cwd-relative or use the
+  explicit `~/blog` absolute root. `open <path>` returns a navigation effect only
+  after that resolver identifies an exact decoded experiment entry. The DOM
+  controller navigates to that effect's href and never constructs a URL from raw
+  command input.
 - NERV remains autonomous at `/lab/nerv/`. Reduced motion disables scanline,
   flicker, and scroll-driven stripe movement while preserving static content.
 - `package-runtime.sh` requires exact equality between
@@ -189,6 +190,12 @@ commands, and only then assembles the release.
   the site at `/`, the catalog at `/lab/`, NERV at `/lab/nerv/`, distinct site
   and NERV 404s, `/healthz`, security headers, and immutable hashed site/NERV
   assets plus the two pinned versioned fonts. HTML is not immutable.
+- Public-release probes require the runtime-owned CSP, Referrer-Policy,
+  `X-Content-Type-Options`, and `X-Frame-Options` headers. They require
+  immutable `Cache-Control` only for the hashed site/NERV assets and pinned
+  fonts; HTML intentionally has no immutable cache policy. HSTS is an external
+  TLS/edge policy, not evidence of this static runtime contract; a deployment
+  that needs HSTS must configure and verify it at that owning boundary.
 
 ### 4. Validation & Error Matrix
 

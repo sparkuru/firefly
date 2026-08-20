@@ -256,15 +256,15 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'ls --help');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Usage: ls [path|pattern]');
 
-  await submit(page, 'ls lab/');
+  await submit(page, 'ls ~/blog/lab/');
   const labListing = transcript.locator('.terminal-record').last();
   await expect(labListing.locator('.terminal-experiment-list')).toHaveCSS('list-style-type', 'none');
   await expect(labListing.locator('[data-terminal-entry-kind="experiment"]')).toHaveCount(1);
   await expect(labListing.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
-  await submit(page, 'ls /');
+  await submit(page, 'ls ~/blog');
   await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
-  await submit(page, 'ls /lab/nerv/');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Use "open lab/nerv" to enter this experiment.');
+  await submit(page, 'ls ~/blog/lab/nerv/');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Use "open ~/blog/lab/nerv" to enter this experiment.');
 
   await input.fill('cd ma');
   await input.press('Tab');
@@ -287,7 +287,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(nestedInput).toBeFocused();
   await nestedInput.press('Enter');
   await expect(transcript).toContainText('llm workflow with trellis');
-  await submit(page, 'cd /posts/main');
+  await submit(page, 'cd ~/blog/posts/main');
   await submit(page, 'ls *.md');
   const wildcardListing = transcript.locator('.terminal-entry-list').last();
   await expect(wildcardListing.locator('.terminal-entry-row--document')).toHaveCount(47);
@@ -298,9 +298,9 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog #');
   await submit(page, 'ls');
   await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
-  await submit(page, 'cd /posts');
+  await submit(page, 'cd ~/blog/posts');
 
-  await submit(page, 'cd /');
+  await submit(page, 'cd ~/blog');
   const rootInput = page.locator('#terminal-command');
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog #');
   await rootInput.fill('cd ');
@@ -313,7 +313,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(rootInput).toHaveValue('cd lab/');
   await expect(rootInput).toBeFocused();
 
-  await submit(page, 'ls posts');
+  await submit(page, 'ls ~/blog/posts');
   const postsListing = transcript.locator('.terminal-entry-list').last();
   await expect(postsListing.locator('.terminal-entry-row')).toHaveCount(7);
   await expect(postsListing.locator('[data-terminal-entry-kind="directory"]')).toHaveCount(7);
@@ -327,10 +327,10 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(announcer).toHaveText('7 posts listed.');
 
   await submit(page, 'ls pages');
-  await expect(transcript.getByRole('link', { name: '/pages/about.md' })).toHaveAttribute('href', '/pages/about/');
-  await rootInput.fill('ls /pages/ab');
+  await expect(transcript.getByRole('link', { name: '~/blog/pages/about.md' })).toHaveAttribute('href', '/pages/about/');
+  await rootInput.fill('ls ~/blog/pages/ab');
   await rootInput.press('Tab');
-  await expect(rootInput).toHaveValue('ls /pages/about.md');
+  await expect(rootInput).toHaveValue('ls ~/blog/pages/about.md');
   await expect(rootInput).toBeFocused();
   await rootInput.press('Enter');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
@@ -342,7 +342,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.locator('.terminal-record').last()).toContainText('llm workflow with trellis');
   await submit(page, 'grep -i about pages/about.md');
   await expect(transcript.locator('.terminal-record').last()).toContainText('/pages/about.md:');
-  await submit(page, 'cat /pages/about.md');
+  await submit(page, 'cat ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-record').last().getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
   await submit(page, 'cat lab/nerv');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Try "open lab/nerv".');
@@ -451,25 +451,25 @@ test('ls and tree entries expose document links and safe directory cd links', as
   await page.goto('/');
   const transcript = page.locator('[data-terminal-transcript]');
 
-  await submit(page, 'ls posts');
+  await submit(page, 'ls ~/blog/posts');
   const lsListing = transcript.locator('.terminal-record').last().locator('.terminal-entry-list');
   const lsDirectory = lsListing.getByRole('link', { name: 'main/' });
   await expect(lsDirectory).toHaveAttribute('href', '/posts/main/');
   await expect(lsDirectory).toHaveAttribute('data-terminal-cd-path', '/posts/main');
   await lsDirectory.click();
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts/main #');
-  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/main/');
+  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd ~/blog/posts/main/');
   await expect(page).toHaveURL(/\/$/u);
 
-  await submit(page, 'cd /');
-  await submit(page, 'tree /');
+  await submit(page, 'cd ~/blog');
+  await submit(page, 'tree ~/blog');
   const tree = transcript.locator('.terminal-record').last().locator('.terminal-tree');
   await expect(tree.getByRole('link', { name: 'posts/' })).toHaveAttribute('href', '/posts/');
   const treeDirectory = tree.getByRole('link', { name: 'main/' });
   await treeDirectory.focus();
   await treeDirectory.press('Enter');
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts/main #');
-  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd /posts/main/');
+  await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd ~/blog/posts/main/');
 });
 
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {
@@ -492,7 +492,33 @@ test('user aliases are session-local and disappear after refresh', async ({ page
 
 test('open navigates only to the validated listed experiment destination', async ({ page }) => {
   await page.goto('/');
-  await submit(page, 'open lab/nerv');
+  const input = page.locator('#terminal-command');
+  await submit(page, 'cd ~/blog/lab');
+  await submit(page, 'ls');
+  await input.fill('open n');
+  await input.press('Tab');
+  await expect(input).toHaveValue('open nerv');
+  await expect(input).toBeFocused();
+  await input.fill('open /lab/nerv');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toBeFocused();
+  await input.fill('open lab/nerv');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toBeFocused();
+  await input.fill('open nerv');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
+
+  await page.goto('/');
+  await submit(page, 'cd ~/blog/lab');
+  await submit(page, 'open ./nerv');
+  await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
+
+  await page.goto('/');
+  await submit(page, 'cd ~/blog/pages');
+  await submit(page, 'open ~/blog/lab/nerv');
   await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
 });
 
@@ -501,36 +527,36 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   const input = page.locator('#terminal-command');
   const transcript = page.locator('[data-terminal-transcript]');
 
-  await submit(page, 'cd /pages');
+  await submit(page, 'cd ~/blog/pages');
   await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/pages #$/u })).toBeVisible();
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/pages #');
 
   await submit(page, 'cat about.md | grep -in about');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About');
   await expect(transcript.locator('[data-terminal-stream-document]')).toHaveCount(0);
-  await submit(page, 'cd /posts');
+  await submit(page, 'cd ~/blog/posts');
   await submit(page, 'cat main/llm-workflow-with-trellis.md | grep a');
   const pipedGrep = transcript.locator('.terminal-record').last();
   await expect(pipedGrep.locator('.terminal-grep-line mark').first()).toHaveText('a');
-  await submit(page, 'grep -inF about /pages/about.md');
+  await submit(page, 'grep -inF about ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-grep-match').last()).toContainText('/pages/about.md:');
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
-  await submit(page, 'grep about -i /pages/about.md');
+  await submit(page, 'grep about -i ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
   await submit(page, 'grep -F definitely-not-in-the-public-corpus');
   await expect(transcript.locator('.terminal-grep-summary').last()).toHaveText('No matches for "definitely-not-in-the-public-corpus".');
-  await submit(page, 'grep -nF "# " /posts/main/llm-workflow-with-trellis.md');
+  await submit(page, 'grep -nF "# " ~/blog/posts/main/llm-workflow-with-trellis.md');
   const sourceMatches = transcript.locator('.terminal-record').last().locator('.terminal-grep-line');
   await expect.poll(async () => sourceMatches.count()).toBeGreaterThan(1);
   expect((await sourceMatches.allTextContents()).every((line) => line.length < 5000)).toBe(true);
 
-  await submit(page, 'whoami > /.rshell/tmp/identity.txt');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Wrote 1 line to /.rshell/tmp/identity.txt.');
-  await submit(page, 'cat /.rshell/tmp/identity.txt');
+  await submit(page, 'whoami > ~/blog/.rshell/tmp/identity.txt');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Wrote 1 line to ~/blog/.rshell/tmp/identity.txt.');
+  await submit(page, 'cat ~/blog/.rshell/tmp/identity.txt');
   await expect(transcript.locator('.terminal-record').last()).toContainText('guest');
 
   await submit(page, 'grep secret /etc/passwd');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('grep can search only listed public documents or /.rshell/tmp scratch files.');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
   await expect(input).toBeFocused();
 });
@@ -552,9 +578,9 @@ test('history preserves a draft and clear returns a fresh prompt with history in
   await input.press('ArrowDown');
   await expect(input).toHaveValue('unfinished');
 
-  await input.fill('ls p');
+  await input.fill('ls ~/blog/p');
   await input.press('Tab');
-  await expect(completion.getByRole('option')).toHaveText(['pages/', 'penetration/', 'posts/']);
+  await expect(completion.getByRole('option')).toHaveText(['~/blog/pages/', '~/blog/posts/']);
   await input.focus();
   await submit(page, 'history');
   await expect(transcript).toContainText('history');
@@ -665,21 +691,21 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   await expect(input).toBeFocused();
   await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toBeVisible();
 
-  await input.fill('ls p');
+  await input.fill('ls ~/blog/p');
   await input.press('Tab');
-  await expect(input).toHaveValue('ls p');
-  await expect(page.getByRole('option')).toHaveText(['pages/', 'penetration/', 'posts/']);
+  await expect(input).toHaveValue('ls ~/blog/p');
+  await expect(page.getByRole('option')).toHaveText(['~/blog/pages/', '~/blog/posts/']);
   await expect(input).toBeFocused();
 
   await input.focus();
-  for (const ambiguous of ['cat ./', 'vim ./', 'cat /', 'vim /']) {
+  for (const ambiguous of ['cat ./', 'vim ./', 'cat ~/blog/', 'vim ~/blog/']) {
     await input.fill(ambiguous);
     await input.press('Tab');
     await expect(input).toBeFocused();
     await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toBeVisible();
   }
 
-  for (const noMatch of ['cat 1', 'vim ./does-not-exist', 'cat /posts/does-not-exist']) {
+  for (const noMatch of ['cat 1', 'vim ./does-not-exist']) {
     await input.fill(noMatch);
     await input.press('Tab');
     await expect(input).toHaveValue(noMatch);
@@ -694,16 +720,16 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   await input.fill('cat ma');
   await input.press('Tab');
   await expect(input).toHaveValue('cat main/');
-  await input.fill('vim /pages/abo');
+  await input.fill('vim ~/blog/pages/abo');
   await input.press('Tab');
-  await expect(input).toHaveValue('vim /pages/about.md');
+  await expect(input).toHaveValue('vim ~/blog/pages/about.md');
 
   await input.fill('cat ./main/llm-w');
   await input.press('Tab');
   await expect(input).toHaveValue('cat ./main/llm-workflow-with-trellis.md');
   await expect(input).toBeFocused();
 
-  for (const unsafe of ['cat ../main/llm-w', 'cat ./nested/../main/llm-w', 'cat /main/llm-w', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat cafe\u0301.md', 'cat control\u0001path']) {
+  for (const unsafe of ['cat ../main/llm-w', 'cat ./nested/../main/llm-w', 'cat /main/llm-w', 'cat /posts/does-not-exist', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat ~', 'cat ~/', 'cat cafe\u0301.md', 'cat control\u0001path']) {
     await input.fill(unsafe);
     await input.press('Tab');
     await expect(input).toHaveValue(unsafe);
@@ -723,9 +749,9 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   }))));
   expect(modifiedTabResults).toEqual([true, true, true, true]);
 
-  await input.fill('open lab/n');
+  await input.fill('open ~/blog/lab/n');
   await input.press('Tab');
-  await expect(input).toHaveValue('open lab/nerv');
+  await expect(input).toHaveValue('open ~/blog/lab/nerv');
 });
 
 test('ambiguous completion exposes a vertical active list and commits before submission', async ({ page }) => {
@@ -744,6 +770,32 @@ test('ambiguous completion exposes a vertical active list and commits before sub
   await expect(input).not.toHaveAttribute('aria-activedescendant');
   expect(await list.evaluate((element) => getComputedStyle(element).display)).toBe('grid');
 
+  await input.press('ArrowDown');
+  await expect(input).toHaveValue('c');
+  await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+  await input.press('ArrowUp');
+  await expect(list.getByRole('option').last()).toHaveAttribute('aria-selected', 'true');
+  await input.press('ArrowDown');
+  await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+
+  await input.fill('c');
+  await input.press('Tab');
+  await expect(input).not.toHaveAttribute('aria-activedescendant');
+  const modifiedArrowResults = await input.evaluate((element) => [
+    { ctrlKey: true },
+    { altKey: true },
+    { metaKey: true },
+    { shiftKey: true }
+  ].map((modifiers) => element.dispatchEvent(new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'ArrowDown',
+    ...modifiers
+  }))));
+  expect(modifiedArrowResults).toEqual([true, true, true, true]);
+  await expect(input).toHaveValue('c');
+  await expect(input).not.toHaveAttribute('aria-activedescendant');
+  await expect(list).toBeVisible();
   await input.press('Tab');
   await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
   await expect(input).toHaveAttribute('aria-activedescendant', 'terminal-completion-option-0');
@@ -1114,7 +1166,7 @@ test('cat respects semantic and page adapter output in the home stream', async (
   await expect(semanticDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' })).toBeFocused();
   await expect(semanticDocument.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
   await expect(semanticDocument.getByRole('region', { name: /^Code content:/u }).first()).toBeVisible();
-  await submit(page, 'cat /pages/about.md');
+  await submit(page, 'cat ~/blog/pages/about.md');
   await expect(page.getByRole('heading', { level: 2, name: 'About this foundation' })).toBeFocused();
   await expect(page.getByText('Future presentations can change how the site looks')).toBeVisible();
   const ids = await page.locator('[id]').evaluateAll((elements) =>
@@ -1224,7 +1276,7 @@ test('post-start clone-scoping failure restores one focused recovery target', as
     second.id = 'duplicate-clone-id';
     article.append(first, second);
   });
-  await submit(page, 'cat /pages/about.md');
+  await submit(page, 'cat ~/blog/pages/about.md');
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();

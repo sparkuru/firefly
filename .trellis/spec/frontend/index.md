@@ -102,7 +102,7 @@ its own lockfile, then run its checks:
     keyboard-focusable local code/table scrolling, draft absence, visible focus,
     and no document overflow;
   - interactive coverage: prompt-only startup, deterministic commands/errors,
-    manifest-backed `ls lab` / `open lab/<id>`, history/draft restoration,
+    manifest-backed lab listing and cwd-relative/`~/blog`-absolute `open`, history/draft restoration,
     safe unique/ambiguous path completion with prefix preservation, prompt-wide
     Tab prevention and native outside-prompt traversal, prompt Ctrl+C cancellation, IME-safe and mobile
     soft-keyboard Enter submission, inline `cat` with unchanged URL,

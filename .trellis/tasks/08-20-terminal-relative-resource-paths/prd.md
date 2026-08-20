@@ -61,13 +61,22 @@ user operands and must not be migrated.
 
 ## Acceptance criteria
 
-- [ ] A listed resource can be opened/read from its containing virtual
+- [x] A listed resource can be opened/read from its containing virtual
       directory using the same safe relative spelling the user sees.
-- [ ] Safe `~/blog` absolute spellings work from every cwd, while slash-root,
+- [x] Safe `~/blog` absolute spellings work from every cwd, while slash-root,
       unsafe, control-bearing, ambiguous, and unknown operands remain rejected
       without navigation or focus loss.
-- [ ] Equivalent path-bearing commands and completion have an explicit,
+- [x] Equivalent path-bearing commands and completion have an explicit,
       evidence-backed consistency decision; each confirmed defect is fixed and
       covered.
-- [ ] Focused unit/browser checks and relevant existing full checks pass; the
+- [x] Focused unit/browser checks and relevant existing full checks pass; the
       fixed release is re-verified in the parent production task.
+
+## Result
+
+The Terminal now uses one operand grammar: cwd-relative paths or the explicit
+`~/blog` root. Slash-rooted and bare-tilde user operands are rejected, while
+internal VFS keys and browser hrefs remain slash-rooted. `open` resolves from
+the current cwd and only opens listed experiments. Unit, type, static-output,
+focused Terminal browser, and full site browser checks passed; the corrected
+release was atomically promoted and externally re-verified by the parent task.

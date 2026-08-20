@@ -72,19 +72,16 @@ export function resolveVirtualPath(
     return { ok: false, reason: 'unsafe' };
   }
 
-  const mountAlias = input.endsWith('/') ? input.slice(0, -1) : input;
-  if (mountAlias === 'posts' || mountAlias === 'pages' || mountAlias === 'lab') {
-    return { ok: true, path: '/' + mountAlias };
-  }
-
   let base: string;
-  if (input === '~' || input === '~/blog') {
+  if (input === shellRoot || input === `${shellRoot}/`) {
     base = '/';
   } else if (input.startsWith('~/')) {
     if (!input.startsWith(shellRoot + '/')) return { ok: false, reason: 'unknown-root' };
     base = '/' + input.slice(shellRoot.length + 1);
   } else if (input.startsWith('/')) {
-    base = input;
+    return { ok: false, reason: 'unknown-root' };
+  } else if (input.startsWith('~')) {
+    return { ok: false, reason: 'unknown-root' };
   } else {
     const rootMount = rootResourceMount(input, cwd, mode);
     base = rootMount !== undefined
@@ -118,6 +115,27 @@ export function resolveVirtualPath(
   return isKnownRoot(path)
     ? { ok: true, path: path || '/' }
     : { ok: false, reason: 'unknown-root' };
+}
+
+export type VirtualOperandPrefix =
+  | { readonly kind: 'relative'; readonly prefix: string; readonly displayPrefix: '' | './' }
+  | { readonly kind: 'absolute'; readonly prefix: string; readonly displayPrefix: '~/blog/' }
+  | { readonly kind: 'invalid' };
+
+/**
+ * Classifies the public rshell operand prefix used by completion. Internal VFS
+ * keys stay slash-rooted; a leading slash is never a user operand.
+ */
+export function classifyVirtualOperandPrefix(input: string): VirtualOperandPrefix {
+  if (input === shellRoot || input === `${shellRoot}/`) {
+    return { kind: 'absolute', prefix: '', displayPrefix: '~/blog/' };
+  }
+  if (input.startsWith(`${shellRoot}/`)) {
+    return { kind: 'absolute', prefix: input.slice(shellRoot.length + 1), displayPrefix: '~/blog/' };
+  }
+  if (input.startsWith('/') || input.startsWith('~')) return { kind: 'invalid' };
+  if (input.startsWith('./')) return { kind: 'relative', prefix: input.slice(2), displayPrefix: './' };
+  return { kind: 'relative', prefix: input, displayPrefix: '' };
 }
 
 export function wildcardSegmentMatches(pattern: string, value: string): boolean {

@@ -18,7 +18,7 @@ const parentHref = directory.virtualPath.includes('/')
 
 <section class="terminal-directory">
   <nav aria-label="Directory navigation"><a href="/">~/blog</a><span aria-hidden="true"> / </span><a href={parentHref}>..</a></nav>
-  <p class="terminal-prompt">{directoryPrompt} tree /{directory.virtualPath}</p>
+  <p class="terminal-prompt">{directoryPrompt} tree ~/blog/{directory.virtualPath}</p>
   <h1>{directory.virtualPath}/</h1>
   {
     directory.children.length === 0 ? (

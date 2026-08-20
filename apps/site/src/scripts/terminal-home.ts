@@ -1086,7 +1086,32 @@ export function startTerminalHome(
       dismissCompletion();
       return;
     }
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    if (
+      completionPanel !== null &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+    ) {
+      event.preventDefault();
+      const candidateCount = completionPanel.candidates.length;
+      if (candidateCount > 0) {
+        const activeIndex = completionPanel.activeIndex === null
+          ? (event.key === 'ArrowUp' ? candidateCount - 1 : 0)
+          : (completionPanel.activeIndex + (event.key === 'ArrowUp' ? -1 : 1) + candidateCount) % candidateCount;
+        completionPanel = { ...completionPanel, activeIndex };
+        renderCompletionPanel(nodes, completionPanel);
+      }
+      return;
+    }
+    if (
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+    ) {
       event.preventDefault();
       const navigation = navigateHistory(
         state,
