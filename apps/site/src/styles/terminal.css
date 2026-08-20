@@ -551,15 +551,46 @@
 }
 
 .terminal-completion {
+  min-width: 0;
   margin: 0.35rem 0 0;
   color: var(--terminal-color-warning);
 }
 
-.terminal-completion-note {
-  display: inline-block;
-  margin-top: 0.2rem;
-  color: var(--terminal-color-muted);
-  font-size: 0.875em;
+.terminal-completion-message {
+  margin: 0;
+}
+
+.terminal-completion-list {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-completion-option {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr);
+  min-width: 0;
+  padding: 0.15rem 0.3rem;
+  overflow-wrap: anywhere;
+}
+
+.terminal-completion-option[data-active] {
+  background: var(--terminal-color-border);
+  color: var(--terminal-color-text);
+}
+
+.terminal-completion-marker {
+  color: var(--terminal-color-command);
+}
+
+.terminal-completion-marker::before {
+  content: '  ';
+}
+
+.terminal-completion-option[data-active] .terminal-completion-marker::before {
+  content: '> ';
 }
 
 .terminal-completion:empty {

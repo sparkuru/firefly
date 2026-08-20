@@ -134,7 +134,13 @@ export type TokenizeResult =
 
 export type CompletionResult =
   | { readonly kind: 'unique'; readonly value: string; readonly candidates: readonly string[] }
-  | { readonly kind: 'ambiguous'; readonly candidates: readonly string[]; readonly ownsTab: boolean }
+  | {
+    readonly kind: 'ambiguous';
+    readonly value: string;
+    readonly candidates: readonly string[];
+    readonly candidateValues: readonly string[];
+    readonly ownsTab: boolean;
+  }
   | { readonly kind: 'no-match'; readonly candidates: readonly []; readonly ownsTab: true }
   | { readonly kind: 'none'; readonly candidates: readonly [] };
 
@@ -540,8 +546,21 @@ function completeFrom(
   const exact = matches.find((candidate) => candidate === prefix);
   if (exact !== undefined) return { kind: 'unique', value: render(exact), candidates: Object.freeze([exact]) };
   if (matches.length === 1 && matches[0] !== undefined) return { kind: 'unique', value: render(matches[0]), candidates: Object.freeze(matches) };
+  if (matches.length === 0) return { kind: 'none', candidates: Object.freeze([]) };
+  const candidateValues = matches.map(render);
+  const commonValue = candidateValues.reduce((common, value) => {
+    let index = 0;
+    while (index < common.length && index < value.length && common[index] === value[index]) index += 1;
+    return common.slice(0, index);
+  });
   return matches.length > 1
-    ? { kind: 'ambiguous', candidates: Object.freeze(matches), ownsTab: ownsAmbiguousTab }
+    ? {
+      kind: 'ambiguous',
+      value: commonValue,
+      candidates: Object.freeze(matches),
+      candidateValues: Object.freeze(candidateValues),
+      ownsTab: ownsAmbiguousTab
+    }
     : { kind: 'none', candidates: Object.freeze([]) };
 }
 

@@ -267,9 +267,11 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
         Command for {prompt}
       </label>
       <p id="terminal-command-help" class="terminal-visually-hidden">
-        Type help for commands. Use Arrow keys for history. Control+C cancels
-        the current command. Tab completes a unique match; safe cat and vim path
-        candidates keep focus when ambiguous, while other Tab presses stay native.
+        Type help for commands. Use Arrow keys for history. Control+C cancels the
+        current command. Tab completes and selects command candidates. Enter or
+        Space accepts an active candidate. Control+A selects the command,
+        Control+E moves to its end, Control+U removes text through the cursor,
+        and Escape dismisses completion candidates.
       </p>
       <div class="terminal-command-row">
         <span class="terminal-prompt" aria-hidden="true" data-terminal-prompt>{prompt}</span>
@@ -284,14 +286,16 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
           spellcheck="false"
           enterkeyhint="send"
           aria-controls="terminal-transcript"
+          aria-haspopup="listbox"
+          aria-expanded="false"
           aria-describedby="terminal-command-help terminal-completion"
         />
       </div>
-      <p
+      <div
         id="terminal-completion"
         class="terminal-completion"
         data-terminal-completion
-      ></p>
+      ></div>
     </form>
     <p
       class="terminal-visually-hidden"

@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Identifies the applicable frontend scope and required validation profile."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Defines the Terminal home controller boundary, prompt-local Tab/Ctrl+C/Ctrl+L behavior, focus ownership, and global typing exclusions."}
+{"file":".trellis/tasks/08-20-command-tab-completion-selection/research/terminal-contract.md","reason":"Task-scoped extract of the typed pure completion/effect contract, including required boundaries and test coverage."}
+{"file":".trellis/tasks/08-20-command-tab-completion-selection/research/ui-ux-pro-max.md","reason":"Approved interaction and accessibility constraints for the vertical candidate panel."}

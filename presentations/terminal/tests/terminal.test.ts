@@ -675,9 +675,21 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('hel', entries, experiments), { kind: 'unique', value: 'help ', candidates: ['help'] });
   assert.deepEqual(completeCommand('frie', entries, experiments), { kind: 'unique', value: 'friends ', candidates: ['friends'] });
   assert.deepEqual(completeCommand('l', entries, experiments), { kind: 'unique', value: 'l ', candidates: ['l'] });
-  assert.equal(completeCommand('', entries, experiments).kind, 'ambiguous');
+  assert.deepEqual(completeCommand('', entries, experiments), {
+    kind: 'ambiguous',
+    value: '',
+    candidates: ['?', 'about', 'alias', 'cat', 'cd', 'clear', 'cls', 'date', 'friends', 'grep', 'help', 'history', 'id', 'l', 'll', 'ls', 'open', 'pwd', 'tree', 'vim', 'whoami'],
+    candidateValues: ['? ', 'about ', 'alias ', 'cat ', 'cd ', 'clear ', 'cls ', 'date ', 'friends ', 'grep ', 'help ', 'history ', 'id ', 'l ', 'll ', 'ls ', 'open ', 'pwd ', 'tree ', 'vim ', 'whoami '],
+    ownsTab: false
+  });
   const listCompletion = completeCommand('ls p', entries, experiments);
-  assert.deepEqual(listCompletion, { kind: 'ambiguous', candidates: ['pages/', 'posts/'], ownsTab: false });
+  assert.deepEqual(listCompletion, {
+    kind: 'ambiguous',
+    value: 'ls p',
+    candidates: ['pages/', 'posts/'],
+    candidateValues: ['ls pages/', 'ls posts/'],
+    ownsTab: false
+  });
   assert.equal(listCompletion.kind === 'ambiguous' && listCompletion.ownsTab, false);
   assert.deepEqual(completeCommand('ls pa', entries, experiments), { kind: 'unique', value: 'ls pages/', candidates: ['pages/'] });
   const emptyListCompletion = completeCommand('ls ', entries, experiments);
@@ -690,7 +702,13 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('cd la', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cd lab/', candidates: ['lab/'] });
   assert.deepEqual(completeCommand('cd la', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts'), { kind: 'no-match', candidates: [], ownsTab: true });
   const rootCdCompletion = completeCommand('cd ', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog');
-  assert.deepEqual(rootCdCompletion, { kind: 'ambiguous', candidates: ['lab/', 'pages/', 'posts/'], ownsTab: true });
+  assert.deepEqual(rootCdCompletion, {
+    kind: 'ambiguous',
+    value: 'cd ',
+    candidates: ['lab/', 'pages/', 'posts/'],
+    candidateValues: ['cd lab/', 'cd pages/', 'cd posts/'],
+    ownsTab: true
+  });
   assert.deepEqual(completeCommand('cat a', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/characters'), { kind: 'unique', value: 'cat alpha.md', candidates: ['alpha.md'] });
   assert.deepEqual(completeCommand('cat cha', entries, experiments), { kind: 'unique', value: 'cat characters/', candidates: ['characters/'] });
   assert.deepEqual(completeCommand('cat characters/alp', entries, experiments), { kind: 'unique', value: 'cat characters/alpha.md', candidates: ['characters/alpha.md'] });
@@ -760,12 +778,16 @@ test('completion consumes only unique contextual document and lab matches', () =
   });
   assert.deepEqual(completeCommand('cat ./', pathEntries, experiments), {
     kind: 'ambiguous',
+    value: 'cat ./',
     candidates: ['./beta.md', './characters/'],
+    candidateValues: ['cat ./beta.md', 'cat ./characters/'],
     ownsTab: true
   });
   assert.deepEqual(completeCommand('vim /', pathEntries, experiments), {
     kind: 'ambiguous',
+    value: 'vim /p',
     candidates: ['/pages/', '/posts/'],
+    candidateValues: ['vim /pages/', 'vim /posts/'],
     ownsTab: true
   });
   for (const input of ['cat 1', 'vim ./does-not-exist', 'cat /posts/does-not-exist']) {

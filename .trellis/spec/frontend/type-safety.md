@@ -310,6 +310,19 @@ completeCommand(
   cwd?: string,
   aliases?: readonly ReadonlyShellAlias[]
 ): CompletionResult
+
+type CompletionResult =
+  | { readonly kind: 'unique'; readonly value: string; readonly candidates: readonly string[] }
+  | {
+    readonly kind: 'ambiguous';
+    readonly value: string;
+    readonly candidates: readonly string[];
+    readonly candidateValues: readonly string[];
+    readonly ownsTab: boolean;
+  }
+  | { readonly kind: 'no-match'; readonly candidates: readonly []; readonly ownsTab: true }
+  | { readonly kind: 'none'; readonly candidates: readonly [] }
+
 startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
 ```
 
@@ -443,10 +456,17 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   wrap a long prompt.
 - When the prompt is focused, every Tab event is prevented, including modified
   and IME/composing variants; only an unmodified, non-composing event may
-  rewrite input. Safe `cd` completion returns only immediate child directories
-  for the current cwd and explicitly refocuses the prompt. The virtual root
-  case `cd ` must report `lab/`, `pages/`, and `posts/` without exposing nested
-  descendants in the completion hint. Tab outside the prompt remains native.
+  rewrite input. An ambiguous result's `value` is the full prompt at the
+  longest common prefix; its `candidateValues` are the matching complete prompt
+  values in lockstep with display `candidates`. First Tab applies `value` only
+  when it extends the input and opens the vertical listbox. Later unmodified
+  Tabs only advance the active option with wrap-around; Enter or Space commits
+  its matching `candidateValues` item without command submission, and Escape
+  closes it without changing input. Safe `cd` completion returns only immediate
+  child directories for the current cwd and explicitly refocuses the prompt.
+  The virtual root case `cd ` must report `lab/`, `pages/`, and `posts/`
+  without exposing nested descendants in the completion hint. Tab outside the
+  prompt remains native.
 - The canonical VFS root is `/`, while the prompt's `~/blog` is its display
   alias. Directory commands resolve `.` against `/` without producing `//.`;
   therefore `cd ../` from `~/blog/posts` followed by `ls` is equivalent to
@@ -463,6 +483,10 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   active prompt. It clears the visible transcript through the same path as the
   `clear` effect, resets input/completion, preserves submitted history for
   ArrowUp, and leaves modified or IME-composed variants native.
+- The same active-prompt boundary owns unmodified `Ctrl+A` (select all),
+  `Ctrl+E` (caret to end), and `Ctrl+U` (delete input before the selection/caret
+  while leaving the caret at zero). All three dismiss completion; Meta/Alt/
+  Shift and composition remain native.
 - `cat`/`vim` share the virtual resolver/completer from
   `content-workspace-contract.md`. Safe zero-result paths use a distinct
   `no-match` result; safe ambiguity marks rewrite ownership explicitly. Other
@@ -483,7 +507,7 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
 | empty command | unchanged state, null effect, empty announcement |
 | unknown command or bad operand | error-line effect; no throw/shell interpretation |
 | mixed-depth `entries` rendering | render immediate directories and documents in one flat directory-first list, align name/date/title, and preserve flat stdout |
-| `ls` option, directory prefix, or empty-operand Tab | definition-owned help for `-h`/`--help`; unique safe prefix such as `ls pa` completes to `ls pages/`; ambiguous `ls p` leaves input unchanged and reports only `pages/`, `posts/`; prompt Tab is always prevented |
+| `ls` option, directory prefix, or empty-operand Tab | definition-owned help for `-h`/`--help`; unique safe prefix such as `ls pa` completes to `ls pages/`; ambiguity supplies a longest common prompt value and ordered full candidate values for the browser listbox; prompt Tab is always prevented |
 | `ls lab` DOM presentation | experiments use the same flat no-marker terminal list row treatment as document listings while retaining validated native destinations |
 | safe `cd` completion | own Tab for safe unique/ambiguous/no-match results, explicitly refocus the prompt, and show only immediate directory candidates at the virtual root and nested virtual directories |
 | inline `cat` document stream | render trusted content without a redundant `Return to prompt` footer while preserving document focus/settlement |
@@ -501,10 +525,11 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
 | final piped grep | structured effect is rendered; its bounded plain stdout remains available to later stages |
 | multi-line `<pre>` template | one resource line per source line; no whitespace flattening before matching |
 | hostile/unknown-root `cat` or `vim` path | not-found/usage or no completion; no navigation or completion rewrite, and focused-prompt Tab remains prevented |
-| safe ambiguous `cat`/`vim` path | `ambiguous` with `ownsTab: true`; retain focus and prefixed candidates |
+| ambiguous completion | first Tab applies only the typed longest common prefix and opens a focused-input listbox; later Tabs wrap active candidates; Enter/Space commit the matching typed value without executing, and Escape dismisses it |
+| safe ambiguous `cat`/`vim` path | `ambiguous` with `ownsTab: true`; preserve focus and `./` or `/` display candidates while committing only runtime-supplied full values |
 | safe zero-result `cat`/`vim` path | exhaustive `no-match` with `ownsTab: true`; retain exact input/focus and status |
-| non-path command ambiguity | `ambiguous` with `ownsTab: false`; leave input unchanged while the focused prompt still prevents Tab's default action |
-| any ambiguous completion rendering | show normalized candidates followed by `input unchanged by design; type more to complete.`; treat it as a normal multi-candidate state, not an error |
+| non-path command ambiguity | `ambiguous` with `ownsTab: false`; its shared prefix/list interaction matches path ambiguity while the focused prompt prevents Tab's default action |
+| completion panel lifecycle | typing, submission, history, Ctrl+C, Ctrl+L, and Ctrl+U dismiss the list and clear `aria-activedescendant`; when closed, `aria-controls` must not reference the removed listbox |
 | custom registry alias in a pipeline | execute the canonical custom definition with bounded text stdin; do not fall back to a legacy single-command path |
 | custom non-text effect in a pipeline/substitution | typed error; no navigation, DOM effect, or partial scratch mutation |
 | malformed template or controller exception | retain/restore recovery and hide partial session |
@@ -562,12 +587,15 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   root ambiguous `cd` Tab ownership and inline `cat` prompt adjacency,
   mount aliases, trailing-slash normalization, document-prefix rejection,
   listed-experiment leaf handling, `friends` safe-link decoding/direct-vs-
-  neutral/text projections, Ctrl+L/cls and lab-row behavior, and hostile path
+  neutral/text projections, ambiguous common-prefix/candidate-value completion,
+  Ctrl+A/Ctrl+E/Ctrl+U/Ctrl+L/cls and lab-row behavior, and hostile path
   rejection.
 - Static output: exact serialized fields/template bijection, canonical nested
   routes, bodies absent from index/JS, home-only command asset, canonical-
   document-only reader asset, and package/style graph closure.
-- Playwright: prompt/history/IME/Tab/recovery/global typing, grouped help,
+- Playwright: prompt/history/IME/Tab/recovery/global typing, accessible vertical
+  completion listbox/active descendant, Tab wrap-around, Enter/Space commit
+  before submit, Escape and prompt-local line editing, grouped help,
   flat mixed-depth `ls`/responsive columns, ls completion focus/options/
   wildcard rendering, multiline grep/no-result rendering,
   tree/cat/vim, Ctrl+L/cls and lab-row behavior, canonical navigation, clone

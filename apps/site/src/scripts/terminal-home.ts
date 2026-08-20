@@ -56,6 +56,13 @@ interface RenderResult {
   readonly navigationHref?: string;
 }
 
+interface CompletionPanel {
+  readonly inputValue: string;
+  readonly candidates: readonly string[];
+  readonly candidateValues: readonly string[];
+  readonly activeIndex: number | null;
+}
+
 type TerminalTreeNode = Extract<TerminalEffect, { kind: 'tree' }>['nodes'][number]['node'];
 
 const protectedTypingTargetSelector = [
@@ -699,7 +706,7 @@ function clearTranscript(nodes: TerminalNodes, announcement: string): void {
   nodes.transcript.replaceChildren();
   markSessionEmpty(nodes);
   nodes.input.value = '';
-  nodes.completion.textContent = '';
+  clearCompletionDisplay(nodes);
   nodes.announcer.textContent = announcement;
   settleViewport(nodes.input, 'center');
 }
@@ -762,12 +769,48 @@ function isUnmodifiedPrimaryClick(event: MouseEvent): boolean {
     !event.shiftKey;
 }
 
-function renderAmbiguousCompletion(node: HTMLElement, candidates: readonly string[]): void {
-  node.textContent = `Matches: ${candidates.join(', ')}`;
-  const note = document.createElement('span');
-  note.className = 'terminal-completion-note';
-  note.textContent = 'input unchanged by design; type more to complete.';
-  node.append(document.createElement('br'), note);
+function clearCompletionDisplay(nodes: TerminalNodes): void {
+  nodes.completion.replaceChildren();
+  nodes.input.setAttribute('aria-controls', 'terminal-transcript');
+  nodes.input.setAttribute('aria-expanded', 'false');
+  nodes.input.removeAttribute('aria-activedescendant');
+}
+
+function renderCompletionMessage(nodes: TerminalNodes, message: string): void {
+  clearCompletionDisplay(nodes);
+  const notice = document.createElement('p');
+  notice.className = 'terminal-completion-message';
+  notice.textContent = message;
+  nodes.completion.append(notice);
+}
+
+function renderCompletionPanel(nodes: TerminalNodes, panel: CompletionPanel): void {
+  clearCompletionDisplay(nodes);
+  const list = document.createElement('ul');
+  list.id = 'terminal-completion-list';
+  list.className = 'terminal-completion-list';
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', 'Completion candidates');
+  panel.candidates.forEach((candidate, index) => {
+    const option = document.createElement('li');
+    const active = panel.activeIndex === index;
+    option.id = `terminal-completion-option-${index}`;
+    option.className = 'terminal-completion-option';
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', String(active));
+    if (active) option.dataset.active = '';
+    const marker = document.createElement('span');
+    marker.className = 'terminal-completion-marker';
+    marker.setAttribute('aria-hidden', 'true');
+    option.append(marker, document.createTextNode(candidate));
+    list.append(option);
+  });
+  nodes.completion.append(list);
+  nodes.input.setAttribute('aria-controls', 'terminal-transcript terminal-completion-list');
+  nodes.input.setAttribute('aria-expanded', 'true');
+  if (panel.activeIndex !== null) {
+    nodes.input.setAttribute('aria-activedescendant', `terminal-completion-option-${panel.activeIndex}`);
+  }
 }
 
 function insertAtPromptSelection(input: HTMLInputElement, value: string): void {
@@ -800,6 +843,7 @@ export function startTerminalHome(
   }
 
   let state: TerminalState = createTerminalState(identity);
+  let completionPanel: CompletionPanel | null = null;
   let composing = false;
   let failed = false;
   let outputInstance = 0;
@@ -819,6 +863,17 @@ export function startTerminalHome(
     showFatalFailure(nodes);
   };
 
+  const dismissCompletion = (): void => {
+    completionPanel = null;
+    clearCompletionDisplay(nodes);
+  };
+
+  const setPromptValue = (value: string): void => {
+    nodes.input.value = value;
+    nodes.input.setSelectionRange(value.length, value.length);
+    nodes.input.focus({ preventScroll: true });
+  };
+
   const submit = (): void => {
     try {
       const command = nodes.input.value;
@@ -826,7 +881,7 @@ export function startTerminalHome(
       const result = execute({ state, input: command, entries, experiments, friendLinks, documents: templates.documents, identity });
       state = result.state;
       updatePrompt();
-      nodes.completion.textContent = '';
+      dismissCompletion();
       if (result.effect === null) {
         return;
       }
@@ -876,7 +931,7 @@ export function startTerminalHome(
     const path = link.dataset.terminalCdPath;
     if (path === undefined) return;
     event.preventDefault();
-    nodes.input.value = `cd ${path === '/' ? '/' : `${path}/`}`;
+    nodes.input.value = `cd ${path === '/' ? '~/blog' : `~/blog${path}/`}`;
     submit();
   });
   document.addEventListener('compositionstart', () => {
@@ -887,8 +942,6 @@ export function startTerminalHome(
   });
   nodes.input.addEventListener('keydown', (event) => {
     if (event.key === 'Tab') {
-      event.preventDefault();
-      nodes.input.focus({ preventScroll: true });
       if (
         composing ||
         event.isComposing ||
@@ -897,6 +950,16 @@ export function startTerminalHome(
         event.metaKey ||
         event.altKey
       ) {
+        return;
+      }
+      event.preventDefault();
+      nodes.input.focus({ preventScroll: true });
+      if (completionPanel !== null && completionPanel.inputValue === nodes.input.value) {
+        const activeIndex = completionPanel.activeIndex === null
+          ? 0
+          : (completionPanel.activeIndex + 1) % completionPanel.candidates.length;
+        completionPanel = { ...completionPanel, activeIndex };
+        renderCompletionPanel(nodes, completionPanel);
         return;
       }
       const completion = completeCommand(
@@ -909,18 +972,29 @@ export function startTerminalHome(
       );
       switch (completion.kind) {
         case 'unique':
-          nodes.input.value = completion.value;
-          nodes.input.setSelectionRange(nodes.input.value.length, nodes.input.value.length);
-          nodes.completion.textContent = '';
+          dismissCompletion();
+          setPromptValue(completion.value);
           break;
-        case 'ambiguous':
-          renderAmbiguousCompletion(nodes.completion, completion.candidates);
+        case 'ambiguous': {
+          const currentValue = nodes.input.value;
+          if (completion.value.startsWith(currentValue) && completion.value.length > currentValue.length) {
+            setPromptValue(completion.value);
+          }
+          completionPanel = {
+            inputValue: nodes.input.value,
+            candidates: completion.candidates,
+            candidateValues: completion.candidateValues,
+            activeIndex: null
+          };
+          renderCompletionPanel(nodes, completionPanel);
           break;
+        }
         case 'no-match':
-          nodes.completion.textContent = 'No matches.';
+          dismissCompletion();
+          renderCompletionMessage(nodes, 'No matches.');
           break;
         case 'none':
-          nodes.completion.textContent = '';
+          dismissCompletion();
           break;
         default: {
           const exhaustive: never = completion;
@@ -930,6 +1004,22 @@ export function startTerminalHome(
       return;
     }
     if (composing || event.isComposing) return;
+    if (!event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
+      if (event.key === 'Escape' && completionPanel !== null) {
+        event.preventDefault();
+        dismissCompletion();
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        if (completionPanel?.activeIndex !== null && completionPanel !== null) {
+          event.preventDefault();
+          const value = completionPanel.candidateValues[completionPanel.activeIndex];
+          if (value !== undefined) setPromptValue(value);
+          dismissCompletion();
+        }
+        return;
+      }
+    }
     if (
       event.key.toLocaleLowerCase('en-US') === 'c' &&
       event.ctrlKey &&
@@ -940,7 +1030,7 @@ export function startTerminalHome(
       event.preventDefault();
       state = cancelCommandInput(state);
       nodes.input.value = '';
-      nodes.completion.textContent = '';
+      dismissCompletion();
       nodes.announcer.textContent = 'Command cancelled.';
       settleViewport(nodes.input, 'center');
       return;
@@ -955,7 +1045,45 @@ export function startTerminalHome(
       event.preventDefault();
       state = cancelCommandInput(state);
       updatePrompt();
+      dismissCompletion();
       clearTranscript(nodes, 'Command transcript cleared.');
+      return;
+    }
+    if (
+      event.key.toLocaleLowerCase('en-US') === 'a' &&
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      nodes.input.select();
+      return;
+    }
+    if (
+      event.key.toLocaleLowerCase('en-US') === 'e' &&
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      nodes.input.setSelectionRange(nodes.input.value.length, nodes.input.value.length);
+      return;
+    }
+    if (
+      event.key.toLocaleLowerCase('en-US') === 'u' &&
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      const end = nodes.input.selectionEnd ?? nodes.input.value.length;
+      nodes.input.value = nodes.input.value.slice(end);
+      nodes.input.setSelectionRange(0, 0);
+      nodes.input.focus({ preventScroll: true });
+      dismissCompletion();
       return;
     }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
@@ -968,11 +1096,12 @@ export function startTerminalHome(
       state = navigation.state;
       nodes.input.value = navigation.input;
       nodes.input.setSelectionRange(nodes.input.value.length, nodes.input.value.length);
+      dismissCompletion();
       return;
     }
   });
   nodes.input.addEventListener('input', () => {
-    nodes.completion.textContent = '';
+    dismissCompletion();
   });
 
   document.addEventListener('keydown', (event) => {
@@ -981,7 +1110,7 @@ export function startTerminalHome(
     }
     event.preventDefault();
     insertAtPromptSelection(nodes.input, event.key);
-    nodes.completion.textContent = '';
+    dismissCompletion();
     settleViewport(nodes.input, 'center');
   });
 

@@ -56,7 +56,7 @@ async function expectCenteredEmptySession(page: Page) {
 
 test('successful startup preserves the boot log before the shell prompt', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.locator('#terminal-command');
 
   await expect(input).toBeVisible();
   await expect(input).not.toBeFocused();
@@ -624,7 +624,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   await expect(input).toHaveValue('whoami');
   await input.fill('vim ./');
   await input.press('Tab');
-  await expect(completion).toContainText('Matches: ./acg/, ./binary/, ./courses/, ./cs/, ./main/, ./penetration/, ./temp/');
+  await expect(completion.getByRole('option')).toHaveText(['./acg/', './binary/', './courses/', './cs/', './main/', './penetration/', './temp/']);
   await expect(input).toBeFocused();
   const modifiedVariants = await input.evaluate((element) => [
     { altKey: true, ctrlKey: true },
@@ -638,7 +638,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   }))));
   expect(modifiedVariants).toEqual([true, true, true]);
   await expect(input).toHaveValue('vim ./');
-  await expect(completion).toContainText('Matches: ./acg/, ./binary/, ./courses/, ./cs/, ./main/, ./penetration/, ./temp/');
+  await expect(completion.getByRole('option')).toHaveText(['./acg/', './binary/', './courses/', './cs/', './main/', './penetration/', './temp/']);
   await input.press('Control+c');
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
@@ -651,7 +651,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   await expect(input).toHaveValue('');
 });
 
-test('the prompt owns every Tab while completion only rewrites safe unmodified matches', async ({ page }) => {
+test('the prompt owns unmodified Tab while completion only rewrites safe matches', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: promptName });
   await input.focus();
@@ -724,11 +724,102 @@ test('the prompt owns every Tab while completion only rewrites safe unmodified m
     key: 'Tab',
     ...modifiers
   }))));
-  expect(modifiedTabResults).toEqual([false, false, false, false]);
+  expect(modifiedTabResults).toEqual([true, true, true, true]);
 
   await input.fill('open lab/n');
   await input.press('Tab');
   await expect(input).toHaveValue('open lab/nerv');
+});
+
+test('ambiguous completion exposes a vertical active list and commits before submission', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: promptName });
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await input.fill('c');
+  await input.press('Tab');
+  await expect(input).toHaveValue('c');
+  const list = page.getByRole('listbox', { name: 'Completion candidates' });
+  await expect(list).toBeVisible();
+  await expect(list.getByRole('option')).toHaveText(['cat', 'cd', 'clear', 'cls']);
+  await expect(input).toHaveAttribute('aria-controls', 'terminal-transcript terminal-completion-list');
+  await expect(input).toHaveAttribute('aria-expanded', 'true');
+  await expect(input).not.toHaveAttribute('aria-activedescendant');
+  expect(await list.evaluate((element) => getComputedStyle(element).display)).toBe('grid');
+
+  await input.press('Tab');
+  await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+  await expect(input).toHaveAttribute('aria-activedescendant', 'terminal-completion-option-0');
+  await input.press('Tab');
+  await expect(list.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await input.press('Tab');
+  await input.press('Tab');
+  await input.press('Tab');
+  await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+  await input.press('Enter');
+  await expect(input).toHaveValue('cat ');
+  await expect(list).toHaveCount(0);
+  await expect(transcript.locator('.terminal-record')).toHaveCount(1);
+  await input.press('Enter');
+  await expect(transcript.locator('.terminal-record')).toHaveCount(2);
+
+  await input.fill('cd ');
+  await input.press('Tab');
+  await input.press('Tab');
+  const firstDirectory = await page.getByRole('option').first().textContent();
+  expect(firstDirectory).not.toBeNull();
+  await input.press(' ');
+  await expect(input).toHaveValue(`cd ${firstDirectory ?? ''}`);
+  await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toHaveCount(0);
+  await expect(transcript.locator('.terminal-record')).toHaveCount(2);
+
+  await input.fill('c');
+  await input.press('Tab');
+  await input.press('Escape');
+  await expect(input).toHaveValue('c');
+  await expect(input).toHaveAttribute('aria-controls', 'terminal-transcript');
+  await expect(input).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toHaveCount(0);
+
+  await input.fill('abcdef');
+  await input.press('Control+a');
+  expect(await input.evaluate((element) => {
+    const control = element as HTMLInputElement;
+    return [control.selectionStart, control.selectionEnd];
+  })).toEqual([0, 6]);
+  await input.press('Control+e');
+  expect(await input.evaluate((element) => {
+    const control = element as HTMLInputElement;
+    return [control.selectionStart, control.selectionEnd];
+  })).toEqual([6, 6]);
+  await input.evaluate((element) => (element as HTMLInputElement).setSelectionRange(3, 3));
+  await input.press('Control+u');
+  await expect(input).toHaveValue('def');
+  await expect(input).toBeFocused();
+  expect(await input.evaluate((element) => {
+    const control = element as HTMLInputElement;
+    return [control.selectionStart, control.selectionEnd];
+  })).toEqual([0, 0]);
+
+  await input.fill('native-boundary');
+  const nativeShortcutResults = await input.evaluate((element) => [
+    { key: 'a', ctrlKey: true, altKey: true },
+    { key: 'e', ctrlKey: true, metaKey: true },
+    { key: 'u', ctrlKey: true, shiftKey: true },
+    { key: 'w', ctrlKey: true },
+    { key: 'r', ctrlKey: true },
+    { key: 't', ctrlKey: true },
+    { key: 'Escape', altKey: true },
+    { key: 'Enter', metaKey: true },
+    { key: ' ', shiftKey: true }
+  ].map((init) => element.dispatchEvent(new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    ...init
+  }))));
+  expect(nativeShortcutResults).toEqual([true, true, true, true, true, true, true, true, true]);
+  await expect(input).toHaveValue('native-boundary');
+  await expectNoHorizontalOverflow(page);
 });
 
 test('IME composition leaves text controls native while prompt Tab remains owned', async ({ page }) => {
@@ -739,18 +830,18 @@ test('IME composition leaves text controls native while prompt Tab remains owned
 
   const dispatchResults = await input.evaluate((element) => {
     element.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
-    const results = ['Enter', 'ArrowUp', 'ArrowDown', 'Tab', 'c'].map((key) =>
+    const results = ['Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown', 'Tab', 'c', 'a', 'e', 'u'].map((key) =>
       element.dispatchEvent(new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
-        ctrlKey: key === 'c',
+        ctrlKey: ['c', 'a', 'e', 'u'].includes(key),
         isComposing: true,
         key
       }))
     );
     return results;
   });
-  expect(dispatchResults).toEqual([true, true, true, false, true]);
+  expect(dispatchResults).toEqual([true, true, true, true, true, true, true, true, true, true]);
   await expect(input).toHaveValue('about');
   await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(2);
 

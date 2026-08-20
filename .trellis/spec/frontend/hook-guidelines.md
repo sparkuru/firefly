@@ -92,13 +92,22 @@ recovery path as malformed identity/index/template data.
 - Preserve the latest pre-history draft and cap submissions at 50. When the
   prompt is focused, prevent the default action for every Tab event, including
   modifiers and IME/composition; only unmodified, non-composing Tab may rewrite
-  input. Safe `cat`/`vim` paths own the rewrite decision for unique, ambiguous,
-  and zero-result completion. Ambiguity keeps prompt focus and preserves `./`
-  or `/`; zero-result completion keeps exact input/focus and shows `No matches.`
-  Tab outside the prompt remains native.
+  input. A typed ambiguous result supplies a longest-common full prompt value,
+  ordered display candidates, and corresponding full candidate values. The
+  first Tab applies only that shared prefix and renders an input-owned vertical
+  listbox; later Tabs cycle its active option without replacing input. Enter or
+  Space commits an active option without submitting, while Escape dismisses the
+  panel and preserves input. Safe `cat`/`vim` paths retain their `./` or `/`
+  display prefixes; zero-result completion keeps exact input/focus and shows
+  `No matches.` Tab outside the prompt remains native.
 - Exact unmodified prompt `Ctrl+C` cancels current input/completion and history
   traversal draft without submitting, clearing prior transcript/history, or
   stealing composition and Alt/Meta/Shift variants.
+- Prompt-local unmodified `Ctrl+A`, `Ctrl+E`, and `Ctrl+U` respectively select
+  the input, move its caret to the end, and remove text through its current
+  selection/caret. They, completion selection, and Escape never take over
+  Meta/Alt/Shift variants, IME, browser/OS shortcuts, or controls outside the
+  active prompt.
 - Submit through desktop or mobile soft-keyboard Enter using the single-input
   native form. `clear` removes every visible transcript/document/completion
   result while preserving bounded history, inert templates, recovery data, and a
