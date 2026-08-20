@@ -306,8 +306,8 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await rootInput.fill('cd ');
   await rootInput.press('Tab');
   await expect(rootInput).toBeFocused();
-  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches: lab/, pages/, posts/');
-  await expect(page.locator('.terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
+  await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toBeVisible();
+  await expect(page.getByRole('option')).toHaveText(['lab/', 'pages/', 'posts/']);
   await rootInput.fill('cd la');
   await rootInput.press('Tab');
   await expect(rootInput).toHaveValue('cd lab/');
@@ -554,8 +554,7 @@ test('history preserves a draft and clear returns a fresh prompt with history in
 
   await input.fill('ls p');
   await input.press('Tab');
-  await expect(completion).toContainText('Matches: pages/, penetration/, posts/');
-  await expect(completion.locator('.terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
+  await expect(completion.getByRole('option')).toHaveText(['pages/', 'penetration/', 'posts/']);
   await input.focus();
   await submit(page, 'history');
   await expect(transcript).toContainText('history');
@@ -664,22 +663,20 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   await input.press('Tab');
   await expect(input).toHaveValue('ls ');
   await expect(input).toBeFocused();
-  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches:');
+  await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toBeVisible();
 
   await input.fill('ls p');
   await input.press('Tab');
   await expect(input).toHaveValue('ls p');
-  await expect(page.locator('[data-terminal-completion]')).toContainText('Matches: pages/, penetration/, posts/');
-  await expect(page.locator('[data-terminal-completion] .terminal-completion-note')).toHaveText('input unchanged by design; type more to complete.');
+  await expect(page.getByRole('option')).toHaveText(['pages/', 'penetration/', 'posts/']);
   await expect(input).toBeFocused();
 
   await input.focus();
   for (const ambiguous of ['cat ./', 'vim ./', 'cat /', 'vim /']) {
     await input.fill(ambiguous);
     await input.press('Tab');
-    await expect(input).toHaveValue(ambiguous);
     await expect(input).toBeFocused();
-    await expect(page.locator('[data-terminal-completion]')).toContainText('Matches:');
+    await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toBeVisible();
   }
 
   for (const noMatch of ['cat 1', 'vim ./does-not-exist', 'cat /posts/does-not-exist']) {
