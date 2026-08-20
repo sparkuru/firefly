@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/tasks/08-20-terminal-viewport-alignment/prd.md","reason":"Approved stable reading-band behavior, startup/clear continuity, scope, and acceptance criteria."}
+{"file":".trellis/tasks/08-20-terminal-viewport-alignment/design.md","reason":"Approved geometry policy, initial-session marker boundary, UUPM-derived spatial-continuity constraints, and rollback scope."}
+{"file":".trellis/tasks/08-20-terminal-viewport-alignment/research/ui-ux-pro-max.md","reason":"Task-specific UUPM research for terminal-style dark content-first layout, spatial continuity, responsive containment, and reduced motion."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Existing Terminal controller contracts for empty-session centering, output settlement, focus, reduced motion, and native scroll boundaries."}
