@@ -48,11 +48,13 @@ const TERMINAL_HOME_STARTUP_LOG_LINES = [
   '[  OK  ] awaiting command prompt ...',
   '[  OK  ] 「FLY ME TO THE STAR」'
 ] as const;
-const TERMINAL_HOME_STARTUP_LINE_DELAY_MS = 55;
-const TERMINAL_HOME_STARTUP_LINE_DURATION_MS = 120;
+const TERMINAL_HOME_STARTUP_LINE_DELAY_MS = 100;
+const TERMINAL_HOME_STARTUP_LINE_DURATION_MS = 180;
+const TERMINAL_HOME_STARTUP_PROMPT_GAP_MS = 120;
 const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
   (TERMINAL_HOME_STARTUP_LOG_LINES.length - 1) * TERMINAL_HOME_STARTUP_LINE_DELAY_MS +
-  TERMINAL_HOME_STARTUP_LINE_DURATION_MS;
+  TERMINAL_HOME_STARTUP_LINE_DURATION_MS +
+  TERMINAL_HOME_STARTUP_PROMPT_GAP_MS;
 ---
 
 <section
@@ -71,6 +73,38 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
       }
 
       root.dataset.terminalStartupState = 'connecting';
+      let startupObserver;
+      const releaseEscapeGuard = () => {
+        document.removeEventListener('keydown', guardEscape, true);
+        startupObserver?.disconnect();
+      };
+      const guardEscape = (event) => {
+        if (root.dataset.terminalStartupState !== 'connecting') {
+          releaseEscapeGuard();
+          return;
+        }
+        if (
+          !event.defaultPrevented &&
+          event.key === 'Escape' &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.shiftKey &&
+          !event.isComposing
+        ) {
+          event.preventDefault();
+        }
+      };
+      document.addEventListener('keydown', guardEscape, true);
+      startupObserver = new MutationObserver(() => {
+        if (root.dataset.terminalStartupState !== 'connecting') {
+          releaseEscapeGuard();
+        }
+      });
+      startupObserver.observe(root, {
+        attributes: true,
+        attributeFilter: ['data-terminal-startup-state']
+      });
       const markUnstartedAsFailed = () => {
         if (root.dataset.terminalStartupState === 'connecting') {
           root.dataset.terminalStartupState = 'failed';

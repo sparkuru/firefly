@@ -90,6 +90,19 @@ recovery path as malformed identity/index/template data.
   `animation: none`, reveal the hidden shell, and mark the root `ready`. This
   prevents DOM relocation from replaying the staged reveal. A fatal runtime path
   marks the root `failed` before restoring recovery and its focused target.
+- While the root is `connecting`, the synchronous marker may register a capture-
+  phase guard for only an unmodified, non-composing, not-already-prevented
+  `Escape` and call `event.preventDefault()`. This prevents the browser's stop-
+  loading behavior from cancelling the deferred controller during the startup
+  window. The guard must release as soon as the root becomes `ready` or
+  `failed` (a `MutationObserver` on `data-terminal-startup-state` is an
+  acceptable implementation); it must not stop propagation, claim modified
+  Escape variants, or replace the completion-panel/prompt Escape behavior
+  after startup. The visual staging contract is a 100ms line cadence, 180ms
+  line reveal, 120ms pause before the prompt, and 180ms prompt reveal. These
+  values are visual only and must never gate readiness. Tests must cover
+  repeated Escape during delayed controller loading, release on both ready and
+  failure, reduced motion, and disabling animation after boot-log relocation.
 - Render text with `textContent`, `createTextNode`, and native `<a>` elements;
   never use `innerHTML` for content or command output.
 - Preserve the latest pre-history draft and cap submissions at 50. When the

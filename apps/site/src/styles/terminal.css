@@ -232,7 +232,7 @@
   margin: 0;
   color: var(--terminal-color-muted);
   opacity: 0;
-  animation: terminal-boot-line-reveal 120ms ease-out both;
+  animation: terminal-boot-line-reveal 180ms ease-out both;
   animation-delay: var(--terminal-boot-delay, 0ms);
 }
 
@@ -516,7 +516,7 @@
   margin-top: var(--terminal-space-record);
   opacity: 0;
   visibility: hidden;
-  animation: terminal-boot-prompt-reveal 1ms step-end both;
+  animation: terminal-boot-prompt-reveal 180ms ease-out both;
   animation-delay: var(--terminal-boot-prompt-delay, 0ms);
 }
 

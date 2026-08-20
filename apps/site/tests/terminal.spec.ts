@@ -106,10 +106,47 @@ test('successful startup preserves the boot log before the shell prompt', async 
   await expectNoHorizontalOverflow(page);
 });
 
+test('connecting startup prevents Escape from stopping the home controller load', async ({ page }) => {
+  await page.addInitScript(() => {
+    const tracker = window as Window & { __terminalEscapeDefaultPrevented?: boolean[] };
+    tracker.__terminalEscapeDefaultPrevented = [];
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        tracker.__terminalEscapeDefaultPrevented?.push(event.defaultPrevented);
+      }
+    });
+  });
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+
+  const root = page.locator('[data-terminal-home]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  for (let index = 0; index < 3; index += 1) {
+    await page.keyboard.press('Escape');
+  }
+  await expect.poll(() => page.evaluate(() => {
+    const tracker = window as Window & { __terminalEscapeDefaultPrevented?: boolean[] };
+    return tracker.__terminalEscapeDefaultPrevented ?? [];
+  })).toEqual([true, true, true]);
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+  const input = page.locator('#terminal-command');
+  await input.focus();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => {
+    const tracker = window as Window & { __terminalEscapeDefaultPrevented?: boolean[] };
+    return tracker.__terminalEscapeDefaultPrevented ?? [];
+  })).toEqual([true, true, true, false]);
+});
+
 test('pending startup exposes the direct boot log before the shell is ready', async ({ page }) => {
   await page.setViewportSize({ width: 2048, height: 1244 });
   await page.route(/TerminalHome.*\.js$/u, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     await route.continue();
   });
   await page.goto('/', { waitUntil: 'commit' });
@@ -120,11 +157,12 @@ test('pending startup exposes the direct boot log before the shell is ready', as
   const bootLines = page.locator('[data-terminal-boot-log] .terminal-boot-line');
   await expect(bootLines).toHaveCount(12);
   await expect(bootLines.first()).toHaveCSS('animation-name', 'terminal-boot-line-reveal');
+  await expect(bootLines.first()).toHaveCSS('animation-duration', '0.18s');
   expect(await bootLines.evaluateAll((lines) => lines.map((line) => ({
     delay: line instanceof HTMLElement ? line.style.getPropertyValue('--terminal-boot-delay') : '',
     animationName: getComputedStyle(line).animationName
   })))).toEqual(Array.from({ length: 12 }, (_, index) => ({
-    delay: `${index * 55}ms`,
+    delay: `${index * 100}ms`,
     animationName: 'terminal-boot-line-reveal'
   })));
   await expect(page.locator('[data-terminal-boot-separator]')).toHaveCount(0);
@@ -134,6 +172,7 @@ test('pending startup exposes the direct boot log before the shell is ready', as
   expect(await bootPrompt.evaluate((prompt) => {
     const style = getComputedStyle(prompt);
     return {
+      animationDuration: style.animationDuration,
       animationName: style.animationName,
       opacity: style.opacity,
       promptDelay: prompt instanceof HTMLElement
@@ -142,15 +181,14 @@ test('pending startup exposes the direct boot log before the shell is ready', as
       visibility: style.visibility
     };
   })).toEqual({
+    animationDuration: '0.18s',
     animationName: 'terminal-boot-prompt-reveal',
     opacity: '0',
-    promptDelay: '725ms',
+    promptDelay: '1400ms',
     visibility: 'hidden'
   });
-  await expect.poll(() => bootPrompt.evaluate((prompt) => {
-    const style = getComputedStyle(prompt);
-    return { opacity: style.opacity, visibility: style.visibility };
-  })).toEqual({ opacity: '1', visibility: 'visible' });
+  await expect.poll(() => bootPrompt.evaluate((prompt) => getComputedStyle(prompt).visibility)).toBe('visible');
+  await expect.poll(() => bootPrompt.evaluate((prompt) => Number.parseFloat(getComputedStyle(prompt).opacity))).toBeGreaterThan(0.9);
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   const pendingGeometry = await readBootGeometry(page);
@@ -169,6 +207,24 @@ test('pending startup exposes the direct boot log before the shell is ready', as
   expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeCloseTo(pendingPromptHeight, 4);
 });
 
+test('reduced motion reveals the connecting boot surface immediately', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+
+  const root = page.locator('[data-terminal-home]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  await expect(page.locator('[data-terminal-boot-log] .terminal-boot-line').first()).toHaveCSS('opacity', '1');
+  await expect(page.locator('[data-terminal-boot-log] .terminal-boot-line').first()).toHaveCSS('animation-name', 'none');
+  await expect(page.locator('[data-terminal-boot-prompt]')).toHaveCSS('opacity', '1');
+  await expect(page.locator('[data-terminal-boot-prompt]')).toHaveCSS('visibility', 'visible');
+  await expect(page.locator('[data-terminal-boot-prompt]')).toHaveCSS('animation-name', 'none');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+});
+
 test('boot animation does not restart when the log becomes transcript history', async ({ page }) => {
   await page.addInitScript(() => {
     const tracker = window as Window & { __terminalBootAnimationStarts?: number };
@@ -180,7 +236,7 @@ test('boot animation does not restart when the log becomes transcript history', 
     }, true);
   });
   await page.route(/TerminalHome.*\.js$/u, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await new Promise((resolve) => setTimeout(resolve, 1800));
     await route.continue();
   });
   await page.goto('/', { waitUntil: 'commit' });
@@ -1257,6 +1313,15 @@ test('malformed startup preserves the untouched native recovery product', async 
 });
 
 test('a missing home controller restores recovery at DOM ready', async ({ page }) => {
+  await page.addInitScript(() => {
+    const tracker = window as Window & { __terminalEscapeDefaultPrevented?: boolean[] };
+    tracker.__terminalEscapeDefaultPrevented = [];
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        tracker.__terminalEscapeDefaultPrevented?.push(event.defaultPrevented);
+      }
+    });
+  });
   await page.route(/TerminalHome.*\.js$/u, (route) => route.abort());
   await page.goto('/');
 

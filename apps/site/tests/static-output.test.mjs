@@ -320,7 +320,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.match(routes.home, /<link rel="preload" href="\/fonts\/JetBrainsMono-Medium-v2\.304\.woff2" as="font"/u);
   assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Regular-v2\.304\.woff2'\)/u);
   assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Medium-v2\.304\.woff2'\)/u);
-  assert.match(routes.home, /--terminal-boot-delay:\s*495ms/u);
+  assert.match(routes.home, /--terminal-boot-delay:\s*1100ms/u);
   assert.match(routes.home, new RegExp(`src="/${homeScript.replaceAll('.', '\\.')}`));
   assert.doesNotMatch(routes.home, new RegExp(readerScript.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, new RegExp(stylesheet.replaceAll('.', '\\.')));
