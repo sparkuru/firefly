@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 29
+- **Total Sessions**: 30
 - **Last Active**: 2026-08-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~633 | Active |
+| `journal-1.md` | ~668 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 30 | 2026-08-20 | Stabilize Terminal home viewport alignment | `e3b1a18` | `anti-entropy-loss-syndrome` |
 | 29 | 2026-08-20 | Reconcile roadmap and sanitize staging history | `8b8532b` | `anti-entropy-loss-syndrome` |
 | 28 | 2026-08-20 | Unify terminal virtual resource paths and archive P0 rollout | `efafc51` | `anti-entropy-loss-syndrome` |
 | 27 | 2026-08-20 | Interactive Terminal completion and prompt shortcuts | `c5f389f`, `75eaf7e` | `anti-entropy-loss-syndrome` |

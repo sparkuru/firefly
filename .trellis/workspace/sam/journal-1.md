@@ -631,3 +631,38 @@ Added common-prefix Tab completion with a vertical accessible candidate list, Ta
 ### Next Steps
 
 - 保持 M5.1 deferred；下一产品任务等待新的 guided owner decision。
+
+
+## Session 30: Stabilize Terminal home viewport alignment
+
+**Date**: 2026-08-20
+**Task**: Stabilize Terminal home viewport alignment
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+稳定 Terminal 首页启动、短/长输出和 clear 的阅读带；补齐 2K 几何回归与共享规范。
+
+### Main Changes
+
+- 统一 Terminal 首页启动、短输出、长输出和 clear 状态的居中阅读带，并保留超长输出时底部提示可见。
+- 补齐 2K 视口几何回归与共享前端契约，记录任务验证证据。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e3b1a18` | (see git log) |
+
+### Testing
+
+- [OK] Terminal 单元测试 29/29；focused Playwright 66/66；full site Playwright 122/122。
+- [OK] Astro check/build、任务上下文校验与 git diff --check 通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 继续跟踪 P1/P2 主线；本次未推送远端。
