@@ -1,0 +1,8 @@
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/prd.md","reason":"Review reported user outcome and no-broadened-access acceptance criteria."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/design.md","reason":"Check cwd resolution, legacy compatibility, type boundary, and completion coherence."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/implement.md","reason":"Review source/test/spec/release ordering and rollback boundaries."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/research/terminal-resource-path-contract.md","reason":"Review the full command-surface consistency audit and bounded experiment navigation decision."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/research/absolute-user-path-migration.md","reason":"Review operand grammar migration, internal/URL boundary, and full regression matrix."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Review virtual-path, completion, scratch, containment, and required test contracts."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Review decoded experiment navigation and keyboard/focus ownership requirements."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review focused interactive browser evidence requirements."}
