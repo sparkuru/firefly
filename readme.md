@@ -1,6 +1,6 @@
 <p align = "left" style="font-size: 34px;" > <strong> me@firefly # cat readme.md </strong> </p>
 
-<p align = "left" style="font-size: 30px;" > firefly </p>
+<p align = "left" style="font-size: 30px;" > <strong> firefly </strong> </p>
 
 firefly is a static Astro publication backed by Markdown and a small
 framework-neutral Terminal presentation. The build is intentionally
@@ -70,7 +70,7 @@ are then omitted, while robots.txt and ordinary relative image paths remain
 valid. TOML has no null literal, so omission represents the configured null
 defaults.
 
-<p align = "left" style="font-size: 26px;" >  Markdown metadata </p>
+<p align = "left" style="font-size: 26px;" > <strong> Markdown metadata </strong> </p>
 
 Posts and pages use strict front matter. Existing title, description, date,
 draft, layout, and access fields remain required where applicable. The
