@@ -119,8 +119,13 @@ main() {
 
 	cd "${REPO_ROOT}"
 	trap cleanup EXIT INT TERM
-	./sam npm run build:m4
+	if [[ -n "${FIREFLY_COMMENTS_EXPORT:-}" ]]; then
+		./sam npm run build:m51
+	else
+		./sam npm run build:m4
+	fi
 	[[ "$(jq -r '.schemaVersion' artifacts/publication.json)" == 1 ]]
+	jq -e '.comments.schemaVersion == 1 and (.comments.tombstoneEpoch | type == "number")' artifacts/publication.json >/dev/null
 	mapfile -t manifest_inventory < <(jq -r '.inventory[]' artifacts/publication.json)
 	mapfile -t release_inventory < <(find dist -type f -printf '%P\n' | sort)
 	[[ "${#manifest_inventory[@]}" -gt 0 && "${#manifest_inventory[@]}" -eq "${#release_inventory[@]}" ]] || {

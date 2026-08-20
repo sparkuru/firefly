@@ -23,8 +23,18 @@ export interface PublicationResult {
   readonly manifestCount: number;
   readonly catalog: ExperimentDiscovery['catalog'];
   readonly inventory: readonly string[];
+  readonly comments: CommentsPublicationMetadata;
   readonly artifactsRoot: string;
   readonly releaseRoot: string;
+}
+
+export interface CommentsPublicationMetadata {
+  readonly enabled: boolean;
+  readonly schemaVersion: 1;
+  readonly sourceRevision: string;
+  readonly generatedAt: string;
+  readonly digest: string | null;
+  readonly tombstoneEpoch: number;
 }
 
 interface FileTree {
@@ -64,6 +74,22 @@ const PROHIBITED_ARTIFACT_FILES = new Set([
 ]);
 const PROHIBITED_SOURCE_EXTENSIONS = new Set(['.astro', '.ts', '.tsx']);
 const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/iu;
+const COMMENT_SECTION_PATTERN = /<section\b[^>]*\bclass=["'](?:terminal-)?comment-section["'][^>]*>[\s\S]*?<\/section>/giu;
+const COMMENT_EMAIL_PATTERN = /\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+\b/iu;
+const PROHIBITED_COMMENT_TEXT = [
+  /(?:emailCiphertext|emailFingerprint|verificationTokenHash|controlTokenHash|ipHash|userAgentHash|internalId|dedupeKey|moderationVersion|privateEmailRetentionAt|abuseRetentionAt|audit_events)\b/iu,
+  /(?:FIREFLY_COMMENTS_EXPORT|FIREFLY_CONTENT_ROOT|file:\/\/|\/app\/|\/home\/|\/tmp\/|\/(?:srv\/uploads|srv\/backups|var\/www|usr\/(?:local\/)?uploads)\/|(?:^|[\\/])\.private(?:[\\/]|$))/imu
+];
+const UNSAFE_COMMENT_MARKUP = /<(?:script|iframe|object|embed|svg|img)\b|(?:\bon[a-z]+\s*=|javascript:)/iu;
+
+const EMPTY_COMMENTS_PUBLICATION: CommentsPublicationMetadata = Object.freeze({
+  enabled: false,
+  schemaVersion: 1,
+  sourceRevision: 'empty',
+  generatedAt: '1970-01-01T00:00:00.000Z',
+  digest: null,
+  tombstoneEpoch: 0
+});
 
 function contained(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
@@ -302,6 +328,7 @@ async function validateTextAndReferences(
     const contents = isText ? bytes.toString('utf8') : '';
     const authoredSiteDocument = isText && isAuthoredSiteDocument(relative, contents);
     if (isText) {
+      validateCommentSurface(relative, contents);
       for (const pattern of PROHIBITED_SENSITIVE_TEXT) {
         if (pattern.test(contents)) {
           throw new TypeError(`${absolute}: prohibited private or credential content.`);
@@ -342,6 +369,15 @@ async function validateTextAndReferences(
   }
 }
 
+function validateCommentSurface(relative: string, contents: string): void {
+  for (const match of contents.matchAll(COMMENT_SECTION_PATTERN)) {
+    const section = match[0] ?? '';
+    if (COMMENT_EMAIL_PATTERN.test(section) || PROHIBITED_COMMENT_TEXT.some((pattern) => pattern.test(section)) || UNSAFE_COMMENT_MARKUP.test(section)) {
+      throw new TypeError(`${relative}: public comment surface contains private data or unsafe markup.`);
+    }
+  }
+}
+
 function assertNoCaseCollisions(paths: readonly string[]): void {
   const seen = new Map<string, string>();
   for (const candidate of paths) {
@@ -352,6 +388,53 @@ function assertNoCaseCollisions(paths: readonly string[]): void {
     }
     seen.set(folded, candidate);
   }
+}
+
+function normalizeCommentsPublicationMetadata(value: CommentsPublicationMetadata): CommentsPublicationMetadata {
+  const generatedAt = typeof value === 'object' && value !== null && typeof value.generatedAt === 'string' ? new Date(value.generatedAt) : null;
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    value.enabled !== true && value.enabled !== false ||
+    value.schemaVersion !== 1 ||
+    typeof value.sourceRevision !== 'string' ||
+    !/^[A-Za-z0-9._~-]{1,256}$/u.test(value.sourceRevision) ||
+    generatedAt === null ||
+    !Number.isFinite(generatedAt.getTime()) ||
+    generatedAt.toISOString() !== value.generatedAt ||
+    (value.digest !== null && (typeof value.digest !== 'string' || !/^[a-f0-9]{64}$/u.test(value.digest))) ||
+    !Number.isSafeInteger(value.tombstoneEpoch) ||
+    value.tombstoneEpoch < 0 ||
+    (value.enabled && value.digest === null)
+  ) {
+    throw new TypeError('comments publication metadata is invalid.');
+  }
+  return Object.freeze({ ...value });
+}
+
+async function readPublishedCommentsEpoch(artifactsTarget: string): Promise<number> {
+  const metadataPath = path.join(artifactsTarget, 'publication.json');
+  if (!(await pathExists(metadataPath))) {
+    return 0;
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(await readFile(metadataPath, 'utf8'));
+  } catch (error) {
+    throw new TypeError(`${metadataPath}: publication metadata is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (typeof value !== 'object' || value === null || !('comments' in value)) {
+    return 0;
+  }
+  const comments = (value as { comments?: unknown }).comments;
+  if (typeof comments !== 'object' || comments === null || !('tombstoneEpoch' in comments)) {
+    throw new TypeError(`${metadataPath}: comments tombstone epoch is missing.`);
+  }
+  const epoch = (comments as { tombstoneEpoch?: unknown }).tombstoneEpoch;
+  if (!Number.isSafeInteger(epoch) || (epoch as number) < 0) {
+    throw new TypeError(`${metadataPath}: comments tombstone epoch is invalid.`);
+  }
+  return epoch as number;
 }
 
 export async function validateRelease(
@@ -480,12 +563,18 @@ export async function buildExperiments(manifests: readonly ExperimentManifest[])
 export async function assemblePublication(options: {
   readonly repositoryRoot: string;
   readonly discovery?: ExperimentDiscovery;
+  readonly comments?: CommentsPublicationMetadata;
 }): Promise<PublicationResult> {
   const repositoryRoot = path.resolve(options.repositoryRoot);
   const discovery = options.discovery ?? await discoverExperiments({ repositoryRoot });
+  const comments = normalizeCommentsPublicationMetadata(options.comments ?? EMPTY_COMMENTS_PUBLICATION);
   const siteOutput = path.join(repositoryRoot, 'apps/site/dist');
   const artifactsTarget = path.join(repositoryRoot, 'artifacts');
   const releaseTarget = path.join(repositoryRoot, 'dist');
+  const publishedTombstoneEpoch = await readPublishedCommentsEpoch(artifactsTarget);
+  if (comments.tombstoneEpoch < publishedTombstoneEpoch) {
+    throw new TypeError(`comments tombstone epoch ${comments.tombstoneEpoch} predates the published epoch ${publishedTombstoneEpoch}; refusing rollback.`);
+  }
   const transaction = randomUUID();
   const artifactsCandidate = path.join(repositoryRoot, `.artifacts-candidate-${transaction}`);
   const releaseCandidate = path.join(repositoryRoot, `.dist-candidate-${transaction}`);
@@ -533,6 +622,7 @@ export async function assemblePublication(options: {
     await writeFile(path.join(artifactsCandidate, 'publication.json'), `${JSON.stringify({
       schemaVersion: 1,
       catalog: discovery.catalog,
+      comments,
       inventory
     }, null, 2)}\n`);
     await promoteTogether([
@@ -545,6 +635,7 @@ export async function assemblePublication(options: {
       manifestCount: discovery.manifests.length,
       catalog: discovery.catalog,
       inventory,
+      comments,
       artifactsRoot: artifactsTarget,
       releaseRoot: releaseTarget
     });

@@ -1,0 +1,9 @@
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/prd.md","reason":"Review implementation against parent requirements and privacy exclusions."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/design.md","reason":"Review service boundaries, export schema, lifecycle, and rollback contract."}
+{"file":".trellis/tasks/08-20-m51-comments-service-core/prd.md","reason":"Review child acceptance criteria."}
+{"file":".trellis/tasks/08-20-m51-comments-service-core/design.md","reason":"Review child design and storage/transport choices."}
+{"file":".trellis/spec/frontend/index.md","reason":"Check repository isolation and validation commands."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check package lockfile and container command discipline."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check request/storage/export data-flow and negative cases."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Check shared validation and contract ownership."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Check public/private service and export boundary."}

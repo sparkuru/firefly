@@ -1,0 +1,12 @@
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/prd.md","reason":"Parent static compatibility, privacy, and rollback requirements."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/design.md","reason":"Parent export, publication, assembler, and rollback contract."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/implement.md","reason":"Parent operations checklist and validation commands."}
+{"file":".trellis/spec/frontend/index.md","reason":"Publication package topology and complete validation profile."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"sam/dev/runtime container ownership and shell validation rules."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Safe artifact, inventory, reference, atomic promotion, and runtime boundaries."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Export handoff, build, release, rollback, and service data-flow checks."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Reuse existing publication validators and avoid duplicate safety logic."}
+{"file":".trellis/tasks/08-20-m51-comments-publication-ops/prd.md","reason":"Child acceptance criteria."}
+{"file":".trellis/tasks/08-20-m51-comments-publication-ops/design.md","reason":"Child handoff and rollback design."}
+{"file":".trellis/tasks/08-20-m51-comments-publication-ops/implement.md","reason":"Child execution and validation order."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Implemented handoff and rollback contract."}

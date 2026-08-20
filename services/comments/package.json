@@ -1,0 +1,21 @@
+{
+  "name": "@firefly/comments-service",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "npm run build --silent && NODE_NO_WARNINGS=1 node --test dist/tests/*.test.js",
+    "build": "tsc",
+    "start": "npm run build --silent && node dist/src/server.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "typescript": "6.0.3"
+  }
+}

@@ -8,6 +8,8 @@
 #   ./sam npm run build:m4
 #   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
 #     ./sam npm --prefix experiments/nerv run test:e2e
+#   FIREFLY_COMMENTS_EXPORT=artifacts/comments/comments.public.v1.json \
+#     ./sam npm run build:m51
 #   WEB_HOST_PORT=4322 ./dev.sh
 #
 # Ports: the assembled publication maps container 4321 to host 4321 by default.
@@ -24,6 +26,8 @@ STEP_INDEX=0
 SAM_BIND_HOST="${SAM_BIND_HOST:-127.0.0.1}"
 WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
 WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
+COMMENTS_EXPORT_PATH="${FIREFLY_COMMENTS_EXPORT:-}"
+COMMENTS_EXPORT_CONTAINER_PATH=""
 
 readonly IMAGE SAM_IPC REPO_ROOT DEVHOME
 
@@ -76,6 +80,40 @@ validate_mount_path() {
 		return 2
 	fi
 	return 0
+}
+
+validate_comments_export() {
+	local configured_path=${COMMENTS_EXPORT_PATH}
+	local resolved_path
+	local segment
+	local -a segments=()
+
+	[[ -n "${configured_path}" ]] || return 0
+	require_command realpath
+	[[ "${configured_path}" != /* && "${configured_path}" != *$'\n'* && "${configured_path}" != *$'\r'* && "${configured_path}" != *\\* && "${configured_path}" != *'//' && "${configured_path}" != */ ]] || {
+		printf '[sam] FIREFLY_COMMENTS_EXPORT must be a repository-relative JSON path\n' >&2
+		return 2
+	}
+	[[ "${configured_path}" == *.json ]] || {
+		printf '[sam] FIREFLY_COMMENTS_EXPORT must name a JSON export\n' >&2
+		return 2
+	}
+	IFS='/' read -r -a segments <<<"${configured_path}"
+	for segment in "${segments[@]}"; do
+		[[ -n "${segment}" && "${segment}" != '.' && "${segment}" != '..' ]] || {
+			printf '[sam] FIREFLY_COMMENTS_EXPORT contains an unsafe path segment\n' >&2
+			return 2
+		}
+	done
+	resolved_path=$(realpath -e -- "${REPO_ROOT}/${configured_path}") || {
+		printf '[sam] FIREFLY_COMMENTS_EXPORT does not resolve to an existing file\n' >&2
+		return 2
+	}
+	[[ "${resolved_path}" == "${REPO_ROOT}/"* && -f "${resolved_path}" && -r "${resolved_path}" ]] || {
+		printf '[sam] FIREFLY_COMMENTS_EXPORT must resolve to a readable file inside the repository\n' >&2
+		return 2
+	}
+	COMMENTS_EXPORT_CONTAINER_PATH="/app/${configured_path}"
 }
 
 discover_content_mounts() {
@@ -176,6 +214,7 @@ run_step() {
 main() {
 	local -a tty_flags=()
 	local -a port_flags=()
+	local -a environment_flags=()
 	local -a docker_command
 
 	[[ $# -gt 0 ]] || {
@@ -183,6 +222,7 @@ main() {
 		return 2
 	}
 
+	validate_comments_export
 	require_command docker
 	require_command id
 	require_command mkdir
@@ -211,6 +251,9 @@ main() {
 		;;
 	esac
 
+	if [[ -n "${COMMENTS_EXPORT_CONTAINER_PATH}" ]]; then
+		environment_flags=(-e "FIREFLY_COMMENTS_EXPORT=${COMMENTS_EXPORT_CONTAINER_PATH}")
+	fi
 	docker_command=(
 		docker run --rm --init
 		"${tty_flags[@]}"
@@ -218,6 +261,7 @@ main() {
 		--user "$(id -u):$(id -g)"
 		-e HOME=/app/.devhome
 		-e "FIREFLY_CONTENT_ROOT=${FIREFLY_CONTENT_ROOT}"
+		"${environment_flags[@]}"
 		-v "${REPO_ROOT}:/app"
 		"${content_mounts[@]}"
 		-w /app

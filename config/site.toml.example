@@ -42,3 +42,11 @@ robots = "index, follow"
 twitterCard = "summary_large_image"
 # Optional absolute URL or root-relative public path for social cards.
 # image = "/social-card.png"
+
+[comments]
+# Enable only after a separately provisioned HTTPS write service is ready.
+enabled = false
+# writeOrigin = "https://comments.example.com"
+# The file is a repository-relative, build-only sanitized export.
+exportPath = "artifacts/comments/comments.public.v1.json"
+consentVersion = "m51-v1"

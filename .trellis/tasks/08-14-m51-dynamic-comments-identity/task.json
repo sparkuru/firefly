@@ -3,7 +3,7 @@
   "name": "m51-dynamic-comments-identity",
   "title": "M5.1 dynamic comments and identity service",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -18,12 +18,17 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "08-20-m51-comments-service-core",
+    "08-20-m51-static-comment-consumer",
+    "08-20-m51-comments-publication-ops"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",
   "meta": {
-    "deferred": "true",
-    "defer_reason": "Owner chose later self-built comment service; complete current mainline first."
+    "authorized": "true",
+    "authorization_date": "2026-08-20",
+    "authorization_scope": "implementation approved on 2026-08-20 after final planning summary review; parent task activated and serial child tasks created"
   }
 }

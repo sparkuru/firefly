@@ -1,0 +1,11 @@
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/prd.md","reason":"Parent requirements and privacy/static boundary."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/design.md","reason":"Parent service, lifecycle, export, privacy, and rollback contract."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/implement.md","reason":"Parent execution order and validation profile."}
+{"file":".trellis/spec/frontend/index.md","reason":"Repository package isolation and ./sam validation boundary."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Container command, lockfile, and unavailable-check handling."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Keep request, storage, lifecycle, and export contracts explicit."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Search-first and shared contract guidance before adding helpers."}
+{"file":".trellis/tasks/08-20-m51-comments-service-core/prd.md","reason":"Child acceptance criteria."}
+{"file":".trellis/tasks/08-20-m51-comments-service-core/design.md","reason":"Child implementation boundaries."}
+{"file":".trellis/tasks/08-20-m51-comments-service-core/implement.md","reason":"Child execution and validation order."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Implemented service/export boundary."}

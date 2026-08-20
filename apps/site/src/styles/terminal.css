@@ -682,6 +682,203 @@
   padding-block-end: var(--reader-status-reserve);
 }
 
+.terminal-comment-section {
+  max-width: var(--terminal-readable-measure);
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--terminal-color-border);
+}
+
+.terminal-comment-header h2,
+.terminal-comment-new h3,
+.terminal-comment-card h3 {
+  margin: 0;
+}
+
+.terminal-comment-eyebrow,
+.terminal-comment-card time,
+.terminal-comment-header > p:last-child,
+.terminal-comment-empty,
+.terminal-comment-form span,
+.terminal-comment-unavailable {
+  color: var(--terminal-color-muted);
+}
+
+.terminal-comment-eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--terminal-color-command);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.terminal-comment-header h2 {
+  margin-bottom: 0.5rem;
+  color: var(--terminal-color-text);
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  font-weight: 500;
+}
+
+.terminal-comment-header > p:last-child {
+  margin: 0;
+}
+
+.terminal-comment-list,
+.terminal-comment-replies {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-comment-card {
+  padding: 1rem;
+  border: 1px solid var(--terminal-color-border);
+  background: var(--terminal-color-surface-subtle);
+}
+
+.terminal-comment-card > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+}
+
+.terminal-comment-card h3 {
+  color: var(--terminal-color-text);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.terminal-comment-card time {
+  font-size: 0.8rem;
+}
+
+.terminal-comment-body {
+  margin: 1rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal-comment-replies {
+  margin: 1rem 0 0 1rem;
+}
+
+.terminal-comment-card--reply {
+  border-left-width: 0.25rem;
+  border-left-color: var(--terminal-color-warning);
+}
+
+.terminal-comment-new {
+  margin-top: 2rem;
+}
+
+.terminal-comment-new h3 {
+  margin-bottom: 0.75rem;
+  color: var(--terminal-color-command);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.terminal-comment-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--terminal-color-border);
+}
+
+.terminal-comment-fields {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.terminal-comment-fields > div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.terminal-comment-form label {
+  color: var(--terminal-color-text);
+  font-weight: 500;
+}
+
+.terminal-comment-form label span {
+  font-weight: 400;
+}
+
+.terminal-comment-form input:not([type='checkbox']),
+.terminal-comment-form textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--terminal-color-border);
+  border-radius: 0.15rem;
+  background: var(--terminal-color-canvas);
+  color: var(--terminal-color-text);
+  font: inherit;
+  font-size: max(1rem, 16px);
+}
+
+.terminal-comment-form textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.terminal-comment-form input:focus-visible,
+.terminal-comment-form textarea:focus-visible {
+  outline: 3px solid var(--terminal-color-focus);
+  outline-offset: 3px;
+}
+
+.terminal-comment-consent {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.terminal-comment-consent label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-weight: 400;
+}
+
+.terminal-comment-consent input {
+  flex: 0 0 auto;
+  margin-top: 0.35rem;
+}
+
+.terminal-comment-form button {
+  width: fit-content;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--terminal-color-command);
+  border-radius: 0.15rem;
+  background: var(--terminal-color-command);
+  color: var(--terminal-color-canvas);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.terminal-comment-form button:hover {
+  background: var(--terminal-color-warning);
+  border-color: var(--terminal-color-warning);
+}
+
+.terminal-comment-honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .terminal-document-header {
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--terminal-color-border);

@@ -1,0 +1,8 @@
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/prd.md","reason":"Review static compatibility, privacy, and rollback acceptance."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/design.md","reason":"Review export handoff and publication boundaries."}
+{"file":".trellis/tasks/08-20-m51-comments-publication-ops/prd.md","reason":"Review child acceptance criteria."}
+{"file":".trellis/tasks/08-20-m51-comments-publication-ops/design.md","reason":"Review contained handoff and tombstone rollback design."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check wrapper, Docker, shell, and unavailable-command handling."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Check artifact safety, references, inventory, and atomic promotion."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check export/build/release/rollback boundary coverage."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Check export handoff, privacy scan, and tombstone rollback."}

@@ -6,7 +6,7 @@
 - **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-20 — The v1.0.0 static release was built, atomically promoted through the established immutable-release procedure, and publicly verified. M5.1 comments remain deferred for a later self-built solution. M7 remains the historical staging rehearsal; M6 remains superseded.
+- **Owner decision:** 2026-08-20 — The v1.0.0 static release was built, atomically promoted through the established immutable-release procedure, and publicly verified. M5.1 was re-authorized as the next product task; the converged planning summary was approved and the task was activated for implementation with serial service, site, and publication child tasks. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 
@@ -25,7 +25,7 @@
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
-| 7 | M5.1 — dynamic comments and identity service | deferred | The planning record remains available for a later self-built service. It is not on the current release path and must not convert the main site to SSR or direct database reads. |
+| 7 | M5.1 — dynamic comments and identity service | in_progress | Owner approved the converged planning summary and activated implementation on 2026-08-20. Serial child tasks cover the isolated service, static consumer, and publication/operations; the main site must not become SSR or directly read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 
@@ -61,7 +61,9 @@
 - M5 durable contract: `.trellis/spec/frontend/content-workspace-contract.md` records workspace/link/materializer/access/path/registry/reader signatures, validation matrix, cases, tests, and wrong/correct patterns; adjacent frontend specs were reconciled from the flat M4 route/index assumptions.
 - M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, staging, and production remain later milestones.
 - M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The content workspace and reader remain the approved Markdown authoring boundary.
-- M5.1 is deferred: its planning record remains available for a later self-built comment/identity service. It is neither authorized nor on the current release path.
+- M5.1 was initially deferred, then re-authorized by the owner on 2026-08-20. The final planning summary was approved and the parent task activated; implementation is proceeding through serial child tasks with the static-only boundary preserved.
+- M5.1 planning artifacts are converged under `.trellis/tasks/08-14-m51-dynamic-comments-identity/`; implementation is tracked by `.trellis/tasks/08-20-m51-comments-service-core/`, `.trellis/tasks/08-20-m51-static-comment-consumer/`, and `.trellis/tasks/08-20-m51-comments-publication-ops/`. The approved contracts define the self-built write/moderation service, static export, post-only scope, plain-text body, privacy controls, and rollback gates.
+- M5.1 implementation evidence: the service child passes 15/15 tests plus check/build, including consent, encrypted private email, hashed tokens, verification/moderation/replies, retention, SQLite, export, and backup/restore. The site child passes 35/35 content tests, 15/15 static-output tests in both disabled and enabled-fixture builds, Astro check, and full site Playwright 122/122. The publication/ops child passes assembler 7/7, assembled-publication Playwright 4/4, default publication build, `check:m51`, `test:m51`, shell syntax/ShellCheck/shfmt, and `package-runtime.sh` runtime probes. The tracked config remains `comments.enabled = false`; no deployment or credentials were used.
 - Production rollout evidence: P0's guarded release procedure completed on
   2026-08-20. The promoted publication matched its locally verified candidate;
   public representative site/content/experiment routes, distinct 404s,
@@ -76,7 +78,9 @@
 
 ## Next Decision
 
-Production and the P1 roadmap reconciliation are complete. M5.1 remains
-deferred; historic counters remain private unless a future task separately
-defines their schema and presentation. The next product task requires a fresh
-guided owner decision.
+Production and the P1 roadmap reconciliation are complete. M5.1
+planning/design and implementation are complete in the serial child-task
+sequence, pending the work commit and Trellis archival. Historic counters
+remain private unless a separate task defines their schema and presentation.
+The next decision is the owner review/rollout gate for external service
+provisioning; the static site remains disabled by default.

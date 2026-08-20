@@ -1,0 +1,11 @@
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/prd.md","reason":"Review parent requirements and static-only exclusions."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/design.md","reason":"Review export, privacy, route, and presentation contracts."}
+{"file":".trellis/tasks/08-20-m51-static-comment-consumer/prd.md","reason":"Review child acceptance criteria."}
+{"file":".trellis/tasks/08-20-m51-static-comment-consumer/design.md","reason":"Review child data-flow and component ownership."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check Astro props, presentation composition, native form semantics, and CSS boundaries."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check static output, browser, responsive, focus, and privacy evidence."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Check no runtime fetch/read/store has been introduced."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Check strict export decoder and route-boundary types."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Check safe build-time write origin and config validation."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check export/decoder/component route and private-field boundaries."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Check decoder, route binding, and no-runtime-read boundary."}

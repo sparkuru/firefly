@@ -1,101 +1,149 @@
-# M5.1 dynamic comments and identity service
+# M5.1 Dynamic Comments and Identity Service
 
 ## Goal
 
-Plan, but do not implement, the first dynamic comment and public-identity
-capability for firefly. The plan must preserve the existing immutable static
-site and keep any future historical-data handling behind an explicit owner
-decision.
+Define and implement the first dynamic comment and public-identity capability
+for firefly. The implementation adds a self-built write and moderation
+boundary while preserving the existing immutable static site, its publication
+pipeline, and its rollback model.
 
-## Confirmed Facts
+The planning/design baseline was approved on 2026-08-20, and implementation is
+now active through the three serial child tasks recorded below. Production
+deployment remains separately gated.
 
-- The current Astro site, its assembled release, and runtime image are
-  static-only. They do not query a database or expose a comment route.
-- M5.1 is planned to own a separately deployed write API/database, consent,
-  abuse controls, moderation, public read-model export, and static rebuild
-  handoff. It must not convert the main site to SSR or direct database reads.
-- Owner direction for this task is planning only: no service, database, API,
-  public comment projection, or deployment implementation may be written.
-- Owner decision: defer M5.1 after this initial requirement capture. A later
-  self-built solution may resume from this task, but comments are not part of
-  the current release path.
-- Local image-like strings in authored Markdown are ordinary public body text,
-  not M5.1 assets, blockers, or a planning concern.
-- Owner decision: the first M5.1 release supports new comments only. All 189
-  historical comments remain private and are not automatically projected,
-  anonymized, or published. Any future historic-comment publication requires a
-  separate owner decision and per-record review/consent policy.
-- Owner decision: new commenters use a classic, account-free verified-pseudonym
-  model. A submission has a public display name and optional credential-free
-  HTTPS homepage; a private email address is used only for one-time verification
-  and opted-in notifications. There is no public email, login account, or
-  source-identity lookup.
-- Owner decision: every new comment is held in an owner-only moderation queue.
-  It enters the public static read model only after explicit approval; verified
-  status alone never causes immediate public display.
-- Owner decision: the first release supports one reply level. A reply targets a
-  top-level comment; replies to replies are not accepted. Replies use the same
-  verified-pseudonym and pre-moderation flow as top-level comments.
-- Owner decision: private email is data-minimized. It is used only for
-  verification, an approval/rejection outcome, and explicitly opted-in reply
-  notifications; notifications default off. Cancellation and deletion requests
-  are supported, and email for an unapproved/deleted comment is removed after a
-  bounded appeal window defined by the implementation plan.
+## Background and confirmed facts
+
+- The current Astro site, assembled release, and runtime image are static-only.
+  They do not query a database or expose a comment route.
+- M5 established the configured Markdown workspace, guest-only public
+  projection, canonical post routes, and a private handoff for historical
+  content. It did not render historical comments or identity fields.
+- The original private handoff contains 189 approved historical comments and
+  separate memo data. These records remain private and are not a first-release
+  input.
+- The repository has separate Semantic and Terminal document components, but
+  no existing comment surface or comment API.
+- M5.1 was initially deferred. On 2026-08-20 the owner re-authorized it as the
+  next product task, approved the planning/design baseline, and activated
+  implementation. This does not authorize production deployment, external
+  provisioning, real credentials, or a production traffic change.
+- Authored Markdown image-like strings are ordinary public body text and are
+  unrelated to the M5.1 service boundary.
+
+## User outcome
+
+Readers can submit a new comment on a public post using a verified pseudonym.
+The owner can verify, moderate, approve, reject, delete, and export comments.
+Approved comments appear on the next immutable static publication; unapproved
+or deleted records never enter the public read model.
 
 ## Requirements
 
-- R1: Define a privacy-first identity model, including the exact public fields,
-  consent policy, alias rules, and irreversible-data boundaries.
-- R2: Define the comment lifecycle: submission, validation, abuse controls,
-  moderation, visibility, deletion/export, and reply behavior.
-- R2a: Use verified pseudonyms without user accounts. Define email verification,
-  display-name/URL validation, private retention, notification consent, and
-  deletion/export behavior.
-- R2b: Support one-level replies while rejecting nested reply chains and keeping
-  parent/child relationships private until moderation approves a public export.
-- R3: Define the compatibility boundary between a dynamic comment service and
-  the immutable static site, including read-model export/rebuild and rollback.
-- R4: Keep historical comments private and out of the first release. A later
-  historic-comment feature must be separately approved and may never publish
-  source IDs, email, IP, user-agent, or raw source identity by default.
-- R5: Produce planning artifacts and evidence sufficient for a later,
-  separately authorized implementation task; preserve the no-implementation
-  boundary in this task.
+- **R1 — Privacy-first identity:** define exact public fields, consent, alias
+  rules, email use, private retention, and irreversible-data boundaries.
+- **R2 — Comment lifecycle:** define submission, validation, abuse controls,
+  verification, moderation, visibility, notification, deletion, export, and
+  rollback behavior.
+- **R2a — Verified pseudonyms:** support account-free display names with an
+  optional HTTPS homepage; use private email only for one-time verification,
+  approval/rejection outcomes, and explicitly opted-in reply notifications.
+- **R2b — One-level replies:** support direct replies to top-level comments;
+  reject reply-to-reply submissions and never expose private parent records.
+- **R3 — Static compatibility:** define the independent service boundary,
+  versioned sanitized export, build handoff, post-route binding, static
+  rendering, publication, and privacy-safe rollback.
+- **R4 — Historical privacy:** exclude all historical comments and memo data
+  from the first release. Any future historical feature requires a separate
+  owner decision, per-record review, and a new privacy contract; source IDs,
+  email, IP, user-agent, and raw source identity are not public by default.
+- **R5 — Implementation traceability:** keep the converged PRD, technical
+  design, ordered implementation/validation plan, child evidence, and curated
+  Trellis context aligned with the implemented boundary.
 
-## Initial Scope Boundaries
+## Resolved product decisions
 
-In scope: product decisions, threat/privacy model, service/data-flow design,
-API and schema proposals, data import/export approach, moderation/abuse policy,
-acceptance criteria, research, and an implementation/validation plan.
+- **Independent service, static public read model:** the service accepts,
+  verifies, validates, rate-limits, moderates, and exports approved records.
+  The static site consumes only the sanitized export during a fresh build. The
+  main site never fetches a comment read API at runtime. Approval-to-publication
+  build latency is accepted.
+- **Route scope:** every public post receives comments in whichever
+  presentation renders that post, Semantic or Terminal. Standalone pages,
+  directory indexes, inline Terminal `cat` output, and experiments do not.
+- **Comment body:** first-release bodies are bounded plain text with preserved
+  line breaks and escaped output. Markdown, HTML, images, and visitor-supplied
+  links are not supported.
+- **Public identity:** each submission has a public display name and optional
+  credential-free HTTPS homepage. Email is private; there are no public email
+  fields, login accounts, or source-identity lookups.
+- **Verification and moderation:** email verification is required before a
+  record enters the owner-only pending queue. Verification never publishes a
+  comment; every public record requires explicit owner approval.
+- **Replies:** a reply targets a top-level comment only. Replies use the same
+  verified-pseudonym and pre-moderation flow. Nested reply chains are rejected.
+- **Notifications and privacy:** notifications default off, are opt-in only,
+  and are transactional rather than marketing. Cancellation and deletion
+  requests are supported. Private email and abuse material have bounded
+  retention defined in the technical design and implementation plan.
+- **Historical data:** the 189 historical comments and memo data stay private;
+  no import, anonymization, projection, or automatic migration is included.
+- **Authorization boundary:** service/site/publication implementation is
+  authorized in this task through the serial child tasks. Production
+  credentials, external provisioning, deployment, and traffic changes require a
+  separate owner decision.
 
-Out of scope: source-code changes, database creation or migration, external
-service provisioning, credentials, deployment, public comment UI, public
-historical-comment materialization, or SSR conversion.
+## In scope for planning
 
-Also out of scope for the current mainline: completing M5.1 planning, approving
-an implementation plan, or starting this task.
+- Service and data-flow architecture.
+- Privacy, consent, threat, and abuse model.
+- Identity, comment, reply, moderation, notification, and retention rules.
+- API and private control-plane proposals.
+- Versioned public export and static-site compatibility contract.
+- Post-route binding and Semantic/Terminal integration boundary.
+- Data import/export boundary, explicitly excluding historical import.
+- Acceptance criteria, implementation sequence, validation commands, rollout,
+  rollback, backup, and restore requirements.
 
-## Resolved Decisions
+## Out of scope for this implementation task
 
-- The first release does not display historical comments. It accepts and
-  displays only newly submitted comments after the planned moderation policy
-  permits them.
-- New-comment identity is a verified pseudonym: public display name and optional
-  HTTPS homepage; private email for verification/opted-in notifications only;
-  no public email or account system.
-- All new comments are pre-moderated. Pending/rejected/spam/quarantined records
-  remain private; only owner-approved records are exported to the public static
-  read model.
-- Each public comment may have approved direct replies. Reply-to-reply attempts
-  are rejected rather than flattened or reparented implicitly.
-- Private email is never public or used for marketing. Reply notices are
-  opt-in; users can withdraw consent or request deletion, with a bounded private
-  appeal/anti-abuse retention period defined before implementation.
+- Production service provisioning, credentials, DNS/email setup, or deployment.
+- Historical data import, migration, or public historical-comment materialization.
+- Public historical-comment materialization or historical statistics.
+- SSR conversion, direct database reads, runtime comment reads, or a public
+  comment-count API.
+- Markdown/rich-text comments, image uploads, reactions, mentions, nested
+  threads, public profiles, or user accounts.
 
-## Deferral Record
+## Acceptance criteria for the planning artifacts
 
-M5.1 is deferred for a future self-built comment service. The selected product
-direction, if resumed, is: no historical-comment projection; account-free
-verified pseudonyms; pre-moderation; one reply level; data-minimized private
-email with opt-in notifications. The static-versus-dynamic public read-model
-decision remains intentionally open for the later planning session.
+- **A1:** `design.md` contains an architecture diagram and explicit boundaries
+  for the independent service, site build, export artifact, assembler, and
+  static runtime.
+- **A2:** The public/private field split, pseudonym validation, email/token
+  handling, consent, retention, deletion, and non-leakage rules are explicit.
+- **A3:** The lifecycle and reply state transitions are observable, including
+  verification-not-public, pre-moderation, one-level replies, tombstones, and
+  deterministic export eligibility.
+- **A4:** The versioned export schema contains only approved public fields and
+  defines route, parent, ordering, digest/signature, stale-route, and
+  tombstone checks.
+- **A5:** The static integration covers post canonical routes in both
+  presentations, excludes pages/experiments/inline `cat`, requires no runtime
+  read, and preserves no-JavaScript reading.
+- **A6:** The publication plan preserves existing build, static-output,
+  assembled-release, runtime, atomic-promotion, and rollback gates, including a
+  privacy-safe rule for deleted comments.
+- **A7:** `implement.md`, `implement.jsonl`, and `check.jsonl` provide the
+  ordered execution plan, validation matrix, rollback points, and real
+  project-spec context entries; child evidence records completed checks.
+- **A8:** No blocking open product questions remain in this record; production
+  rollout remains separately gated by owner review.
+
+## Planning artifacts
+
+- [Technical design](./design.md): architecture, contracts, data model,
+  privacy/security controls, static integration, operations, and alternatives.
+- [Implementation plan](./implement.md): future serial deliverables,
+  validation commands, risk/rollback points, and acceptance mapping.
+- `implement.jsonl` and `check.jsonl`: curated frontend specifications for a
+  later sub-agent implementation/check context.

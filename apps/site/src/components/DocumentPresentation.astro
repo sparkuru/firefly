@@ -1,6 +1,8 @@
 ---
 import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import type { CanonicalDocument } from '../lib/content';
+import { SITE_CONFIG } from '../lib/site-config.mjs';
+import type { PublicComment } from '../lib/comments';
 import type { renderDocument } from '../lib/render-document';
 import SemanticDocument from './SemanticDocument.astro';
 import TerminalDocument from './TerminalDocument.astro';
@@ -12,9 +14,10 @@ type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 interface Props {
   canonical: CanonicalDocument;
   document: RenderedDocument;
+  comments?: readonly PublicComment[];
 }
 
-const { canonical, document } = Astro.props;
+const { canonical, document, comments = [] } = Astro.props;
 const { entry } = canonical;
 const presentation = document.metadata.presentation;
 if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {
@@ -36,7 +39,7 @@ if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {
       date={entry.data.date}
       updated={entry.data.updated}
     >
-      <SemanticDocument entry={entry} document={document} />
+      <SemanticDocument canonical={canonical} document={document} comments={comments} commentsConfig={SITE_CONFIG.comments} />
     </DocumentLayout>
   ) : (
     <TerminalLayout
@@ -52,7 +55,7 @@ if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {
       date={entry.data.date}
       updated={entry.data.updated}
     >
-      <TerminalDocument canonical={canonical} document={document} />
+      <TerminalDocument canonical={canonical} document={document} comments={comments} commentsConfig={SITE_CONFIG.comments} />
     </TerminalLayout>
   )
 }

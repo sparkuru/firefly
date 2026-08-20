@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { decodeExperimentManifest } from '@firefly/validate-experiments';
-import { assemblePublication, validateRelease, walkSafeTree } from '../src/index.js';
+import { assemblePublication, validateRelease, walkSafeTree, type CommentsPublicationMetadata } from '../src/index.js';
 
 async function fixture(context: test.TestContext) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-publication-'));
@@ -221,4 +221,43 @@ test('assembly rejects Experiment outputs and licenses reached through symlinked
     }),
     /resolves outside/u
   );
+});
+
+test('release validation rejects private or unsafe comment surfaces in authored documents', async (context) => {
+  const { root, manifest } = await fixture(context);
+  const release = path.join(root, 'release');
+  await mkdir(path.join(release, 'lab/alpha'), { recursive: true });
+  await mkdir(path.join(release, 'posts/example/article'), { recursive: true });
+  await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
+  await writeFile(path.join(release, '404.html'), '<h1>Missing</h1>');
+  await writeFile(path.join(release, 'lab/index.html'), '<h1>Lab</h1>');
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<h1>Alpha</h1>');
+  await writeFile(path.join(release, 'lab/alpha/404.html'), '<h1>Missing</h1>');
+  await writeFile(path.join(release, 'lab/alpha/license'), 'fixture');
+  await writeFile(path.join(release, 'posts/example/article/index.html'), '<section class="comment-section"><p class="comment-body">privateEmail reader@example.test</p></section>');
+  await assert.rejects(validateRelease(release, [manifest]), /private data|unsafe markup/u);
+  await writeFile(path.join(release, 'posts/example/article/index.html'), '<section class="comment-section"><script>alert(1)</script></section>');
+  await assert.rejects(validateRelease(release, [manifest]), /private data|unsafe markup/u);
+});
+
+test('publication evidence records comment tombstones and refuses an older rollback', async (context) => {
+  const { root, manifest } = await fixture(context);
+  const discovery = Object.freeze({ manifests: Object.freeze([manifest]), catalog: Object.freeze([]) });
+  const current: CommentsPublicationMetadata = {
+    enabled: true,
+    schemaVersion: 1,
+    sourceRevision: 'export-3',
+    generatedAt: '2026-08-20T00:00:00.000Z',
+    digest: 'a'.repeat(64),
+    tombstoneEpoch: 3
+  };
+  const result = await assemblePublication({ repositoryRoot: root, discovery, comments: current });
+  assert.deepEqual(result.comments, current);
+  const publication = JSON.parse(await readFile(path.join(root, 'artifacts/publication.json'), 'utf8')) as { comments: CommentsPublicationMetadata };
+  assert.deepEqual(publication.comments, current);
+  await assert.rejects(
+    assemblePublication({ repositoryRoot: root, discovery, comments: { ...current, sourceRevision: 'export-2', tombstoneEpoch: 2 } }),
+    /predates the published epoch 3/u
+  );
+  assert.equal(await readFile(path.join(root, 'dist/lab/alpha/index.html'), 'utf8'), '<link href="/lab/alpha/assets/app.css">');
 });

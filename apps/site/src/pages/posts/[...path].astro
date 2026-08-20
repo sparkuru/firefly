@@ -3,16 +3,20 @@ import DocumentPresentation from '../../components/DocumentPresentation.astro';
 import ContentDirectoryIndex from '../../components/ContentDirectoryIndex.astro';
 import TerminalLayout from '../../layouts/TerminalLayout.astro';
 import { getCanonicalContent, type CanonicalDocument, type ContentDirectory } from '../../lib/content';
+import { loadCommentsForPosts } from '../../lib/comments.mjs';
+import type { PublicComment } from '../../lib/comments';
+import { SITE_CONFIG } from '../../lib/site-config.mjs';
 import { renderDocument } from '../../lib/render-document';
 
 type RouteProps =
-  | { kind: 'document'; canonical: CanonicalDocument }
+  | { kind: 'document'; canonical: CanonicalDocument; comments: readonly PublicComment[] }
   | { kind: 'directory'; directory: ContentDirectory };
 
 export async function getStaticPaths() {
   const content = await getCanonicalContent();
+  const commentsByPost = loadCommentsForPosts(content.posts, SITE_CONFIG.comments);
   return [
-    ...content.posts.map((canonical) => ({ params: { path: canonical.href.slice('/posts/'.length, -1) }, props: { kind: 'document' as const, canonical } })),
+    ...content.posts.map((canonical) => ({ params: { path: canonical.href.slice('/posts/'.length, -1) }, props: { kind: 'document' as const, canonical, comments: commentsByPost.get(canonical.href) ?? [] } })),
     ...content.directories
       .filter(({ virtualPath }) => virtualPath.startsWith('posts/') )
       .map((directory) => ({ params: { path: directory.virtualPath.slice('posts/'.length) }, props: { kind: 'directory' as const, directory } }))
@@ -24,7 +28,7 @@ const rendered = props.kind === 'document' ? await renderDocument(props.canonica
 ---
 
 {props.kind === 'document' && rendered ? (
-  <DocumentPresentation canonical={props.canonical} document={rendered} />
+  <DocumentPresentation canonical={props.canonical} document={rendered} comments={props.comments} />
 ) : props.kind === 'directory' ? (
   <TerminalLayout title={props.directory.name} description={`Public directory ${props.directory.virtualPath}.`} path={`~/${props.directory.virtualPath}`}>
     <ContentDirectoryIndex directory={props.directory} />
