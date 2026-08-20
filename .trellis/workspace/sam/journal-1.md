@@ -173,7 +173,7 @@ Implemented and independently verified configurable nested Markdown workspaces w
 
 ### Summary
 
-Completed an owner-authorized, temporary staging.majo.im rehearsal through a loopback-only SSH reverse tunnel and Nginx Basic Auth edge. Verified the read-only packaged runtime, public/direct-origin TLS and routes, desktop/mobile browser paths, and independent full rollback; captured the reusable deployment boundary contract.
+Completed an owner-authorized, temporary staging rehearsal through a loopback-only SSH reverse tunnel and Nginx Basic Auth edge. Verified the read-only packaged runtime, public/direct-origin TLS and routes, desktop/mobile browser paths, and independent full rollback; captured the reusable deployment boundary contract.
 
 ### Git Commits
 

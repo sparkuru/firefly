@@ -1,0 +1,12 @@
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/prd.md","reason":"Approved P1 scope, evidence boundary, and redaction decision."}
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/design.md","reason":"Document authority model, target files, neutral-reference rules, and rollback boundary."}
+{"file":".trellis/mainline.md","reason":"Evidence-backed milestone state and continuation policy."}
+{"file":"prd.md","reason":"Root product roadmap, current-state, Terminal, release, and acceptance language to reconcile."}
+{"file":".trellis/tasks/archive/2026-08/08-20-production-rollout-record/prd.md","reason":"Sanitized production outcome and privacy boundary; do not copy private values."}
+{"file":".trellis/tasks/archive/2026-08/08-14-m6-staging-rollout/prd.md","reason":"Historical superseded M6 status and approved redaction target."}
+{"file":".trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging/prd.md","reason":"Accepted staging outcome and historical operational wording to sanitize."}
+{"file":".trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging/design.md","reason":"Historical topology evidence; preserve generic design while redacting endpoints."}
+{"file":".trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging/implement.md","reason":"Historical execution sequence; preserve chronology while redacting endpoints."}
+{"file":".trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging/research/execution-evidence.md","reason":"Historical evidence text requiring operational-identifier cleanup."}
+{"file":".trellis/workspace/sam/journal-1.md","reason":"Historical session evidence containing the approved operational redaction target."}
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/research/evidence-inventory.md","reason":"Planning-time evidence and exact privacy-cleanup inventory."}

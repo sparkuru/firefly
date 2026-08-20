@@ -3,7 +3,7 @@
 ## Preconditions and safety gates
 
 1. Confirm a clean local worktree, strict SSH host-key verification, active
-   remote Nginx, unused `staging.majo.im` server name, and unused remote
+   remote Nginx, unused staging server name, and unused remote
    loopback port 9450.
 2. Run `./package-runtime.sh`; stop before remote mutation if it fails.
 3. Create local mode-600 temporary state for PID/log/credential data outside
@@ -21,7 +21,7 @@
    `ExitOnForwardFailure=yes`, keepalives, and
    `-R 127.0.0.1:9450:127.0.0.1:4321`. Assert remote `ss` shows only a
    `127.0.0.1:9450` listener and curl it from the remote host.
-4. Upload/install the one isolated `staging.majo.im` Nginx file. Validate with
+4. Upload/install the one isolated staging Nginx file. Validate with
    `sudo nginx -t`; only then reload. Capture the pre-existing configuration
    fingerprint/listing so rollback can prove it was restored.
 5. Execute authenticated and unauthenticated direct-origin/public HTTPS probes.
@@ -37,7 +37,7 @@
 - `curl` verifies `401` without credentials; authenticated probes cover `/`,
   `/posts/`, a canonical article, `/lab/`, `/lab/nerv/`, redirects, and both
   site/NERV missing routes.
-- TLS validates for `staging.majo.im`; HTML retains the runtime security/cache
+- TLS validates for the staging name; HTML retains the runtime security/cache
   contract and static assets retain immutable caching.
 - Browser desktop/mobile evidence covers a no-JavaScript page and an enabled
   Terminal route through the public edge.

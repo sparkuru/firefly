@@ -1,0 +1,10 @@
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/prd.md","reason":"Check acceptance criteria, resolved privacy scope, and out-of-scope boundaries."}
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/design.md","reason":"Check authority, target-file limits, neutral references, and rollback safety."}
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/implement.md","reason":"Check ordered documentation workflow and expected privacy/stale-language scans."}
+{"file":".trellis/mainline.md","reason":"Check milestone and continuation claims against the reconciled root PRD."}
+{"file":"prd.md","reason":"Check root roadmap, current inventory, Terminal grammar, and production wording for stale claims."}
+{"file":".trellis/tasks/archive/2026-08/08-14-m6-staging-rollout/prd.md","reason":"Confirm superseded M6 history is preserved without operational identifiers."}
+{"file":".trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging/prd.md","reason":"Confirm accepted M7 outcome remains accurate and sanitized."}
+{"file":".trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging/research/execution-evidence.md","reason":"Confirm historical evidence is sanitized without changing its result."}
+{"file":".trellis/workspace/sam/journal-1.md","reason":"Confirm the targeted journal entry is sanitized and unrelated history is untouched."}
+{"file":".trellis/tasks/08-20-roadmap-mainline-reconciliation/research/evidence-inventory.md","reason":"Check evidence anchors, target-file limits, and license/private-record exclusions."}

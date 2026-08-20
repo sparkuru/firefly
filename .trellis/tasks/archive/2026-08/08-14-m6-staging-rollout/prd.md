@@ -22,7 +22,7 @@ preserving the immutable/static architecture.
 - The repository contains no staging hostname, remote access details, TLS
   material, deployment credentials, or mutable remote configuration. These
   values remain outside Git. The owner has rejected making M6 depend on a
-  specific remote host or `majo.im` domain.
+  specific remote host or staging domain.
 - M5.1 comments are deferred; no comment API, database, SSR, or direct database
   reads belong to staging. Local image-like strings in authored Markdown are
   ordinary public body text and are not a staging concern.
@@ -33,15 +33,15 @@ preserving the immutable/static architecture.
   teardown probes passed; no project-labeled container remained afterward.
   This is local evidence only and does not select, configure, or mutate a remote
   staging target.
-- Owner supplied `ssh wkyuu@ssh.majo.im` as the staging-host control path and
-  confirmed `*.majo.im` wildcard DNS behavior. A strict-host-key, key-auth SSH
-  probe succeeded on 2026-08-15. The remote login is non-root `wkyuu` (uid 1000),
-  Docker 26.1.5 is installed, systemd reports running, no host Nginx executable
-  was found, and `staging.majo.im` resolves from the host. A later read-only
-  baseline connection was closed by the remote host before it could report OS,
-  disk, Docker daemon, or port occupancy. No remote state was changed and those
-  facts remain pending a stable authorized connection.
-- Superseded decision: M6 formerly rejected remote `staging.majo.im` work.
+- The owner supplied an out-of-repository SSH control path and confirmed
+  wildcard staging coverage. A strict-host-key, key-auth SSH probe succeeded
+  on 2026-08-15. The remote login is non-root, Docker and systemd were
+  available, no host Nginx executable was found, and the staging name resolved
+  from the host. A later read-only baseline connection was closed by the
+  remote host before it could report OS, disk, Docker daemon, or port
+  occupancy. No remote state was changed and those facts remain pending a
+  stable authorized connection.
+- Superseded decision: M6 formerly rejected remote staging work.
   Owner authorization on 2026-08-15 created M7 as the separate owner of a
   reversible SSH-reverse-tunnel/Nginx staging rehearsal. This M6 record neither
   authorizes nor constrains M7.
@@ -118,7 +118,7 @@ direct database access, legacy Typecho mutation, and application feature work.
 
 - The local-TLS M6 branch is not continued. The owner-approved M7 physical
   rehearsal is accepted as the staging verification for this mainline.
-- Remote `majo.im` binding and related host changes are not M6 work; the
+- Remote staging-name binding and related host changes are not M6 work; the
   separately authorized M7 task owns that rehearsal.
 - M6 uses a local trusted development CA. Its certificate/private key are
   temporary owner-workstation material; they never enter the repository, Docker

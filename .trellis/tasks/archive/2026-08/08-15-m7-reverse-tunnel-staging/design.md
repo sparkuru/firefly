@@ -9,7 +9,7 @@ network interface.
 
 ```text
 authenticated browser
-  -> CDN / staging.majo.im:443
+  -> CDN / staging edge:443
   -> remote Nginx (TLS + Basic Auth)
   -> remote 127.0.0.1:9450
   -> SSH reverse channel (encrypted, key-auth)
@@ -23,15 +23,15 @@ bind is out of scope and fails the rehearsal.
 
 ## Remote configuration contract
 
-The target's `/etc/nginx/nginx.conf` loads
-`/home/wkyuu/cargo/www/nginx-config/sites-enabled/*.nginx`. M7 adds exactly one
+The target's Nginx configuration loads the existing site include directory.
+M7 adds exactly one
 temporary file in that existing directory and no changes to global Nginx,
 DNS/CDN, certificate, firewall, or SSH configuration.
 
 The temporary file defines:
 
-- port 80 `staging.majo.im` redirecting to its HTTPS URL;
-- port 443 TLS using the existing `majo.im` wildcard certificate;
+- port 80 staging name redirecting to its HTTPS URL;
+- port 443 TLS using the existing wildcard certificate;
 - `auth_basic` plus a task-specific remote password-hash file;
 - a single `/` location proxying to `http://127.0.0.1:9450` with forwarded host,
   scheme, and client-address headers; and
@@ -40,7 +40,7 @@ The temporary file defines:
 
 Its filename, auth file, loopback port, and command process identifier are
 unique to M7. Before installing the file, execution checks that the port is not
-already listening and that no current configuration owns `staging.majo.im`.
+already listening and that no current configuration owns the staging name.
 
 ## Credential design
 

@@ -24,7 +24,7 @@ temporary test material remains.
 - The SSH reverse listener was bound only to remote `127.0.0.1:9450`; the
   remote Nginx upstream used that loopback endpoint.
 - The dedicated temporary Nginx file passed `nginx -t` before each reload. The
-  existing wildcard TLS certificate validated for `staging.majo.im`.
+  existing wildcard TLS certificate validated for the staging name.
 - Public unauthenticated HTTPS returned `401`; the generated, non-recorded
   temporary credential reached the assembled release.
 - Authenticated public and direct-origin probes passed for root, posts,
