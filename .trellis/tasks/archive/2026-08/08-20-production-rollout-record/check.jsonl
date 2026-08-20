@@ -1,0 +1,3 @@
+{"file":".trellis/tasks/08-20-production-rollout-record/prd.md","reason":"Verify requirements and private-details boundary are preserved."}
+{"file":".trellis/tasks/08-20-production-rollout-record/implement.md","reason":"Review promotion, validation, rollback, and stop conditions."}
+{"file":".trellis/mainline.md","reason":"Verify final state does not overclaim or expose deployment data."}

@@ -1,0 +1,4 @@
+{"file":".trellis/tasks/08-20-production-rollout-record/prd.md","reason":"Approved scope, privacy boundary, and acceptance criteria."}
+{"file":".trellis/tasks/08-20-production-rollout-record/design.md","reason":"Generic guarded-promotion and rollback boundary."}
+{"file":".trellis/tasks/08-20-production-rollout-record/implement.md","reason":"Ordered execution and non-sensitive validation plan."}
+{"file":".trellis/mainline.md","reason":"Current production state to update only after validated evidence."}
