@@ -62,7 +62,7 @@
 - M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, staging, and production remain later milestones.
 - M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The content workspace and reader remain the approved Markdown authoring boundary.
 - M5.1 was initially deferred, then re-authorized by the owner on 2026-08-20. The final planning summary was approved and the parent task activated; implementation is proceeding through serial child tasks with the static-only boundary preserved.
-- M5.1 planning artifacts are converged under `.trellis/tasks/08-14-m51-dynamic-comments-identity/`; implementation is tracked by `.trellis/tasks/08-20-m51-comments-service-core/`, `.trellis/tasks/08-20-m51-static-comment-consumer/`, and `.trellis/tasks/08-20-m51-comments-publication-ops/`. The approved contracts define the self-built write/moderation service, static export, post-only scope, plain-text body, privacy controls, and rollback gates.
+- M5.1 planning and implementation artifacts are archived under `.trellis/tasks/archive/2026-08/08-14-m51-dynamic-comments-identity/`, `.trellis/tasks/archive/2026-08/08-20-m51-comments-service-core/`, `.trellis/tasks/archive/2026-08/08-20-m51-static-comment-consumer/`, and `.trellis/tasks/archive/2026-08/08-20-m51-comments-publication-ops/`. The approved contracts define the self-built write/moderation service, static export, post-only scope, plain-text body, privacy controls, and rollback gates.
 - M5.1 implementation evidence: the service child passes 15/15 tests plus check/build, including consent, encrypted private email, hashed tokens, verification/moderation/replies, retention, SQLite, export, and backup/restore. The site child passes 35/35 content tests, 15/15 static-output tests in both disabled and enabled-fixture builds, Astro check, and full site Playwright 122/122. The publication/ops child passes assembler 7/7, assembled-publication Playwright 4/4, default publication build, `check:m51`, `test:m51`, shell syntax/ShellCheck/shfmt, and `package-runtime.sh` runtime probes. The tracked config remains `comments.enabled = false`; no deployment or credentials were used.
 - Production rollout evidence: P0's guarded release procedure completed on
   2026-08-20. The promoted publication matched its locally verified candidate;
@@ -79,8 +79,8 @@
 ## Next Decision
 
 Production and the P1 roadmap reconciliation are complete. M5.1
-planning/design and implementation are complete in the serial child-task
-sequence, pending the work commit and Trellis archival. Historic counters
-remain private unless a separate task defines their schema and presentation.
-The next decision is the owner review/rollout gate for external service
-provisioning; the static site remains disabled by default.
+planning/design and implementation were committed in `41e0207` and
+archived in the serial child-task sequence. Historic counters remain private
+unless a separate task defines their schema and presentation. The next
+decision is the owner review/rollout gate for external service provisioning;
+the static site remains disabled by default.
