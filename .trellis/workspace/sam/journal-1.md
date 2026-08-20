@@ -541,3 +541,25 @@ Implemented public YAML site configuration for identity, Terminal prompt/about, 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 27: Interactive Terminal completion and prompt shortcuts
+
+**Date**: 2026-08-20
+**Task**: Interactive Terminal completion and prompt shortcuts
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added common-prefix Tab completion with a vertical accessible candidate list, Tab cycling, Enter/Space commit-before-submit, Escape dismissal, and prompt-local Ctrl+A/E/U handling; preserved IME/modifier boundaries and added unit plus desktop/mobile Playwright coverage.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c5f389f` | (see git log) |
+| `75eaf7e` | (see git log) |
+
+### Status
+
+[OK] **Completed**

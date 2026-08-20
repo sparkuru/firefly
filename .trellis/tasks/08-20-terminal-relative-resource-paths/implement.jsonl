@@ -1,0 +1,10 @@
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/prd.md","reason":"Approved user-visible behavior, boundary, acceptance criteria, and parent rollout dependency."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/design.md","reason":"Unified relative-path, compatibility, completion, keyboard, and access boundary."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/implement.md","reason":"Ordered source/test/spec/release handoff plan."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/research/terminal-resource-path-contract.md","reason":"Full command-surface evidence and exact safe implementation/test recommendations."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/research/absolute-user-path-migration.md","reason":"Approved absolute-user-path migration, internal boundary, compatibility facade, completion, scratch, and test impact analysis."}
+{"file":".trellis/tasks/08-20-terminal-relative-resource-paths/research/ui-ux-pro-max.md","reason":"Approved UX constraints and rejected generic visual redesign."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Existing virtual-path, completion, resource-boundary, and validation contract."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Existing Terminal registry, decoded navigation, and stale path wording to reconcile."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Existing public virtual-path and runtime type constraints to reconcile with the operand grammar."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required interactive Terminal browser coverage."}
