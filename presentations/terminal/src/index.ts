@@ -1,8 +1,8 @@
 import type {
   NormalizedDocumentInput,
   PresentationAdapter
-} from '@f1refly/x-core';
-import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
+} from '@firefly/x-core';
+import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import type {
   Element,
   ElementContent,

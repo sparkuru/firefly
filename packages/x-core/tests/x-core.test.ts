@@ -131,10 +131,10 @@ test('registry normalizes IDs and reports duplicate, unknown, and unsupported ad
   );
 });
 
-test('the shared default presentation is f1refly and explicit semantic remains selectable', () => {
+test('the shared default presentation is firefly and explicit semantic remains selectable', () => {
   const registry = new PresentationRegistry().register(defaultPresentationAdapter).register(passThroughAdapter);
 
-  assert.equal(DEFAULT_PRESENTATION_ID, 'f1refly');
+  assert.equal(DEFAULT_PRESENTATION_ID, 'firefly');
   assert.equal(
     registry.resolve({ ...semanticContext, presentation: '' }).id,
     DEFAULT_PRESENTATION_ID

@@ -11,7 +11,7 @@
 
 ## Rehearsal
 
-1. Start the `f1refly:m5-runtime` image produced by `./package-runtime.sh` on
+1. Start the `firefly:m5-runtime` image produced by `./package-runtime.sh` on
    `127.0.0.1:4321` with the same read-only/non-root restrictions; wait for the
    static root and assert no non-loopback publication listener exists.
 2. Generate the short-lived Basic Auth value without printing it. Derive the

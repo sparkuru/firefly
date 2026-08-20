@@ -8,12 +8,12 @@ Command:
 python3 .codex/skills/ui-ux-pro-max/scripts/search.py \
   "static personal blog experiment catalog content-first terminal dark immersive accessible restrained" \
   --design-system --stack astro --variance 3 --motion 2 --density 4 \
-  -p "f1refly M4 Experiment Pipeline" -f markdown
+  -p "firefly M4 Experiment Pipeline" -f markdown
 ```
 
 Generated result:
 
-## Design System: f1refly M4 Experiment Pipeline
+## Design System: firefly M4 Experiment Pipeline
 
 ### Design Dials
 
@@ -120,7 +120,7 @@ and Experiment assets must not be prefetched into ordinary pages.
 
 ## Approved M4 Selection
 
-UUPM output is advisory and is reconciled with the established f1refly product
+UUPM output is advisory and is reconciled with the established firefly product
 and frontend specs. M4 approves these task-specific decisions:
 
 - `/lab/` stays content-first, restrained, static, and visually within the
@@ -177,7 +177,7 @@ Follow-up design-system query:
 python3 .codex/skills/ui-ux-pro-max/scripts/search.py \
   "terminal portfolio content-first dark theme keyboard command interface" \
   --design-system --variance 3 --motion 2 --density 6 \
-  -p "f1refly Terminal" -f markdown
+  -p "firefly Terminal" -f markdown
 ```
 
 Follow-up UX and typography queries:

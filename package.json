@@ -1,5 +1,5 @@
 {
-  "name": "f1refly",
+  "name": "firefly",
   "private": true,
   "scripts": {
     "install:validator": "npm --prefix tooling/validate-experiments ci",

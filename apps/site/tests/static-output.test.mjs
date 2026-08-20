@@ -169,12 +169,12 @@ test('static artifacts preserve runtime safety and dependency isolation', async 
   const forbiddenInAllArtifacts = [
     /hidden draft/iu,
     /this should remain private/iu,
-    /PRIVATE_(?:TITLE|BODY)_F1REFLY_7f2a/u,
+    /PRIVATE_(?:TITLE|BODY)_FIREFLY_7f2a/u,
     /private-owner|owner-fixture|hidden-draft/iu,
     /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u,
     /AKIA[0-9A-Z]{16}/u,
     /gh[oprsu]_[A-Za-z0-9]{36,}/u,
-    /F1REFLY_CONTENT_ROOT|\.generated-content|private-handoff|source-ledger/iu
+    /FIREFLY_CONTENT_ROOT|\.generated-content|private-handoff|source-ledger/iu
   ];
   const forbiddenInRuntimeArtifacts = [
     /astro-island/iu,
@@ -222,7 +222,7 @@ test('site dependency and source paths remain isolated from experiments and refe
   const prohibitedReferences = [
     /["'](?:\.\.\/)*experiments\/nerv(?:\/[^"']*)?["']/iu,
     /["'](?:\.\.\/)*prototypes\/typecho-terminal(?:\/[^"']*)?["']/iu,
-    /["']@f1refly\/[^"']*nerv[^"']*["']/iu,
+    /["']@firefly\/[^"']*nerv[^"']*["']/iu,
     /["'](?:@xterm\/[^"']+|xterm(?:\/[^"']*)?)["']/iu
   ];
 
@@ -245,8 +245,8 @@ test('semantic and Terminal presentation packages remain bidirectionally isolate
   const semanticGraph = await readGraph(packages.semantic);
   const terminalGraph = await readGraph(packages.terminal);
 
-  assert.doesNotMatch(semanticGraph, /["'](?:@f1refly\/presentation-terminal|(?:\.\.\/)*(?:presentations\/)?terminal(?:\/|["']))/u);
-  assert.doesNotMatch(terminalGraph, /["'](?:@f1refly\/presentation-semantic|(?:\.\.\/)*(?:presentations\/)?semantic(?:\/|["']))/u);
+  assert.doesNotMatch(semanticGraph, /["'](?:@firefly\/presentation-terminal|(?:\.\.\/)*(?:presentations\/)?terminal(?:\/|["']))/u);
+  assert.doesNotMatch(terminalGraph, /["'](?:@firefly\/presentation-semantic|(?:\.\.\/)*(?:presentations\/)?semantic(?:\/|["']))/u);
   for (const graph of [semanticGraph, terminalGraph]) {
     assert.doesNotMatch(graph, /["'](?:\.\.\/)*(?:apps\/site|experiments\/nerv|prototypes\/typecho-terminal)(?:\/[^"']*)?["']/u);
   }
@@ -285,7 +285,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.doesNotMatch(routes.home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.match(routes.home, /data-terminal-experiment-id="nerv"/u);
   assert.match(routes.home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
-  assert.match(routes.home, /data-terminal-theme="f1refly"/u);
+  assert.match(routes.home, /data-terminal-theme="firefly"/u);
   assert.match(routes.home, /--terminal-color-canvas/u);
   assert.match(routes.home, /font-family:\s*'JetBrains Mono'/u);
   assert.match(routes.home, /font-display:\s*block/u);
@@ -300,7 +300,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.doesNotMatch(routes.home, /class="terminal-titlebar"/u);
   for (const html of terminalDocumentRoutes) {
     assert.match(html, /class="terminal-root"/u);
-    assert.match(html, /data-terminal-theme="f1refly"/u);
+    assert.match(html, /data-terminal-theme="firefly"/u);
     assert.match(html, /class="terminal-titlebar"/u);
     assert.match(html, /class="terminal-document"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
@@ -315,7 +315,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, new RegExp(`href="/${stylesheet.replaceAll('.', '\\.')}`));
     assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
-    assert.doesNotMatch(html, /data-terminal-theme="f1refly"/u);
+    assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
   }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/nerv\/"/u);
@@ -358,7 +358,7 @@ test('official JetBrains Mono assets retain pinned license and provenance', asyn
 
 test('Terminal components consume the root semantic theme contract', async () => {
   const css = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
-  const theme = /\.terminal-root\[data-terminal-theme='f1refly'\]\s*\{[\s\S]*?\n\}/u.exec(css);
+  const theme = /\.terminal-root\[data-terminal-theme='firefly'\]\s*\{[\s\S]*?\n\}/u.exec(css);
   assert.ok(theme);
 
   const componentCss = css.replace(theme[0], '');
@@ -475,7 +475,7 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
     /\binsertAdjacentHTML\b/u,
     /\bcreateContextualFragment\b/u,
     /\beval\s*\(/u,
-    /F1REFLY_CONTENT_ROOT|\.generated-content|private-handoff|source-ledger/u
+    /FIREFLY_CONTENT_ROOT|\.generated-content|private-handoff|source-ledger/u
   ];
   for (const text of [sourceScript, builtScript]) {
     for (const pattern of prohibited) {
@@ -484,7 +484,7 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
   }
 });
 
-test('default f1refly output contains reader boundaries and localized wide regions', async () => {
+test('default firefly output contains reader boundaries and localized wide regions', async () => {
   const post = await readFile(
     path.join(distRoot, 'posts/main/379/index.html'),
     'utf8'

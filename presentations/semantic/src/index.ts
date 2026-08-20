@@ -1,7 +1,7 @@
 import type {
   NormalizedDocumentInput,
   PresentationAdapter
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 import type { Element, Parent, Root as HastRoot, RootContent } from 'hast';
 
 function wrapWideChildren(parent: Parent): void {

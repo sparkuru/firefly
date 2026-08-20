@@ -2,7 +2,7 @@
 
 ## Goal
 
-Deliver the first manifest-driven Experiment publication path for `f1refly` so
+Deliver the first manifest-driven Experiment publication path for `firefly` so
 the autonomous NERV application can be validated, built, assembled beside the
 main site, discovered from `/lab/` and the Terminal home, and served as one
 isolated static release without contaminating ordinary blog bundles.

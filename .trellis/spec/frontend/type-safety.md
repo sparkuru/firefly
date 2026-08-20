@@ -51,7 +51,7 @@ exercise. Do not create a test-only schema.
 | `draft` | required boolean |
 | post `layout` | exactly `post` |
 | page `layout` | schema accepts `page`, `timeline`, `files`; current public projection accepts only `page` |
-| `presentation` | optional lowercase kebab-case adapter ID; omission resolves to the shared `DEFAULT_PRESENTATION_ID` (`f1refly`); explicit `semantic` remains available; registry membership is a build-time X Core check |
+| `presentation` | optional lowercase kebab-case adapter ID; omission resolves to the shared `DEFAULT_PRESENTATION_ID` (`firefly`); explicit `semantic` remains available; registry membership is a build-time X Core check |
 | `aliases` | optional canonical absolute trailing-slash directory routes; every segment passes the safe route-segment gate |
 | `access` | optional exact public/private-owner union; omission defaults public; private requires a safe subject owner |
 | unknown keys | rejected by strict schemas |
@@ -604,7 +604,7 @@ owns the flat directory-first presentation and responsive columns, and
 
 Workspace, access, canonical-path, registry, and reader contracts are detailed
 in `content-workspace-contract.md`. Experiment manifest and publication types live in
-`@f1refly/validate-experiments`, not in Astro routes or the assembler. Raw JSON
+`@firefly/validate-experiments`, not in Astro routes or the assembler. Raw JSON
 must pass the exact descriptor-safe decoder before narrowing; downstream code
 accepts frozen `ExperimentManifest` / `PublicExperiment` values. Terminal narrows
 again to exact canonical `{ id, title, href }` data at the browser boundary.

@@ -45,7 +45,7 @@ function runnerOptions(overrides: Partial<Parameters<typeof runRshellInput>[1]> 
     registry: NEUTRAL_COMMAND_REGISTRY,
     identity: {
       user: 'guest',
-      host: 'f1refly',
+      host: 'firefly',
       workingDirectory: '~/blog/posts',
       about: 'A small public foundation.'
     },

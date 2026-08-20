@@ -1,5 +1,5 @@
 import { z } from 'astro/zod';
-import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
+import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import { isSafeHttpUrl, isSafeImageReference } from './site-config.mjs';
 
 const requiredText = z.string().trim().min(1);

@@ -3,7 +3,7 @@
 ## Architecture
 
 Rshell extends the existing Terminal command interpreter rather than adding a
-shell runtime, backend, or package. The `@f1refly/presentation-terminal/runtime`
+shell runtime, backend, or package. The `@firefly/presentation-terminal/runtime`
 subpath remains pure and DOM-free; `terminal-home.ts` remains the only browser
 controller and DOM owner.
 
@@ -47,7 +47,7 @@ The public virtual root is `~/blog` with only `posts/`, `pages/`, and `lab/`
 children. `posts` and `pages` contain only decoded guest-projected entries;
 `lab` contains only decoded listed experiments. State adds a canonical cwd below
 that root, initially `~/blog/posts`. The visible prompt derives from state, for
-example `guest@f1refly:~/blog/posts $`, so `cd`, `pwd`, relative `ls`, `tree`,
+example `guest@firefly:~/blog/posts $`, so `cd`, `pwd`, relative `ls`, `tree`,
 and document operands agree.
 
 `cd` accepts only canonical public directories plus `~`, `/`, `.`, and bounded

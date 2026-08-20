@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
-import { semanticPresentation } from '@f1refly/presentation-semantic';
-import { terminalPresentation } from '@f1refly/presentation-terminal';
+import { semanticPresentation } from '@firefly/presentation-semantic';
+import { terminalPresentation } from '@firefly/presentation-terminal';
 import {
   createXCorePlugins,
   DEFAULT_PRESENTATION_ID,
   parseXCoreMetadata,
   PresentationRegistry,
   XCoreError
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 import { postSchema } from '../src/lib/content-schema.mjs';
 
 const validFrontmatter = postSchema.parse({
@@ -89,7 +89,7 @@ wide content
   assert.doesNotMatch(first.code, /<script/u);
 });
 
-test('omitted presentation selects f1refly while explicit semantic remains available', async () => {
+test('omitted presentation selects firefly while explicit semantic remains available', async () => {
   const processor = await createProcessor();
   const frontmatter = postSchema.parse({
     title: 'Default integration fixture',
@@ -154,7 +154,7 @@ test('the same schema-validated Markdown selects deterministic semantic and fixt
   assert.equal(fixtureMetadata.presentation, 'fixture');
 });
 
-test('the production registry selects explicit semantic and f1refly presentations', async () => {
+test('the production registry selects explicit semantic and firefly presentations', async () => {
   const processor = await createProcessor();
   const markdown = '## Wide content\n\n| Name | Value |\n| --- | --- |\n| adapter | selected |';
   const semantic = await processor.render(markdown, {
@@ -163,7 +163,7 @@ test('the production registry selects explicit semantic and f1refly presentation
   });
   const terminal = await processor.render(markdown, {
     fileURL: new URL('file:///repo/content/posts/terminal.md'),
-    frontmatter: { ...validFrontmatter, slug: 'f1refly', presentation: DEFAULT_PRESENTATION_ID }
+    frontmatter: { ...validFrontmatter, slug: 'firefly', presentation: DEFAULT_PRESENTATION_ID }
   });
   assert.match(semantic.code, /data-wide-content="table"/u);
   assert.doesNotMatch(semantic.code, /data-terminal-wide/u);

@@ -36,7 +36,7 @@ export function createSitemapXml(paths, origin) {
 
 export function createSiteSeoIntegration(config = SITE_CONFIG) {
   return {
-    name: 'f1refly-site-seo',
+    name: 'firefly-site-seo',
     hooks: {
       'astro:build:done': async ({ dir, pages, logger }) => {
         await writeFile(new URL('robots.txt', dir), createRobotsText(config), 'utf8');

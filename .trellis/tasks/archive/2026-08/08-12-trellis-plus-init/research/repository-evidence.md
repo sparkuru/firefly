@@ -19,7 +19,7 @@
 ## Current validation and runtime
 
 - Root scripts delegate to the NERV experiment: `npm run check:nerv` and `npm run build:nerv`.
-- `f1refly.yaml`, `Dockerfile`, and `nginx.conf` provide a static Nginx deployment at host port `8080` by default; this is deployment evidence, not the preferred task-local browser-test runner.
+- `firefly.yaml`, `Dockerfile`, and `nginx.conf` provide a static Nginx deployment at host port `8080` by default; this is deployment evidence, not the preferred task-local browser-test runner.
 - The current `hako` file and `dev.sh` are executable, and `.gitignore` excludes `.devhome/`.
 - The file named `hako` already identifies itself as `sam`, uses `SAM_*` variables and `sam.*` labels, and is called as `./sam` by `dev.sh`. The user confirmed this is a partially completed rename and that `sam` is the intended wrapper name.
 - The maintained `dev-it-in-docker` skill says Codex should use session-scoped prefix approval and must not create `.codex/rules/default.rules`; this narrower maintained rule resolves the older Trellis Plus reference's portable-rule suggestion.

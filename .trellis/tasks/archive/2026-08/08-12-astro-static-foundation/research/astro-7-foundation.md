@@ -48,7 +48,7 @@ Command:
 ```text
 python3 .codex/skills/ui-ux-pro-max/scripts/search.py \
   'personal developer blog content-first editorial minimal static reading' \
-  --design-system --variance 3 --motion 1 --density 4 -p 'f1refly M1'
+  --design-system --variance 3 --motion 1 --density 4 -p 'firefly M1'
 ```
 
 Reusable M1 signals:

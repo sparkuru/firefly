@@ -18,8 +18,8 @@ the assembled release, or the runtime image.
 Build and packaging entry points:
 
 ```bash
-F1REFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm --prefix apps/site run build:workspace
-F1REFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm run build:m4
+FIREFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm --prefix apps/site run build:workspace
+FIREFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm run build:m4
 ./sam npm run check:m4
 ./sam npm run test:m4
 ./sam npm run build:m4
@@ -152,7 +152,7 @@ startTerminalReader(root: HTMLElement): void
 
 #### Workspace transport and materialization
 
-- `F1REFLY_CONTENT_ROOT` is optional. It defaults to `<repo>/content/posts` and,
+- `FIREFLY_CONTENT_ROOT` is optional. It defaults to `<repo>/content/posts` and,
   when set, must be an absolute readable directory.
 - `sam` mounts the resolved root and every recursively discovered symlink hop and
   final target at the same absolute container path, read-only. It rejects `/`, a
@@ -209,7 +209,7 @@ startTerminalReader(root: HTMLElement): void
   branches do not create empty directories, routes, templates, completion
   candidates, or tree nodes.
 - Terminal permalinks render the exact token order
-  `guest@f1refly:~/blog $ / posts / characters / nahida.md` for the nested
+  `guest@firefly:~/blog $ / posts / characters / nahida.md` for the nested
   fixture. The root and every parent are native underlined links; the current
   filename is underlined non-link `aria-current="page"` text. Separators are
   presentation-only. Visible whitespace uses explicit non-collapsible `1ch` flex
@@ -635,7 +635,7 @@ startTerminalReader(root: HTMLElement): void
   clicking a public directory with an unmodified primary activation submits a
   safe `cd /posts/characters/`, updates the prompt, and leaves the home URL
   unchanged. Ctrl/Cmd/Alt/Shift activation remains a native directory link.
-- Base: omitted `F1REFLY_CONTENT_ROOT` builds the repository fixture; omitted
+- Base: omitted `FIREFLY_CONTENT_ROOT` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
 - Bad: mount `$HOME`, let Astro follow the authored link directly, serialize all
   documents then hide private ones in the browser, derive a URL from a `vim`

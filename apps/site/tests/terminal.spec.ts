@@ -73,7 +73,7 @@ test('successful startup preserves the boot log before the shell prompt', async 
   await expect(page.getByRole('button')).toHaveCount(0);
   await expect(page.getByText('Browse public documents')).toBeHidden();
   const markup = await page.locator('body').innerHTML();
-  expect(markup).not.toMatch(/PRIVATE_(?:TITLE|BODY)_F1REFLY_7f2a|hidden-draft|owner-fixture/u);
+  expect(markup).not.toMatch(/PRIVATE_(?:TITLE|BODY)_FIREFLY_7f2a|hidden-draft|owner-fixture/u);
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #');
   expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 
@@ -872,7 +872,7 @@ test('eligible printable typing returns to the prompt while protected interactio
   await expect(input).toHaveValue('link-safe');
 });
 
-test('f1refly theme and official JetBrains Mono assets stay same-origin', async ({ page }) => {
+test('firefly theme and official JetBrains Mono assets stay same-origin', async ({ page }) => {
   const externalRequests: string[] = [];
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== 'http://127.0.0.1:4321') {
@@ -880,7 +880,7 @@ test('f1refly theme and official JetBrains Mono assets stay same-origin', async 
     }
   });
   await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'f1refly');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'firefly');
   const styles = await page.locator('.terminal-root').evaluate((element) => {
     const computed = getComputedStyle(element);
     return {

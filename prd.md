@@ -1,8 +1,8 @@
-# f1refly 产品需求与架构设计
+# firefly 产品需求与架构设计
 
 ## 1. 产品定义
 
-`f1refly` 是一个以 Markdown 为长期内容源、以静态 HTML 为发布结果的个人博客，同时也是彼此隔离的前端实验集合。
+`firefly` 是一个以 Markdown 为长期内容源、以静态 HTML 为发布结果的个人博客，同时也是彼此隔离的前端实验集合。
 
 系统必须同时支持两类变化：
 
@@ -13,7 +13,7 @@
 
 > 内容保持稳定，表现允许激进；博客负责长期可读，实验负责自由探索。
 
-`f1refly` 是站点与仓库名称，不是准备独立商业化的静态站点框架。可复用边界只服务于内容可迁移、表现可替换和实验可隔离。
+`firefly` 是站点与仓库名称，不是准备独立商业化的静态站点框架。可复用边界只服务于内容可迁移、表现可替换和实验可隔离。
 
 ## 2. 已确认现状
 
@@ -153,7 +153,7 @@ MVP 不包含：
 ## 7. 规划目录结构
 
 ```text
-f1refly/
+firefly/
 ├── prd.md
 ├── package.json
 ├── content/
@@ -306,7 +306,7 @@ tags:
   - Notes
 draft: false
 layout: post
-presentation: f1refly
+presentation: firefly
 aliases:
   - /archives/123/
 ---
@@ -322,7 +322,7 @@ aliases:
 | `tags` | 否 | 语义标签 |
 | `draft` | 是 | 草稿不进入生产构建 |
 | `layout` | 是 | 当前公开迁移使用 `post`、`page`；`timeline`、`files` 仅保留为未来扩展能力 |
-| `presentation` | 否 | 省略时默认使用 `f1refly`；也可以显式指定 `semantic` 或其他已注册 Presentation |
+| `presentation` | 否 | 省略时默认使用 `firefly`；也可以显式指定 `semantic` 或其他已注册 Presentation |
 | `aliases` | 否 | 旧 URL 和历史路径 |
 
 Experiment 不通过文章 Front Matter 声明。主站实验索引从 `experiment.json` 生成，避免内容 schema 与独立构建系统耦合。
@@ -333,7 +333,7 @@ Experiment 不通过文章 Front Matter 声明。主站实验索引从 `experime
 
 ```md
 :::hero
-# Welcome to f1refly
+# Welcome to firefly
 :::
 ```
 
@@ -560,7 +560,7 @@ dist/
 
 默认决策：
 
-- 项目与仓库统一命名为 `f1refly`。
+- 项目与仓库统一命名为 `firefly`。
 - Astro 作为主站静态外壳，Unified 作为显式 Markdown 管道。
 - X Core 只处理内容与 Presentation，不管理独立 Experiment。
 - Terminal 是首个非默认 Presentation。

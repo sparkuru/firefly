@@ -238,11 +238,11 @@ SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --pr
 
 SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix tooling/assemble-publication run test:e2e
 
-docker compose -f f1refly.yaml build
-F1REFLY_HTTP_PORT=18080 docker compose -f f1refly.yaml up -d
-docker compose -f f1refly.yaml ps
-docker compose -f f1refly.yaml exec -T web wget --quiet --spider http://127.0.0.1:8080/healthz
-F1REFLY_HTTP_PORT=18080 docker compose -f f1refly.yaml down
+docker compose -f firefly.yaml build
+FIREFLY_HTTP_PORT=18080 docker compose -f firefly.yaml up -d
+docker compose -f firefly.yaml ps
+docker compose -f firefly.yaml exec -T web wget --quiet --spider http://127.0.0.1:8080/healthz
+FIREFLY_HTTP_PORT=18080 docker compose -f firefly.yaml down
 
 ./dev.sh down
 python3 ./.trellis/scripts/task.py validate 08-13-m4-experiment-pipeline

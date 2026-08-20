@@ -11,7 +11,7 @@ tree rather than a numbered list.
 - The screenshot targets the Terminal presentation rendered by
   `apps/site/src/components/TerminalDocument.astro`.
 - That component currently renders both an interactive `Document path`
-  breadcrumb (`guest@f1refly:~/blog $ / posts / ...`) and a separate
+  breadcrumb (`guest@firefly:~/blog $ / posts / ...`) and a separate
   `terminal-path` paragraph for the same Markdown identity.
 - The current outline is rendered as an ordered list with the visible label
   `On this page`; each item already carries `metadata.outline` depth, anchor ID,

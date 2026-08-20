@@ -19,7 +19,7 @@ import {
   type TerminalIdentity,
   type TerminalState,
   type TerminalTextDocument
-} from '@f1refly/presentation-terminal/runtime';
+} from '@firefly/presentation-terminal/runtime';
 
 interface TerminalNodes {
   readonly root: HTMLElement;

@@ -172,7 +172,7 @@ Experiment-pipeline scope.
   the Terminal prompt followed by a linked root, linked parent path segments, and
   one unlinked current `<filename>.md` segment.
 - The exact visual order for the nested fixture is
-  `guest@f1refly:~/blog $ / posts / characters / nahida.md`. Do not render
+  `guest@firefly:~/blog $ / posts / characters / nahida.md`. Do not render
   literal `cd`, `/ /posts`, or glued `/posts`. Root/parents and the current token
   are underlined; only root/parents are links. Separators are not links.
 - Each parent destination must have real, useful static semantics; do not emit

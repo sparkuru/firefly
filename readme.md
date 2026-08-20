@@ -1,14 +1,12 @@
-<p align = "center" style="font-size: 34px;" > <strong> me@firefly # ____________________ </strong> </p>
+<p align = "left" style="font-size: 34px;" > <strong> me@firefly # cat readme.md </strong> </p>
 
-me@firefly # cat readme.md
+<p align = "left" style="font-size: 30px;" > firefly </p>
 
-# f1refly
-
-f1refly is a static Astro publication backed by Markdown and a small
+firefly is a static Astro publication backed by Markdown and a small
 framework-neutral Terminal presentation. The build is intentionally
 Docker-only: the supported command boundary is ./sam.
 
-## Clone and build
+<p align = "left" style="font-size: 26px;" > Clone and build </p>
 
 After cloning, restore these authored inputs locally:
 
@@ -19,7 +17,7 @@ After cloning, restore these authored inputs locally:
 
 `content/` is intentionally private and ignored by Git, so a fresh clone does
 not contain it. Restore it from the private content backup before running the
-build. `F1REFLY_CONTENT_ROOT` may point to an external posts workspace when the
+build. `FIREFLY_CONTENT_ROOT` may point to an external posts workspace when the
 content is not stored below the checkout.
 
 The default clone path is:
@@ -45,7 +43,7 @@ docker compose up --build -d
 docker compose down
 ~~~
 
-The default runtime listens on `127.0.0.1:8080`; set `F1REFLY_HTTP_PORT` to
+The default runtime listens on `127.0.0.1:8080`; set `FIREFLY_HTTP_PORT` to
 choose another host port. For runtime-only image validation, use
 `./package-runtime.sh`; it does not require a second Compose file.
 
@@ -53,7 +51,7 @@ config/site.toml is public and tracked. It is not a secrets file. The complete
 `content/` workspace is excluded from Git; publication visibility rules still
 control which restored Markdown entries are emitted for guests.
 
-## Site configuration
+<p align = "left" style="font-size: 26px;" >  Site configuration </p>
 
 Ordinary identity and metadata changes belong in config/site.toml; the
 complete commented template is config/site.toml.example. TOML is the only
@@ -72,7 +70,7 @@ are then omitted, while robots.txt and ordinary relative image paths remain
 valid. TOML has no null literal, so omission represents the configured null
 defaults.
 
-## Markdown metadata
+<p align = "left" style="font-size: 26px;" >  Markdown metadata </p>
 
 Posts and pages use strict front matter. Existing title, description, date,
 draft, layout, and access fields remain required where applicable. The

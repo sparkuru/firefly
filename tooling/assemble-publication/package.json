@@ -1,5 +1,5 @@
 {
-  "name": "@f1refly/assemble-publication",
+  "name": "@firefly/assemble-publication",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "test:e2e": "npm run build --silent && playwright test"
   },
   "dependencies": {
-    "@f1refly/validate-experiments": "file:../validate-experiments"
+    "@firefly/validate-experiments": "file:../validate-experiments"
   },
   "devDependencies": {
     "@playwright/test": "1.62.0",

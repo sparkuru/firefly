@@ -140,7 +140,7 @@ are typed and actionable; getters, prototypes, or coercion are not invoked.
 The command executor accepts the current state, validated entries, terminal
 identity, and an injected clock/date formatter. Tests therefore do not depend on
 the machine time zone or wall clock. The site identity defaults to
-`guest@f1refly:~/blog$`; `whoami`, `pwd`, and `about` derive from the same
+`guest@firefly:~/blog$`; `whoami`, `pwd`, and `about` derive from the same
 configuration rather than duplicate literals.
 
 ## Command Grammar and Behavior
@@ -236,7 +236,7 @@ exercise this with injected throwing seams; production exposes no global hook.
 - The skip link remains the first keyboard target; the input never autofocuses.
 - At successful startup, the only persistent visible input control is one
   unboxed prompt row; command output may expose validated native links:
-  `guest@f1refly $ <input>`. Its H1, form label, and concise instructions remain
+  `guest@firefly $ <input>`. Its H1, form label, and concise instructions remain
   programmatic/visually hidden; the accessible name contains the visible prompt.
 - Enter submits unless IME composition is active. The single text input uses
   native implicit form submission plus `enterkeyhint="send"`; there is no visible
@@ -299,7 +299,7 @@ emoji controls, or fake window buttons.
 The working home has no hero, visible index, title bar, bordered window, boxed
 input, cards, per-record panels, or visible Run control. It is a continuous
 transparent terminal stream: prompt/output alignment and whitespace carry the
-hierarchy. The exact visible prompt is `guest@f1refly $`; the input is transparent
+hierarchy. The exact visible prompt is `guest@firefly $`; the input is transparent
 with an accent caret and a clear `:focus-within` state.
 
 Desktop uses one centered terminal stream with a restrained line length. Small

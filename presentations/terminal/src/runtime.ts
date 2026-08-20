@@ -195,7 +195,7 @@ export const DEFAULT_TERMINAL_IDENTITY: TerminalIdentity = Object.freeze({
   user: 'guest',
   host: 'firefly',
   workingDirectory: '~/blog/posts',
-  about: 'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.\nMostly about things I\'ve worked on, broken, fixed, or found interesting.\nSource: https://github.com/sparkuru/f1refly.git'
+  about: 'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.\nMostly about things I\'ve worked on, broken, fixed, or found interesting.\nSource: https://github.com/sparkuru/firefly.git'
 });
 
 export const DEFAULT_TERMINAL_FRIEND_LINKS: readonly TerminalFriendLink[] = Object.freeze([]);

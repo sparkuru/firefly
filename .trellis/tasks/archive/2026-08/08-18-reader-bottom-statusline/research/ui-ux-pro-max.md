@@ -1,4 +1,4 @@
-## Design System: F1refly Reader Bottom Statusline
+## Design System: Firefly Reader Bottom Statusline
 
 ### Design Dials
 - **Variance:** 2/10 — Centered / Minimal

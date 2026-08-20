@@ -3,7 +3,7 @@ import {
   xCoreError,
   type DocumentContext,
   type DocumentContextResolver
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 
 interface AuthoredDocumentMetadata {
   readonly slug?: string;

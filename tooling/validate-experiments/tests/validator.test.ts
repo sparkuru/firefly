@@ -91,7 +91,7 @@ test('rejects malformed schema, paths, ownership, duplicates, and decorated valu
 });
 
 test('discovers stable listed and unlisted manifests and rejects overlapping ownership', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'f1refly-manifests-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-manifests-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   const experimentsRoot = path.join(root, 'experiments');
   await mkdir(experimentsRoot);
@@ -112,7 +112,7 @@ test('discovers stable listed and unlisted manifests and rejects overlapping own
 });
 
 test('discovery rejects malformed or missing manifests and realpath escapes', async (context) => {
-  const sandbox = await mkdtemp(path.join(os.tmpdir(), 'f1refly-manifest-boundary-'));
+  const sandbox = await mkdtemp(path.join(os.tmpdir(), 'firefly-manifest-boundary-'));
   context.after(() => rm(sandbox, { recursive: true, force: true }));
   const repositoryRoot = path.join(sandbox, 'repository');
   const experimentsRoot = path.join(repositoryRoot, 'experiments');

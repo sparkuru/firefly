@@ -1,5 +1,5 @@
 {
-  "name": "@f1refly/presentation-terminal",
+  "name": "@firefly/presentation-terminal",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -24,7 +24,7 @@
     "build": "tsc"
   },
   "devDependencies": {
-    "@f1refly/x-core": "file:../../packages/x-core",
+    "@firefly/x-core": "file:../../packages/x-core",
     "@types/hast": "3.0.5",
     "@types/node": "24.3.0",
     "typescript": "6.0.3"

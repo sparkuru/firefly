@@ -1,4 +1,4 @@
-## Design System: f1refly Terminal Reader
+## Design System: firefly Terminal Reader
 
 ### Pattern
 - **Name:** Newsletter / Content First

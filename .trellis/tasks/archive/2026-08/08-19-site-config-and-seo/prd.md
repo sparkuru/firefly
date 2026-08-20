@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make a fresh clone usable as a personalized f1refly site without editing
+Make a fresh clone usable as a personalized firefly site without editing
 framework source for ordinary identity and metadata changes. Public site
 configuration must be read at build time, validated, and rendered into the
 static publication; no runtime configuration service or secret-bearing config
@@ -28,7 +28,7 @@ is introduced.
 - Article front matter is strict. `title` and `description` are already
   required; an independent browser/HTML title and SEO overrides require an
   explicit schema change.
-- The existing root `f1refly.yaml` is a Docker Compose file and must not be
+- The existing root `firefly.yaml` is a Docker Compose file and must not be
   repurposed as site configuration.
 
 ## Requirements
@@ -141,7 +141,7 @@ validation. Existing `description` remains the per-document SEO description.
 
 ## Evidence anchors
 
-- Root build and runtime boundary: `Dockerfile`, `sam`, `dev.sh`, `f1refly.yaml`.
+- Root build and runtime boundary: `Dockerfile`, `sam`, `dev.sh`, `firefly.yaml`.
 - Current identity: `presentations/terminal/src/runtime.ts:188-202` and
   `apps/site/src/scripts/terminal-home.ts:739-764`.
 - Current layouts: `apps/site/src/layouts/DocumentLayout.astro` and

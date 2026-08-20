@@ -3,7 +3,7 @@
 ## Goal
 
 Plan, but do not implement, the first dynamic comment and public-identity
-capability for f1refly. The plan must preserve the existing immutable static
+capability for firefly. The plan must preserve the existing immutable static
 site and keep any future historical-data handling behind an explicit owner
 decision.
 

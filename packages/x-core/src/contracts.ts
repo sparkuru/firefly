@@ -1,7 +1,7 @@
 import type { Root as HastRoot } from 'hast';
 
 export const X_CORE_METADATA_VERSION = 1 as const;
-export const DEFAULT_PRESENTATION_ID = 'f1refly' as const;
+export const DEFAULT_PRESENTATION_ID = 'firefly' as const;
 
 export type JsonValue =
   | null

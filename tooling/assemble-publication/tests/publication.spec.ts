@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('assembled release preserves cross-application navigation and mounted 404 ownership', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('main')).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'f1refly');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-theme', 'firefly');
   expect((await page.request.get('/fonts/JetBrainsMono-Regular-v2.304.woff2')).status()).toBe(200);
   expect((await page.request.get('/fonts/JetBrainsMono-Medium-v2.304.woff2')).status()).toBe(200);
   expect((await page.request.get('/licenses/JetBrainsMono-OFL-1.1.txt')).status()).toBe(200);

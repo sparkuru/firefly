@@ -83,7 +83,7 @@ ignored. Never put authored source in them.
 ## Main-Site Boundaries
 
 - Keep page Markdown under repository-root `content/pages/`. Posts come from the
-  absolute `F1REFLY_CONTENT_ROOT` workspace, defaulting to `content/posts/`.
+  absolute `FIREFLY_CONTENT_ROOT` workspace, defaulting to `content/posts/`.
   Bodies do not import Astro components, use hydration directives, or depend on
   presentation CSS classes. See `content-workspace-contract.md` for link/mount
   and virtual-path safety.

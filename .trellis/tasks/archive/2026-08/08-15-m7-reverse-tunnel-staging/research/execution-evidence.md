@@ -16,7 +16,7 @@ temporary test material remains.
   rebuilt the complete publication and verified the exact 23-file runtime,
   route/404 ownership, security/cache headers, MIME/cache rules, non-root user,
   read-only filesystem, and teardown.
-- The locally served source was that verified `f1refly:m5-runtime` image bound
+- The locally served source was that verified `firefly:m5-runtime` image bound
   only to `127.0.0.1:4321`.
 
 ## Edge and browser evidence

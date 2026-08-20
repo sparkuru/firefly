@@ -17,7 +17,7 @@ import {
   discoverExperiments,
   type ExperimentDiscovery,
   type ExperimentManifest
-} from '@f1refly/validate-experiments';
+} from '@firefly/validate-experiments';
 
 export interface PublicationResult {
   readonly manifestCount: number;

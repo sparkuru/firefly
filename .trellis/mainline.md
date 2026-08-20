@@ -2,7 +2,7 @@
 
 ## Initiative
 
-- **Title:** f1refly MVP
+- **Title:** firefly MVP
 - **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, staging, and production rollout.
 - **Mode:** guided
 - **Serial authorization:** none
@@ -56,7 +56,7 @@
 - M5 independent review fixed incomplete symlink-chain/broad-mount defenses, scan-to-copy replacement races, Unicode/path drift, active-registry help coupling, reader ID/ARIA/Range ownership gaps, and runtime inventory proof. No confirmed finding remains open.
 - M5 automated evidence: seven package/application checks pass; 58 non-browser tests, main-site Playwright 68/68, publication Playwright 4/4, and sixteen desktop/mobile review captures pass. The external chained-symlink workspace E2E proves exact read-only mounts, ordinary-file staging, guest/private isolation, and absence of host paths. The runtime-only non-root/read-only Nginx image passes exact 23-file manifest/release/image equality, nested route/redirect, distinct 404, security/cache, and teardown probes.
 - M5 owner-review follow-up adds exact prompt `Ctrl+C` cancellation, record-start help settlement, safe ambiguous cat/vim Tab ownership without browser-focus loss, prefixed completion candidates, and copyable cwd-relative post versus virtual-absolute page operands. Independent review found no remaining defect after correcting help/error wording and expanding history/modifier/tree regressions; focused Terminal Playwright is 42/42.
-- M5 second owner-review follow-up makes syntactically safe zero-result cat/vim completion an exhaustive Terminal-owned `no-match` state (`No matches.` without focus loss), while unsafe/control/non-NFC/modifier/IME cases remain native. It also locks permalink grammar to `guest@f1refly:~/blog $ / posts / characters / nahida.md`, with linked root/parents and an underlined non-link current filename. Independent review fixed the control-character boundary and found no remaining issue; focused breadcrumb is 2/2 and the full site remains 68/68.
+- M5 second owner-review follow-up makes syntactically safe zero-result cat/vim completion an exhaustive Terminal-owned `no-match` state (`No matches.` without focus loss), while unsafe/control/non-NFC/modifier/IME cases remain native. It also locks permalink grammar to `guest@firefly:~/blog $ / posts / characters / nahida.md`, with linked root/parents and an underlined non-link current filename. Independent review fixed the control-character boundary and found no remaining issue; focused breadcrumb is 2/2 and the full site remains 68/68.
 - M5 final owner refinement replaces collapsible breadcrumb whitespace with six explicit `1ch` gap boxes around real slash tokens. Independent review changed browser coverage to measure the gap boxes directly across valid wrapping; site check/build/static, focused breadcrumb 2/2, and full site 68/68 remain green. The owner approved commit after this refinement.
 - M5 durable contract: `.trellis/spec/frontend/content-workspace-contract.md` records workspace/link/materializer/access/path/registry/reader signatures, validation matrix, cases, tests, and wrong/correct patterns; adjacent frontend specs were reconciled from the flat M4 route/index assumptions.
 - M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, staging, and production remain later milestones.

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Plan a safe, reversible local staging rehearsal of the completed f1refly static
+Plan a safe, reversible local staging rehearsal of the completed firefly static
 publication. It must let the owner verify the assembled site through a
 production-shaped Docker/TLS boundary before any M7 production switch, while
 preserving the immutable/static architecture.
@@ -28,7 +28,7 @@ preserving the immutable/static architecture.
   ordinary public body text and are not a staging concern.
 - Local Docker preflight on 2026-08-14 confirms the existing runtime model:
   Docker Engine 26.1.5 built the complete M5 publication and minimal
-  `f1refly:m5-runtime` Nginx image. The exact 23-file inventory, routes,
+  `firefly:m5-runtime` Nginx image. The exact 23-file inventory, routes,
   distinct 404s, security/cache headers, non-root/read-only execution, and
   teardown probes passed; no project-labeled container remained afterward.
   This is local evidence only and does not select, configure, or mutate a remote

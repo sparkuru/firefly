@@ -1,4 +1,4 @@
-## Design System: f1refly Terminal
+## Design System: firefly Terminal
 
 ### Design Dials
 - **Variance:** 3/10 — Centered / Minimal

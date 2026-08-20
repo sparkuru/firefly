@@ -6,7 +6,7 @@ import {
   DEFAULT_PRESENTATION_ID,
   type DocumentContext,
   type NormalizedDocumentInput
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 import { terminalPresentation } from '../src/index.js';
 import {
   DEFAULT_TERMINAL_IDENTITY,
@@ -259,7 +259,7 @@ test('runtime subpath stays side-effect-free and independent from adapter depend
   const declarations = await readFile(new URL('../src/runtime.d.ts', import.meta.url), 'utf8');
   const graph = `${runtime}\n${declarations}`;
 
-  assert.doesNotMatch(graph, /@f1refly\/x-core|\b(?:hast|astro)\b|\.\/index\.js|apps\/site/u);
+  assert.doesNotMatch(graph, /@firefly\/x-core|\b(?:hast|astro)\b|\.\/index\.js|apps\/site/u);
 });
 
 test('tokenizer accepts balanced quotes and rejects unbalanced input without shell interpretation', () => {
@@ -413,7 +413,7 @@ test('every command has deterministic output and strict usage errors', () => {
     lines: [
       'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.',
       'Mostly about things I\'ve worked on, broken, fixed, or found interesting.',
-      'Source: https://github.com/sparkuru/f1refly.git'
+      'Source: https://github.com/sparkuru/firefly.git'
     ]
   });
   assert.deepEqual(run('friends').effect, { kind: 'links', links: friendLinks });

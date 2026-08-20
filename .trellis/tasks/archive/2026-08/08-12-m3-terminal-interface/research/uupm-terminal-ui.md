@@ -12,7 +12,7 @@ content navigation mobile dark content-first
 ```
 
 The query used variance `4`, motion `2`, density `6`, and project name
-`f1refly Terminal`. Follow-up domain searches covered keyboard navigation,
+`firefly Terminal`. Follow-up domain searches covered keyboard navigation,
 screen readers, live regions, mobile, reduced motion, terminal/CRT style, and
 accessible monospace typography.
 
@@ -69,7 +69,7 @@ The visual target is a content terminal, not a hacker-game simulation:
 
 The design-system search also proposed newsletter conversion structure, Bento
 cards, Atkinson Hyperlegible from Google Fonts, hover scaling, and a GSAP route
-transition. Those are database-neighbor results, not f1refly requirements, and
+transition. Those are database-neighbor results, not firefly requirements, and
 conflict with the terminal-first static shell, local-font policy, and minimal
 runtime. They must not enter implementation.
 
@@ -98,7 +98,7 @@ The revised approved direction is:
 - in the enhanced working state, the prompt is the only initial visible UI;
 - command lines and results form one transparent continuous stream rather than
   panels or cards;
-- the exact visible prompt is `guest@f1refly $`, kept on one line beside a
+- the exact visible prompt is `guest@firefly $`, kept on one line beside a
   transparent 16px-or-larger input with a clear `:focus-within` indicator;
 - `cat` inserts a restrained Glow-like article with a 70–78ch reading measure,
   modest headings, underlined links, a blockquote rule, and locally scrollable

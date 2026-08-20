@@ -11,7 +11,7 @@
 
 ## 1. Workspace transport and ingestion
 
-- [x] Add strict shell handling for `F1REFLY_CONTENT_ROOT`, default fixture root,
+- [x] Add strict shell handling for `FIREFLY_CONTENT_ROOT`, default fixture root,
       exact read-only same-path workspace/link-target mounts, recursive link
       discovery, broken-link/cycle-safe failure, and existing labels/ports/IPC.
 - [x] Keep `dev.sh` and root build delegates on the same content-root contract.

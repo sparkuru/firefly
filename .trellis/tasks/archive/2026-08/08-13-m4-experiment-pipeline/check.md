@@ -113,7 +113,7 @@ Nginx UID/GID `101`, and an exact 18-file release-only runtime inventory. The
 exact service was torn down after the probes.
 
 The current post-refinement image was rebuilt as
-`f1refly:local@sha256:3c1b5065ebc82f1a200858582e5c4626b805b13f2e27109012400ddfcee91f10`.
+`firefly:local@sha256:3c1b5065ebc82f1a200858582e5c4626b805b13f2e27109012400ddfcee91f10`.
 Its exact inventory contains six main HTML routes, two main `_astro` assets, two
 WOFF2 fonts, OFL/provenance, and six NERV files. Root/lab/NERV, font and license
 URLs, canonical redirects, distinct 404s, cache/security headers, read-only
