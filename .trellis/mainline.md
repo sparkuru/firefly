@@ -67,10 +67,16 @@
   public representative site/content/experiment routes, distinct 404s,
   required security headers, and immutable static assets passed. Operational
   identifiers and rollback commands are deliberately excluded from Git.
+- Roadmap reconciliation evidence: the root `prd.md` now separates the
+  original SQL input baseline (93 posts / 7 pages) from the current authored
+  inventory (95 posts / 8 pages), classifies M0–M5, M6, M7, M5.1, and P0 with
+  their current states, and records the cwd-relative/`~/blog` Terminal path
+  grammar. The archived M6/M7 records and targeted journal entry contain only
+  neutral staging references; operational execution details remain local.
 
 ## Next Decision
 
-Production is complete. Next, reconcile the root roadmap and historic planning
-language with the evidence-backed mainline as a documentation task. M5.1
-remains deferred; historic counters remain private unless a future task
-separately defines their schema and presentation.
+Production and the P1 roadmap reconciliation are complete. M5.1 remains
+deferred; historic counters remain private unless a future task separately
+defines their schema and presentation. The next product task requires a fresh
+guided owner decision.
