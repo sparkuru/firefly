@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/tasks/08-20-terminal-viewport-alignment/prd.md","reason":"Check observable startup, short-output, long-output, and clear-state acceptance criteria against the approved stable reading band."}
+{"file":".trellis/tasks/08-20-terminal-viewport-alignment/design.md","reason":"Check geometry math, responsive/reduced-motion behavior, accessibility constraints, and non-document/document settlement boundaries."}
+{"file":".trellis/tasks/08-20-terminal-viewport-alignment/research/ui-ux-pro-max.md","reason":"Check the visual implementation against approved spatial-continuity, responsive containment, focus, and reduced-motion guidance."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check the controller preserves existing prompt focus, empty-state, native scroll, and document-reader contracts."}

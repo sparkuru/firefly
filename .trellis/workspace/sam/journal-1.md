@@ -597,3 +597,37 @@ Added common-prefix Tab completion with a vertical accessible candidate list, Ta
 ### Next Steps
 
 - 按主线继续处理 P1，P2 保持不动。
+
+
+## Session 29: Reconcile roadmap and sanitize staging history
+
+**Date**: 2026-08-20
+**Task**: Reconcile roadmap and sanitize staging history
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+完成 P1 根 PRD 与主线事实对齐：区分原始 SQL 基线和当前 95/8 内容库存，标注完成/替代/延期里程碑，统一 ~/blog Terminal 语法，并脱敏 M6/M7 归档记录与目标日志中的部署标识。
+
+### Main Changes
+
+- 更新根 PRD、主线证据与文档-only 任务工件。
+- 将归档 staging 历史中的真实域名、SSH、CDN/边缘标识改为中性描述，保留结果与许可证署名。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8b8532b` | (see git log) |
+
+### Testing
+
+- [OK] task context validation、git diff --check、隐私/陈旧表述扫描及独立 Trellis 检查通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 保持 M5.1 deferred；下一产品任务等待新的 guided owner decision。
