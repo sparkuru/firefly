@@ -48,7 +48,7 @@ release is promoted only after every check succeeds.
 experiments/*/experiment.json
        │
        ▼
-@f1refly/validate-experiments
+@firefly/validate-experiments
   ├─ strict manifest decoder
   ├─ deterministic discovery
   └─ frozen public catalog
@@ -57,7 +57,7 @@ experiments/*/experiment.json
        │                  ├─ /lab/index.html
        │                  └─ Terminal lab recovery/index data
        │
-       └──────────────► @f1refly/assemble-publication
+       └──────────────► @firefly/assemble-publication
                           ├─ source-controlled build commands
                           ├─ apps/site/dist → artifacts/site
                           ├─ experiment dist → artifacts/experiments/<id>

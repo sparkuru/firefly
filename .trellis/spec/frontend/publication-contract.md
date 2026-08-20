@@ -14,9 +14,9 @@ switches are not supported.
 
 The two private tooling packages are intentionally separate:
 
-- `@f1refly/validate-experiments` decodes manifests, discovers Experiments, and
+- `@firefly/validate-experiments` decodes manifests, discovers Experiments, and
   projects the public catalog without loading Experiment source.
-- `@f1refly/assemble-publication` builds declared Experiments, validates static
+- `@firefly/assemble-publication` builds declared Experiments, validates static
   trees/references, stages isolated artifacts, and promotes a complete root
   release transaction.
 

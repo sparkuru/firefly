@@ -51,7 +51,7 @@ archive still require explicit owner approval.
    remain native. Independent review found and fixed the control-character gap.
 9. **Exact permalink path grammar** — the first breadcrumb interpretation kept
    literal `cd` and uniform separators. It now renders exactly
-   `guest@f1refly:~/blog $ / posts / characters / nahida.md`: root and parents
+   `guest@firefly:~/blog $ / posts / characters / nahida.md`: root and parents
    are underlined native links; the underlined current filename is non-link
    `aria-current`; duplicate/glued slashes and `cd` are absent. Desktop/mobile
    wrapping, focus-visible behavior, and no-overflow assertions pass.
@@ -85,7 +85,7 @@ archive still require explicit owner approval.
   exact mounts are read-only, broad/broken/FIFO inputs fail, built routes exist,
   generated stage has zero symlinks, and private/host-path sentinels are absent.
   The default ten-page site build was restored afterward.
-- Runtime-only image `f1refly:m5-runtime`: minimal 478.46 kB build context,
+- Runtime-only image `firefly:m5-runtime`: minimal 478.46 kB build context,
   `User=nginx`, read-only rootfs, all capabilities dropped, no-new-privileges,
   exact 23-file manifest/release/image equality, nested route/redirect, distinct
   site/NERV 404, security, immutable reader/font cache, and teardown probes pass.

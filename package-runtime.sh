@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_NAME="${F1REFLY_RUNTIME_IMAGE:-f1refly:runtime}"
+IMAGE_NAME="${FIREFLY_RUNTIME_IMAGE:-firefly:runtime}"
 PROJECT_LABEL="sam.repo=${REPO_ROOT}"
 SCOPE_LABEL="sam.scope=package-runtime"
 CONTEXT_ROOT=""
@@ -22,7 +22,7 @@ cleanup() {
 	if [[ -n "${CONTAINER_ID}" ]]; then
 		docker rm -f "${CONTAINER_ID}" >/dev/null 2>&1 || true
 	fi
-	if [[ -n "${CONTEXT_ROOT}" && "${CONTEXT_ROOT}" == /tmp/f1refly-runtime-context.* ]]; then
+	if [[ -n "${CONTEXT_ROOT}" && "${CONTEXT_ROOT}" == /tmp/firefly-runtime-context.* ]]; then
 		rm -rf -- "${CONTEXT_ROOT}"
 	fi
 }
@@ -83,7 +83,7 @@ assert_no_non_authored_private_data() {
 			--glob '!posts/**/index.html' \
 			--glob '!pages/**/index.html' \
 			--glob '!index.html' \
-			'PRIVATE_(TITLE|BODY)_F1REFLY_7f2a|private-owner|owner-fixture|hidden-draft|F1REFLY_CONTENT_ROOT|/home/|/tmp/f1refly-|/(srv/uploads|srv/backups|var/www|usr/(local/)?uploads)/' \
+			'PRIVATE_(TITLE|BODY)_FIREFLY_7f2a|private-owner|owner-fixture|hidden-draft|FIREFLY_CONTENT_ROOT|/home/|/tmp/firefly-|/(srv/uploads|srv/backups|var/www|usr/(local/)?uploads)/' \
 			.
 	); then
 		printf '[package-runtime] publication contains private data or source metadata outside authored document bodies\n' >&2
@@ -149,7 +149,7 @@ main() {
 	assert_sha256 "${REPO_ROOT}/dist/fonts/JetBrainsMono-Regular-v2.304.woff2" "a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2"
 	assert_sha256 "${REPO_ROOT}/dist/fonts/JetBrainsMono-Medium-v2.304.woff2" "086c48dfbea9ddaff1320f7e09399b8e2924e88ce67453721255db3bdbb5a353"
 
-	CONTEXT_ROOT=$(mktemp -d /tmp/f1refly-runtime-context.XXXXXX)
+	CONTEXT_ROOT=$(mktemp -d /tmp/firefly-runtime-context.XXXXXX)
 	mkdir -p "${CONTEXT_ROOT}/dist"
 	cp Dockerfile nginx.conf "${CONTEXT_ROOT}/"
 	cp -R dist/. "${CONTEXT_ROOT}/dist/"

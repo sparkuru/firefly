@@ -59,7 +59,7 @@
 - `nginx.conf` currently redirects `/` to `/lab/nerv/` and uses the NERV 404 for
   all misses. M4 must replace those temporary baseline semantics when the full
   site becomes the release root.
-- `f1refly.yaml` already constrains the runtime to loopback publication, a
+- `firefly.yaml` already constrains the runtime to loopback publication, a
   read-only filesystem, `/tmp` tmpfs, dropped capabilities, and
   `no-new-privileges`.
 - `.dockerignore` excludes `.private`, generated output, dependencies, reference

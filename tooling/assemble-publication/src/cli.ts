@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { discoverExperiments } from '@f1refly/validate-experiments';
+import { discoverExperiments } from '@firefly/validate-experiments';
 import { assemblePublication, buildExperiments } from './index.js';
 
 function usage(): string {

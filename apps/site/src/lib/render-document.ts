@@ -3,7 +3,7 @@ import {
   parseXCoreMetadata,
   xCoreError,
   type OutlineItem
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 import type { PublicPage, PublicPost } from './content';
 
 export type PublicDocument = PublicPost | PublicPage;

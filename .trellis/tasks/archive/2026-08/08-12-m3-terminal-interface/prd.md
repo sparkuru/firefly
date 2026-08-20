@@ -4,7 +4,7 @@
 
 Deliver the first interactive Terminal Presentation on the static main site.
 The home route is the shell: its working state visually centers one continuous
-command/output stream and an inline `guest@f1refly $` prompt rather than a
+command/output stream and an inline `guest@firefly $` prompt rather than a
 content index plus form. Readers discover and render the same validated Markdown
 content through allowlisted commands, while useful native navigation remains in
 initial HTML for no-JavaScript and failure recovery.

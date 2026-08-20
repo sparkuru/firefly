@@ -77,7 +77,7 @@ Root npm scripts are delegators and are valid only when already invoked inside
 | `SAM_BIND_HOST` | `dev.sh` defaults to `0.0.0.0` for LAN-accessible development; direct `sam` defaults to `127.0.0.1`; override with a narrower address when needed. |
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
-| `F1REFLY_CONTENT_ROOT` | Optional absolute readable posts workspace; defaults to `<repo>/content/posts`. `sam` resolves and passes it into the container. |
+| `FIREFLY_CONTENT_ROOT` | Optional absolute readable posts workspace; defaults to `<repo>/content/posts`. `sam` resolves and passes it into the container. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
 | Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit assembled-publication server path. |
@@ -127,7 +127,7 @@ so Playwright owns and terminates that preview process.
 
 - Good: the site build/static scan passes, then focused Playwright uses the
   matching Noble image, host IPC, and an owned preview of the unchanged artifact.
-- Good: `F1REFLY_CONTENT_ROOT=/absolute/notebook WEB_HOST_PORT=4322 ./dev.sh`
+- Good: `FIREFLY_CONTENT_ROOT=/absolute/notebook WEB_HOST_PORT=4322 ./dev.sh`
   uses exact read-only content mounts and starts the Astro development server;
   the same host port can be checked for `/` and native content links while
   source changes hot-reload.
@@ -244,7 +244,7 @@ ssh -F /dev/null -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -N \
   -R 127.0.0.1:<remote-port>:127.0.0.1:4321 <operator>@<staging-host>
 ```
 
-The local source is the read-only `f1refly:m5-runtime` image produced by
+The local source is the read-only `firefly:m5-runtime` image produced by
 `package-runtime.sh`, mapped only as `127.0.0.1:4321:8080`. Do not use `dev.sh`
 as the edge-runtime source: it is a Node preview and does not reproduce Nginx
 response-header behavior.

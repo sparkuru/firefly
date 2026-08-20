@@ -1,6 +1,6 @@
-# UUPM Research: f1refly Terminal startup
+# UUPM Research: firefly Terminal startup
 
-## Design System: f1refly Terminal startup
+## Design System: firefly Terminal startup
 
 ### Design Dials
 - **Variance:** 2/10 — Centered / Minimal

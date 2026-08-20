@@ -31,7 +31,7 @@ routes.
 - Main-site post/page routes consume the shared canonical model in
   `getStaticPaths()`, call `renderDocument(entry)`, and pass canonical/result to
   `DocumentPresentation.astro`. The dispatcher accepts only `semantic` or
-  `f1refly` metadata and composes the matching layout/document pair. Routes do
+  `firefly` metadata and composes the matching layout/document pair. Routes do
   not call Astro `render()` directly, parse metadata, or repeat presentation,
   collection, or heading validation.
 - `SemanticDocument.astro` owns the article header/date, conditional outline,
@@ -76,7 +76,7 @@ routes.
   not import a layout, stylesheet, or browser runtime. Its inline stream ends at
   the trusted document content; do not add a redundant prompt-return footer when
   the active command prompt already follows the stream.
-- The current published main-site corpus uses the `f1refly` Terminal default for
+- The current published main-site corpus uses the `firefly` Terminal default for
   `/pages/about/` and the article `/posts/main/379/`; its physical source
   identity is `/posts/main/llm-workflow-with-trellis.md`. The semantic adapter
   remains an explicit generic package contract for future authorized consumers;

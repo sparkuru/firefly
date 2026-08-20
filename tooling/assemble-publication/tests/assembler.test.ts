@@ -3,11 +3,11 @@ import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { decodeExperimentManifest } from '@f1refly/validate-experiments';
+import { decodeExperimentManifest } from '@firefly/validate-experiments';
 import { assemblePublication, validateRelease, walkSafeTree } from '../src/index.js';
 
 async function fixture(context: test.TestContext) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'f1refly-publication-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-publication-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   const site = path.join(root, 'apps/site/dist');
   const experiment = path.join(root, 'experiments/alpha');

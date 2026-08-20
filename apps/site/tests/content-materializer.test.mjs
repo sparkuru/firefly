@@ -6,7 +6,7 @@ import test from 'node:test';
 import { materializeMarkdownWorkspace, scanMarkdownWorkspace } from '../scripts/materialize-content.mjs';
 
 async function workspace(t) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'f1refly-content-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-content-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const source = path.join(root, 'source');
   const target = path.join(root, 'stage', 'posts');

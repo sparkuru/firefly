@@ -47,7 +47,7 @@ async function requireSourceRoot(sourceRoot) {
   const source = path.resolve(sourceRoot);
   const sourceStat = await stat(source).catch(() => null);
   if (sourceStat === null || !sourceStat.isDirectory()) {
-    throw new Error('F1REFLY_CONTENT_ROOT must name a readable directory.');
+    throw new Error('FIREFLY_CONTENT_ROOT must name a readable directory.');
   }
   return source;
 }
@@ -151,7 +151,7 @@ export async function scanMarkdownWorkspace(sourceRoot) {
 }
 
 export async function materializeMarkdownWorkspace({
-  sourceRoot = process.env.F1REFLY_CONTENT_ROOT ?? path.resolve(siteRoot, '../../content/posts'),
+  sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? path.resolve(siteRoot, '../../content/posts'),
   targetRoot = generatedPostsRoot,
   beforeCopy,
   beforePromote

@@ -100,7 +100,7 @@ than a terminal-themed index and command form. This decision supersedes the
 navigation conclusion above for the enhanced home only:
 
 - successful enhancement hides the recovery index and exposes only a continuous
-  prompt/output stream beginning with `guest@f1refly $`;
+  prompt/output stream beginning with `guest@firefly $`;
 - `cat <filename>.md` renders the selected public document inline without
   changing the URL;
 - `clear` removes every visible command and document output while retaining the

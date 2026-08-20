@@ -14,7 +14,7 @@
   src: url('/fonts/JetBrainsMono-Medium-v2.304.woff2') format('woff2');
 }
 
-.terminal-root[data-terminal-theme='f1refly'] {
+.terminal-root[data-terminal-theme='firefly'] {
   --terminal-color-scheme: dark;
   --terminal-color-canvas: #050806;
   --terminal-color-surface: #080d0a;

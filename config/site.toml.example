@@ -3,7 +3,7 @@
 
 [site]
 # The visible brand name and the default home-page <title>.
-name = "f1refly"
+name = "firefly"
 # Used when a route does not provide its own description.
 description = "Fly Me 2 The Star."
 # BCP 47 document language, for example en or zh-CN.
@@ -23,7 +23,7 @@ cwd = "~/blog/posts"
 about = """
 A personal space for notes, experiments, and technical things I don't want to figure out twice.
 Mostly about things I've worked on, broken, fixed, or found interesting.
-Source: https://github.com/sparkuru/f1refly.git
+Source: https://github.com/sparkuru/firefly.git
 """
 # Curated public links shown by the `friends` command and Terminal recovery.
 friends = []
@@ -35,7 +35,7 @@ friends = []
 
 [seo]
 # Appended to visible document titles unless front matter supplies htmlTitle.
-titleSuffix = " | f1refly"
+titleSuffix = " | firefly"
 # The default HTML robots policy. A document with noindex uses noindex, follow.
 robots = "index, follow"
 # Supported values are summary and summary_large_image.

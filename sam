@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sam - Run f1refly development commands inside node:22-alpine.
+# sam - Run firefly development commands inside node:22-alpine.
 # The host needs Docker only; the repository is mounted at /app with uid mapping.
 #
 # Usage:
@@ -79,7 +79,7 @@ validate_mount_path() {
 }
 
 discover_content_mounts() {
-	local configured_root=${F1REFLY_CONTENT_ROOT:-${REPO_ROOT}/content/posts}
+	local configured_root=${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content/posts}
 	local content_root
 	local current_directory
 	local link_path
@@ -96,17 +96,17 @@ discover_content_mounts() {
 		require_command "${dependency}"
 	done
 	[[ "${configured_root}" == /* ]] || {
-		printf '[sam] F1REFLY_CONTENT_ROOT must be an absolute directory path\n' >&2
+		printf '[sam] FIREFLY_CONTENT_ROOT must be an absolute directory path\n' >&2
 		return 2
 	}
 	validate_mount_path "${configured_root}"
 	content_root=$(readlink -f -- "${configured_root}") || {
-		printf '[sam] F1REFLY_CONTENT_ROOT cannot be resolved\n' >&2
+		printf '[sam] FIREFLY_CONTENT_ROOT cannot be resolved\n' >&2
 		return 2
 	}
 	validate_mount_path "${content_root}"
 	[[ -d "${content_root}" && -r "${content_root}" ]] || {
-		printf '[sam] F1REFLY_CONTENT_ROOT must name a readable directory\n' >&2
+		printf '[sam] FIREFLY_CONTENT_ROOT must name a readable directory\n' >&2
 		return 2
 	}
 
@@ -161,8 +161,8 @@ discover_content_mounts() {
 		done < <(find "${current_directory}" -type l -print0)
 	done
 
-	F1REFLY_CONTENT_ROOT=${content_root}
-	export F1REFLY_CONTENT_ROOT
+	FIREFLY_CONTENT_ROOT=${content_root}
+	export FIREFLY_CONTENT_ROOT
 }
 
 run_step() {
@@ -217,7 +217,7 @@ main() {
 		--ipc "${SAM_IPC}"
 		--user "$(id -u):$(id -g)"
 		-e HOME=/app/.devhome
-		-e "F1REFLY_CONTENT_ROOT=${F1REFLY_CONTENT_ROOT}"
+		-e "FIREFLY_CONTENT_ROOT=${FIREFLY_CONTENT_ROOT}"
 		-v "${REPO_ROOT}:/app"
 		"${content_mounts[@]}"
 		-w /app

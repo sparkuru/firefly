@@ -14,7 +14,7 @@ client cache, or lifecycle abstraction.
   hydration directive exists.
 - X Core and both adapters run only during Markdown build/render. Their emitted
   enhancement manifests are empty and have no generic browser loader.
-- `@f1refly/presentation-terminal/runtime` (the package's `./runtime` export) is
+- `@firefly/presentation-terminal/runtime` (the package's `./runtime` export) is
   a pure, side-effect-free command/index module.
   `apps/site/src/scripts/terminal-home.ts` owns command DOM wiring.
 - `apps/site/src/scripts/terminal-reader.ts` is a separate route-local controller

@@ -1,8 +1,8 @@
-# UUPM Research: f1refly site configuration
+# UUPM Research: firefly site configuration
 
 ## Raw design-system output
 
-### Design System: f1refly site configuration
+### Design System: firefly site configuration
 
 ### Pattern
 - **Name:** Newsletter / Content First

@@ -50,7 +50,7 @@
 
 ## Chosen implementation constraints
 
-- Use `F1REFLY_CONTENT_ROOT` as the optional host-facing workspace setting.
+- Use `FIREFLY_CONTENT_ROOT` as the optional host-facing workspace setting.
   Absence means the repository fixture `content/posts/`.
 - Materialize validated Markdown into an ignored, transactionally replaced site
   staging directory using link-owned virtual paths. Astro reads only that stage,

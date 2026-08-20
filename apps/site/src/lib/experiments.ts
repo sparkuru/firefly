@@ -1,4 +1,4 @@
-import { discoverExperiments, type PublicExperiment } from '@f1refly/validate-experiments';
+import { discoverExperiments, type PublicExperiment } from '@firefly/validate-experiments';
 
 const modulePath = decodeURIComponent(new URL(import.meta.url).pathname);
 const siteBoundary = '/apps/site/';

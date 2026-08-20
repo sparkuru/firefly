@@ -2,7 +2,7 @@
 
 ## Goal
 
-Safely rehearse the complete, immutable f1refly publication through the real
+Safely rehearse the complete, immutable firefly publication through the real
 `staging.majo.im` TLS/Nginx edge while the static runtime remains on the owner
 workstation. The rehearsal must prove the reverse-tunnel boundary, public
 routes, headers, and a complete rollback without exposing a workstation port

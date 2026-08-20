@@ -4,7 +4,7 @@ import type { Root as HastRoot } from 'hast';
 import type {
   DocumentContext,
   NormalizedDocumentInput
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 import { semanticPresentation } from '../src/index.js';
 
 const context: DocumentContext = {

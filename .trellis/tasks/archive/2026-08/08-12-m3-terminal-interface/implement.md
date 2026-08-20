@@ -142,7 +142,7 @@
   `<template>`. Validate the decoded entry/template sets as a bijection before
   revealing any interactive UI.
 - Render the whole session hidden. On successful boot, reveal only a continuous
-  transcript and inline `guest@f1refly $` input row; no hero, index cards,
+  transcript and inline `guest@firefly $` input row; no hero, index cards,
   visible Command label, field box, titlebar, or visible Run button. Never
   autofocus or capture whole-page/global key events.
 - Apply text/list effects with safe DOM APIs. For `document`, clone only trusted

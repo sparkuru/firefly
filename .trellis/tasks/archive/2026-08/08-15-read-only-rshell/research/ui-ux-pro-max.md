@@ -5,7 +5,7 @@ Generated 2026-08-15 with the project-local UUPM entry point:
 ```bash
 python3 .codex/skills/ui-ux-pro-max/scripts/search.py \
   "static knowledge browser terminal shell content-first minimal dark accessible" \
-  --design-system --project-name "f1refly rshell" --format markdown \
+  --design-system --project-name "firefly rshell" --format markdown \
   --variance 2 --motion 1 --density 7
 ```
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { DEFAULT_PRESENTATION_ID } from '@f1refly/x-core';
+import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
 
 const validPost = {
@@ -43,7 +43,7 @@ test('valid metadata parses and coerces dates', () => {
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
 });
 
-test('omitted presentation defaults to f1refly while semantic remains explicit', () => {
+test('omitted presentation defaults to firefly while semantic remains explicit', () => {
   const omitted = postSchema.parse({ ...validPost, presentation: undefined });
 
   assert.equal(omitted.presentation, DEFAULT_PRESENTATION_ID);

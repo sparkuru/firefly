@@ -5,13 +5,13 @@
 The project-local UI/UX Pro Max search was run with:
 
 ```text
-python3 .codex/skills/ui-ux-pro-max/scripts/search.py "personal static blog curated friend links editorial directory external links" --design-system --stack astro --format markdown --project-name "f1refly Friend Links" --variance 2 --motion 1 --density 4
+python3 .codex/skills/ui-ux-pro-max/scripts/search.py "personal static blog curated friend links editorial directory external links" --design-system --stack astro --format markdown --project-name "firefly Friend Links" --variance 2 --motion 1 --density 4
 ```
 
 The generated recommendation was:
 
 ```text
-## Design System: f1refly Friend Links
+## Design System: firefly Friend Links
 
 ### Design Dials
 - Variance: 2/10 — Centered / Minimal

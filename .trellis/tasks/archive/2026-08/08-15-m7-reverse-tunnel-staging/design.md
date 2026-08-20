@@ -55,7 +55,7 @@ deleted.
 ## Lifecycle and failure behavior
 
 1. Confirm the release baseline with `./package-runtime.sh`, then start the
-   resulting read-only `f1refly:m5-runtime` image on `127.0.0.1:4321`. This
+   resulting read-only `firefly:m5-runtime` image on `127.0.0.1:4321`. This
    preserves the runtime's Nginx headers; `dev.sh` is a Node preview and is not
    an equivalent edge-runtime probe.
 2. Establish one foreground-managed SSH process with strict host-key checking,

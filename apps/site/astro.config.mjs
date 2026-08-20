@@ -1,10 +1,10 @@
 import { unified } from '@astrojs/markdown-remark';
-import { semanticPresentation } from '@f1refly/presentation-semantic';
-import { terminalPresentation } from '@f1refly/presentation-terminal';
+import { semanticPresentation } from '@firefly/presentation-semantic';
+import { terminalPresentation } from '@firefly/presentation-terminal';
 import {
   createXCorePlugins,
   PresentationRegistry
-} from '@f1refly/x-core';
+} from '@firefly/x-core';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 import { terminalHomeAssetsInlineLimit } from './src/lib/assets-inline-limit.mjs';

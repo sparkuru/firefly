@@ -19,7 +19,7 @@ source of truth; database results are advisory.
 
 ```text
 static terminal blog nested content filesystem vim read-only dark content-first
-  --design-system -p "f1refly Terminal Reader" -f markdown
+  --design-system -p "firefly Terminal Reader" -f markdown
 
 keyboard shortcuts search breadcrumbs reduced motion accessibility
   --domain ux -n 12

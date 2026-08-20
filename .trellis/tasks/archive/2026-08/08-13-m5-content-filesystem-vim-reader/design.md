@@ -49,7 +49,7 @@ only and rejects symlinks.
 
 ### 3.1 Configuration and mount transport
 
-- Optional host variable: `F1REFLY_CONTENT_ROOT`.
+- Optional host variable: `FIREFLY_CONTENT_ROOT`.
 - Default host root: `<repo>/content/posts`.
 - `sam` resolves the root, verifies it is a readable directory, and mounts it at
   the same absolute container path, read-only.
@@ -59,7 +59,7 @@ only and rejects symlinks.
   hostile path forms stop before Docker starts.
 - Only exact discovered roots/targets are mounted. The wrapper never solves link
   access by mounting `/`, `$HOME`, or a broad ancestor.
-- `sam` passes the normalized `F1REFLY_CONTENT_ROOT` into the container. Existing
+- `sam` passes the normalized `FIREFLY_CONTENT_ROOT` into the container. Existing
   repo/user/IPC/port/label/teardown contracts remain unchanged.
 
 The shell layer establishes container visibility, not publication validity. The
@@ -227,7 +227,7 @@ reader controller and both exit to `/` through `:q`.
 Terminal document routes render a native breadcrumb navigation. For the example:
 
 ```text
-guest@f1refly:~/blog $ / posts / characters / nahida.md
+guest@firefly:~/blog $ / posts / characters / nahida.md
                        └links───────────┘  └underlined current text┘
 ```
 

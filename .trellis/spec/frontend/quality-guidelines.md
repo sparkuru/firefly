@@ -115,7 +115,7 @@ package suite from the single profile in `index.md`.
   in JavaScript, JSON, or entry `data-*` metadata.
 - Output contains only the frozen guest projection. Private/draft titles, bodies,
   owners, paths, completion entries, templates, routes, and private-only
-  directories are absent, as are `F1REFLY_CONTENT_ROOT` and resolved host paths.
+  directories are absent, as are `FIREFLY_CONTENT_ROOT` and resolved host paths.
   Generated, assembled, and runtime trees contain zero symlinks.
 - `/lab/` and Terminal recovery consume one frozen listed catalog projection.
   Site entry links use validated default entries; Terminal links use canonical

@@ -8,10 +8,10 @@ The accepted and rejected recommendations are interpreted in
 Command:
 
 ```bash
-python3 .codex/skills/ui-ux-pro-max/scripts/search.py "personal static blog terminal interface retro CRT keyboard-first accessible content navigation mobile dark content-first" --design-system --project-name "f1refly Terminal" --format markdown --variance 4 --motion 2 --density 6
+python3 .codex/skills/ui-ux-pro-max/scripts/search.py "personal static blog terminal interface retro CRT keyboard-first accessible content navigation mobile dark content-first" --design-system --project-name "firefly Terminal" --format markdown --variance 4 --motion 2 --density 6
 ```
 
-## Design System: f1refly Terminal
+## Design System: firefly Terminal
 
 ### Design Dials
 - **Variance:** 4/10 — Balanced / Modern

@@ -109,7 +109,7 @@ test('site config rejects unknown keys, unsafe identity text, and malformed orig
 });
 
 test('site config loader uses TOML syntax, preserves multiline about, and rejects malformed TOML', async () => {
-  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'f1refly-site-config-'));
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'firefly-site-config-'));
   const filePath = path.join(temporaryRoot, 'site.toml');
   const source = [
     '[site]',
