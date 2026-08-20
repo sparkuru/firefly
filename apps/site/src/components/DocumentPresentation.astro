@@ -2,8 +2,8 @@
 import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import type { CanonicalDocument } from '../lib/content';
 import { SITE_CONFIG } from '../lib/site-config.mjs';
-import type { PublicComment } from '../lib/comments';
 import type { renderDocument } from '../lib/render-document';
+import { commentsFromPostExtensions } from '../lib/site-plugins';
 import SemanticDocument from './SemanticDocument.astro';
 import TerminalDocument from './TerminalDocument.astro';
 import DocumentLayout from '../layouts/DocumentLayout.astro';
@@ -14,10 +14,11 @@ type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 interface Props {
   canonical: CanonicalDocument;
   document: RenderedDocument;
-  comments?: readonly PublicComment[];
+  pluginExtensions?: readonly unknown[];
 }
 
-const { canonical, document, comments = [] } = Astro.props;
+const { canonical, document, pluginExtensions = [] } = Astro.props;
+const comments = commentsFromPostExtensions(pluginExtensions);
 const { entry } = canonical;
 const presentation = document.metadata.presentation;
 if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {

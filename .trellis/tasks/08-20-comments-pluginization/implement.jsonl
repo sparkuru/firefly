@@ -1,0 +1,11 @@
+{"file":".trellis/tasks/08-20-comments-pluginization/design.md","reason":"Approved technical boundary, data flow, UI constraints, SMTP design, and compatibility invariants for implementation."}
+{"file":".trellis/tasks/08-20-comments-pluginization/research/ui-ux-pro-max.md","reason":"Project-local UI/UX research used to define responsive, accessible, low-variance comment states while preserving Firefly's existing visual system."}
+{"file":".trellis/tasks/08-20-comments-pluginization/research/zoho-smtp.md","reason":"Authoritative Zoho SMTP host, port, TLS, authentication, and sender-alignment facts for the provider-compatible adapter."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend workflow, browser validation profile, responsive viewports, and review expectations."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Existing M5.1 public export, page-boundary, privacy, digest, and rollback contract to preserve."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Astro component ownership, native semantics, and styling boundaries for the plugin site surface."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Frontend accessibility, responsive, testing, and quality-gate requirements."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Repository command/runtime conventions, including the required sam wrapper."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Build-time configuration and disabled-by-default site configuration semantics."}
+{"file":".trellis/spec/frontend/x-core-contract.md","reason":"Existing core/site integration contracts that the plugin registry and host adapters must respect."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Cross-layer dependency and data-flow guidance for the site, service, assembler, and notification migration."}

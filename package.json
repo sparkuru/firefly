@@ -15,6 +15,7 @@
     "check:comments": "npm --prefix services/comments run check",
     "test:comments": "npm --prefix services/comments run test",
     "build:comments": "npm --prefix services/comments run build",
+    "deliver:comments": "npm --prefix services/comments run deliver:notifications",
     "install:x-core": "npm --prefix packages/x-core ci",
     "check:x-core": "npm --prefix packages/x-core run check",
     "test:x-core": "npm --prefix packages/x-core run test",

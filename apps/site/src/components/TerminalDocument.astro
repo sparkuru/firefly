@@ -2,7 +2,7 @@
 import type { CanonicalDocument } from '../lib/content';
 import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
 import type { renderDocument } from '../lib/render-document';
-import CommentSection from './CommentSection.astro';
+import CommentSection from '../plugins/comments/CommentSection.astro';
 import ReaderStatus from './ReaderStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;

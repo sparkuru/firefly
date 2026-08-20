@@ -14,6 +14,9 @@ material only.
 content/
 ├── posts/**/*.md                 # Default nested posts workspace
 └── pages/*.md                    # Repository-local pages collection
+plugins/comments/
+├── plugin.json                   # Internal Firefly capability manifest
+└── README.md                     # Ownership and private/public boundary
 packages/x-core/
 ├── package.json + package-lock.json
 ├── src/                          # Contracts, pipeline, registry, metadata
@@ -48,7 +51,12 @@ apps/site/
 │   │   ├── content.ts            # Canonical paths/tree/routes/breadcrumbs
 │   │   ├── experiments.ts        # Build-only validated public catalog
 │   │   ├── render-document.ts    # Astro/X Core metadata bridge
+│   │   ├── site-plugins.ts        # Static plugin registry and post extensions
 │   │   └── x-core-context.ts     # App-owned DocumentContext resolver
+│   ├── plugins/comments/          # Comment plugin UI and site adapter
+│   │   ├── CommentSection.astro
+│   │   ├── CommentForm.astro
+│   │   └── site.mjs               # Build-only comments export entry
 │   ├── layouts/                  # Semantic and Terminal whole-page shells
 │   ├── pages/                    # Thin nested document/directory route entries
 │   ├── scripts/
@@ -72,6 +80,10 @@ tooling/assemble-publication/
 ├── src/                           # Build, validation, staging, transaction, server
 ├── playwright.config.ts
 └── tests/{assembler.test,publication.spec}.ts
+services/comments/
+├── package.json + package-lock.json
+├── src/                          # Private service, plugin factory, SMTP worker
+└── tests/                        # Storage, HTTP, privacy, and delivery tests
 artifacts/                          # Ignored staged evidence after success
 dist/                               # Ignored complete assembled release
 package-runtime.sh                  # Runtime-only image/inventory/probe delegate
@@ -106,6 +118,9 @@ ignored. Never put authored source in them.
   for the explicit `#terminal-reader` entry fragment. Every document's semantic
   content and breadcrumb remain complete without JavaScript.
 - Keep main-site tests and Playwright configuration inside `apps/site/`.
+- Keep public comment UI and its build adapter under
+  `apps/site/src/plugins/comments/`; generic document components may invoke the
+  plugin entry but must not own comment data loading or storage behavior.
 - Keep vendored public fonts under `apps/site/public/fonts/` and their complete
   license/provenance evidence under `apps/site/public/licenses/`. Provenance
   names the immutable upstream tag/commit, exact source and published paths, and
@@ -166,6 +181,13 @@ routes before their milestone supplies real semantics.
   The assembler may execute/copy an Experiment only after discovery; Experiments
   never import either tooling package.
 - The root `package.json` delegates commands but is not an npm workspace.
+- `plugins/comments/plugin.json` is the ownership index for the internal
+  comments capability. Its site/publication/service entrypoints may live in
+  their package boundaries; the manifest is not a runtime loader or a public
+  npm distribution mechanism.
+- `services/comments/` is private runtime code. Its SQLite database, outbox,
+  SMTP settings, delivery state, and admin routes never enter `apps/site/`,
+  `artifacts/`, or the assembled release.
 - Publication consumes static artifacts/manifests only through the M4 tooling;
   no package writes directly into another package's or the root release `dist/`.
 - Astro versions may differ. Do not upgrade NERV merely because the main site

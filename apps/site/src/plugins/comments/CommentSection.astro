@@ -1,0 +1,101 @@
+---
+import type { CommentsSiteConfig, PublicComment } from '../../lib/comments';
+import CommentForm from './CommentForm.astro';
+
+interface Props {
+  variant: 'semantic' | 'terminal';
+  postPath: string;
+  comments: readonly PublicComment[];
+  config: CommentsSiteConfig;
+}
+
+const { variant, postPath, comments, config } = Astro.props;
+const prefix = variant === 'semantic' ? 'comment' : 'terminal-comment';
+const action = config.writeOrigin ? new URL('/v1/submissions', config.writeOrigin).toString() : null;
+const topLevel = comments.filter((comment) => comment.parentId === null);
+const replies = new Map<string, PublicComment[]>();
+for (const comment of comments) {
+  if (comment.parentId === null) continue;
+  const current = replies.get(comment.parentId) ?? [];
+  current.push(comment);
+  replies.set(comment.parentId, current);
+}
+
+function commentId(id: string) {
+  return `${prefix}-${id}`;
+}
+
+function displayDate(value: string) {
+  return new Date(value).toLocaleDateString('en', { dateStyle: 'medium', timeZone: 'UTC' });
+}
+---
+
+<section class={`${prefix}-section`} aria-labelledby={`${prefix}-title`}>
+  <header class={`${prefix}-header`}>
+    <p class={`${prefix}-eyebrow`}>Conversation</p>
+    <h2 id={`${prefix}-title`}>Comments</h2>
+    <p>Comments are plain text and appear after verification and owner approval.</p>
+  </header>
+
+  {
+    topLevel.length === 0 ? (
+      <p class={`${prefix}-empty`}>No comments yet.</p>
+    ) : (
+      <ol class={`${prefix}-list`}>
+        {topLevel.map((comment) => (
+          <li>
+            <article id={commentId(comment.id)} class={`${prefix}-card`} aria-labelledby={`${commentId(comment.id)}-author`}>
+              <header>
+                <h3 id={`${commentId(comment.id)}-author`}>
+                  {comment.homepage ? (
+                    <a href={comment.homepage} rel="nofollow ugc noopener noreferrer">{comment.displayName}</a>
+                  ) : comment.displayName}
+                </h3>
+                <time datetime={comment.createdAt}>{displayDate(comment.createdAt)}</time>
+              </header>
+              <p class={`${prefix}-body`}>{comment.body}</p>
+              {
+                (replies.get(comment.id) ?? []).length > 0 && (
+                  <ol class={`${prefix}-replies`} aria-label={`Replies to ${comment.displayName}`}>
+                    {(replies.get(comment.id) ?? []).map((reply) => (
+                      <li>
+                        <article id={commentId(reply.id)} class={`${prefix}-card ${prefix}-card--reply`} aria-labelledby={`${commentId(reply.id)}-author`}>
+                          <header>
+                            <h3 id={`${commentId(reply.id)}-author`}>
+                              {reply.homepage ? (
+                                <a href={reply.homepage} rel="nofollow ugc noopener noreferrer">{reply.displayName}</a>
+                              ) : reply.displayName}
+                            </h3>
+                            <time datetime={reply.createdAt}>{displayDate(reply.createdAt)}</time>
+                          </header>
+                          <p class={`${prefix}-body`}>{reply.body}</p>
+                        </article>
+                      </li>
+                    ))}
+                  </ol>
+                )
+              }
+              <CommentForm
+                variant={variant}
+                action={action}
+                postPath={postPath}
+                parentId={comment.id}
+                consentVersion={config.consentVersion}
+              />
+            </article>
+          </li>
+        ))}
+      </ol>
+    )
+  }
+
+  <div class={`${prefix}-new`}>
+    <h3>Leave a comment</h3>
+    <CommentForm
+      variant={variant}
+      action={action}
+      postPath={postPath}
+      consentVersion={config.consentVersion}
+    />
+  </div>
+</section>
