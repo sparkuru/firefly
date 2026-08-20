@@ -1,0 +1,11 @@
+{"file":".trellis/tasks/08-20-comments-pluginization/design.md","reason":"Verification must check the proposed ownership boundary, public/private data flow, UI states, SMTP failure semantics, and rollback rules."}
+{"file":".trellis/tasks/08-20-comments-pluginization/research/ui-ux-pro-max.md","reason":"Browser verification must cover the task-specific accessibility, responsive, focus, and interaction constraints."}
+{"file":".trellis/tasks/08-20-comments-pluginization/research/zoho-smtp.md","reason":"Provider tests and review must verify the documented Zoho-compatible security modes without using production credentials."}
+{"file":".trellis/spec/frontend/index.md","reason":"Defines the project-standard Playwright workflow, viewports, and residual human review checks."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Defines exact comments publication and privacy invariants for regression verification."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Defines Astro, accessibility, and CSS namespace checks for Semantic and Terminal surfaces."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Defines quality, responsive, keyboard, contrast, and test expectations."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Defines the approved command wrapper and development/runtime validation conventions."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Defines disabled/default configuration and build-time safety checks."}
+{"file":".trellis/spec/frontend/x-core-contract.md","reason":"Defines core integration constraints for checking that comments logic remains behind the plugin boundary."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Guides end-to-end validation of service, export, assembler, site, and notification data flow."}

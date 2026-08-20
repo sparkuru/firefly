@@ -122,6 +122,7 @@ export interface CommentRepository {
 export type NotificationKind = 'verification' | 'approved' | 'rejected' | 'reply';
 
 export interface NotificationMessage {
+  notificationId?: string;
   kind: NotificationKind;
   to: string;
   publicId: string;
@@ -133,6 +134,10 @@ export interface NotificationMessage {
 
 export interface NotificationTransport {
   send(message: NotificationMessage): void | Promise<void>;
+}
+
+export interface NotificationDeliveryTransport {
+  deliver(message: NotificationMessage): void | Promise<void>;
 }
 
 export interface RouteCatalog {

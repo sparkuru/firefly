@@ -1,6 +1,6 @@
 # Firefly comments service
 
-This package is the private M5.1 write and moderation boundary. It is not a
+This package is the private `comments` plugin service boundary. It is not a
 public comment read API and it is never part of the static publication image.
 The only public-site handoff is an owner-reviewed
 `comments.public.v1.json` export passed to a guarded local build through
@@ -77,3 +77,22 @@ the assembler records the export revision/digest/tombstone epoch and refuses
 to promote a candidate older than the epoch already recorded in the last
 publication. The service never calls the publication pipeline or receives
 release credentials.
+
+## Notification delivery
+
+The HTTP process writes notification events to the private outbox and does not
+open an SMTP connection in the submission request. Run the delivery worker as
+a separate private process with the same outbox volume:
+
+```sh
+./sam npm --prefix services/comments run deliver:notifications
+```
+
+The worker records delivered notification IDs in
+`COMMENTS_OUTBOX_STATE_PATH`, retries unresolved entries on the next run, and
+keeps failure state private. Configure a controlled staging SMTP sink first.
+For Zoho Mail, use the account-specific host, port `465` with
+`COMMENTS_SMTP_SECURE=true`, or port `587` with
+`COMMENTS_SMTP_SECURE=false`; provide a full mailbox username and an
+app-specific password when the account requires one. Never commit those
+values.

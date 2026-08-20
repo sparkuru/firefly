@@ -1,0 +1,19 @@
+{
+  "id": "comments",
+  "version": "0.1.0",
+  "configNamespace": "comments",
+  "capabilities": [
+    "site-post-extension",
+    "publication",
+    "service"
+  ],
+  "entrypoints": {
+    "site": "apps/site/src/lib/site-plugins.ts",
+    "publication": "tooling/assemble-publication/src/plugins/comments.ts",
+    "service": "services/comments/src/plugin.ts",
+    "ui": [
+      "apps/site/src/plugins/comments/CommentSection.astro",
+      "apps/site/src/plugins/comments/CommentForm.astro"
+    ]
+  }
+}

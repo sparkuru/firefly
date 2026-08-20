@@ -9,7 +9,8 @@
     "check": "tsc --noEmit",
     "test": "npm run build --silent && NODE_NO_WARNINGS=1 node --test dist/tests/*.test.js",
     "build": "tsc",
-    "start": "npm run build --silent && node dist/src/server.js"
+    "start": "npm run build --silent && node dist/src/server.js",
+    "deliver:notifications": "npm run build --silent && node dist/src/mailer.js"
   },
   "engines": {
     "node": ">=22.13.0"
