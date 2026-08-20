@@ -55,6 +55,10 @@ test('site config validates, normalizes, and deeply freezes public values', () =
   assert.equal(Object.hasOwn(config.terminal.friends[0], 'desc'), true);
   assert.equal(Object.hasOwn(config.terminal.friends[1], 'desc'), false);
   assert.equal(config.seo.robots, 'index, follow');
+  assert.equal(config.comments.enabled, false);
+  assert.equal(config.comments.writeOrigin, null);
+  assert.equal(config.comments.exportPath, 'artifacts/comments/comments.public.v1.json');
+  assert.equal(config.comments.consentVersion, 'm51-v1');
   assert.ok(Object.isFrozen(config));
   assert.ok(Object.isFrozen(config.site));
   assert.ok(Object.isFrozen(config.terminal));
@@ -102,7 +106,11 @@ test('site config rejects unknown keys, unsafe identity text, and malformed orig
     { ...validConfig, site: { ...validConfig.site, url: 'javascript:alert(1)' } },
     { ...validConfig, site: { ...validConfig.site, url: 'https://example.test/path' } },
     { ...validConfig, seo: { ...validConfig.seo, twitterCard: 'large' } },
-    { ...validConfig, seo: { ...validConfig.seo, image: 'relative.png' } }
+    { ...validConfig, seo: { ...validConfig.seo, image: 'relative.png' } },
+    { ...validConfig, comments: { enabled: true, exportPath: 'artifacts/comments/comments.public.v1.json', consentVersion: 'm51-v1' } },
+    { ...validConfig, comments: { enabled: true, writeOrigin: 'http://comments.example.test', exportPath: 'artifacts/comments/comments.public.v1.json', consentVersion: 'm51-v1' } },
+    { ...validConfig, comments: { enabled: false, exportPath: '../private.json', consentVersion: 'm51-v1' } },
+    { ...validConfig, comments: { enabled: false, exportPath: 'artifacts/comments/comments.json', consentVersion: 'm51-v1', unknown: true } }
   ]) {
     assert.throws(() => parseSiteConfig(value, 'fixture'), /Invalid site configuration/u);
   }
@@ -155,6 +163,8 @@ test('the checked-in TOML example loads with documented optional defaults', () =
   assert.equal(config.site.url, null);
   assert.equal(config.site.author, null);
   assert.equal(config.seo.image, null);
+  assert.equal(config.comments.enabled, false);
+  assert.equal(config.comments.writeOrigin, null);
   assert.deepEqual(config.terminal.friends, []);
 });
 

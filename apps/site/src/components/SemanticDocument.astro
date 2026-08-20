@@ -1,16 +1,21 @@
 ---
-import type { PublicDocument } from '../lib/render-document';
+import type { CanonicalDocument } from '../lib/content';
 import type { renderDocument } from '../lib/render-document';
+import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
+import CommentSection from './CommentSection.astro';
 import ReaderStatus from './ReaderStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface Props {
-  entry: PublicDocument;
+  canonical: CanonicalDocument;
   document: RenderedDocument;
+  comments: readonly PublicComment[];
+  commentsConfig: CommentsSiteConfig;
 }
 
-const { entry, document } = Astro.props;
+const { canonical, document, comments, commentsConfig } = Astro.props;
+const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
 const kind = entry.collection === 'posts' ? 'Post' : 'Page';
@@ -61,6 +66,10 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
   >
     <Content />
   </div>
+
+  {entry.collection === 'posts' && commentsConfig.enabled && (
+    <CommentSection variant="semantic" postPath={canonical.href} comments={comments} config={commentsConfig} />
+  )}
 
   <ReaderStatus variant="semantic" />
 </article>

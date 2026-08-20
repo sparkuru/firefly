@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "fixture-stale-route",
+  "generatedAt": "2026-08-20T00:00:00.000Z",
+  "tombstoneEpoch": 0,
+  "comments": [
+    {
+      "id": "c_12345678",
+      "postPath": "/posts/private/not-published/",
+      "parentId": null,
+      "displayName": "Reader",
+      "body": "This must not render.",
+      "createdAt": "2026-08-20T00:00:00.000Z"
+    }
+  ]
+}

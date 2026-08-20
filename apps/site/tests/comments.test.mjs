@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { decodePublicCommentsExport, loadCommentsForPosts } from '../src/lib/comments.mjs';
+
+const postPath = '/posts/main/example/';
+const timestamp = '2026-08-20T00:00:00.000Z';
+
+function envelope(comments = []) {
+  return {
+    schemaVersion: 1,
+    sourceRevision: 'fixture-revision',
+    generatedAt: timestamp,
+    tombstoneEpoch: 4,
+    comments
+  };
+}
+
+function comment(id, overrides = {}) {
+  return {
+    id,
+    postPath,
+    parentId: null,
+    displayName: 'Reader',
+    body: 'A first line.\nA second line.',
+    createdAt: timestamp,
+    ...overrides
+  };
+}
+
+test('public comments decode into deterministic top-level and direct-reply records', () => {
+  const decoded = decodePublicCommentsExport(envelope([
+    comment('c_87654321', { createdAt: '2026-08-20T00:00:02.000Z' }),
+    comment('c_12345678', { homepage: 'https://example.test/' }),
+    comment('c_abcdef12', { parentId: 'c_12345678', createdAt: '2026-08-20T00:00:01.000Z' })
+  ]));
+
+  assert.deepEqual(decoded.comments.map(({ id }) => id), ['c_12345678', 'c_abcdef12', 'c_87654321']);
+  assert.equal(decoded.comments[0].homepage, 'https://example.test/');
+  assert.ok(Object.isFrozen(decoded));
+  assert.ok(Object.isFrozen(decoded.comments));
+});
+
+test('site grouping rejects stale post routes and preserves empty canonical groups', () => {
+  const posts = [{ href: postPath }, { href: '/posts/main/other/' }];
+  const config = { enabled: true, writeOrigin: 'https://comments.example.test', exportPath: 'artifacts/comments/comments.public.v1.json', consentVersion: 'm51-v1' };
+  const grouped = loadCommentsForPosts(posts, config);
+  assert.deepEqual(grouped.get('/posts/main/other/'), []);
+
+  assert.throws(
+    () => loadCommentsForPosts(posts, { ...config, exportPath: 'apps/site/tests/fixtures/comments-stale-route.json' }),
+    /non-public post route/u
+  );
+});
+
+test('decoder rejects private fields, unknown fields, duplicates, nesting, and unsafe URLs', () => {
+  assert.throws(() => decodePublicCommentsExport(envelope([comment('c_12345678', { email: 'private@example.test' })])), /unknown field "email"/u);
+  assert.throws(() => decodePublicCommentsExport({ ...envelope(), extra: true }), /unknown field "extra"/u);
+  assert.throws(() => decodePublicCommentsExport(envelope([comment('c_12345678'), comment('c_12345678')])), /duplicate public comment ID/u);
+  assert.throws(() => decodePublicCommentsExport(envelope([
+    comment('c_12345678'),
+    comment('c_abcdef12', { parentId: 'c_12345678' }),
+    comment('c_deadbeef', { parentId: 'c_abcdef12' })
+  ])), /nested reply/u);
+  assert.throws(() => decodePublicCommentsExport(envelope([comment('c_12345678', { homepage: 'http://example.test' })])), /HTTPS/u);
+  assert.throws(() => decodePublicCommentsExport(envelope([comment('c_12345678', { postPath: '/posts/.hidden/' })])), /canonical \/posts/u);
+  assert.throws(() => decodePublicCommentsExport(envelope([comment('c_12345678', { body: '<b>unsafe HTML</b>' })])), /bounded plain text/u);
+  assert.throws(() => decodePublicCommentsExport({ ...envelope(), digest: '0'.repeat(64) }), /digest does not match/u);
+});

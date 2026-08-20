@@ -1,0 +1,16 @@
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/prd.md","reason":"Parent M5.1 requirements and exclusion boundary."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/design.md","reason":"Parent export, route, privacy, and presentation contract."}
+{"file":".trellis/tasks/08-14-m51-dynamic-comments-identity/implement.md","reason":"Parent execution and validation plan."}
+{"file":".trellis/spec/frontend/index.md","reason":"Site package topology and validation profile."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Canonical routes, site component ownership, and static publication boundaries."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Semantic/Terminal composition, native markup, CSS ownership, and no-JavaScript behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Static-output, accessibility, responsive, privacy-scan, and browser gates."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Build-time export state and prohibition on runtime read/store/fetch behavior."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict TypeScript and external JSON boundary decoding."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Strict build-time configuration and safe origin/URL validation."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Service export to build decoder to component data-flow checks."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Shared decoder/component and validation ownership checks."}
+{"file":".trellis/tasks/08-20-m51-static-comment-consumer/prd.md","reason":"Child acceptance criteria."}
+{"file":".trellis/tasks/08-20-m51-static-comment-consumer/design.md","reason":"Child component and export-boundary design."}
+{"file":".trellis/tasks/08-20-m51-static-comment-consumer/implement.md","reason":"Child implementation and validation order."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Implemented static comments consumer contract."}

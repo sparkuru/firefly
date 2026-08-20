@@ -1,6 +1,8 @@
 ---
 import type { CanonicalDocument } from '../lib/content';
+import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
 import type { renderDocument } from '../lib/render-document';
+import CommentSection from './CommentSection.astro';
 import ReaderStatus from './ReaderStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
@@ -8,9 +10,11 @@ type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 interface Props {
   canonical: CanonicalDocument;
   document: RenderedDocument;
+  comments: readonly PublicComment[];
+  commentsConfig: CommentsSiteConfig;
 }
 
-const { canonical, document } = Astro.props;
+const { canonical, document, comments, commentsConfig } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
@@ -87,6 +91,10 @@ function outlinePrefix(index: number, depth: number) {
     role="region"
     aria-label={`Read-only Vim reader for ${entry.data.title}`}
   ><Content /></div>
+
+  {entry.collection === 'posts' && commentsConfig.enabled && (
+    <CommentSection variant="terminal" postPath={canonical.href} comments={comments} config={commentsConfig} />
+  )}
 
   <ReaderStatus variant="terminal" />
 </article>

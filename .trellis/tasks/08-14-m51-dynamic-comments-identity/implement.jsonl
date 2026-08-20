@@ -1,1 +1,7 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Preserve the existing site, presentation, content, package-isolation, canonical-route, and static-publication boundaries while adding the future comments consumer."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Define the public, secret-free comment write-origin and consent configuration without weakening the existing site identity and static build boundary."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Keep comments build-time input and presentation props rather than introducing a browser store or runtime read model."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Plan schema, static-output, browser, privacy-scan, isolation, and publication validation for the site integration."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Preserve safe artifact, reference, inventory, atomic promotion, and rollback contracts for comment-bearing releases."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Extend the existing sam/build/runtime workflow without broad mounts, unmanaged services, or deployment-only evidence."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Implemented M5.1 cross-layer contract."}

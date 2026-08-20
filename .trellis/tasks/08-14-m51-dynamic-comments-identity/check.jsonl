@@ -1,1 +1,6 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check the future service/site changes against schema, content-contract, static-output, browser, privacy-leak, accessibility, and package-isolation gates."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Verify shared site-local comment rendering, Semantic/Terminal dispatcher boundaries, article structure, and reader-region isolation."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Check that comment exports cannot introduce private artifacts, unsafe references, source paths, symlinks, inventory drift, or unsafe rollback candidates."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Check that the main site has no runtime comment fetch, browser store, hydration requirement, or private state leakage."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check wrapper/container input safety, service lifecycle, build ordering, exact-label teardown, and unavailable-environment reporting."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Verify service, static, publication, and rollback boundaries."}

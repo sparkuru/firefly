@@ -16,6 +16,7 @@ const controlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\
 const lineBreaks = /[\r\n\u2028\u2029]/u;
 const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
 const safePromptToken = /^[^\\/?#%\s\u0000-\u001f\u007f]+$/u;
+const safeRelativeArtifactPath = (value) => typeof value === 'string' && value.normalize('NFC') === value && value.endsWith('.json') && !value.startsWith('/') && !value.includes('\\') && !value.includes('?') && !value.includes('#') && !controlCharacters.test(value) && value.split('/').every((segment) => safePathSegment.test(segment));
 
 function safeText(message, { multiline = false } = {}) {
   return z.string().refine((value) => {
@@ -138,7 +139,38 @@ const seoSchema = z.object({
   image
 }).strict();
 
-const siteConfigSchema = z.object({ site: siteSchema, terminal: terminalSchema, seo: seoSchema }).strict();
+const commentsWriteOrigin = z.union([z.string(), z.null()]).optional().default(null).refine(
+  (value) => value === null || (normalizeOrigin(value) !== false && new URL(value).protocol === 'https:'),
+  'comments.writeOrigin must be an HTTPS origin without a path, query, fragment, or credentials'
+).transform((value) => value === null ? null : normalizeOrigin(value));
+
+const commentsSchema = z.object({
+  enabled: z.boolean().optional().default(false),
+  writeOrigin: commentsWriteOrigin,
+  exportPath: z.string().optional().default('artifacts/comments/comments.public.v1.json').refine(
+    safeRelativeArtifactPath,
+    'comments.exportPath must be a safe repository-relative JSON path'
+  ),
+  consentVersion: safeText('comments.consentVersion must be non-empty safe text')
+    .optional()
+    .default('m51-v1')
+}).strict().superRefine((value, context) => {
+  if (value.enabled && value.writeOrigin === null) {
+    context.addIssue({ code: 'custom', path: ['writeOrigin'], message: 'comments.writeOrigin is required when comments.enabled is true' });
+  }
+});
+
+const siteConfigSchema = z.object({
+  site: siteSchema,
+  terminal: terminalSchema,
+  seo: seoSchema,
+  comments: commentsSchema.optional().default({
+    enabled: false,
+    writeOrigin: null,
+    exportPath: 'artifacts/comments/comments.public.v1.json',
+    consentVersion: 'm51-v1'
+  })
+}).strict();
 
 function freezeDeep(value, seen = new WeakSet()) {
   if (value === null || typeof value !== 'object' || seen.has(value)) return value;

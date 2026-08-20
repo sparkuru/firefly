@@ -141,6 +141,33 @@ test('shared head metadata and public discovery files follow site configuration'
   assert.equal(robots, createRobotsText(SITE_CONFIG));
 });
 
+test('comment output is post-only and follows the enabled build contract', async () => {
+  const routes = {
+    home: await readFile(path.join(distRoot, 'index.html'), 'utf8'),
+    postsIndex: await readFile(path.join(distRoot, 'posts/index.html'), 'utf8'),
+    pagesIndex: await readFile(path.join(distRoot, 'pages/index.html'), 'utf8'),
+    page: await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8'),
+    lab: await readFile(path.join(distRoot, 'lab/index.html'), 'utf8'),
+    notFound: await readFile(path.join(distRoot, '404.html'), 'utf8'),
+    post: await readFile(path.join(distRoot, 'posts/main/379/index.html'), 'utf8')
+  };
+  const commentSurface = /<section\b[^>]*\bclass=["'](?:terminal-)?comment-section["']/iu;
+  const excluded = [routes.home, routes.postsIndex, routes.pagesIndex, routes.page, routes.lab, routes.notFound];
+
+  if (!SITE_CONFIG.comments.enabled) {
+    assert.doesNotMatch(routes.post, commentSurface);
+    for (const html of excluded) assert.doesNotMatch(html, commentSurface);
+    return;
+  }
+
+  assert.match(routes.post, /class="terminal-comment-section"/u);
+  assert.match(routes.post, /Reader/u);
+  assert.match(routes.post, /Another reader/u);
+  assert.match(routes.post, /action="https:\/\/comments\.example\.test\/v1\/submissions"/u);
+  assert.doesNotMatch(routes.post, /emailCiphertext|verificationTokenHash|controlTokenHash|ipHash|userAgentHash|internalId|dedupeKey/iu);
+  for (const html of excluded) assert.doesNotMatch(html, commentSurface);
+});
+
 test('only the exact generated Terminal home script bypasses asset inlining', () => {
   const generated = '_astro/TerminalHome.astro_astro_type_script_index_0_lang.Abc_123-.js';
   assert.equal(terminalHomeAssetsInlineLimit(generated), false);

@@ -1,0 +1,58 @@
+---
+interface Props {
+  variant: 'semantic' | 'terminal';
+  action: string | null;
+  postPath: string;
+  parentId?: string;
+  consentVersion: string;
+}
+
+const { variant, action, postPath, parentId, consentVersion } = Astro.props;
+const prefix = variant === 'semantic' ? 'comment' : 'terminal-comment';
+const formId = `${prefix}-form-${parentId ?? 'top'}`;
+---
+
+{action ? (
+  <form id={formId} class={`${prefix}-form`} action={action} method="post">
+    <input type="hidden" name="postPath" value={postPath} />
+    {parentId && <input type="hidden" name="parentId" value={parentId} />}
+    <input type="hidden" name="consentVersion" value={consentVersion} />
+
+    <div class={`${prefix}-fields`}>
+      <div>
+        <label for={`${formId}-display-name`}>Display name</label>
+        <input id={`${formId}-display-name`} name="displayName" maxlength="80" required autocomplete="nickname" />
+      </div>
+      <div>
+        <label for={`${formId}-homepage`}>Homepage <span>(optional HTTPS link)</span></label>
+        <input id={`${formId}-homepage`} name="homepage" type="url" inputmode="url" pattern="https://.*" autocomplete="url" />
+      </div>
+      <div>
+        <label for={`${formId}-email`}>Email <span>(private; used for verification)</span></label>
+        <input id={`${formId}-email`} name="email" type="email" required autocomplete="email" />
+      </div>
+      <div>
+        <label for={`${formId}-body`}>Comment</label>
+        <textarea id={`${formId}-body`} name="body" maxlength="8192" required rows="5"></textarea>
+      </div>
+    </div>
+
+    <div class={`${prefix}-consent`}>
+      <label>
+        <input type="checkbox" name="consent" value="accepted" required />
+        I agree that this comment may be published under this pseudonym after moderation.
+      </label>
+      <label>
+        <input type="checkbox" name="notifyReplies" value="true" />
+        Notify me about direct replies (optional).
+      </label>
+    </div>
+
+    <div class={`${prefix}-honeypot`} aria-hidden="true">
+      <label for={`${formId}-website`}>Website<input id={`${formId}-website`} name="honeypot" tabindex="-1" autocomplete="off" /></label>
+    </div>
+    <button type="submit">Send for verification</button>
+  </form>
+) : (
+  <p class={`${prefix}-unavailable`}>Comment submission is currently unavailable.</p>
+)}
