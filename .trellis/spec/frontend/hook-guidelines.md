@@ -121,11 +121,16 @@ recovery path as malformed identity/index/template data.
   `data-terminal-session-empty` state so CSS centers that prompt even when the
   document cannot scroll; remove the state when the next output record is
   appended. Announce only the latest brief result via the polite atomic node.
-- After non-document output, focus the fresh prompt but settle from the current
-  record start so long help is not top-clipped; keep the prompt visible when the
-  viewport can contain both. After a document effect, focus and settle its title
-  at the reading start. Scrolling is smooth normally and immediate under
-  `prefers-reduced-motion`.
+- After non-document output, focus the fresh prompt and settle the newest record
+  plus prompt as one centered reading band when the group fits the viewport. For
+  oversized output, keep the fresh prompt visible at the lower edge while
+  allowing earlier lines above the fold. Empty startup and `clear`/`Ctrl+L`
+  return to the centered empty-session placement; the connecting startup
+  surface and ready boot session share the same bounded tall-viewport offset so
+  moving the boot log into the transcript does not jump its geometry, and that
+  offset is removed after the first output. After a document effect, focus and
+  settle its title at the reading start. Scrolling is smooth normally and
+  immediate under `prefers-reduced-motion`.
 - An unmodified, non-Space printable key pressed elsewhere in the document may
   return focus to the prompt and insert at its current selection. Never take over
   modified keys, Space, navigation/control keys, IME composition, an active text

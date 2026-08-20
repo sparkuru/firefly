@@ -179,6 +179,14 @@ function clearSessionEmpty(nodes: TerminalNodes): void {
   delete nodes.session.dataset.terminalSessionEmpty;
 }
 
+function markSessionInitial(nodes: TerminalNodes): void {
+  nodes.session.dataset.terminalSessionInitial = '';
+}
+
+function clearSessionInitial(nodes: TerminalNodes): void {
+  delete nodes.session.dataset.terminalSessionInitial;
+}
+
 function preserveBootLog(nodes: TerminalNodes): void {
   const record = document.createElement('section');
   record.className = 'terminal-record terminal-boot-record';
@@ -705,6 +713,7 @@ function showFatalFailure(nodes: TerminalNodes): void {
 function clearTranscript(nodes: TerminalNodes, announcement: string): void {
   nodes.transcript.replaceChildren();
   markSessionEmpty(nodes);
+  clearSessionInitial(nodes);
   nodes.input.value = '';
   clearCompletionDisplay(nodes);
   nodes.announcer.textContent = announcement;
@@ -727,11 +736,14 @@ function settleCommandOutput(record: HTMLElement, input: HTMLInputElement): void
   const margin = Math.min(24, window.innerHeight * 0.05);
   const recordTop = record.getBoundingClientRect().top;
   const inputBottom = input.getBoundingClientRect().bottom;
-  if (inputBottom - recordTop <= window.innerHeight - margin * 2) {
+  const span = inputBottom - recordTop;
+  const available = window.innerHeight - margin * 2;
+  if (span <= available) {
+    const centeredTop = margin + (available - span) / 2;
     window.scrollBy({
       behavior,
       left: 0,
-      top: recordTop - margin
+      top: recordTop - centeredTop
     });
     return;
   }
@@ -900,6 +912,7 @@ export function startTerminalHome(
       });
       nodes.transcript.append(record);
       clearSessionEmpty(nodes);
+      clearSessionInitial(nodes);
       nodes.input.value = '';
       nodes.announcer.textContent = result.announcement;
       if (rendered.navigationHref !== undefined) {
@@ -1143,6 +1156,7 @@ export function startTerminalHome(
     preserveBootLog(nodes);
     nodes.fallback.hidden = true;
     nodes.session.hidden = false;
+    markSessionInitial(nodes);
     updatePrompt();
   } catch {
     fail();

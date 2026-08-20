@@ -40,6 +40,30 @@ async function readBootGeometry(page: Page) {
   });
 }
 
+async function readCommandBandGeometry(page: Page) {
+  return page.evaluate(() => {
+    const records = document.querySelectorAll<HTMLElement>(
+      '[data-terminal-transcript] .terminal-record:not(.terminal-boot-record)'
+    );
+    const record = records[records.length - 1];
+    const row = document.querySelector<HTMLElement>('[data-terminal-session] .terminal-command-row');
+    if (record === undefined || row === null) {
+      throw new Error('Missing Terminal command band geometry targets.');
+    }
+    const recordRect = record.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    return {
+      bandCenter: (recordRect.top + rowRect.bottom) / 2,
+      recordTop: recordRect.top,
+      rowBottom: rowRect.bottom,
+      rowTop: rowRect.top,
+      scrollHeight: document.documentElement.scrollHeight,
+      sessionInitial: document.querySelector('[data-terminal-session]')?.hasAttribute('data-terminal-session-initial') ?? false,
+      viewportHeight: window.innerHeight
+    };
+  });
+}
+
 async function expectCenteredEmptySession(page: Page) {
   await expect.poll(async () => page.evaluate(() => {
     const row = document.querySelector<HTMLElement>('[data-terminal-session] .terminal-command-row');
@@ -83,6 +107,7 @@ test('successful startup preserves the boot log before the shell prompt', async 
 });
 
 test('pending startup exposes the direct boot log before the shell is ready', async ({ page }) => {
+  await page.setViewportSize({ width: 2048, height: 1244 });
   await page.route(/TerminalHome.*\.js$/u, async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
@@ -617,6 +642,42 @@ test('clear, cls, and Ctrl+L center the empty-session prompt without overflow', 
   await submit(page, 'pwd');
   await expect(session).not.toHaveAttribute('data-terminal-session-empty');
   await expect(transcript).not.toBeEmpty();
+});
+
+test('tall desktop keeps startup, output, and clear in one reading band', async ({ page }) => {
+  await page.setViewportSize({ width: 2048, height: 1244 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  const input = page.getByRole('textbox', { name: promptName });
+  const session = page.locator('[data-terminal-session]');
+  await expect(input).toBeVisible();
+  await expect(session).toHaveAttribute('data-terminal-session-initial', '');
+  const startup = await page.locator('[data-terminal-session] .terminal-command-row').evaluate((row) => {
+    const rect = row.getBoundingClientRect();
+    return { center: (rect.top + rect.bottom) / 2, viewportHeight: window.innerHeight };
+  });
+  expect(Math.abs(startup.center - startup.viewportHeight / 2)).toBeLessThan(96);
+
+  await submit(page, 'pwd');
+  const short = await readCommandBandGeometry(page);
+  expect(short.sessionInitial).toBe(false);
+  expect(short.recordTop).toBeGreaterThanOrEqual(0);
+  expect(short.rowBottom).toBeLessThanOrEqual(short.viewportHeight);
+  expect(Math.abs(short.bandCenter - short.viewportHeight / 2)).toBeLessThan(48);
+
+  await submit(page, 'grep -nF a ~/blog/posts/main/llm-workflow-with-trellis.md');
+  const long = await readCommandBandGeometry(page);
+  expect(long.sessionInitial).toBe(false);
+  expect(long.scrollHeight).toBeGreaterThan(long.viewportHeight);
+  expect(long.rowTop).toBeGreaterThanOrEqual(0);
+  expect(long.rowBottom).toBeLessThanOrEqual(long.viewportHeight);
+  expect(long.recordTop).toBeLessThan(long.rowTop);
+
+  await submit(page, 'clear');
+  await expect(session).toHaveAttribute('data-terminal-session-empty', '');
+  await expect(session).not.toHaveAttribute('data-terminal-session-initial');
+  await expectCenteredEmptySession(page);
 });
 
 test('Ctrl+L clears the transcript without consuming command history and cls aliases clear', async ({ page }) => {

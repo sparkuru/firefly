@@ -73,7 +73,7 @@ package suite from the single profile in `index.md`.
   restoration, safe unique/ambiguous/zero-result path completion with retained focus and
   prompt-wide Tab prevention plus native outside-prompt traversal, prompt `Ctrl+C` cancellation,
   IME-safe and mobile soft-keyboard Enter, inline `cat` with unchanged URL,
-  record-start/document viewport settlement, executable list operands, nested
+  stable-band/document viewport settlement, executable list operands, nested
   tree/cat/vim, Vim movement/search/
   visual Range/`:q`, safe printable typing with native/ARIA
   widget and local-scroll exclusions, repeated-clone

@@ -308,6 +308,13 @@
   align-content: center;
 }
 
+@media (min-width: 48rem) and (min-height: 60rem) {
+  .terminal-startup,
+  .terminal-session[data-terminal-session-initial] {
+    padding-block-start: clamp(0rem, calc(16dvh - 8rem), 8rem);
+  }
+}
+
 .terminal-transcript {
   min-width: 0;
 }

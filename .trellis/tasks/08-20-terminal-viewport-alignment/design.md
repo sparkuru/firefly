@@ -21,9 +21,12 @@ semantics.
   choose a centered target when it fits, and retain the existing prompt-at-end
   fallback for oversized output.
 - The initial boot record needs a small tall-viewport offset because the page is
-  too short for browser scrolling to center it. A transient
-  `data-terminal-session-initial` marker on the session enables CSS-only
-  compensation; the marker is removed on the first command result and on clear.
+  too short for browser scrolling to center it. The connecting startup staging
+  surface and the ready session use the same CSS compensation before and after
+  the boot record is relocated, so the relocation cannot shift the log. A
+  transient `data-terminal-session-initial` marker on the session enables the
+  ready-state compensation; the marker is removed on the first command result
+  and on clear.
 - `data-terminal-session-empty` remains the authoritative clear/empty state and
   continues to center the prompt with the existing grid layout.
 - Document effects keep their existing title settlement and are not folded into
@@ -57,6 +60,7 @@ must use semantic prompt/transcript locators rather than screenshot snapshots.
 ## Rollback boundary
 
 The change is limited to the home controller, Terminal CSS, the Terminal browser
-spec, and the reusable frontend hook/type-safety contracts if needed. Runtime,
-document-reader settlement, command output, and native fallback markup are not
-changed.
+spec, and the reusable frontend settlement contracts (`hook-guidelines.md`,
+`type-safety.md`, `content-workspace-contract.md`, `quality-guidelines.md`, and
+the validation index) if needed. Runtime, document-reader settlement, command
+output, and native fallback markup are not changed.

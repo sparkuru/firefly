@@ -453,14 +453,19 @@ startTerminalReader(root: HTMLElement): void
   for stdin, and returns a safe no-result effect instead of conflating “no
   matches” with an invalid resource. Resource, scanned-line, match-count, and
   output-size limits remain enforced before rendering.
-- Non-document command output settles from the current record start while keeping
-  the fresh prompt focused and visible when viewport geometry permits. Document
-  output still settles its title. Motion is smooth normally and immediate under
-  reduced motion; repeated prior transcript must not clip the new output's first
-  line at the viewport top.
+- Non-document command output settles the newest record and fresh prompt as one
+  centered reading band when the group fits the viewport. Oversized output keeps
+  the fresh prompt focused and visible at the viewport's lower edge while earlier
+  lines may remain above the fold. Document output still settles its title at the
+  reading start. Motion is smooth normally and immediate under reduced motion;
+  repeated prior transcript must not clip the new output's first line at the
+  viewport top.
 - A non-document settlement measures the record-to-prompt span before scrolling:
-  it uses the record start when both fit in the viewport, otherwise it scrolls
-  the fresh prompt to the viewport end. This responsive fallback is required at
+  it centers the group within the readable band when it fits, otherwise it
+  scrolls the fresh prompt to the viewport end. Empty startup and `clear`/`Ctrl+L`
+  return to the centered empty-session placement. The connecting startup surface
+  and ready boot session share a bounded tall-viewport offset so relocating the
+  boot log does not change its geometry. This responsive fallback is required at
   the mobile profile as well as desktop.
 
 #### Read-only Vim reader
@@ -592,7 +597,7 @@ startTerminalReader(root: HTMLElement): void
 | built-in `clear` alias | `help`, `alias`, execution, and completion all expose `cls=clear` from the canonical registry definition |
 | `ls lab` presentation | render listed experiments as flat no-marker terminal rows with native links and readable titles; preserve catalog navigation |
 | inline `cat` stream footer | end at the trusted document content without a redundant `Return to prompt` control; keep the prompt below and focused |
-| long help after prior output | first new record line not top-clipped; fresh prompt usable/visible when geometry permits |
+| long help after prior output | fitting record/prompt group centered in the readable band; oversized output keeps the fresh prompt usable/visible without top-clipping the new record |
 | JavaScript unavailable or reader startup cannot initialize | full document/breadcrumb remains usable |
 | empty reader search | cancel the input without creating or replacing a committed query |
 | committed literal search with matches | one exact DOM range per non-overlapping occurrence; persistent current/total status; all/active CSS Highlights when supported |
