@@ -3,3 +3,6 @@
 {"file":".trellis/tasks/08-20-terminal-viewport-alignment/design.md","reason":"Check geometry math, responsive/reduced-motion behavior, accessibility constraints, and non-document/document settlement boundaries."}
 {"file":".trellis/tasks/08-20-terminal-viewport-alignment/research/ui-ux-pro-max.md","reason":"Check the visual implementation against approved spatial-continuity, responsive containment, focus, and reduced-motion guidance."}
 {"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Check the controller preserves existing prompt focus, empty-state, native scroll, and document-reader contracts."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check shared non-document settlement and oversized-output fallback wording."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check browser validation terminology remains synchronized."}
+{"file":".trellis/spec/frontend/index.md","reason":"Check the project Playwright profile names stable-band/document settlement."}

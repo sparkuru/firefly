@@ -6,8 +6,9 @@
    command/clear path without changing history, completion, or document effects.
 2. Replace the non-document record-top scroll offset with the approved centered
    reading-band calculation and retain the oversized-output fallback.
-3. Add bounded tall-viewport CSS compensation for the boot log plus initial
-   prompt; keep the existing empty-session centering rule unchanged.
+3. Add bounded tall-viewport CSS compensation to both the connecting boot
+   staging surface and the ready boot log plus initial prompt; keep the existing
+   empty-session centering rule unchanged.
 4. Extend `apps/site/tests/terminal.spec.ts` with a 2048×1244 geometry flow for
    startup, short output, long output, and clear; preserve the existing desktop,
    mobile, reduced-motion, and no-overflow assertions.
@@ -21,6 +22,9 @@
 - `apps/site/tests/terminal.spec.ts`
 - `.trellis/spec/frontend/hook-guidelines.md`
 - `.trellis/spec/frontend/type-safety.md`
+- `.trellis/spec/frontend/content-workspace-contract.md`
+- `.trellis/spec/frontend/quality-guidelines.md`
+- `.trellis/spec/frontend/index.md`
 
 ## Validation commands
 

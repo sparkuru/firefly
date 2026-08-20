@@ -106,7 +106,7 @@ its own lockfile, then run its checks:
     safe unique/ambiguous path completion with prefix preservation, prompt-wide
     Tab prevention and native outside-prompt traversal, prompt Ctrl+C cancellation, IME-safe and mobile
     soft-keyboard Enter submission, inline `cat` with unchanged URL,
-    record-start/document viewport settlement, safe printable typing with native/
+    stable-band/document viewport settlement, safe printable typing with native/
     ARIA widget and local-scroll exclusions, actual 400/500 font loading,
     repeated-clone ID/reference scoping, nested tree/cat/vim paths, canonical
     document/directory routes, breadcrumb navigation, and the read-only Vim

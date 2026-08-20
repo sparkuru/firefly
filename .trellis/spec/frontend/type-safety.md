@@ -489,6 +489,14 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
   active prompt. It clears the visible transcript through the same path as the
   `clear` effect, resets input/completion, preserves submitted history for
   ArrowUp, and leaves modified or IME-composed variants native.
+- Terminal home settlement uses one stable reading band: empty startup and
+  `clear`/`Ctrl+L` center the fresh prompt, a fitting non-document record plus
+  prompt are centered together, and oversized output keeps the fresh prompt
+  visible at the lower edge. The connecting startup surface and ready boot
+  session share one bounded tall-viewport offset so relocating the boot log
+  preserves its geometry; that transient offset must be removed after the
+  first output. Document effects retain their title-at-reading-start
+  settlement. Smooth scrolling becomes immediate under `prefers-reduced-motion`.
 - The same active-prompt boundary owns unmodified `Ctrl+A` (select all),
   `Ctrl+E` (caret to end), and `Ctrl+U` (delete input before the selection/caret
   while leaving the caret at zero). All three dismiss completion; Meta/Alt/

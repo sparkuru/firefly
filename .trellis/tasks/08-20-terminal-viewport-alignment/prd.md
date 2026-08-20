@@ -32,7 +32,8 @@ centering rule and the output-scrolling rule fight each other.
   empty startup state, non-document output, and transcript clearing. The
   approved stable reading band must preserve readable command output while
   avoiding a gratuitous jump between the centered empty state and the first
-  settled output.
+  settled output. The connecting boot staging surface and the ready session
+  must also share their initial log geometry when the boot record is relocated.
 - R2: Keep the prompt focused after command submission and preserve the current
   behavior for document results, reduced-motion preferences, mobile viewports,
   history, completion, and keyboard shortcuts.
@@ -52,21 +53,34 @@ centering rule and the output-scrolling rule fight each other.
 
 ## Acceptance Criteria
 
-- [ ] The final planning decision defines an observable vertical policy for
-      startup, short output, long output, and clear states.
-- [ ] At the configured tall desktop viewport, the prompt and the relevant
+- [x] The final planning decision defines an observable vertical policy for
+      connecting/ready startup, short output, long output, and clear states.
+- [x] At the configured tall desktop viewport, the prompt and the relevant
       output occupy the intended readable band without the current top/center
       discontinuity; repeated commands remain stable.
-- [ ] `clear`, `cls`, and `Ctrl+L` return to the same intentional empty-state
+- [x] `clear`, `cls`, and `Ctrl+L` return to the same intentional empty-state
       placement, while history and focus behavior remain intact.
-- [ ] Existing Terminal type-check, unit tests, site check/build, and desktop
+- [x] Existing Terminal type-check, unit tests, site check/build, and desktop
       plus mobile Playwright suites pass; the new geometry assertions pass.
-- [ ] `git diff --check` passes and no unrelated task changes are included.
+- [x] `git diff --check` passes and no unrelated task changes are included.
 
 ## Decision status
 
 Resolved: use the stable centered reading band described above. Traditional
 bottom-of-output cursor positioning is out of scope for this task.
+
+## Completion evidence
+
+- Terminal TypeScript check and unit suite: passed, 29/29.
+- Main-site Astro check: passed with 0 errors, 0 warnings, and 0 hints.
+- Main-site build/static output checks: passed, 14/14.
+- Terminal home Playwright: passed, 66/66 across desktop and mobile projects,
+  including the 2048×1244 reduced-motion geometry flow and pending-startup
+  staging-to-session log-top continuity assertion.
+- Full site Playwright: passed, 122/122 across static, Terminal, and reader
+  projects.
+- `git diff --check`: passed. Existing CSS optimizer warnings for `::highlight`
+  remain unrelated and unchanged.
 
 ## Notes
 
