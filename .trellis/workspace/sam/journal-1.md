@@ -563,3 +563,37 @@ Added common-prefix Tab completion with a vertical accessible candidate list, Ta
 ### Status
 
 [OK] **Completed**
+
+
+## Session 28: Unify terminal virtual resource paths and archive P0 rollout
+
+**Date**: 2026-08-20
+**Task**: Unify terminal virtual resource paths and archive P0 rollout
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+统一 Terminal 用户路径语法为 cwd-relative 或 ~/blog absolute，补齐规格、测试与生产回归；完成路径修复及 P0 生产记录归档。
+
+### Main Changes
+
+- 统一终端路径解析、补全、open/cat/cd/ls/tree/grep/vim 与站点目录入口。
+- 同步前端契约、任务 PRD 和 P0 生产记录，保留敏感部署细节在本地临时记录。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `efafc51` | (see git log) |
+
+### Testing
+
+- [OK] Terminal 29/29；Terminal Playwright 64/64；站点 Playwright 120/120；Astro check/build 通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 按主线继续处理 P1，P2 保持不动。
