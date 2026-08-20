@@ -710,7 +710,7 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
 test('vim opens a Terminal document reader with the unified presentation', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
-  await input.fill('vim /pages/about.md');
+  await input.fill('vim ~/blog/pages/about.md');
   await input.press('Enter');
 
   await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
@@ -775,7 +775,7 @@ test('direct canonical permalinks keep reader focus and key ownership idle', asy
 test('reader entry keeps native Back and Forward route boundaries', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
-  await input.fill('vim /pages/about.md');
+  await input.fill('vim ~/blog/pages/about.md');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
 

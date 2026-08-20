@@ -132,9 +132,13 @@ export function executeLs(context: ProcessContext, args: ParsedCommandArguments)
     return successResult([formatDocument(node.document)], { value: { kind: 'directory-listing', listing } });
   }
   if (node?.kind === 'experiment') {
+    const cwdPrefix = context.cwd === '/' ? '/' : `${context.cwd}/`;
+    const operand = node.path.startsWith(cwdPrefix)
+      ? node.path.slice(cwdPrefix.length)
+      : `~/blog${node.path}`;
     return successResult([
       `${node.experiment.id}/ — ${node.experiment.title}`,
-      `Use "open lab/${node.experiment.id}" to enter this experiment.`
+      `Use "open ${operand}" to enter this experiment.`
     ]);
   }
   const listing = node?.kind === 'directory' ? context.fs.list(path) : undefined;

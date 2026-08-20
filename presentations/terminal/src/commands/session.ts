@@ -10,7 +10,7 @@ import type {
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
 
-export const OPEN_USAGE = 'open lab/<id>';
+export const OPEN_USAGE = 'open <path>';
 export const VIM_USAGE = 'vim <path>';
 export const OPEN_SUMMARY = 'open a listed experiment';
 export const VIM_SUMMARY = 'open a public document in the reader';
@@ -187,13 +187,10 @@ export function executeAlias(context: ProcessContext, args: ParsedCommandArgumen
 
 export function executeOpen(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
   const { operands } = args;
-  if (operands.length !== 1 || (!operands[0]!.startsWith('lab/') && !operands[0]!.startsWith('/lab/'))) {
-    return failureResult(`Usage: ${OPEN_USAGE}`);
-  }
-  const input = operands[0]!.startsWith('/') ? operands[0]! : `/${operands[0]!}`;
-  const resolution = context.fs.resolve(input, context.cwd, 'resource');
+  if (operands.length !== 1) return failureResult(`Usage: ${OPEN_USAGE}`);
+  const resolution = context.fs.resolve(operands[0]!, context.cwd, 'resource');
   const node = resolution.ok ? context.fs.stat(resolution.path) : undefined;
-  if (node?.kind !== 'experiment') return failureResult(`No listed experiment named "${operands[0]}". Try "ls lab".`);
+  if (node?.kind !== 'experiment') return failureResult(`No listed experiment named "${operands[0]}". Try "ls".`);
   return successResult([], { controls: [{ kind: 'open-experiment', id: node.experiment.id }] });
 }
 
@@ -203,7 +200,7 @@ export function executeVim(context: ProcessContext, args: ParsedCommandArguments
   const resolution = context.fs.resolve(operands[0]!, context.cwd, 'resource');
   const node = resolution.ok ? context.fs.stat(resolution.path) : undefined;
   if (node?.kind !== 'document') {
-    return failureResult(`No public document named "${operands[0]}". Try "tree" or "tree /".`);
+    return failureResult(`No public document named "${operands[0]}". Try "tree" or "tree ~/blog".`);
   }
   return successResult([], { controls: [{ kind: 'open-document', path: node.document.path }] });
 }

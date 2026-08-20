@@ -11,7 +11,7 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
 
   await page.goto('/');
   const prompt = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
-  await prompt.fill('tree /');
+  await prompt.fill('tree ~/blog');
   await prompt.press('Enter');
   await expect(page.locator('.terminal-tree')).toBeVisible();
   await capture('tree');

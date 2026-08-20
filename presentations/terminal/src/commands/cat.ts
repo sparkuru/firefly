@@ -6,7 +6,7 @@ export const CAT_USAGE = 'cat [path]';
 export const CAT_SUMMARY = 'render a document or stream text';
 
 function unreadableResource(operand: string): ProcessResult {
-  return failureResult(`No readable rshell resource named "${operand}". Try "tree" or "tree /".`);
+  return failureResult(`No readable rshell resource named "${operand}". Try "tree" or "tree ~/blog".`);
 }
 
 export function executeCat(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
@@ -18,7 +18,7 @@ export function executeCat(context: ProcessContext, args: ParsedCommandArguments
   if (!resolution.ok) return unreadableResource(operand);
   const node = context.fs.stat(resolution.path);
   if (node?.kind === 'experiment') {
-    return failureResult(`Cannot read rshell experiment "${operand}" as a document. Try "open lab/${node.experiment.id}".`);
+    return failureResult(`Cannot read rshell experiment "${operand}" as a document. Try "open ${operand}".`);
   }
   if (node?.kind === 'directory') {
     return failureResult(`Cannot read rshell directory "${operand}" as a document. Try "ls ${operand}".`);

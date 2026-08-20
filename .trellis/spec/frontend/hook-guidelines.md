@@ -51,13 +51,16 @@ The default immutable registry recognizes `help`, `ls`, `open`, `cat`, `vim`,
 `tree`, `friends`, `about`, `pwd`, `whoami`, `date`, `history`, and `clear`. Each definition
 owns aliases, help/usage, execution, and optional completion. The shipped
 registry has no surprise aliases; tests prove a custom definition and alias.
-`ls lab` returns a closed Experiment-list effect. `open lab/<id>`
-returns a navigation effect only for an exact decoded listed ID; the controller
-navigates to that validated canonical mount and never constructs a destination
-from raw command input. `cat`/`vim` resolve nested paths through the same virtual
-filesystem: relative operands are under posts, one exact `./` is optional, and
-virtual absolute operands begin only `/posts/` or `/pages/`. Hidden/dot/
-traversal/percent/backslash/URL/non-NFC inputs do not resolve. A valid `cat`
+Every path-aware command accepts either a cwd-relative operand or the explicit
+absolute root `~/blog`; `/...`, bare `~`, and bare `~/` are rejected as user
+syntax. Internal VFS keys and native browser hrefs remain slash-rooted. `ls lab`
+returns a closed Experiment-list effect. `open <path>` returns a navigation
+effect only for an exact decoded listed ID, so `open nerv` works from
+`~/blog/lab`, `open lab/nerv` works only from `~/blog`, and cross-cwd input is
+`open ~/blog/lab/nerv`. The controller navigates to the validated canonical
+mount and never constructs a destination from raw command input. `cat`/`vim`
+use the same resolver. Hidden/dot/traversal/percent/backslash/URL/non-NFC inputs
+do not resolve. A valid `cat`
 returns `document`; `vim` returns `document-navigation` with the validated entry.
 The controller clones only
 the matching validated `HTMLTemplateElement.content`, scopes clone-owned IDs and
@@ -97,9 +100,12 @@ recovery path as malformed identity/index/template data.
   first Tab applies only that shared prefix and renders an input-owned vertical
   listbox; later Tabs cycle its active option without replacing input. Enter or
   Space commits an active option without submitting, while Escape dismisses the
-  panel and preserves input. Safe `cat`/`vim` paths retain their `./` or `/`
+  panel and preserves input. Safe `cat`/`vim` paths retain their `./` or `~/blog/`
   display prefixes; zero-result completion keeps exact input/focus and shows
-  `No matches.` Tab outside the prompt remains native.
+  `No matches.` With the panel open, unmodified ArrowUp/ArrowDown cycle the
+  active option without entering history; when it is closed, those arrows retain
+  their history behavior. Modified or composing arrows remain native and do not
+  dismiss the panel. Tab outside the prompt remains native.
 - Exact unmodified prompt `Ctrl+C` cancels current input/completion and history
   traversal draft without submitting, clearing prior transcript/history, or
   stealing composition and Alt/Meta/Shift variants.
