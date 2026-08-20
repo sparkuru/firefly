@@ -666,3 +666,24 @@ Added common-prefix Tab completion with a vertical accessible candidate list, Ta
 ### Next Steps
 
 - 继续跟踪 P1/P2 主线；本次未推送远端。
+
+
+## Session 31: Extract M5.1 comments into an internal plugin
+
+**Date**: 2026-08-20
+**Task**: Extract M5.1 comments into an internal plugin
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented the statically registered comments plugin with post-only Semantic/Terminal UI adapters, publication bridge, private service factory, durable notification outbox, provider-neutral Zoho-compatible SMTP worker, strict delivery validation, and task/spec documentation. Sequential M5.1 checks, tests, and build passed; real Zoho staging send remains operator-owned.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c6118fd` | (see git log) |
+
+### Status
+
+[OK] **Completed**
