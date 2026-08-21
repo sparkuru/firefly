@@ -76,6 +76,13 @@ publication contract.
 - **R8 — Verification:** add contract tests proving plugin disabled/enabled
   behavior, both document presentations, publication handoff, service
   isolation, and notification-provider substitution.
+- **R9 — Unified configuration:** use the repository's single site configuration
+  source for plugin settings. Each plugin owns the schema and reads only its
+  declared namespace; the host must not duplicate comments-specific settings.
+- **R10 — Secret projection:** separate public build settings from private
+  runtime settings. SMTP passwords and other credentials are supplied through
+  an owner-controlled secret reference or environment input, never as literal
+  values in the unified configuration or static publication.
 
 ## Recommended scope
 
@@ -93,8 +100,8 @@ mail delivery; production mailbox provisioning and rollout remain separate.
 - SSR/runtime comment reads or a public comment-count API.
 - Rich text, media, reactions, nested threads, public accounts, or profiles.
 - A generic third-party plugin marketplace or cross-project npm product.
-- Rewriting the existing M5.1 privacy/publication contract without a separate
-  owner decision.
+- Rewriting the existing M5.1 privacy/publication contract; this configuration
+  amendment only changes how plugin settings are loaded and projected.
 
 ## Acceptance criteria
 
@@ -128,6 +135,9 @@ mail delivery; production mailbox provisioning and rollout remain separate.
   without retry and failure handling.
 - Zoho Mail is the intended production-compatible provider. The task does not
   provision the mailbox, DNS, credentials, or production deployment.
+- The current project retains `config/site.toml` as the only editable site
+  configuration source. A YAML migration, if desired later, is a separate
+  format-migration task and must not create two active sources of truth.
 
 ## Planning artifact status
 
@@ -135,6 +145,14 @@ mail delivery; production mailbox provisioning and rollout remain separate.
 - `design.md`: approved and implemented on 2026-08-20.
 - `implement.md`: completed as a serial, independently verified work plan on
   2026-08-20.
+
+### Approved follow-up amendment — 2026-08-21
+
+The planning/design is extended with R9/R10: registered plugins consume their
+own namespace from the unified TOML configuration, while the host passes only
+the public projection to the static build and the private projection to the
+service. The comments plugin continues to accept environment overrides for
+deployment compatibility, but a literal SMTP password in TOML is invalid.
 
 ## Verification record
 

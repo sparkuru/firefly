@@ -6,6 +6,54 @@ Proposed design for final plan review. It is based on the current M5.1
 implementation, the frontend Trellis specs, and the task-local UI/UX research.
 Implementation must not begin until this plan is explicitly approved.
 
+## Approved configuration amendment — 2026-08-21
+
+The plugin configuration model is amended to use one repository configuration
+source with plugin-owned namespaces. The current project format remains
+`config/site.toml`; `site.yaml` is not introduced as a second source of truth.
+This amendment changes the configuration boundary, not the public comments
+publication contract.
+
+The root loader parses the TOML once and dispatches the `comments` namespace
+to the comments plugin's schema. The plugin returns two projections:
+
+- a public build projection containing only `enabled`, `writeOrigin`,
+  `exportPath`, and `consentVersion`;
+- a private runtime projection containing SMTP and outbox options for the
+  service and delivery worker.
+
+Non-secret SMTP options may be declared under the plugin namespace. Passwords
+and other credentials must remain runtime inputs. The TOML may contain a
+reference such as `passwordEnv = "COMMENTS_SMTP_PASSWORD"`, but never the
+password value itself. The plugin resolves that reference from the process
+environment or an owner-only secret file. Existing `COMMENTS_SMTP_*` variables
+remain a compatibility override during migration.
+
+The intended shape is:
+
+```toml
+[comments]
+enabled = false
+writeOrigin = "https://comments.example.com"
+exportPath = "artifacts/comments/comments.public.v1.json"
+consentVersion = "m51-v1"
+
+[comments.smtp]
+host = "smtppro.zoho.com"
+port = 587
+secure = false
+user = "noreply@example.com"
+from = "noreply@example.com"
+fromName = "firefly-comments"
+passwordEnv = "COMMENTS_SMTP_PASSWORD"
+publicOrigin = "https://comments.example.com"
+```
+
+The static site must never receive or serialize the runtime projection. A
+disabled comments plugin must not require either projection's service files or
+secrets. Enabling the plugin validates the complete public configuration before
+the site build and validates runtime configuration before service startup.
+
 ## 1. Design summary
 
 Comments become a statically registered, internal Firefly plugin. The plugin is
@@ -203,7 +251,34 @@ be written.
 
 ### Configuration
 
-Use provider-neutral environment variables with explicit validation:
+Use the unified `config/site.toml` namespace for non-secret plugin settings,
+with explicit public/runtime projection and validation:
+
+```text
+[comments]
+enabled
+writeOrigin
+exportPath
+consentVersion
+
+[comments.smtp]
+host
+port
+secure
+user
+from
+fromName
+passwordEnv
+publicOrigin
+```
+
+The comments plugin owns the schema for both namespaces. Firefly core owns only
+the generic load-once/dispatch mechanism and does not add SMTP-specific keys
+to the site host schema. The private service receives the runtime projection;
+the Astro build receives the public projection.
+
+For deployment compatibility, the runtime projection may be overridden by
+provider-neutral environment variables with explicit validation:
 
 ```text
 COMMENTS_SMTP_HOST
@@ -214,6 +289,12 @@ COMMENTS_SMTP_PASSWORD     # app-specific password when required
 COMMENTS_SMTP_FROM         # authenticated mailbox or permitted alias
 COMMENTS_SMTP_FROM_NAME
 ```
+
+`COMMENTS_SMTP_PASSWORD` remains a required runtime secret when SMTP delivery
+is enabled. `passwordEnv` identifies its source; the password value is never
+accepted from `config/site.toml`, fixtures, publication output, browser code,
+or logs. Outbox paths and runtime service settings follow the same private
+projection boundary.
 
 For Zoho, the operator selects the documented host for the account type and
 uses either port 465 with implicit SSL or port 587 with STARTTLS. The exact
