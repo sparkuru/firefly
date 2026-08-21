@@ -25,7 +25,7 @@
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
-| 7 | M5.1 — dynamic comments and identity service | in_progress | Owner approved the converged planning summary and activated implementation on 2026-08-20. Serial child tasks cover the isolated service, static consumer, and publication/operations; the main site must not become SSR or directly read the database. |
+| 7 | M5.1 — dynamic comments and identity service | ready_for_provisioning | Implementation and WIP convergence are complete in serial child tasks; the static site remains disabled by default, and external service provisioning is a separate owner-authorized gate. The main site must not become SSR or directly read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 
@@ -64,6 +64,15 @@
 - M5.1 was initially deferred, then re-authorized by the owner on 2026-08-20. The final planning summary was approved and the parent task activated; implementation is proceeding through serial child tasks with the static-only boundary preserved.
 - M5.1 planning and implementation artifacts are archived under `.trellis/tasks/archive/2026-08/08-14-m51-dynamic-comments-identity/`, `.trellis/tasks/archive/2026-08/08-20-m51-comments-service-core/`, `.trellis/tasks/archive/2026-08/08-20-m51-static-comment-consumer/`, and `.trellis/tasks/archive/2026-08/08-20-m51-comments-publication-ops/`. The approved contracts define the self-built write/moderation service, static export, post-only scope, plain-text body, privacy controls, and rollback gates.
 - M5.1 implementation evidence: the service child passes 15/15 tests plus check/build, including consent, encrypted private email, hashed tokens, verification/moderation/replies, retention, SQLite, export, and backup/restore. The site child passes 35/35 content tests, 15/15 static-output tests in both disabled and enabled-fixture builds, Astro check, and full site Playwright 122/122. The publication/ops child passes assembler 7/7, assembled-publication Playwright 4/4, default publication build, `check:m51`, `test:m51`, shell syntax/ShellCheck/shfmt, and `package-runtime.sh` runtime probes. The tracked config remains `comments.enabled = false`; no deployment or credentials were used.
+- M5.1 WIP convergence evidence (2026-08-21): `433c16d` integrates the
+  plugin-owned comments public/private configuration boundary, Node `v22.23.1`
+  service/site checks, root-context Docker/read-only config probes, raw SMTP
+  and private-path regressions, and privacy scanning. `6f60776` aligns the
+  canonical nested post route, accepts deeper authored post output by shape,
+  passes assembler 7/7, content 36/36, publication Playwright 4/4, runtime
+  probes, and stale-route scanning. The two child tasks are archived under
+  `.trellis/tasks/archive/2026-08/08-21-*`; no external service or credential
+  was provisioned.
 - Production rollout evidence: P0's guarded release procedure completed on
   2026-08-20. The promoted publication matched its locally verified candidate;
   public representative site/content/experiment routes, distinct 404s,
@@ -79,8 +88,9 @@
 ## Next Decision
 
 Production and the P1 roadmap reconciliation are complete. M5.1
-planning/design and implementation were committed in `41e0207` and
-archived in the serial child-task sequence. Historic counters remain private
-unless a separate task defines their schema and presentation. The next
-decision is the owner review/rollout gate for external service provisioning;
-the static site remains disabled by default.
+planning/design and implementation were previously committed in `41e0207` and
+are now reconciled with the WIP convergence commits `433c16d` and `6f60776`;
+the serial child tasks are archived. Historic counters remain private unless
+a separate task defines their schema and presentation. The next decision is
+the owner review/rollout gate for external service provisioning; the static
+site remains disabled by default.

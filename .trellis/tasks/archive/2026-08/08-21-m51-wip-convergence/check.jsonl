@@ -1,0 +1,9 @@
+{"file":".trellis/tasks/08-21-m51-wip-convergence/prd.md","reason":"Review parent observable acceptance criteria and out-of-scope boundaries."}
+{"file":".trellis/tasks/08-21-m51-wip-convergence/design.md","reason":"Review cross-layer data flow, child ownership, compatibility, and rollback."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Check static/public-private comments boundary and export safety."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Check config parser ownership, secret exclusion, and safe path rules."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check exact validation, container, and lockfile expectations."}
+{"file":".trellis/tasks/archive/2026-08/08-21-comments-config-boundary/prd.md","reason":"Review archived comments child acceptance criteria and privacy exclusions."}
+{"file":".trellis/tasks/archive/2026-08/08-21-comments-config-boundary/design.md","reason":"Review archived comments child boundary and environment precedence."}
+{"file":".trellis/tasks/archive/2026-08/08-21-publication-route-alignment/prd.md","reason":"Review archived canonical route and publication acceptance criteria."}
+{"file":".trellis/tasks/archive/2026-08/08-21-publication-route-alignment/design.md","reason":"Review archived nested route handling and path safety constraints."}

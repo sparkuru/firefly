@@ -1,0 +1,13 @@
+{"file":".trellis/tasks/08-21-m51-wip-convergence/prd.md","reason":"Parent requirements, acceptance criteria, scope boundary, and current WIP evidence."}
+{"file":".trellis/tasks/08-21-m51-wip-convergence/design.md","reason":"Parent data flow, child boundaries, compatibility, rollback, and mainline reconciliation."}
+{"file":".trellis/tasks/08-21-m51-wip-convergence/implement.md","reason":"Parent serial execution order and validation commands."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Durable public/private comments and publication contract."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Site configuration projection, safety, and secret exclusion contract."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Repository ownership of plugin configuration files."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Runtime, lockfile, container, and unavailable-check conventions."}
+{"file":".trellis/tasks/archive/2026-08/08-21-comments-config-boundary/prd.md","reason":"Archived comments child requirements and acceptance criteria."}
+{"file":".trellis/tasks/archive/2026-08/08-21-comments-config-boundary/design.md","reason":"Archived comments child configuration ownership and runtime data flow."}
+{"file":".trellis/tasks/archive/2026-08/08-21-comments-config-boundary/implement.md","reason":"Archived comments child execution and validation order."}
+{"file":".trellis/tasks/archive/2026-08/08-21-publication-route-alignment/prd.md","reason":"Archived publication route child requirements and acceptance criteria."}
+{"file":".trellis/tasks/archive/2026-08/08-21-publication-route-alignment/design.md","reason":"Archived publication route child boundaries and path safety constraints."}
+{"file":".trellis/tasks/archive/2026-08/08-21-publication-route-alignment/implement.md","reason":"Archived publication route child execution and validation order."}

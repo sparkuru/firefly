@@ -1,0 +1,5 @@
+{"file":".trellis/tasks/08-21-comments-config-boundary/prd.md","reason":"Check privacy, static-only, and validation acceptance criteria."}
+{"file":".trellis/tasks/08-21-comments-config-boundary/design.md","reason":"Check parser projections, precedence, Docker boundary, and rollback."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Verify durable public/private contract compliance."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Verify strict config and secret handling rules."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Verify package/runtime/container checks and unavailable-check handling."}
