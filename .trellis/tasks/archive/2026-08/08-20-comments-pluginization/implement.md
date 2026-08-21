@@ -121,6 +121,35 @@ Acceptance: a clean disabled build/check works without private service or SMTP
 variables; staging documentation makes it possible to verify mail safely
 without suggesting production credentials belong in the repository.
 
+## Work package 5A — unify plugin configuration and secret projection
+
+This follow-up package applies the approved 2026-08-21 configuration amendment
+without changing the existing public export or service route contracts.
+
+1. Add a root configuration loader that parses `config/site.toml` once and
+   dispatches each registered plugin namespace to a plugin-owned schema.
+2. Add a comments configuration schema for `[comments]` and `[comments.smtp]`.
+   Preserve `comments.enabled`, `comments.writeOrigin`, `comments.exportPath`,
+   and `comments.consentVersion` exactly for the public site.
+3. Add an explicit public projection/runtime projection boundary. The Astro
+   site receives only public comments settings; the private service and mailer
+   receive runtime settings.
+4. Resolve `passwordEnv` (or an equivalent owner-only secret reference) at
+   runtime. Reject literal SMTP passwords in the unified file and keep the
+   existing `COMMENTS_SMTP_*` environment variables as a migration override.
+5. Add tests for plugin-owned schema validation, unknown-key diagnostics,
+   disabled behavior without runtime secrets, runtime secret resolution, and
+   the guarantee that the public projection cannot contain SMTP credentials or
+   private paths.
+6. Update the configuration template and operator documentation with a safe
+   Zoho example using placeholders only.
+
+Acceptance: changing a non-secret option in the comments namespace changes the
+plugin behavior without editing site host code; a disabled build remains
+independent of service files and secrets; a runtime worker can resolve its SMTP
+password only from an owner-provided secret source; and no password or runtime
+path reaches static output, fixtures, or logs.
+
 ## Work package 6 — focused and full verification
 
 Run focused checks after each work package, then the project-standard full gate:
