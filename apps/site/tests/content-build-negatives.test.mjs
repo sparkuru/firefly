@@ -57,7 +57,7 @@ draft: false
 layout: page
 presentation: semantic
 aliases:
-  - /posts/main/379/
+  - /posts/ai/llm-workflow-with-trellis/
 ---
 
 ## Duplicate fixture
@@ -66,7 +66,7 @@ This content must never be published.
 `,
       patterns: [
         /Route collision/u,
-        /document posts\/main\/llm-workflow-with-trellis\.md/u,
+        /document posts\/ai\/llm-workflow-with-trellis\.md/u,
         /alias for pages\/x-core-negative-duplicate\.md/u
       ]
     });

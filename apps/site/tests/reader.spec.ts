@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function openReader(page: Page) {
-  await page.goto('/posts/main/379/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
   const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await region.focus();
   await expect(region).toBeFocused();
@@ -223,7 +223,7 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
 });
 
 test('reader searches exact repeated occurrences from the canonical fragment entry', async ({ page }) => {
-  await page.goto('/posts/main/379/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
   const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
 
@@ -276,7 +276,7 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
 });
 
 test('reader keeps committed search status visible while scrolling and clears it on cancellation', async ({ page }) => {
-  await page.goto('/posts/main/379/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
   const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await region.focus();
   await region.press('/');
@@ -337,7 +337,7 @@ test('reader keeps committed search status visible while scrolling and clears it
 test('reader search cycles keep transient prompt chrome separate in both directions', async ({ page }) => {
   const routes = [
     {
-      path: '/posts/main/379/#terminal-reader',
+      path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
       regionName: /Read-only Vim reader for llm-workflow-with-trellis/u,
       query: 'trellis'
     },
@@ -484,7 +484,7 @@ test('reader command input also leaves committed search chrome while editing', a
 test('reader search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
   const routes = [
     {
-      path: '/posts/main/379/#terminal-reader',
+      path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
       regionName: /Read-only Vim reader for llm-workflow-with-trellis/u
     },
     {
@@ -693,9 +693,9 @@ test('reader never treats a user-replaced visual Range as its owned selection', 
 test('vim resolves a closed canonical destination and :q exits directly to home', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
-  await input.fill('vim ./main/llm-workflow-with-trellis.md');
+  await input.fill('vim ./ai/llm-workflow-with-trellis.md');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/posts\/main\/379\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#terminal-reader$/u);
   const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
   await region.press('G');
@@ -739,7 +739,7 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
     };
   });
 
-  await page.goto('/posts/main/379/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
   await expect.poll(() => page.evaluate(() => document.activeElement?.id ?? '')).toBe('terminal-reader');
   const result = await page.evaluate(() => ({
     active: document.activeElement?.id,
@@ -752,7 +752,7 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
 });
 
 test('direct canonical permalinks keep reader focus and key ownership idle', async ({ page }) => {
-  await page.goto('/posts/main/379/');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/');
   const foundationRegion = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(foundationRegion).not.toBeFocused();
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();

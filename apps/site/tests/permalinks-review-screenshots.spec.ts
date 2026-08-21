@@ -9,7 +9,7 @@ test('capture canonical reader entry and idle states', async ({ page }, testInfo
     animations: 'disabled'
   });
 
-  await page.goto('/posts/main/379/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
   const semanticReader = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
   await expect(semanticReader).toBeFocused();
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();

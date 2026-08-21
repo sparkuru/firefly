@@ -31,8 +31,8 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   await expect(page.locator('[data-terminal-completion]')).toHaveText('No matches.');
   await capture('path-completion');
 
-  await page.goto('/posts/main/');
-  await expect(page.getByRole('heading', { name: 'posts/main/' })).toBeVisible();
+  await page.goto('/posts/ai/');
+  await expect(page.getByRole('heading', { name: 'posts/ai/' })).toBeVisible();
   await capture('nested-directory');
 
   await page.goto('/pages/about/');
