@@ -687,3 +687,38 @@ Implemented the statically registered comments plugin with post-only Semantic/Te
 ### Status
 
 [OK] **Completed**
+
+
+## Session 32: Unify Terminal document paths
+
+**Date**: 2026-08-21
+**Task**: Unify Terminal document paths
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Unified visible Terminal document and directory paths under ~/blog, removed the duplicate body source-path marker, updated frontend contracts and focused static/browser assertions, and archived the task after manual visual review. Main-site automated validation remains blocked by pre-existing unsupported COMMENTS_* keys in config/site.toml.
+
+### Main Changes
+
+- Title-bar paths now use ~/blog/<virtualPath> while internal VFS paths and canonical web URLs remain slash-rooted.
+- Terminal documents render the source identity once in the title bar; title, metadata, outline, reader, and content remain intact.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `af97ed9` | (see git log) |
+
+### Testing
+
+- [OK] Terminal type-check passed; Terminal tests passed 29/29; git diff --check passed.
+- [OK] Manual browser review passed; main-site check/content automation was blocked by the existing site-config comments-key error.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Resolve the unrelated config/site.toml COMMENTS_* schema mismatch before rerunning full Astro and Playwright validation.

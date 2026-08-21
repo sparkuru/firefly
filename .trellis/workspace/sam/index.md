@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 31
-- **Last Active**: 2026-08-20
+- **Total Sessions**: 32
+- **Last Active**: 2026-08-21
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~689 | Active |
+| `journal-1.md` | ~724 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 32 | 2026-08-21 | Unify Terminal document paths | `af97ed9` | `anti-entropy-loss-syndrome` |
 | 31 | 2026-08-20 | Extract M5.1 comments into an internal plugin | `c6118fd` | `anti-entropy-loss-syndrome` |
 | 30 | 2026-08-20 | Stabilize Terminal home viewport alignment | `e3b1a18` | `anti-entropy-loss-syndrome` |
 | 29 | 2026-08-20 | Reconcile roadmap and sanitize staging history | `8b8532b` | `anti-entropy-loss-syndrome` |
