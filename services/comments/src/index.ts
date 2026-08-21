@@ -7,5 +7,6 @@ export * from './notifications.js';
 export * from './smtp.js';
 export * from './service.js';
 export * from './sqlite-repository.js';
+export * from './storage.js';
 export * from './types.js';
 export * from './validation.js';

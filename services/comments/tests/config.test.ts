@@ -1,10 +1,33 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { loadCommentsRuntimeConfig } from '../src/config.js';
+import { loadCommentsRuntimeConfig, loadCommentsSecrets, parseCommentsSecrets } from '../src/config.js';
+
+test('dotenv parser accepts only the small non-expanding key/value subset', () => {
+  assert.deepEqual(parseCommentsSecrets('# comment\nCOMMENTS_TOKEN_SECRET=literal-value\nCOMMENTS_SMTP_PASSWORD=value=with=equals\n'), {
+    COMMENTS_TOKEN_SECRET: 'literal-value',
+    COMMENTS_SMTP_PASSWORD: 'value=with=equals'
+  });
+  assert.throws(() => parseCommentsSecrets('COMMENTS_TOKEN_SECRET=one\nCOMMENTS_TOKEN_SECRET=two\n'), /Duplicate comments secrets key/u);
+  assert.throws(() => parseCommentsSecrets('COMMENTS-TOKEN=unsafe\n'), /Invalid comments secrets entry/u);
+});
+
+test('comments secrets require owner-only readable regular files and keep values out of errors', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-secrets-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const secretsPath = path.join(directory, 'secrets.env');
+  const privateValue = 'safe-test-only-value';
+  await writeFile(secretsPath, `COMMENTS_TOKEN_SECRET=${privateValue}\n`);
+  await chmod(secretsPath, 0o640);
+  assert.throws(() => loadCommentsSecrets({ COMMENTS_SECRETS_FILE: secretsPath }), /permissions are too broad/u);
+  await chmod(secretsPath, 0o600);
+  const loaded = loadCommentsSecrets({ COMMENTS_SECRETS_FILE: secretsPath });
+  assert.equal(loaded.COMMENTS_TOKEN_SECRET, privateValue);
+  assert.equal(loadCommentsSecrets({ COMMENTS_SECRETS_FILE: secretsPath, COMMENTS_TOKEN_SECRET: 'environment-value' }).COMMENTS_TOKEN_SECRET, 'environment-value');
+});
 
 test('compiled runtime loader resolves the shared plugin decoder from the repository root', async () => {
   const compiledLoaderPath = fileURLToPath(new URL('../src/config.js', import.meta.url));

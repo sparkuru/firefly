@@ -14,11 +14,13 @@ FROM node:22-alpine
 
 WORKDIR /app/services/comments
 ENV NODE_ENV=production \
-    COMMENTS_BIND=0.0.0.0 \
+    COMMENTS_BIND=127.0.0.1 \
     COMMENTS_PORT=8787 \
-    COMMENTS_DATABASE_PATH=/var/lib/firefly-comments/comments.sqlite
+    COMMENTS_DATABASE_PATH=/var/lib/firefly-comments/core.db \
+    COMMENTS_SECRETS_FILE=/run/secrets/comments.env
 
 RUN mkdir -p /var/lib/firefly-comments \
+    && chmod 700 /var/lib/firefly-comments \
     && chown -R node:node /var/lib/firefly-comments
 COPY --from=build --chown=node:node /app/services/comments/package.json /app/services/comments/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts

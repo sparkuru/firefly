@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { appendFile, chmod, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 import type { NotificationDeliveryTransport, NotificationKind, NotificationMessage, NotificationTransport } from './types.js';
 
@@ -57,6 +58,7 @@ export class FileNotificationTransport implements NotificationTransport {
 
   async send(message: NotificationMessage): Promise<void> {
     const queued = { ...message, notificationId: notificationIdFor(message) };
+    await mkdir(path.dirname(this.path), { recursive: true, mode: 0o700 });
     await appendFile(this.path, `${JSON.stringify(queued)}\n`, { encoding: 'utf8', mode: 0o600 });
     await chmod(this.path, 0o600);
   }
