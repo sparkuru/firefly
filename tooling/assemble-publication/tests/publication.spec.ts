@@ -12,7 +12,7 @@ test('assembled release preserves cross-application navigation and mounted 404 o
   await expect(provenance.text()).resolves.toContain(
     'a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2'
   );
-  await page.goto('/posts/main/379/');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/');
   await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(page.locator('[data-terminal-reader]')).toBeVisible();
   const readerScript = await page.locator('script[src*="ReaderStatus"]').getAttribute('src');

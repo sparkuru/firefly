@@ -157,6 +157,12 @@ commands, and only then assembles the release.
   reference, but does not block promotion or rewrite output. Required site,
   entry, license, and mounted error files remain hard requirements. Validation
   reports errors and warnings but never rewrites output.
+- Authored site-document classification is shape-based: a `posts` document is
+  any safe `posts/<one-or-more-directory-segments>/<slug>/index.html` output
+  (at least four slash-separated segments), while a `pages` document remains
+  exactly `pages/<slug>/index.html`. Do not replace this with an article-name
+  allowlist or weaken the independent unsafe-path, reference, collision, and
+  inventory checks.
 - `artifacts/` and `dist/` are promoted together. Existing targets move to unique
   backups, both candidates move into place, and any failure rolls back every
   moved/prepared target. Backups are deleted only after complete success.
@@ -207,6 +213,7 @@ commands, and only then assembles the release.
 | lexical or realpath escape through Experiment root/output/license | fail; never copy or execute the escaped target |
 | build command exits non-zero or receives a signal | stop in sorted build phase and propagate actionable status |
 | symlink, source map, source/dev/private artifact, unsafe name, case collision | reject staged candidate before promotion |
+| safe authored post has more than one directory segment before its slug | classify it as a document and retain its nested route; do not classify it as a private or unknown artifact |
 | missing required entry/license or mount-escaping URL | reject release candidate without rewriting it |
 | safe local reference has no emitted target | warn with source and raw reference; preserve output and promote |
 | first or second target promotion fails | restore all prior `artifacts/` and `dist/`; clean candidates |
@@ -235,7 +242,7 @@ commands, and only then assembles the release.
   deterministic listed/unlisted discovery; root/directory realpath escapes.
 - Assembler Node tests: unsafe node/source/map/name/content/reference rejection;
   output/license symlinked-parent escapes; file/directory case collisions;
-  deterministic clean assembly, including nested routes, two
+  deterministic clean assembly, including ordinary and deeper nested post routes, two
   route-owned site scripts, semantic/NERV styles, the two pinned Terminal fonts,
   complete OFL, and provenance record; stale-file exclusion; coordinated prior-
   target preservation and rollback.

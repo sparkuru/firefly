@@ -212,7 +212,7 @@ main() {
 	done
 	probe_status 200 /
 	probe_status 200 /posts/
-	probe_status 200 /posts/main/379/
+	probe_status 200 /posts/ai/llm-workflow-with-trellis/
 	probe_status 200 /lab/
 	probe_status 301 /lab/nerv
 	probe_status 200 /lab/nerv/
@@ -245,8 +245,8 @@ main() {
 		printf '[package-runtime] site and NERV must each publish immutable runtime assets\n' >&2
 		return 1
 	}
-	assert_header "/posts/main/379/" '^content-type: text/html'
-	assert_no_header "/posts/main/379/" '^cache-control: .*immutable'
+	assert_header "/posts/ai/llm-workflow-with-trellis/" '^content-type: text/html'
+	assert_no_header "/posts/ai/llm-workflow-with-trellis/" '^cache-control: .*immutable'
 	assert_header "/_astro/${reader_asset}" '^content-type: application/javascript'
 	for asset in "${site_assets[@]}"; do
 		assert_header "/_astro/${asset}" '^cache-control: public, max-age=31536000, immutable'

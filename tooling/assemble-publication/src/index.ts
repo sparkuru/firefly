@@ -212,7 +212,7 @@ function isAuthoredSiteDocument(relative: string, contents: string): boolean {
   const segments = relative.split('/');
   const collection = segments[0];
   return (
-    ((collection === 'posts' && segments.length === 4) ||
+    ((collection === 'posts' && segments.length >= 4) ||
       (collection === 'pages' && segments.length === 3)) &&
     segments.at(-1) === 'index.html'
   );
