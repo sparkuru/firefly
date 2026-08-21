@@ -744,3 +744,24 @@ Closed the comments configuration and publication-route WIP. Tracked the shared 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 34: M5.1 comments private provisioning
+
+**Date**: 2026-08-21
+**Task**: M5.1 comments private provisioning
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and validated the opt-in same-device comments provisioning boundary: literal owner-only secrets, core/plugin SQLite storage catalog, legacy migration, backup/restore hardening, loopback proxying, runtime packaging, and regression tests. Static publication remains disabled. External DNS/TLS, remote rollout, real SMTP, production backup/restore, and public submission/verification remain owner-gated.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ab6e574` | (see git log) |
+
+### Status
+
+[OK] **Completed**

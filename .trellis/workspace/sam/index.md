@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 33
+- **Total Sessions**: 34
 - **Last Active**: 2026-08-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~746 | Active |
+| `journal-1.md` | ~767 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 34 | 2026-08-21 | M5.1 comments private provisioning | `ab6e574` | `anti-entropy-loss-syndrome` |
 | 33 | 2026-08-21 | M5.1 WIP convergence | `433c16d`, `6f60776` | `anti-entropy-loss-syndrome` |
 | 32 | 2026-08-21 | Unify Terminal document paths | `af97ed9` | `anti-entropy-loss-syndrome` |
 | 31 | 2026-08-20 | Extract M5.1 comments into an internal plugin | `c6118fd` | `anti-entropy-loss-syndrome` |
