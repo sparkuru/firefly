@@ -722,3 +722,25 @@ Unified visible Terminal document and directory paths under ~/blog, removed the 
 ### Next Steps
 
 - Resolve the unrelated config/site.toml COMMENTS_* schema mismatch before rerunning full Astro and Playwright validation.
+
+
+## Session 33: M5.1 WIP convergence
+
+**Date**: 2026-08-21
+**Task**: M5.1 WIP convergence
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Closed the comments configuration and publication-route WIP. Tracked the shared comments parser/types, public/private service projection, read-only root-context runtime boundary, SMTP/private-path safety regressions, and canonical deeper post route alignment. Node 22 checks, tests, builds, publication Playwright, runtime packaging, shell checks, privacy scans, task evidence, and mainline reconciliation passed. External comments provisioning remains a separate owner-authorized gate; tracked comments stay disabled.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `433c16d` | (see git log) |
+| `6f60776` | (see git log) |
+
+### Status
+
+[OK] **Completed**
