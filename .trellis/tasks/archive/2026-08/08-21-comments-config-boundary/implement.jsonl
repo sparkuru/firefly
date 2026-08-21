@@ -1,0 +1,6 @@
+{"file":".trellis/tasks/08-21-comments-config-boundary/prd.md","reason":"Child requirements and observable acceptance criteria."}
+{"file":".trellis/tasks/08-21-comments-config-boundary/design.md","reason":"Parser, site projection, service runtime, safety, and rollback design."}
+{"file":".trellis/tasks/08-21-comments-config-boundary/implement.md","reason":"Child implementation sequence and validation commands."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Public/private comments and export boundary."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Configuration ownership and secret exclusion."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Runtime and container validation conventions."}

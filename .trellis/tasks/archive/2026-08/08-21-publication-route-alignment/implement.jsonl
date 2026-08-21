@@ -1,0 +1,5 @@
+{"file":".trellis/tasks/08-21-publication-route-alignment/prd.md","reason":"Child canonical route and publication acceptance criteria."}
+{"file":".trellis/tasks/08-21-publication-route-alignment/design.md","reason":"Route shape, assembler depth rule, ownership, and rollback."}
+{"file":".trellis/tasks/08-21-publication-route-alignment/implement.md","reason":"Child route alignment sequence and validation commands."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Repository route/publication file ownership context."}
+{"file":".trellis/spec/frontend/comments-publication-contract.md","reason":"Comments fixture route must resolve to published output."}

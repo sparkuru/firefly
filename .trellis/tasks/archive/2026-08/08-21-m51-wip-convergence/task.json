@@ -1,0 +1,29 @@
+{
+  "id": "m51-wip-convergence",
+  "name": "m51-wip-convergence",
+  "title": "Close comments configuration and publication WIP",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-08-21",
+  "completedAt": "2026-08-21",
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-21-comments-config-boundary",
+    "08-21-publication-route-alignment"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
