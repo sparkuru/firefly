@@ -5,3 +5,5 @@ dist
 *.jsonl
 .env
 .env.*
+config/secrets.env
+**/secrets.env

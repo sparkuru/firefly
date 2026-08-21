@@ -43,8 +43,11 @@ export class EmailCipher {
     return new EmailCipher(randomBytes(KEY_BYTES));
   }
 
-  static fromEnvironment(name = 'COMMENTS_EMAIL_KEY'): EmailCipher {
-    const value = process.env[name];
+  static fromEnvironment(
+    name = 'COMMENTS_EMAIL_KEY',
+    environment: Readonly<Record<string, string | undefined>> = process.env
+  ): EmailCipher {
+    const value = environment[name];
     if (!value) {
       throw new ValidationError(`${name} must be provided at runtime.`, 'missing_secret');
     }

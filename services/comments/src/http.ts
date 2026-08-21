@@ -25,7 +25,7 @@ export function createCommentHttpServer(service: CommentService, options: Commen
   });
 }
 
-export async function listenCommentHttpServer(server: Server, port: number, host = '0.0.0.0'): Promise<void> {
+export async function listenCommentHttpServer(server: Server, port: number, host = '127.0.0.1'): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const onError = (error: Error): void => {
       server.off('listening', onListening);

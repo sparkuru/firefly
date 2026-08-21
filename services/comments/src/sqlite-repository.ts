@@ -1,7 +1,17 @@
+import { chmodSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 import { ConflictError, NotFoundError } from './errors.js';
 import type { CommentRepository, RepositoryAuditEvent, StoredComment } from './types.js';
+import {
+  normalizeStorageCatalogEntry,
+  resolvePluginStoragePath,
+  sortMigrations,
+  type Migration,
+  type StorageCatalogEntry
+} from './storage.js';
 
 type DatabaseSync = import('node:sqlite').DatabaseSync;
 type SqlValue = null | number | string;
@@ -9,77 +19,26 @@ type SqlRow = Record<string, unknown>;
 
 const require = createRequire(import.meta.url);
 
-const INITIAL_SCHEMA = `
-PRAGMA foreign_keys = ON;
-PRAGMA journal_mode = WAL;
-PRAGMA busy_timeout = 5000;
-
-CREATE TABLE IF NOT EXISTS schema_migrations (
-  version INTEGER PRIMARY KEY,
-  applied_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS service_metadata (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS comments (
-  internal_id TEXT PRIMARY KEY,
-  public_id TEXT NOT NULL UNIQUE,
-  dedupe_key TEXT NOT NULL UNIQUE,
-  post_path TEXT NOT NULL,
-  parent_internal_id TEXT REFERENCES comments(internal_id),
-  display_name TEXT NOT NULL,
-  homepage TEXT,
-  body TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  email_ciphertext TEXT NOT NULL,
-  email_fingerprint TEXT NOT NULL,
-  verification_token_hash TEXT UNIQUE,
-  verification_expires_at TEXT,
-  control_token_hash TEXT UNIQUE,
-  control_expires_at TEXT,
-  status TEXT NOT NULL,
-  verified_at TEXT,
-  moderation_version INTEGER NOT NULL DEFAULT 0,
-  last_action_id TEXT,
-  consent_version TEXT NOT NULL,
-  notify_replies INTEGER NOT NULL DEFAULT 0,
-  ip_hash TEXT,
-  user_agent_hash TEXT,
-  abuse_retention_at TEXT NOT NULL,
-  private_email_retention_at TEXT,
-  tombstone_epoch INTEGER
-);
-CREATE INDEX IF NOT EXISTS comments_status_created_idx ON comments(status, created_at);
-CREATE INDEX IF NOT EXISTS comments_post_created_idx ON comments(post_path, created_at, public_id);
-CREATE INDEX IF NOT EXISTS comments_verification_idx ON comments(verification_token_hash);
-CREATE INDEX IF NOT EXISTS comments_control_idx ON comments(control_token_hash);
-CREATE TABLE IF NOT EXISTS audit_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  public_id TEXT NOT NULL,
-  action TEXT NOT NULL,
-  action_id TEXT,
-  from_status TEXT,
-  to_status TEXT NOT NULL,
-  occurred_at TEXT NOT NULL
-);
-INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, '1970-01-01T00:00:00.000Z');
-INSERT OR IGNORE INTO service_metadata(key, value) VALUES ('tombstone_epoch', '0');
-`;
+const DEFAULT_MIGRATIONS_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../migrations');
 
 export interface SqliteRepositoryOptions {
   readOnly?: boolean;
+  dataRoot?: string;
+  migrationsDirectory?: string;
 }
 
 export class SQLiteCommentRepository implements CommentRepository {
   private readonly database: DatabaseSync;
+  private readonly dataRoot: string;
   private closed = false;
 
-  constructor(path: string, options: SqliteRepositoryOptions = {}) {
-    this.database = openDatabase(path, options.readOnly ?? false);
+  constructor(databasePath: string, options: SqliteRepositoryOptions = {}) {
+    const resolvedPath = path.resolve(databasePath);
+    this.dataRoot = path.resolve(options.dataRoot ?? path.dirname(resolvedPath));
+    this.database = openDatabase(resolvedPath, options.readOnly ?? false);
     if (!options.readOnly) {
-      this.database.exec(INITIAL_SCHEMA);
+      applySqliteMigrations(this.database, loadSqliteMigrations(options.migrationsDirectory ?? DEFAULT_MIGRATIONS_DIRECTORY));
+      chmodSync(resolvedPath, 0o600);
     }
   }
 
@@ -194,6 +153,74 @@ export class SQLiteCommentRepository implements CommentRepository {
     });
   }
 
+  registerPluginStorage(entry: StorageCatalogEntry, pluginVersion = '0.1.0', now = new Date().toISOString()): void {
+    const normalized = normalizeStorageCatalogEntry(entry);
+    resolvePluginStoragePath(this.dataRoot, normalized);
+    try {
+      this.database.prepare(`
+        INSERT OR IGNORE INTO plugin_registry(plugin_id, version, enabled, registered_at, updated_at)
+        VALUES (?, ?, 0, ?, ?)
+      `).run(normalized.pluginId, pluginVersion, now, now);
+      this.database.prepare(`
+        INSERT INTO plugin_storage_catalog(
+          plugin_id, dialect, relative_path, schema_version, lifecycle_state, registered_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(normalized.pluginId, normalized.dialect, normalized.relativePath, normalized.schemaVersion, normalized.lifecycleState, now, now);
+    } catch (error) {
+      if (isConstraintError(error)) {
+        throw new ConflictError('plugin storage catalog entry already exists.');
+      }
+      throw error;
+    }
+  }
+
+  listPluginStorage(): StorageCatalogEntry[] {
+    try {
+      const rows = this.database.prepare(`
+        SELECT plugin_id, dialect, relative_path, schema_version, lifecycle_state
+        FROM plugin_storage_catalog
+        ORDER BY plugin_id ASC
+      `).all();
+      return rows.map((row) => normalizeStorageCatalogEntry({
+        pluginId: row.plugin_id,
+        dialect: row.dialect,
+        relativePath: row.relative_path,
+        schemaVersion: toNumber(row.schema_version),
+        lifecycleState: row.lifecycle_state
+      }));
+    } catch (error) {
+      if (isMissingTableError(error)) return [];
+      throw error;
+    }
+  }
+
+  listMigrationVersions(): number[] {
+    try {
+      const rows = this.database.prepare('SELECT version FROM schema_migrations ORDER BY version ASC').all();
+      return rows.map((row) => toNumber(row.version));
+    } catch (error) {
+      if (isMissingTableError(error)) return [];
+      throw error;
+    }
+  }
+
+  updatePluginStorage(entry: StorageCatalogEntry, now = new Date().toISOString()): void {
+    const normalized = normalizeStorageCatalogEntry(entry);
+    resolvePluginStoragePath(this.dataRoot, normalized);
+    const result = this.database.prepare(`
+      UPDATE plugin_storage_catalog SET
+        dialect = ?, relative_path = ?, schema_version = ?, lifecycle_state = ?, updated_at = ?
+      WHERE plugin_id = ?
+    `).run(normalized.dialect, normalized.relativePath, normalized.schemaVersion, normalized.lifecycleState, now, normalized.pluginId);
+    if (result.changes === 0) {
+      throw new NotFoundError();
+    }
+  }
+
+  pluginStoragePath(entry: StorageCatalogEntry): string {
+    return resolvePluginStoragePath(this.dataRoot, entry);
+  }
+
   purge(now: string): number {
     const comments = this.list();
     let changed = 0;
@@ -269,14 +296,53 @@ export function hasNodeSqlite(): boolean {
   }
 }
 
-function openDatabase(path: string, readOnly: boolean): DatabaseSync {
+function openDatabase(databasePath: string, readOnly: boolean): DatabaseSync {
   let sqlite: typeof import('node:sqlite');
   try {
     sqlite = require('node:sqlite') as typeof import('node:sqlite');
   } catch {
     throw new Error('SQLiteCommentRepository requires Node 22.13.0 or newer with node:sqlite.');
   }
-  return new sqlite.DatabaseSync(path, { readOnly, enableForeignKeyConstraints: true });
+  if (!readOnly) {
+    mkdirSync(path.dirname(databasePath), { recursive: true, mode: 0o700 });
+  }
+  return new sqlite.DatabaseSync(databasePath, { readOnly, enableForeignKeyConstraints: true });
+}
+
+export function loadSqliteMigrations(migrationsDirectory = DEFAULT_MIGRATIONS_DIRECTORY): readonly Migration[] {
+  const entries = readdirSync(migrationsDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /^\d+-[^/]+\.sql$/u.test(entry.name))
+    .map((entry) => {
+      const match = entry.name.match(/^(\d+)-(.+)\.sql$/u);
+      if (!match?.[1] || !match[2]) {
+        throw new Error(`Invalid SQLite migration filename: ${entry.name}`);
+      }
+      return {
+        version: Number(match[1]),
+        name: match[2],
+        sql: readFileSync(path.join(migrationsDirectory, entry.name), 'utf8')
+      } satisfies Migration;
+    });
+  return sortMigrations(entries);
+}
+
+export function applySqliteMigrations(database: DatabaseSync, migrations: readonly Migration[]): void {
+  const ordered = sortMigrations(migrations);
+  for (const migration of ordered) {
+    if (isMigrationApplied(database, migration.version)) continue;
+    database.exec(migration.sql);
+    database.prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)').run(migration.version, new Date().toISOString());
+  }
+}
+
+function isMigrationApplied(database: DatabaseSync, version: number): boolean {
+  try {
+    const row = database.prepare('SELECT 1 AS applied FROM schema_migrations WHERE version = ?').get(version) as SqlRow | undefined;
+    return row?.applied === 1;
+  } catch (error) {
+    if (isMissingTableError(error)) return false;
+    throw error;
+  }
 }
 
 function commentValues(comment: StoredComment): SqlValue[] {
@@ -378,4 +444,8 @@ function toStatus(value: unknown): StoredComment['status'] {
 
 function isConstraintError(error: unknown): boolean {
   return error instanceof Error && /constraint|unique|foreign key/iu.test(error.message);
+}
+
+function isMissingTableError(error: unknown): boolean {
+  return error instanceof Error && /no such table/iu.test(error.message);
 }

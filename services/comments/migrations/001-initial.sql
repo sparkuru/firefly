@@ -61,7 +61,5 @@ CREATE TABLE IF NOT EXISTS audit_events (
   occurred_at TEXT NOT NULL
 );
 
-INSERT OR IGNORE INTO schema_migrations(version, applied_at)
-VALUES (1, '1970-01-01T00:00:00.000Z');
 INSERT OR IGNORE INTO service_metadata(key, value)
 VALUES ('tombstone_epoch', '0');

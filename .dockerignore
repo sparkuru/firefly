@@ -7,5 +7,11 @@ artifacts
 dist
 **/node_modules
 **/*.log
+config/secrets.env
+**/secrets.env
+services/comments/staging.env
+**/*.sqlite
+**/*.sqlite-*
+**/*.jsonl
 experiments/nerv/reference
 prototypes

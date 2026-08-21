@@ -20,3 +20,7 @@ tooling/sync-server/
 content/
 
 config/site.toml
+config/secrets.env
+*.sqlite
+*.sqlite-*
+*.jsonl

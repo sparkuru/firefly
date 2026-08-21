@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parse as parseToml } from 'smol-toml';
@@ -16,6 +16,60 @@ export interface CommentsRuntimeConfig {
   readonly outboxPath: string | null;
   readonly outboxStatePath: string | null;
   readonly environment: NodeJS.ProcessEnv;
+}
+
+export const DEFAULT_COMMENTS_SECRETS_FILE = path.resolve(process.cwd(), 'config/secrets.env');
+
+const environmentNamePattern = /^[A-Z_][A-Z0-9_]*$/u;
+const dotenvControlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
+
+export function parseCommentsSecrets(source: string, sourceName = 'config/secrets.env'): Readonly<Record<string, string>> {
+  const values: Record<string, string> = {};
+  for (const [index, originalLine] of source.split('\n').entries()) {
+    const lineNumber = index + 1;
+    const line = originalLine.endsWith('\r') ? originalLine.slice(0, -1) : originalLine;
+    if (line.trim().length === 0 || line.trimStart().startsWith('#')) continue;
+    const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/u);
+    if (!match?.[1] || match[2] === undefined || !environmentNamePattern.test(match[1])) {
+      throw new Error(`Invalid comments secrets entry at ${sourceName}:${lineNumber}.`);
+    }
+    if (Object.hasOwn(values, match[1])) {
+      throw new Error(`Duplicate comments secrets key at ${sourceName}:${lineNumber}.`);
+    }
+    if (dotenvControlCharacters.test(match[2])) {
+      throw new Error(`Invalid comments secrets value at ${sourceName}:${lineNumber}.`);
+    }
+    values[match[1]] = match[2];
+  }
+  return Object.freeze(values);
+}
+
+export function loadCommentsSecrets(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const configured = env.COMMENTS_SECRETS_FILE?.trim();
+  const secretsPath = configured === undefined || configured.length === 0
+    ? (existsSync(DEFAULT_COMMENTS_SECRETS_FILE) ? DEFAULT_COMMENTS_SECRETS_FILE : null)
+    : path.isAbsolute(configured) ? configured : path.resolve(process.cwd(), configured);
+  if (secretsPath === null) return { ...env };
+  let stats;
+  try {
+    stats = lstatSync(secretsPath);
+  } catch {
+    throw new Error(`Unable to read comments secrets file at ${secretsPath}.`);
+  }
+  if (!stats.isFile() || stats.isSymbolicLink()) {
+    throw new Error(`Comments secrets file must be a regular file at ${secretsPath}.`);
+  }
+  if ((stats.mode & 0o077) !== 0 || (stats.mode & 0o400) === 0) {
+    throw new Error(`Comments secrets file permissions are too broad at ${secretsPath}.`);
+  }
+  let source;
+  try {
+    source = readFileSync(secretsPath, 'utf8');
+  } catch {
+    throw new Error(`Unable to read comments secrets file at ${secretsPath}.`);
+  }
+  const fileValues = parseCommentsSecrets(source, secretsPath);
+  return { ...fileValues, ...env };
 }
 
 function configCandidates(env: NodeJS.ProcessEnv): readonly string[] {
@@ -57,8 +111,9 @@ function readCommentsNamespace(configPath: string | null): unknown {
 }
 
 export function loadCommentsRuntimeConfig(env: NodeJS.ProcessEnv = process.env): CommentsRuntimeConfig {
+  const runtimeEnvironment = loadCommentsSecrets(env);
   const configPath = resolveConfigPath(env);
-  const resolved = resolveCommentsRuntimeOptions(readCommentsNamespace(configPath), env, configPath ?? 'environment');
+  const resolved = resolveCommentsRuntimeOptions(readCommentsNamespace(configPath), runtimeEnvironment, configPath ?? 'environment');
   const outboxPath = resolved.smtpEnvironment.COMMENTS_OUTBOX_PATH?.trim() || null;
   const outboxStatePath = resolved.smtpEnvironment.COMMENTS_OUTBOX_STATE_PATH?.trim() || null;
   return Object.freeze({

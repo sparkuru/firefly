@@ -15,3 +15,10 @@ test('private email encryption is authenticated and tokens are stored as keyed h
   assert.equal(constantTimeEqual('same', 'same'), true);
   assert.equal(constantTimeEqual('same', 'different'), false);
 });
+
+test('email encryption can consume a runtime-loaded environment without mutating process.env', () => {
+  const cipher = EmailCipher.fromEnvironment('COMMENTS_EMAIL_KEY', {
+    COMMENTS_EMAIL_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+  });
+  assert.equal(cipher.decrypt(cipher.encrypt('reader@example.test')), 'reader@example.test');
+});

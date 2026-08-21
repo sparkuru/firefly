@@ -68,6 +68,12 @@ Browser signatures are recorded in the single Playwright profile in `index.md`.
 Root npm scripts are delegators and are valid only when already invoked inside
 `./sam` with the appropriate image.
 
+Docker Compose configuration syntax is a host Docker boundary, not a wrapped
+Node command. Use `docker compose config --quiet` to validate Compose files;
+`./sam docker compose ...` makes the wrapper invoke `docker` as a Node entry
+point and is not valid evidence. Do not start services merely to perform this
+syntax check.
+
 ### 3. Contracts
 
 | Input / boundary | Contract |

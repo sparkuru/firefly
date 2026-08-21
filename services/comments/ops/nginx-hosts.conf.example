@@ -1,0 +1,44 @@
+# Operator-owned edge example. Replace the neutral example names and private
+# listener ports in a deployment-only configuration; keep this file generic.
+# Host/SNI selects the server block before /v1/ is evaluated, so production and
+# development cannot cross their upstream or database boundaries.
+
+upstream firefly_comments_production {
+    server 127.0.0.1:8787;
+}
+
+upstream firefly_comments_development {
+    server 127.0.0.1:8788;
+}
+
+server {
+    listen 443 ssl;
+    server_name production.example.invalid;
+
+    # ssl_certificate and ssl_certificate_key are operator-managed.
+    location ^~ /v1/ {
+        proxy_pass http://firefly_comments_production;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Connection "";
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name development.example.invalid;
+
+    # ssl_certificate and ssl_certificate_key are operator-managed.
+    location ^~ /v1/ {
+        proxy_pass http://firefly_comments_development;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Connection "";
+    }
+}
