@@ -162,11 +162,11 @@ test('the real Terminal page keeps strict metadata and representative Markdown',
 
 test('a source article keeps metadata and Markdown content', async () => {
   const article = await readFile(
-    new URL('../../../content/posts/main/llm-workflow-with-trellis.md', import.meta.url),
+    new URL('../../../content/posts/ai/llm-workflow-with-trellis.md', import.meta.url),
     'utf8'
   );
   assert.match(article, /^---\ntitle: "llm-workflow-with-trellis"\ndescription: "和 LLM 沟通比和人打交道简单多了。"\ndate: "2026-05-28T03:48:00.000Z"/mu);
-  assert.match(article, /draft: false\nlayout: "post"\nslug: "379"/u);
+  assert.match(article, /draft: false\nlayout: "post"\nslug: "llm-workflow-with-trellis"/u);
   assert.doesNotMatch(article, /^presentation:/mu);
   assert.equal((article.match(/^# /gmu) ?? []).length, 0);
   assert.match(article, /^## llm workflow with trellis$/mu);

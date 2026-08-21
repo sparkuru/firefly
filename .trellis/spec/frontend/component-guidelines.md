@@ -78,8 +78,8 @@ routes.
   the trusted document content; do not add a redundant prompt-return footer when
   the active command prompt already follows the stream.
 - The current published main-site corpus uses the `firefly` Terminal default for
-  `/pages/about/` and the article `/posts/main/379/`; its physical source
-  identity is `/posts/main/llm-workflow-with-trellis.md`. The semantic adapter
+  `/pages/about/` and the article `/posts/ai/llm-workflow-with-trellis/`; its
+  physical source identity is `/posts/ai/llm-workflow-with-trellis.md`. The semantic adapter
   remains an explicit generic package contract for future authorized consumers;
   `#terminal-reader` selects reader entry behavior only and never changes the
   document presentation. When the published corpus changes, update the route,
