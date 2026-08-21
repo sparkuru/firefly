@@ -1,0 +1,8 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend package scope and project validation profile for the Astro site."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Astro Terminal layout/document ownership, semantic markup, accessibility, and responsive boundaries."}
+{"file": ".trellis/spec/frontend/content-workspace-contract.md", "reason": "Visible ~/blog shell paths versus internal slash-rooted VFS and canonical URL contracts."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Required static-output, browser, accessibility, responsive, and diff validation gates."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Main-site route/component ownership and nested document boundaries."}
+{"file": ".trellis/tasks/08-21-unify-terminal-document-paths/research/ui-ux-pro-max.md", "reason": "Approved task research: preserve the existing content-first dark monospace Terminal visual direction."}
+{"file": ".trellis/tasks/08-21-unify-terminal-document-paths/design.md", "reason": "Approved path namespace, rendering, accessibility, and responsive decisions for implementation."}

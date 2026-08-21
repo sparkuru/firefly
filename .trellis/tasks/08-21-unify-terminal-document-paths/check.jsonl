@@ -1,0 +1,8 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend package scope and exact project validation commands."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Check Terminal document/title-bar ownership and semantic UI boundaries."}
+{"file": ".trellis/spec/frontend/content-workspace-contract.md", "reason": "Check visible shell, internal VFS, and web URL namespace separation."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Check static output, browser, responsive, accessibility, and diff requirements."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Check route/component boundary and nested directory coverage."}
+{"file": ".trellis/tasks/08-21-unify-terminal-document-paths/research/ui-ux-pro-max.md", "reason": "Approved UI research constraints for visual consistency and restrained change."}
+{"file": ".trellis/tasks/08-21-unify-terminal-document-paths/design.md", "reason": "Approved design decisions to verify against the implementation."}
