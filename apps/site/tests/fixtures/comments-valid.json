@@ -3,11 +3,11 @@
   "sourceRevision": "fixture-valid-comments",
   "generatedAt": "2026-08-20T00:00:00.000Z",
   "tombstoneEpoch": 4,
-  "digest": "a56ffef82d5d5f82b881045d430aac3163707ba9eec1cc75f4ac2a7e25d4949c",
+  "digest": "e6ccec354046003e15bc7234bb8413a6b00c9ce2dc3c34b970b155decfdda9c4",
   "comments": [
     {
       "id": "c_12345678",
-      "postPath": "/posts/main/379/",
+      "postPath": "/posts/ai/llm-workflow-with-trellis/",
       "parentId": null,
       "displayName": "Reader",
       "homepage": "https://example.test/",
@@ -16,7 +16,7 @@
     },
     {
       "id": "c_abcdef12",
-      "postPath": "/posts/main/379/",
+      "postPath": "/posts/ai/llm-workflow-with-trellis/",
       "parentId": "c_12345678",
       "displayName": "Another reader",
       "body": "A direct reply.",

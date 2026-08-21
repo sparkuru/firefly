@@ -109,14 +109,17 @@ test('allows path-like authored post/page bodies but rejects the same text in an
   const release = path.join(root, 'release');
   const authoredBody = '<img src="asset.txt">\n/srv/uploads/public-example.txt';
   await mkdir(path.join(release, 'posts/example/article'), { recursive: true });
+  await mkdir(path.join(release, 'posts/security/binary/article'), { recursive: true });
   await mkdir(path.join(release, 'pages/about'), { recursive: true });
   await mkdir(path.join(release, 'lab/alpha'), { recursive: true });
   await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
   await writeFile(path.join(release, '404.html'), '<h1>Missing</h1>');
   await writeFile(path.join(release, 'lab/index.html'), '<h1>Lab</h1>');
   await writeFile(path.join(release, 'posts/example/article/index.html'), authoredBody);
+  await writeFile(path.join(release, 'posts/security/binary/article/index.html'), authoredBody);
   await writeFile(path.join(release, 'pages/about/index.html'), authoredBody);
   await writeFile(path.join(release, 'posts/example/article/asset.txt'), 'public asset');
+  await writeFile(path.join(release, 'posts/security/binary/article/asset.txt'), 'public asset');
   await writeFile(path.join(release, 'pages/about/asset.txt'), 'public asset');
   await writeFile(path.join(release, 'lab/alpha/index.html'), authoredBody);
   await writeFile(path.join(release, 'lab/alpha/404.html'), '<h1>Missing</h1>');
