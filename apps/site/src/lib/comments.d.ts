@@ -1,4 +1,5 @@
 import type { CanonicalDocument } from './content';
+import type { CommentsPublicConfig } from '../../../../plugins/comments/config.mjs';
 
 export interface PublicComment {
   readonly id: string;
@@ -19,12 +20,7 @@ export interface PublicCommentsExport {
   readonly comments: readonly PublicComment[];
 }
 
-export interface CommentsSiteConfig {
-  readonly enabled: boolean;
-  readonly writeOrigin: string | null;
-  readonly exportPath: string;
-  readonly consentVersion: string;
-}
+export type CommentsSiteConfig = CommentsPublicConfig;
 
 export function decodePublicCommentsExport(value: unknown, source?: string): PublicCommentsExport;
 export function loadPublicCommentsExport(): PublicCommentsExport;

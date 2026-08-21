@@ -1,0 +1,103 @@
+import assert from 'node:assert/strict';
+import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import test from 'node:test';
+import { loadCommentsRuntimeConfig } from '../src/config.js';
+
+test('compiled runtime loader resolves the shared plugin decoder from the repository root', async () => {
+  const compiledLoaderPath = fileURLToPath(new URL('../src/config.js', import.meta.url));
+  const pluginPath = path.resolve(path.dirname(compiledLoaderPath), '../../../../plugins/comments/config.mjs');
+  await access(pluginPath);
+});
+
+test('comments runtime config reads the plugin namespace and resolves only the named secret', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-config-'));
+  const configPath = path.join(directory, 'site.toml');
+  await writeFile(configPath, [
+    '[comments]',
+    'enabled = false',
+    '',
+    '[comments.smtp]',
+    'host = "smtp.example.test"',
+    'port = 465',
+    'secure = true',
+    'user = "comments@example.test"',
+    'from = "comments@example.test"',
+    'passwordEnv = "COMMENTS_TEST_PASSWORD"',
+    'publicOrigin = "https://comments.example.test"',
+    '',
+    '[comments.runtime]',
+    'outboxPath = "/private/comments/outbox.jsonl"',
+    'outboxStatePath = "/private/comments/outbox.state.json"',
+    ''
+  ].join('\n'));
+  try {
+    const config = loadCommentsRuntimeConfig({
+      COMMENTS_CONFIG_PATH: configPath,
+      COMMENTS_TEST_PASSWORD: 'app-password'
+    });
+    assert.equal(config.configPath, configPath);
+    assert.equal(config.outboxPath, '/private/comments/outbox.jsonl');
+    assert.equal(config.outboxStatePath, '/private/comments/outbox.state.json');
+    assert.equal(config.environment.COMMENTS_SMTP_HOST, 'smtp.example.test');
+    assert.equal(config.environment.COMMENTS_SMTP_PORT, '465');
+    assert.equal(config.environment.COMMENTS_SMTP_SECURE, 'true');
+    assert.equal(config.environment.COMMENTS_SMTP_PASSWORD, 'app-password');
+    assert.equal(config.environment.COMMENTS_CONSENT_VERSION, 'm51-v1');
+    assert.equal(config.environment.COMMENTS_TEST_PASSWORD, 'app-password');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('environment values override non-secret values from the unified config', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-config-'));
+  const configPath = path.join(directory, 'site.toml');
+  await writeFile(configPath, [
+    '[comments.smtp]',
+    'host = "smtp.file.example.test"',
+    'port = 465',
+    'secure = true',
+    'user = "comments@example.test"',
+    'from = "comments@example.test"',
+    'publicOrigin = "https://comments.example.test"',
+    ''
+  ].join('\n'));
+  try {
+    const config = loadCommentsRuntimeConfig({
+      COMMENTS_CONFIG_PATH: configPath,
+      COMMENTS_SMTP_HOST: 'smtp.env.example.test',
+      COMMENTS_SMTP_PORT: '587',
+      COMMENTS_SMTP_SECURE: 'false',
+      COMMENTS_SMTP_USER: 'comments@example.test',
+      COMMENTS_SMTP_PASSWORD: 'app-password',
+      COMMENTS_SMTP_FROM: 'comments@example.test',
+      COMMENTS_PUBLIC_ORIGIN: 'https://comments.example.test'
+    });
+    assert.equal(config.environment.COMMENTS_SMTP_HOST, 'smtp.env.example.test');
+    assert.equal(config.environment.COMMENTS_SMTP_PORT, '587');
+    assert.equal(config.environment.COMMENTS_SMTP_SECURE, 'false');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('runtime outbox paths reject traversal and empty path segments', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-config-'));
+  const configPath = path.join(directory, 'site.toml');
+  await writeFile(configPath, [
+    '[comments.runtime]',
+    'outboxPath = "../outside/notifications.jsonl"',
+    ''
+  ].join('\n'));
+  try {
+    assert.throws(
+      () => loadCommentsRuntimeConfig({ COMMENTS_CONFIG_PATH: configPath }),
+      /safe private path without traversal/u
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

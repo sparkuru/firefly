@@ -1,4 +1,5 @@
 import type { Server } from 'node:http';
+import { loadCommentsRuntimeConfig } from './config.js';
 import {
   CommentService,
   createCommentHttpServer,
@@ -22,6 +23,7 @@ export interface CommentsServiceRuntime {
 }
 
 export function createCommentsServiceRuntime(env: NodeJS.ProcessEnv = process.env): CommentsServiceRuntime {
+  const runtimeConfig = loadCommentsRuntimeConfig(env);
   const databasePath = env.COMMENTS_DATABASE_PATH ?? './comments.sqlite';
   const routeValue = env.COMMENTS_POST_ROUTES ?? '';
   const routes = routeValue.split(',').map((value) => value.trim()).filter(Boolean);
@@ -42,8 +44,8 @@ export function createCommentsServiceRuntime(env: NodeJS.ProcessEnv = process.en
     controlSecret: env.COMMENTS_CONTROL_SECRET ?? tokenSecret,
     abuseSecret: env.COMMENTS_ABUSE_SECRET ?? tokenSecret,
     allowedOrigins,
-    consentVersion: env.COMMENTS_CONSENT_VERSION,
-    notificationTransport: new FileNotificationTransport(env.COMMENTS_OUTBOX_PATH ?? `${databasePath}.outbox.jsonl`)
+    consentVersion: env.COMMENTS_CONSENT_VERSION ?? runtimeConfig.environment.COMMENTS_CONSENT_VERSION,
+    notificationTransport: new FileNotificationTransport(runtimeConfig.outboxPath ?? `${databasePath}.outbox.jsonl`)
   });
   const server = createCommentHttpServer(service, {
     allowedOrigins,

@@ -8,15 +8,16 @@ The only public-site handoff is an owner-reviewed
 
 ## Runtime contract
 
-Build the image from this directory and keep its database/outbox volume
+From the repository root, build the image and keep its database/outbox volume
 private. Publish the port only on loopback or behind an owner-controlled
 private ingress:
 
 ```sh
-docker build --tag firefly-comments:staging services/comments
+docker build --tag firefly-comments:staging -f services/comments/Dockerfile .
 docker run --rm --init \
   --read-only --tmpfs /tmp:size=16m,mode=1777 \
   --mount type=volume,src=firefly-comments-staging,dst=/var/lib/firefly-comments \
+  --mount type=bind,src="$PWD/config/site.toml",dst=/app/config/site.toml,readonly \
   --env-file services/comments/staging.env \
   --publish 127.0.0.1:8787:8787 \
   firefly-comments:staging
@@ -27,6 +28,13 @@ The environment file is an operator-owned secret input and is not committed;
 email encryption keys, token secrets, admin authentication, and allowed origins
 are injected at runtime. Do not mount the database, outbox, environment file,
 or service source into `apps/site`, `artifacts`, or the runtime image.
+
+The service reads the `[comments]` namespace from `config/site.toml` using the
+repository-root, package, and container path candidates. Set
+`COMMENTS_CONFIG_PATH` to an explicit absolute or working-directory-relative
+file when a different config is required. Explicit `COMMENTS_*` environment
+values override non-secret values from the file; `comments.smtp.passwordEnv`
+only names the separately injected password variable.
 
 ## Backup and restore
 

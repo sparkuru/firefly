@@ -15,6 +15,9 @@
   "engines": {
     "node": ">=22.13.0"
   },
+  "dependencies": {
+    "smol-toml": "1.8.0"
+  },
   "devDependencies": {
     "@types/node": "24.3.0",
     "typescript": "6.0.3"

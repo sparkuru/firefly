@@ -47,21 +47,34 @@ const SUBJECTS = {
   reply: 'A reader replied to your Firefly comment'
 } as const;
 
+const controlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
 const emailPattern = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/u;
+const hostnameLabelPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u;
 
 export function parseSmtpConfig(env: NodeJS.ProcessEnv = process.env): SmtpConfig | null {
-  const configured = ['COMMENTS_SMTP_HOST', 'COMMENTS_SMTP_USER', 'COMMENTS_SMTP_PASSWORD', 'COMMENTS_SMTP_FROM', 'COMMENTS_PUBLIC_ORIGIN']
-    .some((key) => env[key] !== undefined && env[key] !== '');
+  const configured = [
+    'COMMENTS_SMTP_HOST',
+    'COMMENTS_SMTP_PORT',
+    'COMMENTS_SMTP_SECURE',
+    'COMMENTS_SMTP_USER',
+    'COMMENTS_SMTP_PASSWORD',
+    'COMMENTS_SMTP_FROM',
+    'COMMENTS_SMTP_FROM_NAME',
+    'COMMENTS_PUBLIC_ORIGIN',
+    'COMMENTS_SMTP_CONNECT_TIMEOUT_MS',
+    'COMMENTS_SMTP_COMMAND_TIMEOUT_MS'
+  ].some((key) => env[key] !== undefined);
   if (!configured) return null;
-  const host = requiredEnv(env, 'COMMENTS_SMTP_HOST');
-  const user = requiredEnv(env, 'COMMENTS_SMTP_USER');
+  const host = requiredEnv(env, 'COMMENTS_SMTP_HOST', false);
+  const user = requiredEnv(env, 'COMMENTS_SMTP_USER', false);
   const password = requiredEnv(env, 'COMMENTS_SMTP_PASSWORD', false);
-  const from = requiredEnv(env, 'COMMENTS_SMTP_FROM');
-  const notificationOrigin = normalizeOrigin(requiredEnv(env, 'COMMENTS_PUBLIC_ORIGIN'));
-  if (!emailPattern.test(user) || !emailPattern.test(from)) {
+  const from = requiredEnv(env, 'COMMENTS_SMTP_FROM', false);
+  const notificationOrigin = normalizeOrigin(requiredEnv(env, 'COMMENTS_PUBLIC_ORIGIN', false));
+  if (controlCharacters.test(user) || controlCharacters.test(from) || !emailPattern.test(user) || !emailPattern.test(from)) {
     throw new SmtpConfigurationError('COMMENTS_SMTP_USER and COMMENTS_SMTP_FROM must be mailbox addresses.');
   }
-  if (/\s/u.test(host) || host.length > 253 || /[\r\n]/u.test(host)) {
+  const hostLabels = host.split('.');
+  if (/\s/u.test(host) || host.length > 253 || hostLabels.some((label) => !hostnameLabelPattern.test(label))) {
     throw new SmtpConfigurationError('COMMENTS_SMTP_HOST must be a safe hostname.');
   }
   const portValue = env.COMMENTS_SMTP_PORT ?? '587';
@@ -71,7 +84,7 @@ export function parseSmtpConfig(env: NodeJS.ProcessEnv = process.env): SmtpConfi
   }
   const secure = parseBoolean(env.COMMENTS_SMTP_SECURE ?? (port === 465 ? 'true' : 'false'), 'COMMENTS_SMTP_SECURE');
   const fromNameValue = env.COMMENTS_SMTP_FROM_NAME;
-  if (fromNameValue !== undefined && /[\r\n]/u.test(fromNameValue)) {
+  if (fromNameValue !== undefined && (controlCharacters.test(fromNameValue) || /[\r\n]/u.test(fromNameValue))) {
     throw new SmtpConfigurationError('COMMENTS_SMTP_FROM_NAME must not contain line breaks.');
   }
   return Object.freeze({
@@ -372,6 +385,9 @@ function parseDuration(value: string | undefined, fallback: number): number {
 }
 
 function normalizeOrigin(value: string): string {
+  if (value.trim() !== value || controlCharacters.test(value) || /\s/u.test(value)) {
+    throw new SmtpConfigurationError('COMMENTS_PUBLIC_ORIGIN must be an absolute HTTP(S) origin.');
+  }
   let parsed: URL;
   try {
     parsed = new URL(value);

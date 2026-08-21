@@ -113,6 +113,16 @@ the normalized envelope without the digest field.
 - `config/site.toml` contains public build-time `comments.enabled`,
   `comments.writeOrigin`, `comments.exportPath`, and
   `comments.consentVersion`. Enabled comments require an HTTPS origin.
+- The `comments` plugin owns the full `[comments]` namespace. Its shared
+  decoder projects only those four public fields to the site; optional
+  `[comments.smtp]` and `[comments.runtime]` values are read by the private
+  service/worker and never enter the site config or publication. `passwordEnv`
+  is only an environment-variable name: a literal SMTP password and
+  `COMMENTS_SMTP_PASSWORD` key are rejected in TOML.
+- The private service reads the same `config/site.toml` and lets explicit
+  environment variables override file values. Container deployments mount the
+  file read-only at `/app/config/site.toml`; a missing SMTP secret remains a
+  runtime configuration error and is never logged.
 - `FIREFLY_COMMENTS_EXPORT` is optional for the empty disabled build and
   mandatory for an enabled M5.1 build. `./sam` accepts only a readable,
   repository-relative JSON file and passes it into the container as
@@ -232,6 +242,25 @@ deliverNotificationOutbox(
 ): Promise<NotificationDeliverySummary>
 
 parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
+
+parseCommentsNamespace(
+  value: unknown,
+  source?: string
+): {
+  readonly public: CommentsPublicConfig
+  readonly runtime: {
+    readonly smtp: Readonly<Record<string, unknown>> | null
+    readonly outboxPath: string | null
+    readonly outboxStatePath: string | null
+  }
+}
+
+loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
+  readonly configPath: string | null
+  readonly outboxPath: string | null
+  readonly outboxStatePath: string | null
+  readonly environment: NodeJS.ProcessEnv
+}
 ```
 
 ### 3. Contracts
@@ -244,7 +273,14 @@ parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
   existing write-origin configuration.
 - The service always writes a private NDJSON outbox before a notification can
   be delivered. Queued messages have a stable `n_<32 lowercase hex>` id.
-- SMTP configuration uses `COMMENTS_SMTP_HOST`, `COMMENTS_SMTP_PORT`,
+- The shared plugin decoder is the single source of truth for the public
+  projection and private runtime namespace. Runtime outbox paths may be
+  absolute or relative, but must be non-empty, slash-separated paths with no
+  backslashes, traversal segments, empty interior segments, controls, or
+  whitespace. A single leading slash is allowed for the mounted private
+  volume.
+- SMTP configuration uses the validated `[comments.smtp]` projection or its
+  `COMMENTS_SMTP_HOST`, `COMMENTS_SMTP_PORT`,
   `COMMENTS_SMTP_SECURE`, `COMMENTS_SMTP_USER`, `COMMENTS_SMTP_PASSWORD`,
   `COMMENTS_SMTP_FROM`, `COMMENTS_SMTP_FROM_NAME`, and
   `COMMENTS_PUBLIC_ORIGIN`. The full mailbox username and an app-specific
@@ -256,6 +292,15 @@ parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
 - Delivery state is private, records attempts and a bounded next-attempt time,
   and marks an event delivered only after SMTP accepts the message. The HTTP
   submission path never opens an SMTP connection.
+- `loadCommentsRuntimeConfig()` reads an explicit `COMMENTS_CONFIG_PATH` first,
+  then the repository/package/container config candidates, and passes the
+  decoded namespace to the service. Explicit `COMMENTS_*` environment values
+  override non-secret file values; `passwordEnv` resolves only the named
+  separately injected secret into `COMMENTS_SMTP_PASSWORD`.
+- `parseSmtpConfig()` validates raw environment strings before trimming values
+  used in SMTP headers or connections. Host labels, mailbox fields, origins,
+  booleans, ports, and durations are bounded; a missing required field raises
+  `SmtpConfigurationError` without logging the value.
 
 ### 4. Validation & Error Matrix
 
@@ -265,6 +310,9 @@ parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
 | page/index/experiment/404/inline Terminal output | no comments extension |
 | partial SMTP configuration | fail with `SmtpConfigurationError` before connection |
 | unsafe host, sender, recipient, origin, port, or boolean mode | reject configuration without logging secrets |
+| runtime outbox path contains traversal, backslash, whitespace, control, or empty interior segment | reject the comments namespace before service startup |
+| file and legacy/named environment values configure the same field | reject the namespace; explicit environment overrides apply only at the service boundary |
+| SMTP environment value has leading/trailing whitespace or controls | reject the raw value before normalization |
 | missing outbox | return an empty delivery summary |
 | malformed outbox/state record | fail closed with private file context |
 | SMTP failure | record private attempt/error name and bounded retry time |
@@ -290,7 +338,9 @@ parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
   and Terminal posts, no runtime read, and page-boundary negatives.
 - Service: private factory/HTTP behavior, stable outbox ids, fake delivery
   success/failure, idempotency, redacted state, retry timing, and SMTP 465/587
-  configuration/rendering.
+  configuration/rendering; shared namespace loading, named-secret resolution,
+  environment precedence, compiled plugin-path resolution, and traversal/
+  empty-segment rejection for runtime paths.
 - Publication: plugin handoff, exact `comments.public.v1`, privacy scanner,
   digest, and tombstone rollback protection.
 - Full checks remain sequential when tests mutate `.generated-content`; running
@@ -310,4 +360,12 @@ await smtp.send(privateEmail, token); // inside POST /v1/submissions
 ```ts
 await fileNotificationTransport.send({ kind, to, publicId, postPath, token });
 await deliverNotificationOutbox(outboxPath, statePath, smtpTransport);
+```
+
+```ts
+// Correct: validate the raw value, then derive the normalized connection value.
+const host = requiredEnv(env, 'COMMENTS_SMTP_HOST', false);
+if (host.split('.').some((label) => !hostnameLabelPattern.test(label))) {
+  throw new SmtpConfigurationError('unsafe SMTP host');
+}
 ```
