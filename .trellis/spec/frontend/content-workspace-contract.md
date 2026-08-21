@@ -334,9 +334,11 @@ startTerminalReader(root: HTMLElement): void
   before resolution. Thus `lab/nerv` is valid from the root cwd, but is not a
   cross-cwd alias once the cwd is `~/blog/lab`; there the experiment is opened
   as `open nerv`, `open ./nerv`, or `open ~/blog/lab/nerv`. Internal VFS paths,
-  decoded metadata, and browser hrefs remain slash-rooted. Directory-mode
-  `resolve('.', '/')` must produce `/` rather than `//.`, and resource-mode
-  `..` traversal remains rejected.
+  decoded metadata, and browser hrefs remain slash-rooted. Terminal document
+  title bars are the sole visible source-path identity and use
+  `~/blog/<virtualPath>`; the document body does not render a second
+  `.terminal-path` marker. Directory-mode `resolve('.', '/')` must produce `/`
+  rather than `//.`, and resource-mode `..` traversal remains rejected.
 - When the prompt input is focused, the controller prevents the default action
   for every Tab event, including modifiers and IME/composition events. Only an
   unmodified, non-composing Tab may rewrite input through completion. Safe `cd`

@@ -32,7 +32,7 @@ const rendered = props.kind === 'document' ? await renderDocument(props.canonica
 {props.kind === 'document' && rendered ? (
   <DocumentPresentation canonical={props.canonical} document={rendered} pluginExtensions={props.pluginExtensions} />
 ) : props.kind === 'directory' ? (
-  <TerminalLayout title={props.directory.name} description={`Public directory ${props.directory.virtualPath}.`} path={`~/${props.directory.virtualPath}`}>
+  <TerminalLayout title={props.directory.name} description={`Public directory ${props.directory.virtualPath}.`} path={`~/blog/${props.directory.virtualPath}`}>
     <ContentDirectoryIndex directory={props.directory} />
   </TerminalLayout>
 ) : null}

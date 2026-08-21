@@ -39,11 +39,12 @@ routes.
   Show `On this page` only for two or more body headings; its links use the
   exact validated X Core/Astro IDs. Its reader status is hidden and its region
   is not ordinarily focusable until `#terminal-reader` is present.
-- `TerminalDocument.astro` owns the single canonical `/posts/<file>.md` or
-  `/pages/<file>.md` source-path line, article metadata, conditional Terminal
-  tree outline, `.terminal-prose`, reader status/forms, and `<Content />`. The
-  outline remains a semantic `<nav aria-label="Document outline">` containing
-  native links and aria-hidden `├──`/`└──`/`│` prefixes derived from validated
+- `TerminalLayout.astro` owns the single visible `~/blog/<virtual-path>`
+  title-bar identity. `TerminalDocument.astro` owns article metadata,
+  conditional Terminal tree outline, `.terminal-prose`, reader status/forms,
+  and `<Content />` without a duplicate body path marker. The outline remains a
+  semantic `<nav aria-label="Document outline">` containing native links and
+  aria-hidden `├──`/`└──`/`│` prefixes derived from validated
   `metadata.outline`; it must remain JavaScript-free and keyboard navigable.
   The component no longer renders a body breadcrumb or a separate current
   filename item. Shared `ReaderStatus.astro` imports only the bounded

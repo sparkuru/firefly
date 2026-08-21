@@ -37,7 +37,8 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
 
   await page.goto('/pages/about/');
   const reader = page.getByRole('region', { name: /Read-only Vim reader/u });
-  await expect(page.locator('.terminal-path')).toHaveText('/pages/about.md');
+  await expect(page.locator('.terminal-titlebar span').nth(1)).toHaveText('~/blog/pages/about.md');
+  await expect(page.locator('.terminal-path')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await capture('header-path');
 

@@ -330,6 +330,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, /data-terminal-theme="firefly"/u);
     assert.match(html, /class="terminal-titlebar"/u);
     assert.match(html, /class="terminal-document"/u);
+    assert.doesNotMatch(html, /class="terminal-path"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
     assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
     assert.match(html, new RegExp(readerScript.replaceAll('.', '\\.')));
@@ -356,6 +357,22 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(readerScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-(?:home|startup|boot-log|startup-marker)/u);
+  }
+});
+
+test('Terminal document and directory chrome use the visible shell path once', async () => {
+  const routes = [
+    ['pages/about/index.html', '~/blog/pages/about.md'],
+    ['posts/main/379/index.html', '~/blog/posts/main/llm-workflow-with-trellis.md'],
+    ['posts/main/index.html', '~/blog/posts/main']
+  ];
+
+  for (const [route, visiblePath] of routes) {
+    const html = await readFile(path.join(distRoot, route), 'utf8');
+    const titlebar = /<div class="terminal-titlebar"[^>]*>([\s\S]*?)<\/div>/u.exec(html)?.[1] ?? '';
+    assert.ok(titlebar.includes('<span>' + visiblePath + '</span>'));
+    assert.doesNotMatch(titlebar, /<span>~\/posts\//u);
+    assert.doesNotMatch(html, /class="terminal-path"/u);
   }
 });
 
