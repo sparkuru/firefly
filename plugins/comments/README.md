@@ -15,6 +15,15 @@ in `config/site.toml`. When disabled, the public build does not read a private
 export and does not require the comments service, database, outbox, or SMTP
 settings.
 
+The plugin owns the `[comments]` namespace. Public settings stay at the
+namespace root; non-secret SMTP and private outbox settings may be placed under
+`[comments.smtp]` and `[comments.runtime]`. `passwordEnv` is only a reference
+to an owner-provided runtime secret. A literal SMTP password is rejected from
+`site.toml`; the site build receives only the public comments projection.
+The service resolves this same namespace from the mounted `config/site.toml`
+and applies explicit environment overrides before constructing SMTP or outbox
+settings.
+
 The service writes a private notification outbox. The optional delivery worker
 consumes that queue through a provider-neutral transport. Zoho Mail can be
 configured with the documented account host, port `465` with implicit TLS, or

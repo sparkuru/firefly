@@ -20,6 +20,7 @@ import {
   normalizePublicPath,
   publicSitemapPaths
 } from '../src/lib/site-seo.mjs';
+import { parseCommentsNamespace } from '../../../plugins/comments/config.mjs';
 
 const validConfig = {
   site: {
@@ -72,6 +73,33 @@ test('site config validates, normalizes, and deeply freezes public values', () =
   });
 });
 
+test('comments plugin config projects runtime settings away from the site config', () => {
+  const rawComments = {
+    enabled: false,
+    exportPath: 'artifacts/comments/comments.public.v1.json',
+    consentVersion: 'm51-v1',
+    smtp: {
+      host: 'smtppro.zoho.com',
+      port: 465,
+      secure: true,
+      user: 'noreply@example.test',
+      from: 'noreply@example.test',
+      passwordEnv: 'COMMENTS_SMTP_PASSWORD',
+      publicOrigin: 'https://comments.example.test'
+    },
+    runtime: {
+      outboxPath: '/var/lib/firefly-comments/notifications.jsonl',
+      outboxStatePath: '/var/lib/firefly-comments/notifications.jsonl.state.json'
+    }
+  };
+  const namespace = parseCommentsNamespace(rawComments, 'fixture');
+  const config = parseSiteConfig({ ...validConfig, comments: rawComments }, 'fixture');
+  assert.deepEqual(config.comments, namespace.public);
+  assert.equal(Object.hasOwn(config.comments, 'smtp'), false);
+  assert.equal(namespace.runtime.smtp?.passwordEnv, 'COMMENTS_SMTP_PASSWORD');
+  assert.equal(namespace.runtime.outboxPath, '/var/lib/firefly-comments/notifications.jsonl');
+});
+
 test('site config defaults omitted friend links to an empty list', () => {
   const { friends: _friends, ...terminalWithoutFriends } = validConfig.terminal;
   const config = parseSiteConfig({
@@ -109,8 +137,17 @@ test('site config rejects unknown keys, unsafe identity text, and malformed orig
     { ...validConfig, seo: { ...validConfig.seo, image: 'relative.png' } },
     { ...validConfig, comments: { enabled: true, exportPath: 'artifacts/comments/comments.public.v1.json', consentVersion: 'm51-v1' } },
     { ...validConfig, comments: { enabled: true, writeOrigin: 'http://comments.example.test', exportPath: 'artifacts/comments/comments.public.v1.json', consentVersion: 'm51-v1' } },
+    { ...validConfig, comments: { enabled: null } },
+    { ...validConfig, comments: { exportPath: null } },
+    { ...validConfig, comments: { consentVersion: null } },
     { ...validConfig, comments: { enabled: false, exportPath: '../private.json', consentVersion: 'm51-v1' } },
-    { ...validConfig, comments: { enabled: false, exportPath: 'artifacts/comments/comments.json', consentVersion: 'm51-v1', unknown: true } }
+    { ...validConfig, comments: { enabled: false, exportPath: 'artifacts/comments/comments.json', consentVersion: 'm51-v1', unknown: true } },
+    { ...validConfig, comments: { smtp: { host: 'smtp..example.test' } } },
+    { ...validConfig, comments: { smtp: { passwordEnv: 'comments_password' } } },
+    { ...validConfig, comments: { smtp: { host: 'smtp.example.test' }, COMMENTS_SMTP_HOST: 'smtp.other.test' } },
+    { ...validConfig, comments: { runtime: { outboxPath: '/private/outbox.jsonl' }, COMMENTS_OUTBOX_PATH: '/private/other.jsonl' } },
+    { ...validConfig, comments: { COMMENTS_SMTP_PASSWORD: 'must-not-be-stored' } },
+    { ...validConfig, comments: { smtp: { password: 'must-not-be-stored' } } }
   ]) {
     assert.throws(() => parseSiteConfig(value, 'fixture'), /Invalid site configuration/u);
   }

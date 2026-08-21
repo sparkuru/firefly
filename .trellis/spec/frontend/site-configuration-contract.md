@@ -6,8 +6,9 @@
 
 Use this contract whenever changing `config/site.toml`, the site identity,
 Terminal prompt/about output, document head metadata, Markdown SEO front matter,
-or build-generated `robots.txt`/`sitemap.xml`. The configuration is a public,
-repository-tracked build input; it is not a secret store or runtime service.
+or build-generated `robots.txt`/`sitemap.xml`. The site consumes a public
+projection of this repository-local configuration; plugin-owned namespaces may
+also contain non-secret runtime settings. It is never a secret store.
 
 ### 2. Signatures
 
@@ -56,6 +57,22 @@ titleSuffix = " | firefly"
 robots = "index, follow"
 twitterCard = "summary"
 # image = "/social-card.png"
+
+[comments]
+enabled = false
+exportPath = "artifacts/comments/comments.public.v1.json"
+consentVersion = "m51-v1"
+
+# Optional plugin-owned non-secret runtime settings. The site receives only
+# the public comments projection; service workers may read the full namespace.
+# [comments.smtp]
+# host = "smtppro.zoho.com"
+# port = 465
+# secure = true
+# user = "comments@example.com"
+# from = "comments@example.com"
+# passwordEnv = "COMMENTS_SMTP_PASSWORD"
+# publicOrigin = "https://comments.example.com"
 ```
 
 - `config/site.toml.example` is the complete commented template. The tracked
@@ -79,8 +96,20 @@ twitterCard = "summary"
   known source-root fallback paths. Do not replace it with a package-relative
   path that breaks negative Astro builds using an alternate same-filesystem
   `--outDir`.
-- This file may contain public identity and attribution only. Do not add
-  credentials, private author data, host filesystem paths, or runtime secrets.
+- The `comments` plugin owns its namespace. The site parser projects only
+  `enabled`, `writeOrigin`, `exportPath`, and `consentVersion`; it rejects
+  unknown plugin keys and literal SMTP passwords. The private service may read
+  validated non-secret SMTP/outbox settings from the same file, while explicit
+  environment variables remain runtime overrides.
+- Plugin-owned private runtime paths use the same strict decoder as the public
+  projection: absolute or relative slash-separated paths are allowed, but
+  backslashes, traversal segments, empty interior segments, controls, and
+  whitespace are rejected. This keeps the service's outbox inside an explicit
+  mounted/private boundary without weakening the public export-path checks.
+- This file may contain public identity, plugin-owned non-secret settings, and
+  plugin-defined private paths only. Do not add credentials, private author
+  data, or runtime secrets; `passwordEnv` names a secret that must be injected
+  separately.
 
 ### Design Decision: TOML as the single site-config source
 
@@ -157,6 +186,7 @@ not be added manually.
 | --- | --- |
 | missing/malformed TOML, duplicate key, unknown key, missing field | fail with source and field context before rendering |
 | control character, empty text, unsafe prompt token, traversal cwd, or non-NFC path | fail config/content validation |
+| comments runtime path has traversal, backslash, whitespace, control, or empty interior segment | fail the shared comments namespace before site/service projection |
 | non-http(s), origin with path/query/fragment/credentials, or unsafe image | fail validation; never emit it into HTML |
 | friend link with non-http(s), credentials, fragment, controls, unknown fields, invalid desc, or duplicate URL | fail `terminal.friends` validation with record/field context |
 | omitted or empty `terminal.friends` | normalize to `[]`; render the bounded `No friend links.` recovery/command state |
@@ -236,6 +266,8 @@ renderFriendLinksWithNativeAnchors(links);
 - `config/site.toml`
 - `config/site.toml.example`
 - `apps/site/src/lib/site-config.mjs`
+- `plugins/comments/config.mjs`
+- `services/comments/src/config.ts`
 - `apps/site/src/lib/site-meta.mjs`
 - `apps/site/src/lib/site-seo.mjs`
 - `apps/site/src/components/SiteHead.astro`

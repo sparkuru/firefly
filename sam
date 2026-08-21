@@ -215,7 +215,25 @@ main() {
 	local -a tty_flags=()
 	local -a port_flags=()
 	local -a environment_flags=()
+	local -a config_mount_flags=()
 	local -a docker_command
+	local -a comments_environment_names=(
+		COMMENTS_CONFIG_PATH
+		COMMENTS_SMTP_HOST
+		COMMENTS_SMTP_PORT
+		COMMENTS_SMTP_SECURE
+		COMMENTS_SMTP_USER
+		COMMENTS_SMTP_PASSWORD
+		COMMENTS_SMTP_FROM
+		COMMENTS_SMTP_FROM_NAME
+		COMMENTS_SMTP_CONNECT_TIMEOUT_MS
+		COMMENTS_SMTP_COMMAND_TIMEOUT_MS
+		COMMENTS_PUBLIC_ORIGIN
+		COMMENTS_OUTBOX_PATH
+		COMMENTS_OUTBOX_STATE_PATH
+		COMMENTS_CONSENT_VERSION
+	)
+	local env_name
 
 	[[ $# -gt 0 ]] || {
 		usage
@@ -254,6 +272,12 @@ main() {
 	if [[ -n "${COMMENTS_EXPORT_CONTAINER_PATH}" ]]; then
 		environment_flags=(-e "FIREFLY_COMMENTS_EXPORT=${COMMENTS_EXPORT_CONTAINER_PATH}")
 	fi
+	if [[ -f "${REPO_ROOT}/config/site.toml" ]]; then
+		config_mount_flags=(--mount "type=bind,src=${REPO_ROOT}/config/site.toml,dst=/app/config/site.toml,readonly")
+	fi
+	for env_name in "${comments_environment_names[@]}"; do
+		[[ -n "${!env_name-}" ]] && environment_flags+=(-e "${env_name}")
+	done
 	docker_command=(
 		docker run --rm --init
 		"${tty_flags[@]}"
@@ -263,6 +287,7 @@ main() {
 		-e "FIREFLY_CONTENT_ROOT=${FIREFLY_CONTENT_ROOT}"
 		"${environment_flags[@]}"
 		-v "${REPO_ROOT}:/app"
+		"${config_mount_flags[@]}"
 		"${content_mounts[@]}"
 		-w /app
 		--label "sam.repo=${REPO_ROOT}"

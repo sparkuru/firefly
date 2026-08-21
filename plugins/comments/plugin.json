@@ -8,6 +8,7 @@
     "service"
   ],
   "entrypoints": {
+    "config": "plugins/comments/config.mjs",
     "site": "apps/site/src/lib/site-plugins.ts",
     "publication": "tooling/assemble-publication/src/plugins/comments.ts",
     "service": "services/comments/src/plugin.ts",

@@ -90,6 +90,9 @@ test('SMTP configuration supports Zoho-compatible implicit TLS and STARTTLS mode
   assert.equal(implicitTls?.secure, true);
   assert.throws(() => parseSmtpConfig(smtpEnvironment({ COMMENTS_SMTP_SECURE: 'maybe' })), SmtpConfigurationError);
   assert.throws(() => parseSmtpConfig({ COMMENTS_SMTP_HOST: 'smtp.example.test' }), SmtpConfigurationError);
+  assert.throws(() => parseSmtpConfig({ COMMENTS_SMTP_PORT: '587' }), SmtpConfigurationError);
+  assert.throws(() => parseSmtpConfig(smtpEnvironment({ COMMENTS_SMTP_HOST: 'smtp..example.test' })), SmtpConfigurationError);
+  assert.throws(() => parseSmtpConfig(smtpEnvironment({ COMMENTS_PUBLIC_ORIGIN: 'https://comments.example.test\n' })), SmtpConfigurationError);
 });
 
 test('notification rendering keeps private links in mail content only', () => {

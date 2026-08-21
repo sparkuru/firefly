@@ -16,6 +16,8 @@ content/
 └── pages/*.md                    # Repository-local pages collection
 plugins/comments/
 ├── plugin.json                   # Internal Firefly capability manifest
+├── config.mjs                    # Shared comments namespace decoder
+├── config.d.mts                  # Type declaration for service consumers
 └── README.md                     # Ownership and private/public boundary
 packages/x-core/
 ├── package.json + package-lock.json

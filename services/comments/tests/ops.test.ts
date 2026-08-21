@@ -16,7 +16,10 @@ test('runtime and staging contracts keep private state outside the publication i
   const staging = await readFile(new URL('../../staging.env.example', import.meta.url), 'utf8');
   assert.match(dockerfile, /USER node/u);
   assert.match(dockerfile, /VOLUME \["\/var\/lib\/firefly-comments"\]/u);
+  assert.match(dockerfile, /COPY plugins\/comments\/config\.mjs/u);
   assert.match(readme, /FIREFLY_COMMENTS_EXPORT/u);
+  assert.match(readme, /-f services\/comments\/Dockerfile \./u);
+  assert.match(readme, /config\/site\.toml/u);
   assert.match(readme, /--read-only/u);
   assert.match(readme, /encrypted/u);
   assert.doesNotMatch(staging, /-----BEGIN|sk-[A-Za-z0-9]|prod(?:uction)?/iu);

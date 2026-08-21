@@ -50,3 +50,20 @@ enabled = false
 # The file is a repository-relative, build-only sanitized export.
 exportPath = "artifacts/comments/comments.public.v1.json"
 consentVersion = "m51-v1"
+
+# Non-secret notification settings belong to the comments plugin namespace.
+# The password is never stored here; passwordEnv names the runtime secret.
+# [comments.smtp]
+# host = "smtppro.zoho.com"
+# port = 465
+# secure = true
+# user = "noreply@example.com"
+# from = "noreply@example.com"
+# fromName = "firefly-comments"
+# passwordEnv = "COMMENTS_SMTP_PASSWORD"
+# publicOrigin = "https://comments.example.com"
+
+# Private outbox paths may be configured here for the service worker.
+# [comments.runtime]
+# outboxPath = "/var/lib/firefly-comments/notifications.jsonl"
+# outboxStatePath = "/var/lib/firefly-comments/notifications.jsonl.state.json"

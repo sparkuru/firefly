@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'astro/zod';
 import { parse as parseToml } from 'smol-toml';
+import { parseCommentsNamespace } from '../../../../plugins/comments/config.mjs';
 
 const sourceRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const configCandidates = [
@@ -16,7 +17,6 @@ const controlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\
 const lineBreaks = /[\r\n\u2028\u2029]/u;
 const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
 const safePromptToken = /^[^\\/?#%\s\u0000-\u001f\u007f]+$/u;
-const safeRelativeArtifactPath = (value) => typeof value === 'string' && value.normalize('NFC') === value && value.endsWith('.json') && !value.startsWith('/') && !value.includes('\\') && !value.includes('?') && !value.includes('#') && !controlCharacters.test(value) && value.split('/').every((segment) => safePathSegment.test(segment));
 
 function safeText(message, { multiline = false } = {}) {
   return z.string().refine((value) => {
@@ -139,37 +139,10 @@ const seoSchema = z.object({
   image
 }).strict();
 
-const commentsWriteOrigin = z.union([z.string(), z.null()]).optional().default(null).refine(
-  (value) => value === null || (normalizeOrigin(value) !== false && new URL(value).protocol === 'https:'),
-  'comments.writeOrigin must be an HTTPS origin without a path, query, fragment, or credentials'
-).transform((value) => value === null ? null : normalizeOrigin(value));
-
-const commentsSchema = z.object({
-  enabled: z.boolean().optional().default(false),
-  writeOrigin: commentsWriteOrigin,
-  exportPath: z.string().optional().default('artifacts/comments/comments.public.v1.json').refine(
-    safeRelativeArtifactPath,
-    'comments.exportPath must be a safe repository-relative JSON path'
-  ),
-  consentVersion: safeText('comments.consentVersion must be non-empty safe text')
-    .optional()
-    .default('m51-v1')
-}).strict().superRefine((value, context) => {
-  if (value.enabled && value.writeOrigin === null) {
-    context.addIssue({ code: 'custom', path: ['writeOrigin'], message: 'comments.writeOrigin is required when comments.enabled is true' });
-  }
-});
-
 const siteConfigSchema = z.object({
   site: siteSchema,
   terminal: terminalSchema,
-  seo: seoSchema,
-  comments: commentsSchema.optional().default({
-    enabled: false,
-    writeOrigin: null,
-    exportPath: 'artifacts/comments/comments.public.v1.json',
-    consentVersion: 'm51-v1'
-  })
+  seo: seoSchema
 }).strict();
 
 function freezeDeep(value, seen = new WeakSet()) {
@@ -186,10 +159,22 @@ function formatIssues(error) {
   }).join('; ');
 }
 
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export function parseSiteConfig(value, source = 'config/site.toml') {
-  const result = siteConfigSchema.safeParse(value);
+  const rawValue = isRecord(value) ? value : {};
+  const { comments: rawComments, ...siteValue } = rawValue;
+  let comments;
+  try {
+    comments = parseCommentsNamespace(rawComments, source).public;
+  } catch (error) {
+    throw new Error(`Invalid site configuration in ${source}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const result = siteConfigSchema.safeParse(siteValue);
   if (!result.success) throw new Error(`Invalid site configuration in ${source}: ${formatIssues(result.error)}`);
-  return freezeDeep(result.data);
+  return freezeDeep({ ...result.data, comments });
 }
 
 export function loadSiteConfig(filePath = SITE_CONFIG_PATH) {
