@@ -59,11 +59,11 @@ const PROHIBITED_SENSITIVE_TEXT = [
 ];
 const PROHIBITED_SOURCE_PATH_TEXT = [
   /(?:^|[\s"'])file:\/\//imu,
-  /\/home\/[^/\s"']+\//u,
-  /\/Users\/[^/\s"']+\//u,
-  /[A-Z]:\\Users\\[^\\\s"']+\\/u,
-  /\/(?:srv\/(?:uploads|backups)|var\/www|usr\/(?:local\/)?uploads)\//iu,
-  /\/app\//u,
+  /(?:^|[^A-Za-z0-9_-])\/home\/[^/\s"']+\//u,
+  /(?:^|[^A-Za-z0-9_-])\/Users\/[^/\s"']+\//u,
+  /(?:^|[^A-Za-z0-9_-])[A-Z]:\\Users\\[^\\\s"']+\\/u,
+  /(?:^|[^A-Za-z0-9_-])\/(?:srv\/(?:uploads|backups)|var\/www|usr\/(?:local\/)?uploads)\//iu,
+  /(?:^|[^A-Za-z0-9_-])\/app\//u,
   /(?:^|[\\/])\.private(?:[\\/]|$)/imu
 ];
 const PROHIBITED_ARTIFACT_SEGMENTS = new Set(['.git', '.private', 'node_modules']);

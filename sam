@@ -117,7 +117,7 @@ validate_comments_export() {
 }
 
 discover_content_mounts() {
-	local configured_root=${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content/posts}
+	local configured_root=${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}
 	local content_root
 	local current_directory
 	local link_path
@@ -144,13 +144,19 @@ discover_content_mounts() {
 	}
 	validate_mount_path "${content_root}"
 	[[ -d "${content_root}" && -r "${content_root}" ]] || {
-		printf '[sam] FIREFLY_CONTENT_ROOT must name a readable directory\n' >&2
+		printf '[sam] FIREFLY_CONTENT_ROOT must name a readable blog root directory\n' >&2
 		return 2
 	}
+	for collection in posts pages; do
+		[[ -d "${content_root}/${collection}" && -r "${content_root}/${collection}" ]] || {
+			printf '[sam] FIREFLY_CONTENT_ROOT must contain readable posts/ and pages/ directories\n' >&2
+			return 2
+		}
+	done
 
 	content_mounts+=(--mount "type=bind,src=${content_root},dst=${content_root},readonly")
 	mounted_paths["${content_root}"]=1
-	directory_queue+=("${content_root}")
+	directory_queue+=("${content_root}/posts" "${content_root}/pages")
 
 	while ((queue_index < ${#directory_queue[@]})); do
 		current_directory=${directory_queue[queue_index]}

@@ -56,13 +56,13 @@ function getFrontmatter(
   };
 }
 
-function postRelativePath(filePath: string | undefined): string | undefined {
+function stagedRelativePath(filePath: string | undefined, collection: 'posts' | 'pages'): string | undefined {
   if (!filePath) {
     return undefined;
   }
 
   const normalized = filePath.replaceAll('\\', '/');
-  const stageMarker = '/.generated-content/posts/';
+  const stageMarker = `/.generated-content/${collection}/`;
   const contentIndex = normalized.lastIndexOf(stageMarker);
 
   if (contentIndex === -1) {
@@ -75,16 +75,16 @@ function postRelativePath(filePath: string | undefined): string | undefined {
 export const resolveDocumentContext: DocumentContextResolver = (file) => {
   const metadata = getFrontmatter(file.data);
   const collection = metadata.layout === 'post' ? 'posts' : 'pages';
-  const relativePostPath = collection === 'posts' ? postRelativePath(file.path) : undefined;
-  const slug = collection === 'posts'
-    ? metadata.slug ?? relativePostPath?.split('/').at(-1)?.replace(/\.md$/u, '')
-    : metadata.slug;
+  const relativePath = stagedRelativePath(file.path, collection);
+  const slug = (collection === 'posts'
+    ? metadata.slug ?? relativePath?.split('/').at(-1)?.replace(/\.md$/u, '')
+    : metadata.slug)?.replace(/\s+/gu, '-');
   if (slug === undefined) {
     throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
   }
   const relativeRoute = collection === 'posts'
     ? (() => {
-        const physicalPath = relativePostPath?.replace(/\.md$/u, '');
+        const physicalPath = relativePath?.replace(/\.md$/u, '');
         if (physicalPath === undefined || slug === undefined) return undefined;
         const parent = physicalPath.slice(0, physicalPath.lastIndexOf('/'));
         return parent.length === 0 ? slug : `${parent}/${slug}`;
@@ -95,8 +95,8 @@ export const resolveDocumentContext: DocumentContextResolver = (file) => {
   }
 
   return {
-    documentId: `${collection}/${relativePostPath ?? `${slug}.md`}`,
-    sourcePath: `${collection}/${relativePostPath ?? `${slug}.md`}`,
+    documentId: `${collection}/${relativePath ?? `${slug}.md`}`,
+    sourcePath: `${collection}/${relativePath ?? `${slug}.md`}`,
     route: `/${collection}/${relativeRoute}/`,
     collection,
     slug,

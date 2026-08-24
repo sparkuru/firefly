@@ -1,0 +1,38 @@
+name: firefly-comments
+
+# This plugin-local template is intended to be copied with config.toml,
+# secrets.env, and data/ into <deploy-root>/plugins/comments/. The image is
+# supplied by the operator or a release pipeline. It uses host networking so a
+# same-host edge proxy can reach the loopback-only service without publishing a
+# public Docker port.
+services:
+  comments:
+    image: ${COMMENTS_IMAGE:-firefly-comments:local}
+    init: true
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "node"
+    environment:
+      NODE_ENV: production
+      COMMENTS_BIND: 127.0.0.1
+      COMMENTS_PORT: 8787
+      COMMENTS_DATABASE_PATH: /var/lib/firefly-comments/core.db
+      COMMENTS_CONFIG_PATH: /app/config/plugins/comments/config.toml
+      COMMENTS_SECRETS_FILE: /run/secrets/comments.env
+    volumes:
+      - ./data:/var/lib/firefly-comments
+      - ./config.toml:/app/config/plugins/comments/config.toml:ro
+      - ./secrets.env:/run/secrets/comments.env:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3

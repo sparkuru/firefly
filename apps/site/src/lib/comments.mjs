@@ -9,7 +9,7 @@ const repositoryRoot = [
   path.resolve(process.cwd()),
   path.resolve(process.cwd(), '../..'),
   moduleRepositoryRoot
-].find((candidate) => existsSync(path.join(candidate, 'config/site.toml')) && existsSync(path.join(candidate, 'content/posts'))) ?? moduleRepositoryRoot;
+].find((candidate) => existsSync(path.join(candidate, 'config/site.toml')) && existsSync(path.join(candidate, 'content/posts')) && existsSync(path.join(candidate, 'content/pages'))) ?? moduleRepositoryRoot;
 const defaultExportPath = path.join(repositoryRoot, 'artifacts/comments/comments.public.v1.json');
 const envelopeKeys = new Set(['schemaVersion', 'sourceRevision', 'generatedAt', 'tombstoneEpoch', 'digest', 'comments']);
 const commentKeys = new Set(['id', 'postPath', 'parentId', 'displayName', 'homepage', 'body', 'createdAt']);

@@ -10,8 +10,14 @@ import { createRobotsText } from '../src/lib/site-seo.mjs';
 const siteRoot = path.resolve(import.meta.dirname, '..');
 const distRoot = path.join(siteRoot, 'dist');
 const sourceRoot = path.join(siteRoot, 'src');
-const pagesRoot = path.resolve(siteRoot, '../../content/pages');
+const generatedPagesRoot = path.join(siteRoot, '.generated-content/pages');
 const generatedPostsRoot = path.join(siteRoot, '.generated-content/posts');
+const workflowSlug = 'llm-workflow-with-trellis';
+const workflowRoute = 'posts/ai/llm-workflow-with-trellis/index.html';
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
 
 async function listFiles(directory, prefix = '') {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -53,7 +59,7 @@ async function collectContentRoutes(directory, prefix, includeDirectories) {
         }
         const physicalRoute = childRelative.slice(0, -3);
         const slugMatch = /^slug:\s*(?:"([^"]+)"|([^\s]+))\s*$/mu.exec(frontmatter);
-        const routeSlug = slugMatch?.[1] ?? slugMatch?.[2] ?? path.posix.basename(physicalRoute);
+        const routeSlug = (slugMatch?.[1] ?? slugMatch?.[2] ?? path.posix.basename(physicalRoute)).replace(/\s+/gu, '-');
         const parent = path.posix.dirname(physicalRoute);
         const route = prefix === 'posts' && parent !== '.' ? `${parent}/${routeSlug}` : routeSlug;
         routes.push(`${prefix}/${route}/index.html`);
@@ -67,6 +73,49 @@ async function collectContentRoutes(directory, prefix, includeDirectories) {
   return routes;
 }
 
+let workflowDocumentPromise;
+
+async function findWorkflowDocument() {
+  if (workflowDocumentPromise === undefined) {
+    workflowDocumentPromise = (async () => {
+      async function walk(directory, relative = '') {
+        const entries = await readdir(directory, { withFileTypes: true });
+        for (const entry of entries) {
+          const childRelative = path.posix.join(relative, entry.name);
+          const child = path.join(directory, entry.name);
+          if (entry.isDirectory()) {
+            const result = await walk(child, childRelative);
+            if (result !== undefined) return result;
+            continue;
+          }
+          if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+          const source = await readFile(child, 'utf8');
+          const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n/u)?.[1] ?? '';
+          const slugMatch = /^slug:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/mu.exec(frontmatter);
+          const slug = (slugMatch?.[1] ?? slugMatch?.[2] ?? slugMatch?.[3] ?? entry.name.slice(0, -3)).replace(/\s+/gu, '-');
+          if (slug !== workflowSlug) continue;
+          const dateMatch = /^date:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/mu.exec(frontmatter);
+          const date = dateMatch?.[1] ?? dateMatch?.[2] ?? dateMatch?.[3];
+          if (date === undefined) throw new Error(`Workflow fixture ${childRelative} has no date metadata.`);
+          const virtualPath = `posts/${childRelative}`;
+          return Object.freeze({
+            virtualPath,
+            filename: entry.name,
+            visiblePath: `~/blog/${virtualPath}`,
+            date: date.slice(0, 10)
+          });
+        }
+        return undefined;
+      }
+
+      const document = await walk(generatedPostsRoot);
+      if (document === undefined) throw new Error(`Could not find post with slug ${workflowSlug}.`);
+      return document;
+    })();
+  }
+  return workflowDocumentPromise;
+}
+
 test('static build emits only the implemented route surface', async () => {
   const files = await listFiles(distRoot);
   const htmlFiles = files.filter((file) => file.endsWith('.html'));
@@ -76,7 +125,7 @@ test('static build emits only the implemented route surface', async () => {
     'lab/index.html',
     'pages/index.html',
     'posts/index.html',
-    ...(await collectContentRoutes(pagesRoot, 'pages', false)),
+    ...(await collectContentRoutes(generatedPagesRoot, 'pages', false)),
     ...(await collectContentRoutes(generatedPostsRoot, 'posts', true))
   ].sort();
 
@@ -361,9 +410,10 @@ test('route closures keep public documents in Terminal styles and isolate home J
 });
 
 test('Terminal document and directory chrome use the visible shell path once', async () => {
+  const workflow = await findWorkflowDocument();
   const routes = [
     ['pages/about/index.html', '~/blog/pages/about.md'],
-    ['posts/ai/llm-workflow-with-trellis/index.html', '~/blog/posts/ai/llm-workflow-with-trellis.md'],
+    [workflowRoute, workflow.visiblePath],
     ['posts/ai/index.html', '~/blog/posts/ai']
   ];
 
@@ -439,17 +489,18 @@ test('Terminal components consume the root semantic theme contract', async () =>
 });
 
 test('home emits an exact safe entry/template map with inert build-rendered bodies', async () => {
+  const workflow = await findWorkflowDocument();
   const files = await listFiles(distRoot);
   const scriptPath = files.find((file) => /TerminalHome.*\.js$/u.test(file));
   assert.ok(scriptPath);
   const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
   const terminalArticle = await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8');
-  const article = await readFile(path.join(distRoot, 'posts/ai/llm-workflow-with-trellis/index.html'), 'utf8');
-  assert.match(home, /data-terminal-entry-virtual-path="posts\/ai\/llm-workflow-with-trellis\.md"/u);
-  assert.match(home, /data-terminal-entry-filename="llm-workflow-with-trellis\.md"/u);
+  const article = await readFile(path.join(distRoot, workflowRoute), 'utf8');
+  assert.match(home, new RegExp(`data-terminal-entry-virtual-path="${escapeRegExp(workflow.virtualPath)}"`, 'u'));
+  assert.match(home, new RegExp(`data-terminal-entry-filename="${escapeRegExp(workflow.filename)}"`, 'u'));
   assert.match(home, /data-terminal-entry-href="\/posts\/ai\/llm-workflow-with-trellis\/"/u);
-  assert.match(home, /data-terminal-entry-date="2026-05-28"/u);
+  assert.match(home, new RegExp(`data-terminal-entry-date="${escapeRegExp(workflow.date)}(?:T[^"]+)?"`, 'u'));
   assert.doesNotMatch(home, /data-terminal-entry-(?:description|body|draft|source|presentation)/u);
   assert.match(home, /data-terminal-experiment-id="nerv"/u);
   assert.match(home, /data-terminal-experiment-title="NERV"/u);
@@ -459,7 +510,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   const templatePaths = [...home.matchAll(/data-terminal-template-path="([^"]+)"/gu)].map((match) => match[1]);
   assert.deepEqual([...templatePaths].sort(), [...entryPaths].sort());
   assert.ok(templatePaths.includes('pages/about.md'));
-  assert.ok(templatePaths.includes('posts/ai/llm-workflow-with-trellis.md'));
+  assert.ok(templatePaths.includes(workflow.virtualPath));
   const templateBodies = [...home.matchAll(/<template\b[^>]*data-terminal-template[^>]*>([\s\S]*?)<\/template>/gu)].map((match) => match[1] ?? '');
   assert.equal(templateBodies.length, entryPaths.length);
   assert.match(templateBodies.join('\n'), /data-language="mermaid"/u);
@@ -495,7 +546,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(article, /class="terminal-document"/u);
   assert.match(article, /class="terminal-root"/u);
   assert.match(article, /published/u);
-  assert.match(article, /<span>~\/blog\/posts\/ai\/llm-workflow-with-trellis\.md<\/span>/u);
+  assert.match(article, new RegExp(`<span>${escapeRegExp(workflow.visiblePath)}<\\/span>`, 'u'));
   assert.doesNotMatch(article, /class="terminal-path"/u);
 });
 
@@ -536,8 +587,9 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
 });
 
 test('default firefly output contains reader boundaries and localized wide regions', async () => {
+  const workflow = await findWorkflowDocument();
   const post = await readFile(
-    path.join(distRoot, 'posts/ai/llm-workflow-with-trellis/index.html'),
+    path.join(distRoot, workflowRoute),
     'utf8'
   );
 
@@ -555,7 +607,7 @@ test('default firefly output contains reader boundaries and localized wide regio
   assert.match(post, /data-terminal-wide="table"/u);
   assert.match(post, /data-language="mermaid"/u);
   assert.match(post, /<h1>llm-workflow-with-trellis<\/h1>/u);
-  assert.match(post, /<span>~\/blog\/posts\/ai\/llm-workflow-with-trellis\.md<\/span>/u);
+  assert.match(post, new RegExp(`<span>${escapeRegExp(workflow.visiblePath)}<\\/span>`, 'u'));
   assert.doesNotMatch(post, /class="terminal-path"/u);
 });
 

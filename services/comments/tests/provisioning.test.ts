@@ -4,15 +4,21 @@ import test from 'node:test';
 
 test('same-device provisioning keeps comments private and the tracked site disabled', async () => {
   const compose = await readFile(new URL('../../../../compose.yml', import.meta.url), 'utf8');
+  const pluginCompose = await readFile(new URL('../../../../plugins/comments/compose.yml', import.meta.url), 'utf8');
   const nginx = await readFile(new URL('../../../../nginx.conf', import.meta.url), 'utf8');
   const dockerfile = await readFile(new URL('../../Dockerfile', import.meta.url), 'utf8');
-  const siteConfig = await readFile(new URL('../../../../config/site.toml', import.meta.url), 'utf8');
+  const siteConfig = await readFile(new URL('../../../../config/site.toml.example', import.meta.url), 'utf8');
   const dockerignore = await readFile(new URL('../../../../.dockerignore', import.meta.url), 'utf8');
   assert.match(compose, /comments:\n\s+profiles:\n\s+- comments/u);
   assert.match(compose, /network_mode: service:web/u);
   assert.match(compose, /COMMENTS_SECRETS_FILE: \/run\/secrets\/comments\.env/u);
-  assert.match(compose, /\.\/config\/plugins\/comments\/secrets\.env:\/run\/secrets\/comments\.env:ro/u);
-  assert.match(compose, /\.\/config\/plugins\/comments\/config\.toml:\/app\/config\/plugins\/comments\/config\.toml:ro/u);
+  assert.match(compose, /COMMENTS_PLUGIN_ROOT:-\.\/plugins\/comments\}\/secrets\.env:\/run\/secrets\/comments\.env:ro/u);
+  assert.match(compose, /COMMENTS_PLUGIN_ROOT:-\.\/plugins\/comments\}\/config\.toml:\/app\/config\/plugins\/comments\/config\.toml:ro/u);
+  assert.match(compose, /COMMENTS_DATA_ROOT:-\.\/plugins\/comments\/data\}:/u);
+  assert.match(pluginCompose, /network_mode: host/u);
+  assert.match(pluginCompose, /\.\/data:\/var\/lib\/firefly-comments/u);
+  assert.match(pluginCompose, /\.\/config\.toml:\/app\/config\/plugins\/comments\/config\.toml:ro/u);
+  assert.match(pluginCompose, /\.\/secrets\.env:\/run\/secrets\/comments\.env:ro/u);
   const commentsBlock = compose.slice(compose.indexOf('\n  comments:'));
   assert.doesNotMatch(commentsBlock, /\n\s+ports:/u);
   assert.match(nginx, /location \^~ \/v1\/comments\//u);

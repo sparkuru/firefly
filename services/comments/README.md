@@ -44,16 +44,22 @@ to the repository-relative `config/plugins/comments/config.toml`. The comments
 service reads that plugin-owned file read-only for its private runtime
 projection; the static site receives only the file's `[public]` section.
 
-Create the ignored local input from the tracked name template only when a
-private staging run is authorized:
+In production, the service is owned by `<deploy-root>/plugins/comments/`, with
+`compose.yml`, `config.toml`, `secrets.env`, and owner-only `data/` beside one
+another. The repository-relative `config/plugins/comments/` path is the local
+build input/template path; it is not the production data directory.
+
+Create the ignored plugin-local input from the tracked name templates only when
+a private staging run is authorized:
 
 ```sh
-cp config/plugins/comments/config.toml.example config/plugins/comments/config.toml
-cp config/plugins/comments/secrets.env.example config/plugins/comments/secrets.env
-chmod 600 config/plugins/comments/secrets.env
+mkdir -p plugins/comments/data
+cp config/plugins/comments/config.toml.example plugins/comments/config.toml
+cp config/plugins/comments/secrets.env.example plugins/comments/secrets.env
+chmod 600 plugins/comments/secrets.env
 ```
 
-`config/plugins/comments/secrets.env` is a small dotenv file containing only
+`plugins/comments/secrets.env` is a small dotenv file containing only
 secret values. `COMMENTS_SECRETS_FILE` selects an explicit path; otherwise the
 service may use the owner-local plugin file for local development. The loader
 rejects symlinks, non-regular files, broad permissions, malformed lines,

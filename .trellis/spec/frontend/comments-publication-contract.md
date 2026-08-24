@@ -448,11 +448,14 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 ### 3. Contracts
 
 - `config/site.toml` is public, build-time configuration. The ignored
-  `config/plugins/comments/config.toml` is the plugin's non-secret owner-local
-  runtime input; the tracked `config/plugins/comments/config.toml.example` is
-  its template. The ignored `config/plugins/comments/secrets.env` contains
-  only secret values and the tracked `secrets.env.example` contains names and
-  safe placeholders only. The dotenv loader accepts `KEY=VALUE`, comments,
+  `config/plugins/comments/config.toml` is the repository's non-secret
+  build/runtime-test input; the tracked
+  `config/plugins/comments/config.toml.example` is its template. Production
+  copies reviewed runtime values to the plugin-owned
+  `<deploy-root>/plugins/comments/config.toml`. The ignored
+  `config/plugins/comments/secrets.env` contains only secret values and the
+  tracked `secrets.env.example` contains names and safe placeholders only. The
+  dotenv loader accepts `KEY=VALUE`, comments,
   and blank lines; it never performs shell or variable expansion, rejects
   malformed/duplicate/control-containing values and known non-secret keys,
   rejects symlinks and group/other permissions, and gives explicit process
@@ -460,8 +463,15 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 - The comments image and static image exclude
   `config/plugins/comments/secrets.env`, SQLite files, outbox files, and
   runtime state. The comments profile mounts the plugin TOML and secret file
-  read-only, stores data under a private volume, and publishes no host port.
-  Its listener defaults to loopback.
+  read-only, stores data under the owner-only
+  `<deploy-root>/plugins/comments/data/` directory, and publishes no host
+  port. Its listener defaults to loopback. The plugin runtime is separate from
+  `current`, `releases`, and `blog`.
+- Production owns the runtime files at
+  `<deploy-root>/plugins/comments/{compose.yml,config.toml,secrets.env,data/}`.
+  The repository-relative `config/plugins/comments/` files remain local
+  build inputs and templates; `config/site.toml` is build input only and is
+  embedded in the static release rather than copied as a production source.
 - A route catalog derived from an active static publication must validate
   every candidate through the same canonical UTF-8-aware `normalizePostPath`
   contract used by submissions. Invalid candidates must be reported and
