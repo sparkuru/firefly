@@ -791,3 +791,24 @@ M51_comments_configuration_runtime_keys_route_fix_SMTP_and_end_to_end_flow_verif
 ### Status
 
 [OK] **Completed**
+
+
+## Session 36: Reorganize content and production runtime
+
+**Date**: 2026-08-25
+**Task**: Reorganize content and production runtime
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented configurable blog-root content loading, tracked demo content, legacy metadata compatibility, plugin-local comments SQLite runtime, production blog/current/releases layout, and verified default/external builds plus production smoke checks.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dd2c69b` | (see git log) |
+
+### Status
+
+[OK] **Completed**
