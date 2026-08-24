@@ -41,6 +41,15 @@ noted otherwise:
 | `shfmt -d sam package-runtime.sh services/comments/ops/*.sh` | passed |
 | `./package-runtime.sh` | passed; publication, route, header, 404, non-root, and read-only probes |
 
+Follow-up after the canonical route compatibility fix:
+
+- `./sam npm --prefix services/comments run test` passed; 38/38, using a
+  temporary empty content-root input because the local workspace does not
+  currently contain its optional content root.
+- `./sam npm --prefix services/comments run check` passed.
+- The rebuilt production-shaped comments image was loaded and the private
+  runtime health endpoint remained healthy after replacement.
+
 ## Browser and privacy checks
 
 - `SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts` passed; 20/20.
@@ -51,7 +60,9 @@ noted otherwise:
   assertions. The gate also expanded route coverage for delete, export, and
   moderation endpoints plus their old-path 404 behavior.
 - The repository secret file was checked by metadata only and remains a
-  regular owner-readable file with mode `600`; its contents were not read.
+  regular owner-readable file with mode `600`; secret values were not printed,
+  copied, or recorded. An owner-authorized runtime probe was allowed to read
+  the injected value inside the isolated delivery process.
 - No SMTP credential, private mailbox, DNS record, certificate private key, or
   raw remote output was recorded. Exact operational identities and paths remain
   outside this record; production changes are represented only by the
@@ -83,6 +94,10 @@ noted otherwise:
   configuration, owner-only secrets, read-only container root, dropped Linux
   capabilities, and no published host port. The service is healthy and binds
   only to the loopback interface.
+- The five missing comments runtime keys were generated in the owner-only
+  secret boundary without changing or copying the existing SMTP value. The
+  deployed service was then replaced with the follow-up image containing the
+  canonical encoded-route notification fix and remained healthy.
 - The existing HTTPS edge was updated to proxy only `/v1/comments/*`. The
   generic `/v1` root and unknown `/v1/*` paths fail closed with JSON 404s,
   `no-store`, and the required security headers. Nginx syntax validation,
@@ -106,8 +121,12 @@ noted otherwise:
 - The static build retains the existing authored-content-link warnings (12)
   and CSS optimizer warnings for `::highlight` (2); neither is introduced by
   this route migration and all required commands completed successfully.
-- Controlled SMTP delivery remains deferred because no SMTP secret and test
-  recipient were supplied; the notification worker was not started.
+- An owner-authorized runtime-injected SMTP probe reached the provider's TLS
+  endpoint but received SMTP status `535` during authentication; delivery is
+  therefore not verified. The secret value was not printed or persisted in
+  project records. Re-test remains pending after the owner confirms the
+  account-specific SMTP host, outgoing-mail permission, and application
+  password for the sender account.
 - Public comments submission and verification browser smoke remains deferred
   because comments are intentionally still disabled pending the owner's
   enablement decision and an approved test input.
