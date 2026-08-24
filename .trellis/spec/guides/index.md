@@ -23,6 +23,7 @@ These guides help you **ask the right questions before coding**.
 |-------|---------|-------------|
 | [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md) | Identify patterns and reduce duplication | When you notice repeated patterns |
 | [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md) | Think through data flow across layers | Features spanning multiple layers |
+| [Project Record Privacy and Scope Guide](./project-record-privacy.md) | Keep Trellis records project-scoped and redact operational identities | Remote deployment, external services, journals, tasks, specs, and mainline updates |
 
 ---
 
