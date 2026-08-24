@@ -121,12 +121,10 @@ Follow-up after the canonical route compatibility fix:
 - The static build retains the existing authored-content-link warnings (12)
   and CSS optimizer warnings for `::highlight` (2); neither is introduced by
   this route migration and all required commands completed successfully.
-- An owner-authorized runtime-injected SMTP probe reached the provider's TLS
-  endpoint but received SMTP status `535` during authentication; delivery is
-  therefore not verified. The secret value was not printed or persisted in
-  project records. Re-test remains pending after the owner confirms the
-  account-specific SMTP host, outgoing-mail permission, and application
-  password for the sender account.
+- An owner-authorized runtime-injected SMTP probe successfully delivered a
+  test notification through the configured provider endpoint. The secret
+  value was not printed or persisted in project records; the exact endpoint,
+  sender identity, and recipient remain in the operator channel.
 - Public comments submission and verification browser smoke remains deferred
   because comments are intentionally still disabled pending the owner's
   enablement decision and an approved test input.
