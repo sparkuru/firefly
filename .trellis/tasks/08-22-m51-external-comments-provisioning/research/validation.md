@@ -103,6 +103,12 @@ Follow-up after the canonical route compatibility fix:
   `no-store`, and the required security headers. Nginx syntax validation,
   reload, and public smoke checks passed; the old unscoped admin route returns
   404 while the authenticated new admin route returns success.
+- The owner-authorized end-to-end smoke test accepted a submission on a
+  canonical encoded post route, transitioned it through verification and
+  moderation, delivered the approval notification, and produced a signed
+  public export without private email fields. The temporary record was then
+  deleted; the cleaned export contains no test record and the tombstone epoch
+  advanced. The private service remained healthy throughout.
 - The active static publication produced one post path outside the existing
   ASCII-safe comments route contract. The runtime route catalog accepted 98
   compatible paths and deliberately excluded that one path; comments remain
