@@ -15,14 +15,22 @@ Docker-only: the supported command boundary is ./sam.
 After cloning, restore these authored inputs locally:
 
 - config/site.toml
-- content/posts/
-- content/pages/
+- optional owner-local comments build inputs under config/plugins/comments/
 - presentations/, packages/, tooling/, and experiments/
 
-`content/` is intentionally private and ignored by Git, so a fresh clone does
-not contain it. Restore it from the private content backup before running the
-build. `FIREFLY_CONTENT_ROOT` may point to an external posts workspace when the
-content is not stored below the checkout.
+The tracked `content/` directory is a clone-ready demo blog root containing
+`posts/` and `pages/`, including public, draft, and private-access fixtures.
+For the full authoring workspace, point the same variable at its containing
+blog root (not at `posts/` alone):
+
+~~~sh
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm --prefix apps/site run build:workspace
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
+~~~
+
+The external root is mounted read-only and only its `posts/` and `pages/`
+trees are scanned. Symlinks are dereferenced into the generated workspace;
+generated files never retain symlink metadata or host absolute paths.
 
 The default clone path is:
 
@@ -48,11 +56,14 @@ docker compose down
 ~~~
 
 The private comments runtime is opt-in and has no host-published port. After
-creating owner-only `config/plugins/comments/config.toml` and
-`config/plugins/comments/secrets.env` from their tracked templates, an
-operator may start the same-device profile with:
+creating the plugin-owned local runtime files and data directory from their
+tracked templates, an operator may start the same-device profile with:
 
 ~~~sh
+mkdir -p plugins/comments/data
+cp config/plugins/comments/config.toml.example plugins/comments/config.toml
+cp config/plugins/comments/secrets.env.example plugins/comments/secrets.env
+chmod 600 plugins/comments/secrets.env
 docker compose --profile comments up --build -d
 docker compose --profile comments down
 ~~~
@@ -73,9 +84,11 @@ is `config/site.toml.example`. It contains core site settings plus the single
 The comments plugin's non-secret public/runtime settings live in the explicit
 repository-relative `config/plugins/comments/config.toml`. Its protected
 `secrets.env` contains only injected secret values and is never part of the
-static build. The complete `content/` workspace is excluded from Git;
-publication visibility rules still control which restored Markdown entries are
-emitted for guests.
+static build. The repository-relative `config/plugins/comments/` files are
+build inputs/templates. The production-shaped comments runtime owns
+`<deploy-root>/plugins/comments/{compose.yml,config.toml,secrets.env,data/}`;
+its SQLite data is never part of a static release. Publication visibility rules
+control which Markdown entries are emitted for guests.
 
 <p align = "center" style="font-size: 26px;" > <strong> Site configuration </strong> </p>
 
@@ -114,6 +127,55 @@ htmlTitle controls the escaped document title in either presentation. Without
 it, the visible title receives seo.titleSuffix. canonical, seoImage, and
 noindex are validated during the build; unsafe or unknown front-matter keys
 fail the build.
+
+New authored files use these paths and safe-slug convention:
+
+~~~text
+content/posts/<category>/<safe-slug>.md
+content/pages/<safe-slug>.md
+~~~
+
+For example, the smallest new post and page are:
+
+~~~yaml
+# content/posts/notes/first-entry.md
+---
+title: First entry
+slug: first-entry
+date: 2026-08-24
+description: A short public note.
+draft: false
+layout: post
+---
+~~~
+
+~~~yaml
+# content/pages/about.md
+---
+title: About
+slug: about
+date: 2026-08-24
+description: A short public page.
+draft: false
+layout: page
+---
+~~~
+
+Do not use whitespace, percent escapes, dot segments, slashes, backslashes, or
+control characters in new path segments or slugs. A legacy slug containing a
+run of whitespace is normalized to `-` before route validation; this migration
+compatibility does not change the new-file convention. The legacy `source`
+field is optional provenance only: when present it must be a safe relative
+Markdown reference with an optional fragment, and it never controls routing or
+public output. Omit it for new content.
+
+The build materializes both collections atomically under
+`apps/site/.generated-content/{posts,pages}` before Astro loads them. Draft and
+private-owner entries remain in the source inventory for access projection but
+are excluded from the guest publication. Zero-byte Markdown placeholders are
+ignored; any non-empty new article must pass the front matter schema gate and
+should start body headings at `##`. Legacy body `#` headings are normalized in
+the generated stage only; source and production Markdown remain unchanged.
 
 All configuration and Markdown values are embedded at build time. No runtime
 configuration service, client-side config fetch, credentials, or private

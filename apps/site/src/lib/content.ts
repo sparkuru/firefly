@@ -94,7 +94,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     throw new Error(`Invalid Markdown identity for ${collection}/${entry.id}.`);
   }
   const stem = filename.slice(0, -3);
-  const routeSlug = entry.data.slug ?? stem;
+  const routeSlug = (entry.data.slug ?? stem).replace(/\s+/gu, '-');
   const virtualPath = `${collection}/${relativePath}`;
   const parentSegments = [collection, ...pathSegments.slice(0, -1)];
   const directoryHrefs = parentSegments.map((_, index) => directoryHref(parentSegments.slice(0, index + 1)));

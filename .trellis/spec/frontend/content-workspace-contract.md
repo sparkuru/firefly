@@ -18,8 +18,8 @@ the assembled release, or the runtime image.
 Build and packaging entry points:
 
 ```bash
-FIREFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm --prefix apps/site run build:workspace
-FIREFLY_CONTENT_ROOT=/absolute/notebook/posts ./sam npm run build:m4
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm --prefix apps/site run build:workspace
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
 ./sam npm run check:m4
 ./sam npm run test:m4
 ./sam npm run build:m4
@@ -36,6 +36,20 @@ materializeMarkdownWorkspace(options?: {
   beforeCopy?: () => Promise<void> | void;
   beforePromote?: () => Promise<void> | void;
 }): Promise<readonly string[]>
+
+scanContentWorkspace(sourceRoot?: string): Promise<{
+  readonly posts: readonly ScannedMarkdownFile[];
+  readonly pages: readonly ScannedMarkdownFile[];
+}>
+materializeContentWorkspace(options?: {
+  sourceRoot?: string;
+  targetRoot?: string;
+  beforeCopy?: () => Promise<void> | void;
+  beforePromote?: () => Promise<void> | void;
+}): Promise<{
+  readonly posts: readonly string[];
+  readonly pages: readonly string[];
+}>
 
 projectContentForPrincipal(documents, principal): readonly CanonicalDocument[]
 ```
@@ -152,16 +166,19 @@ startTerminalReader(root: HTMLElement): void
 
 #### Workspace transport and materialization
 
-- `FIREFLY_CONTENT_ROOT` is optional. It defaults to `<repo>/content/posts` and,
-  when set, must be an absolute readable directory.
+- `FIREFLY_CONTENT_ROOT` is optional. It defaults to the blog root
+  `<repo>/content`, which must contain readable `posts/` and `pages/` children.
+  When set, it must name an absolute readable blog root with the same shape.
 - `sam` mounts the resolved root and every recursively discovered symlink hop and
-  final target at the same absolute container path, read-only. It rejects `/`, a
-  broad system/home ancestor, a repository ancestor, broken/cyclic links, and
-  targets other than regular files or directories. It never mounts an entire
-  home directory merely to satisfy one link.
+  final target below only the `posts/` and `pages/` source trees at the same
+  absolute container path, read-only. It rejects `/`, a broad system/home
+  ancestor, a repository ancestor, broken/cyclic links, and targets other than
+  regular files or directories. It never mounts an entire home directory merely
+  to satisfy one link.
 - The Node scanner is the publication authority. It walks deterministically,
   skips hidden ordinary entries, rejects hidden/unsafe linked paths, and accepts
-  only ordinary `.md` files. Linked regular non-Markdown files, FIFOs, sockets,
+  only ordinary `.md` files with content. Zero-byte `.md` placeholders are
+  ignored as non-articles; linked regular non-Markdown files, FIFOs, sockets,
   devices, broken links, cycles, and unsafe virtual names are errors.
 - Public identity is the link-owned path below the workspace. A link to
   `/host/secret/location/note.md` at `characters/note.md` becomes only
@@ -173,12 +190,18 @@ startTerminalReader(root: HTMLElement): void
   opened file must remain a regular file with the scanned device/inode before
   its bytes are copied.
 - Materialization writes a unique candidate below
-  `apps/site/.generated-content/`, then atomically promotes it. A copy or promote
-  failure removes the candidate and restores the prior stage. The resulting
-  tree contains ordinary Markdown files and no symlinks.
-- Every Astro command that reads posts runs `prepare:content` first. The posts
-  collection loads only `.generated-content/posts/**/*.md`; authored workspace
-  paths are not an Astro loader base.
+  `apps/site/.generated-content/`, copies both collections, then atomically
+  promotes one complete stage. A copy or promote failure removes the candidate
+  and restores the prior stage. The resulting `posts/` and `pages/` trees
+  contain ordinary Markdown files and no symlinks.
+- The generated stage keeps source Markdown content but applies the legacy body
+  compatibility rule that demotes ATX `# ` headings outside fenced code blocks
+  to `## `; the document title owns the rendered h1. New authored documents
+  should write body headings from level two and do not rely on this migration
+  rule.
+- Every Astro command that reads content runs `prepare:content` first. The posts
+  and pages collections load only `.generated-content/{posts,pages}/**/*.md`;
+  authored workspace paths are not Astro loader bases.
 
 #### Metadata, projection, and canonical routes
 
@@ -195,6 +218,14 @@ startTerminalReader(root: HTMLElement): void
   segment and may differ from the physical filename stem; without it, the stem
   remains the route segment. Pages use their physical staged path for the tree
   and their required front-matter `slug` for the canonical route.
+- The legacy optional `source` field is accepted only as a safe relative Markdown
+  reference with an optional safe fragment. It is provenance metadata only and
+  never contributes to a route, public link, or rendered body. New content omits
+  it. A legacy slug run containing whitespace is normalized to `-` before the
+  existing safe-segment checks; new authored slugs and source filenames use
+  the no-whitespace convention. A legacy physical Markdown filename may retain
+  whitespace as source identity; its canonical route comes from the normalized
+  slug.
 - `posts/characters/nahida.md` maps to
   `/posts/characters/nahida/`; its directory routes are `/posts/` and
   `/posts/characters/`. `index.md` remains `/.../index/` rather than replacing

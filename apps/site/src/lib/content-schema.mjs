@@ -22,9 +22,23 @@ const isSafeRouteSegment = (segment) => segment.length > 0 &&
   !segment.startsWith('.') &&
   segment.normalize('NFC') === segment &&
   !unsafeRouteSegment.test(segment);
-const slug = requiredText.refine(
+const slug = requiredText.transform((value) => value.replace(/\s+/gu, '-')).refine(
   isSafeRouteSegment,
   'Slug must be one canonical safe URL segment'
+);
+const isSafeSourceReference = (value) => {
+  if (value.normalize('NFC') !== value || value.startsWith('/') || value.includes('\\')) return false;
+  const [sourcePath, fragment, ...extraFragments] = value.split('#');
+  if (extraFragments.length > 0 || sourcePath.length === 0 || !sourcePath.endsWith('.md')) return false;
+  if (sourcePath.split('/').some((segment) => segment.length === 0 || segment === '.' || segment === '..' || segment.startsWith('.') || /:/u.test(segment) || unsafeRouteSegment.test(segment))) {
+    return false;
+  }
+  if (fragment !== undefined && (fragment.length === 0 || unsafeRouteSegment.test(fragment) || fragment.includes('/'))) return false;
+  return true;
+};
+const source = requiredText.refine(
+  isSafeSourceReference,
+  'Source must be a safe relative Markdown reference with an optional fragment'
 );
 const alias = requiredText.refine(
   (value) => value.startsWith('/') && value.endsWith('/') &&
@@ -58,6 +72,7 @@ const sharedMetadata = {
   draft: z.boolean(),
   presentation: presentation.optional().default(DEFAULT_PRESENTATION_ID),
   aliases: z.array(alias).optional(),
+  source: source.optional(),
   access: access.optional().default({ visibility: 'public' })
 };
 

@@ -12,12 +12,13 @@ material only.
 
 ```text
 content/
-├── posts/**/*.md                 # Default nested posts workspace
-└── pages/*.md                    # Repository-local pages collection
+├── posts/**/*.md                 # Default nested posts collection
+└── pages/**/*.md                 # Default nested pages collection
 plugins/comments/
 ├── plugin.json                   # Internal Firefly capability manifest
 ├── config.mjs                    # Shared comments namespace decoder
 ├── config.d.mts                  # Type declaration for service consumers
+├── compose.yml                   # Plugin-local runtime template
 └── README.md                     # Ownership and private/public boundary
 packages/x-core/
 ├── package.json + package-lock.json
@@ -43,6 +44,7 @@ apps/site/
 ├── scripts/
 │   └── materialize-content.mjs   # Safe workspace/link scanner and transaction
 ├── .generated-content/posts/     # Ignored ordinary-file stage consumed by Astro
+├── .generated-content/pages/     # Ignored ordinary-file stage consumed by Astro
 ├── src/
 │   ├── content.config.ts         # Generated posts + repository pages loaders
 │   ├── components/               # Dispatcher, semantic/Terminal documents/home
@@ -96,15 +98,16 @@ ignored. Never put authored source in them.
 
 ## Main-Site Boundaries
 
-- Keep page Markdown under repository-root `content/pages/`. Posts come from the
-  absolute `FIREFLY_CONTENT_ROOT` workspace, defaulting to `content/posts/`.
+- Keep Markdown under `content/posts/<category>/<safe-slug>.md` or
+  `content/pages/<safe-slug>.md`. The absolute `FIREFLY_CONTENT_ROOT` points to
+  their containing blog root and defaults to `content/`.
   Bodies do not import Astro components, use hydration directives, or depend on
   presentation CSS classes. See `content-workspace-contract.md` for link/mount
   and virtual-path safety.
-- The scanner dereferences validated authored links into ignored
-  `.generated-content/posts/`; Astro loads only that ordinary-file stage. Schema
-  validation, access projection, and canonical route/tree invariants stay in
-  their shared helpers rather than routes.
+- The scanner dereferences validated authored links into one ignored
+  `.generated-content/{posts,pages}/` stage; Astro loads only those ordinary-file
+  trees. Schema validation, access projection, and canonical route/tree
+  invariants stay in their shared helpers rather than routes.
 - Keep route files thin. The home derives a validated, canonical Terminal index
   from public content and calls `renderDocument()` once per public entry to emit
   one inert keyed `TerminalStreamDocument` template. Dynamic post/page files

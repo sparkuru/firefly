@@ -14,7 +14,7 @@ const posts = defineCollection({
 const pages = defineCollection({
   loader: glob({
     pattern: '**/*.md',
-    base: '../../content/pages',
+    base: '.generated-content/pages',
     generateId: ({ entry }) => entry.replaceAll('\\', '/')
   }),
   schema: pageSchema

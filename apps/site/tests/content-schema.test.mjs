@@ -18,7 +18,8 @@ const validPost = {
   draft: false,
   layout: 'post',
   presentation: 'semantic',
-  aliases: ['/posts/main/379-alias/']
+  aliases: ['/posts/main/379-alias/'],
+  source: 'legacy/379.md#workflow'
 };
 
 const validPage = {
@@ -40,6 +41,7 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(page.date instanceof Date);
   assert.deepEqual(post.access, { visibility: 'public' });
   assert.deepEqual(post.tags, ['trellis']);
+  assert.equal(post.source, 'legacy/379.md#workflow');
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
 });
 
@@ -83,6 +85,28 @@ test('invalid slug is rejected', () => {
   for (const slug of ['nested/post', '.hidden', '..', 'encoded%2fpath', 'back\\slash', 'not normalized e\u0301']) {
     assert.equal(postSchema.safeParse({ ...validPost, slug }).success, false, slug);
   }
+  assert.equal(postSchema.parse({ ...validPost, slug: 'legacy title' }).slug, 'legacy-title');
+  assert.equal(postSchema.parse({ ...validPost, slug: '  legacy\ttitle  ' }).slug, 'legacy-title');
+});
+
+test('legacy source metadata is a safe relative Markdown reference and never a route input', () => {
+  for (const source of [
+    '/absolute.md',
+    '../outside.md',
+    'legacy/../outside.md',
+    'legacy/private.txt',
+    'https:legacy.md',
+    'legacy/unsafe%2f.md',
+    'legacy/unsafe path.md',
+    'legacy/file.md#',
+    'legacy/file.md#unsafe fragment',
+    'legacy/file.md#section/child'
+  ]) {
+    assert.equal(postSchema.safeParse({ ...validPost, source }).success, false, source);
+  }
+  const parsed = postSchema.parse({ ...validPost, slug: 'canonical title', source: 'legacy/file.md#section' });
+  assert.equal(parsed.slug, 'canonical-title');
+  assert.equal(parsed.source, 'legacy/file.md#section');
 });
 
 test('SEO front matter is strict and safe', () => {
@@ -160,19 +184,20 @@ test('the real Terminal page keeps strict metadata and representative Markdown',
   assert.match(page, /Future presentations can change how the site looks/u);
 });
 
-test('a source article keeps metadata and Markdown content', async () => {
+test('the tracked demo article keeps compatibility metadata and authored Markdown content', async () => {
   const article = await readFile(
     new URL('../../../content/posts/ai/llm-workflow-with-trellis.md', import.meta.url),
     'utf8'
   );
-  assert.match(article, /^---\ntitle: "llm-workflow-with-trellis"\ndescription: "和 LLM 沟通比和人打交道简单多了。"\ndate: "2026-05-28T03:48:00.000Z"/mu);
-  assert.match(article, /draft: false\nlayout: "post"\nslug: "llm-workflow-with-trellis"/u);
+  assert.match(article, /^---\ntitle: "llm-workflow-with-trellis"\ndate: 2026-05-28\nupdated: 2026-07-03\ndescription:/mu);
+  assert.match(article, /draft: false\nlayout: post\n---/u);
+  assert.doesNotMatch(article, /^source:/mu);
   assert.doesNotMatch(article, /^presentation:/mu);
   assert.equal((article.match(/^# /gmu) ?? []).length, 0);
-  assert.match(article, /^## llm workflow with trellis$/mu);
-  assert.match(article, /^### Phase 1 — Plan$/mu);
-  assert.match(article, /^\| Spec 系统/mu);
-  assert.match(article, /^> trellis 的工作流/mu);
+  assert.match(article, /^## install$/mu);
+  assert.match(article, /^## usage$/mu);
+  assert.match(article, /Use the workflow like this/u);
+  assert.match(article, /^\| Step \| Result \|/mu);
   assert.match(article, /^```mermaid\nflowchart TD/mu);
   assert.match(article, /https:\/\/github\.com\/mindfold-ai\/Trellis\.git/u);
 });

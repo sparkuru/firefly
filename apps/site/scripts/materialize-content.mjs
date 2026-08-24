@@ -1,4 +1,5 @@
 import {
+  access,
   lstat,
   mkdir,
   open,
@@ -15,14 +16,26 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const siteRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-export const generatedPostsRoot = path.join(siteRoot, '.generated-content', 'posts');
-const unsafeSegment = /[\\/?#\u0000-\u001f\u007f]/u;
+const defaultContentRoot = path.resolve(siteRoot, '../../content');
+export const generatedContentRoot = path.join(siteRoot, '.generated-content');
+export const generatedPostsRoot = path.join(generatedContentRoot, 'posts');
+export const generatedPagesRoot = path.join(generatedContentRoot, 'pages');
+const collections = Object.freeze(['posts', 'pages']);
+const unsafeSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
 
-function safeDiagnosticPath(segments) {
-  return segments.length === 0 ? 'posts/' : `posts/${segments.join('/')}`;
+function safeDiagnosticPath(segments, collection = 'posts') {
+  return segments.length === 0 ? `${collection}/` : `${collection}/${segments.join('/')}`;
 }
 
-function validateSegment(segment, virtualSegments) {
+function collectionName(options) {
+  const collection = typeof options === 'string' ? options : options?.collection ?? 'posts';
+  if (!collections.includes(collection)) {
+    throw new Error(`Unsupported content collection: ${collection}`);
+  }
+  return collection;
+}
+
+function validateSegment(segment, virtualSegments, collection) {
   if (
     segment.length === 0 ||
     segment === '.' ||
@@ -31,7 +44,7 @@ function validateSegment(segment, virtualSegments) {
     unsafeSegment.test(segment) ||
     segment.normalize('NFC') !== segment
   ) {
-    throw new Error(`Unsafe content path: ${safeDiagnosticPath([...virtualSegments, segment])}`);
+    throw new Error(`Unsafe content path: ${safeDiagnosticPath([...virtualSegments, segment], collection)}`);
   }
 }
 
@@ -46,13 +59,15 @@ function collisionKey(value) {
 async function requireSourceRoot(sourceRoot) {
   const source = path.resolve(sourceRoot);
   const sourceStat = await stat(source).catch(() => null);
-  if (sourceStat === null || !sourceStat.isDirectory()) {
+  const readable = await access(source, constants.R_OK).then(() => true).catch(() => false);
+  if (sourceStat === null || !sourceStat.isDirectory() || !readable) {
     throw new Error('FIREFLY_CONTENT_ROOT must name a readable directory.');
   }
   return source;
 }
 
-export async function scanMarkdownWorkspace(sourceRoot) {
+export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
+  const collection = collectionName(options);
   const source = await requireSourceRoot(sourceRoot);
   const files = [];
   const publicPaths = new Map();
@@ -63,7 +78,7 @@ export async function scanMarkdownWorkspace(sourceRoot) {
     const key = collisionKey(virtualPath);
     const existing = publicPaths.get(key);
     if (existing !== undefined) {
-      throw new Error(`Content path collision: posts/${existing} and posts/${virtualPath}`);
+      throw new Error(`Content path collision: ${collection}/${existing} and ${collection}/${virtualPath}`);
     }
     publicPaths.set(key, virtualPath);
 
@@ -72,7 +87,7 @@ export async function scanMarkdownWorkspace(sourceRoot) {
     const opposite = kind === 'file' ? directoryRoutes : fileRoutes;
     const routeOwner = opposite.get(routeKey);
     if (routeOwner !== undefined) {
-      throw new Error(`Content file/directory route collision: posts/${routeOwner} and posts/${virtualPath}`);
+      throw new Error(`Content file/directory route collision: ${collection}/${routeOwner} and ${collection}/${virtualPath}`);
     }
     (kind === 'file' ? fileRoutes : directoryRoutes).set(routeKey, virtualPath);
   }
@@ -80,7 +95,7 @@ export async function scanMarkdownWorkspace(sourceRoot) {
   async function walk(physicalPath, virtualSegments, resolvedAncestors) {
     let nodeStat = await lstat(physicalPath).catch(() => null);
     if (nodeStat === null) {
-      throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments)}`);
+      throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments, collection)}`);
     }
 
     let resolvedPath = physicalPath;
@@ -89,18 +104,18 @@ export async function scanMarkdownWorkspace(sourceRoot) {
       await readlink(physicalPath);
       resolvedPath = await realpath(physicalPath).catch(() => '');
       if (resolvedPath.length === 0) {
-        throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments)}`);
+        throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments, collection)}`);
       }
       nodeStat = await stat(resolvedPath).catch(() => null);
       if (nodeStat === null) {
-        throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments)}`);
+        throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments, collection)}`);
       }
     }
 
     if (nodeStat.isDirectory()) {
       const resolvedDirectory = await realpath(resolvedPath);
       if (resolvedAncestors.has(resolvedDirectory)) {
-        throw new Error(`Content link cycle: ${safeDiagnosticPath(virtualSegments)}`);
+        throw new Error(`Content link cycle: ${safeDiagnosticPath(virtualSegments, collection)}`);
       }
       if (virtualSegments.length > 0) {
         reservePath(virtualSegments.join('/'), 'directory');
@@ -111,20 +126,29 @@ export async function scanMarkdownWorkspace(sourceRoot) {
       children.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
       for (const child of children) {
         if (child.name.startsWith('.')) {
+          if (child.isSymbolicLink()) {
+            throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([...virtualSegments, child.name], collection)}`);
+          }
           continue;
         }
-        validateSegment(child.name, virtualSegments);
+        validateSegment(child.name, virtualSegments, collection);
         await walk(path.join(resolvedPath, child.name), [...virtualSegments, child.name], nextAncestors);
       }
       return;
     }
 
     if (!nodeStat.isFile()) {
-      throw new Error(`Unsupported content node: ${safeDiagnosticPath(virtualSegments)}`);
+      throw new Error(`Unsupported content node: ${safeDiagnosticPath(virtualSegments, collection)}`);
     }
     const filename = virtualSegments.at(-1) ?? '';
     if (path.extname(filename).toLowerCase() !== '.md') {
-      if (linked) throw new Error(`Content link target is not Markdown: ${safeDiagnosticPath(virtualSegments)}`);
+      if (linked) throw new Error(`Content link target is not Markdown: ${safeDiagnosticPath(virtualSegments, collection)}`);
+      return;
+    }
+    if (linked && path.extname(path.basename(resolvedPath)).toLowerCase() !== '.md') {
+      throw new Error(`Content link target is not Markdown: ${safeDiagnosticPath(virtualSegments, collection)}`);
+    }
+    if (nodeStat.size === 0) {
       return;
     }
     const virtualPath = virtualSegments.join('/');
@@ -142,26 +166,74 @@ export async function scanMarkdownWorkspace(sourceRoot) {
   children.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
   for (const child of children) {
     if (child.name.startsWith('.')) {
+      if (child.isSymbolicLink()) {
+        throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([child.name], collection)}`);
+      }
       continue;
     }
-    validateSegment(child.name, []);
+    validateSegment(child.name, [], collection);
     await walk(path.join(source, child.name), [child.name], new Set([rootRealPath]));
   }
   return Object.freeze(files);
 }
 
-export async function materializeMarkdownWorkspace({
-  sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? path.resolve(siteRoot, '../../content/posts'),
-  targetRoot = generatedPostsRoot,
-  beforeCopy,
-  beforePromote
-} = {}) {
+async function copyFiles(files, targetRoot) {
+  for (const file of files) {
+    const destination = path.join(targetRoot, ...file.virtualPath.split('/'));
+    await mkdir(path.dirname(destination), { recursive: true });
+    let sourceHandle;
+    try {
+      sourceHandle = await open(file.sourcePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+      const currentStat = await sourceHandle.stat();
+      if (!currentStat.isFile() || currentStat.dev !== file.device || currentStat.ino !== file.inode) {
+        throw new Error(`Content source changed during materialization: ${safeDiagnosticPath(file.virtualPath.split('/'), file.collection ?? 'posts')}`);
+      }
+        const sourceBytes = await sourceHandle.readFile();
+        const sourceText = sourceBytes.toString('utf8');
+        const normalizedText = normalizeLegacyBodyHeadings(sourceText);
+        await writeFile(destination, normalizedText === sourceText ? sourceBytes : normalizedText);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Content source changed during materialization:')) {
+        throw error;
+      }
+      throw new Error(`Content source changed during materialization: ${safeDiagnosticPath(file.virtualPath.split('/'), file.collection ?? 'posts')}`, { cause: error });
+    } finally {
+      await sourceHandle?.close();
+    }
+  }
+}
+
+function normalizeLegacyBodyHeadings(markdown) {
+  const lines = markdown.split('\n');
+  let frontmatter = lines[0]?.trim() === '---';
+  let fenced = false;
+  let changed = false;
+  const normalized = lines.map((line, index) => {
+    if (frontmatter) {
+      if (index > 0 && line.trim() === '---') {
+        frontmatter = false;
+      }
+      return line;
+    }
+    if (/^\s*(```|~~~)/u.test(line)) {
+      fenced = !fenced;
+      return line;
+    }
+    if (!fenced && /^# /u.test(line)) {
+      changed = true;
+      return `#${line}`;
+    }
+    return line;
+  });
+  return changed ? normalized.join('\n') : markdown;
+}
+
+async function replaceStage(targetRoot, { beforeCopy, beforePromote, copy }) {
   const target = path.resolve(targetRoot);
   const parent = path.dirname(target);
   if (target === parent || path.basename(target).length === 0) {
     throw new Error('Generated content target is unsafe.');
   }
-  const files = await scanMarkdownWorkspace(sourceRoot);
   await mkdir(parent, { recursive: true });
   const candidate = `${target}.candidate-${process.pid}-${Date.now()}`;
   const backup = `${target}.backup-${process.pid}-${Date.now()}`;
@@ -172,26 +244,7 @@ export async function materializeMarkdownWorkspace({
     if (beforeCopy !== undefined) {
       await beforeCopy();
     }
-    for (const file of files) {
-      const destination = path.join(candidate, ...file.virtualPath.split('/'));
-      await mkdir(path.dirname(destination), { recursive: true });
-      let sourceHandle;
-      try {
-        sourceHandle = await open(file.sourcePath, constants.O_RDONLY | constants.O_NOFOLLOW);
-        const currentStat = await sourceHandle.stat();
-        if (!currentStat.isFile() || currentStat.dev !== file.device || currentStat.ino !== file.inode) {
-          throw new Error(`Content source changed during materialization: posts/${file.virtualPath}`);
-        }
-        await writeFile(destination, await sourceHandle.readFile());
-      } catch (error) {
-        if (error instanceof Error && error.message.startsWith('Content source changed during materialization:')) {
-          throw error;
-        }
-        throw new Error(`Content source changed during materialization: posts/${file.virtualPath}`, { cause: error });
-      } finally {
-        await sourceHandle?.close();
-      }
-    }
+    await copy(candidate);
     const prior = await lstat(target).catch(() => null);
     if (prior !== null) {
       await rename(target, backup);
@@ -212,10 +265,61 @@ export async function materializeMarkdownWorkspace({
     }
     throw error;
   }
+}
+
+export async function materializeMarkdownWorkspace({
+  sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? path.join(defaultContentRoot, 'posts'),
+  targetRoot = generatedPostsRoot,
+  beforeCopy,
+  beforePromote
+} = {}) {
+  const files = await scanMarkdownWorkspace(sourceRoot, { collection: 'posts' });
+  await replaceStage(targetRoot, {
+    beforeCopy,
+    beforePromote,
+    copy: (candidate) => copyFiles(files, candidate)
+  });
   return files.map(({ virtualPath }) => virtualPath);
 }
 
+export async function scanContentWorkspace(sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? defaultContentRoot) {
+  const root = await requireSourceRoot(sourceRoot);
+  const inventory = {};
+  for (const collection of collections) {
+    const collectionRoot = path.join(root, collection);
+    const scanned = await scanMarkdownWorkspace(collectionRoot, { collection });
+    inventory[collection] = Object.freeze(scanned.map((file) => Object.freeze({ ...file, collection })));
+  }
+  return Object.freeze(inventory);
+}
+
+export async function materializeContentWorkspace({
+  sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? defaultContentRoot,
+  targetRoot = generatedContentRoot,
+  beforeCopy,
+  beforePromote
+} = {}) {
+  const inventory = await scanContentWorkspace(sourceRoot);
+  await replaceStage(targetRoot, {
+    beforeCopy,
+    beforePromote,
+    copy: async (candidate) => {
+      for (const collection of collections) {
+        const collectionTarget = path.join(candidate, collection);
+        await mkdir(collectionTarget, { recursive: true });
+        await copyFiles(inventory[collection], collectionTarget);
+      }
+    }
+  });
+  return Object.freeze({
+    pages: inventory.pages.map(({ virtualPath }) => virtualPath),
+    posts: inventory.posts.map(({ virtualPath }) => virtualPath)
+  });
+}
+
+export const materializeMarkdownCollections = materializeContentWorkspace;
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const inventory = await materializeMarkdownWorkspace();
-  process.stdout.write(`[content] materialized ${inventory.length} Markdown files\n`);
+  const inventory = await materializeContentWorkspace();
+  process.stdout.write(`[content] materialized ${inventory.posts.length} posts and ${inventory.pages.length} pages\n`);
 }

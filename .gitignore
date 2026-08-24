@@ -17,12 +17,14 @@ presentations/terminal/dist/
 .DS_Store
 *.log
 tooling/sync-server/
-content/
 
 config/site.toml
 config/secrets.env
 config/plugins/comments/config.toml
 config/plugins/comments/secrets.env
+plugins/comments/config.toml
+plugins/comments/secrets.env
+plugins/comments/data/
 *.sqlite
 *.sqlite-*
 *.jsonl
