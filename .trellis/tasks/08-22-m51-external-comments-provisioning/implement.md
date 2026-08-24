@@ -9,8 +9,10 @@
 - [ ] Exact deployment targets, hostnames, accounts, mailbox values, private
       paths, release IDs, and credentials remain in the operator channel or
       owner-only ignored inputs.
-- [ ] The real SMTP password is never read, printed, copied, tested by the
-      repository agent, or committed.
+- [ ] The real SMTP password is never printed, copied, recorded, or committed.
+      If the owner authorizes a runtime-injected delivery probe, record only
+      its redacted outcome and keep the value outside the repository agent's
+      output and durable task records.
 - [ ] The route namespace decision and the no-enablement decision are recorded
       in `prd.md` before implementation begins.
 
