@@ -17,9 +17,13 @@ import {
 import { ExportValidationError, ValidationError } from './errors.js';
 
 type CommentsConfigModule = typeof import('../../../plugins/comments/config.mjs');
-const { isCanonicalCommentsPostRoute } = await import(
+const { isCanonicalCommentsPostRoute: isCanonicalRoute } = await import(
   pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../plugins/comments/config.mjs')).href
 ) as CommentsConfigModule;
+
+export function isCanonicalCommentsPostRoute(value: unknown): value is string {
+  return isCanonicalRoute(value);
+}
 
 const SUBMISSION_KEYS = new Set([
   'postPath',

@@ -63,6 +63,30 @@ test('notification IDs are stable and queued messages receive a private ID', asy
   }
 });
 
+test('notification outbox accepts canonical UTF-8 percent-encoded post routes', async () => {
+  const encodedMessage: NotificationMessage = {
+    ...message,
+    postPath: '/posts/%E7%8C%AB/'
+  };
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-notifications-'));
+  const outboxPath = path.join(root, 'notifications.jsonl');
+  const statePath = path.join(root, 'notifications.state.json');
+  try {
+    await writeFile(outboxPath, `${JSON.stringify(encodedMessage)}\n`);
+    const delivered: NotificationMessage[] = [];
+    const transport: NotificationDeliveryTransport = { deliver: (value) => { delivered.push(value); } };
+    assert.deepEqual(await deliverNotificationOutbox(outboxPath, statePath, transport), {
+      queued: 1,
+      delivered: 1,
+      skipped: 0,
+      failed: 0
+    });
+    assert.equal(delivered[0]?.postPath, encodedMessage.postPath);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('failed delivery is recorded without exposing message content in state', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-notifications-'));
   const outboxPath = path.join(root, 'notifications.jsonl');

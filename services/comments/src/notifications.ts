@@ -3,11 +3,11 @@ import { appendFile, chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path';
 
 import type { NotificationDeliveryTransport, NotificationKind, NotificationMessage, NotificationTransport } from './types.js';
+import { isCanonicalCommentsPostRoute } from './validation.js';
 
 const NOTIFICATION_KINDS = new Set<NotificationKind>(['verification', 'approved', 'rejected', 'reply']);
 const notificationIdPattern = /^n_[a-f0-9]{32}$/u;
 const publicIdPattern = /^c_[A-Za-z0-9_-]{3,128}$/u;
-const postPathPattern = /^\/posts\/(?:[A-Za-z0-9][A-Za-z0-9._~-]*\/)*[A-Za-z0-9][A-Za-z0-9._~-]*\/$/u;
 const emailPattern = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/u;
 const verificationTokenPattern = /^v_[A-Za-z0-9_-]+$/u;
 const controlTokenPattern = /^k_[A-Za-z0-9_-]+$/u;
@@ -152,7 +152,7 @@ function decodeNotificationMessage(value: unknown, source: string): Notification
   if (typeof message.publicId !== 'string' || !publicIdPattern.test(message.publicId)) {
     throw new TypeError(`${source}: notification public ID is invalid.`);
   }
-  if (typeof message.postPath !== 'string' || !postPathPattern.test(message.postPath)) {
+  if (typeof message.postPath !== 'string' || !isCanonicalCommentsPostRoute(message.postPath)) {
     throw new TypeError(`${source}: notification post route is invalid.`);
   }
   if (message.notificationId !== undefined && (typeof message.notificationId !== 'string' || !notificationIdPattern.test(message.notificationId))) {
