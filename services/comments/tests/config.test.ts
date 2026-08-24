@@ -129,6 +129,34 @@ test('runtime outbox paths reject traversal and empty path segments', async () =
   }
 });
 
+test('comments route catalog accepts canonical UTF-8 percent escapes and rejects unsafe routes', () => {
+  const encodedRoute = '/posts/acg/%E5%A6%B9%E7%9B%B8%E9%9A%8F-%E9%BB%91%E7%99%BD%E4%B8%96%E7%95%8C-%E6%B8%B8%E7%8E%A9%E8%AE%B0%E5%BD%95/';
+  const parseRoutes = (postRoutes: string[]) => parseCommentsConfig({ runtime: { postRoutes } }, 'fixture').runtime.postRoutes;
+
+  assert.deepEqual(parseRoutes(['/posts/main/first/', encodedRoute, '/posts/main/%C3%A9/']), [
+    '/posts/main/first/',
+    encodedRoute,
+    '/posts/main/%C3%A9/'
+  ]);
+
+  for (const route of [
+    '/posts/main/%E5%A6%B9%E7%9B%B8%E9%9A%8F',
+    '/posts/main/%E5%A6%B9%ZZ/',
+    '/posts/main/%2E%2E/',
+    '/posts/main/%2F/',
+    '/posts/main/%5C/',
+    '/posts/main/%00/',
+    '/posts/main/%E2%80%A8/',
+    '/posts/main/%C3%A9%20title/',
+    '/posts/main/%41/',
+    '/posts/main/-leading-ascii/',
+    '/posts/main/_leading-ascii/',
+    '/posts/main/é/'
+  ]) {
+    assert.throws(() => parseRoutes([route]), /canonical \/posts/u, route);
+  }
+});
+
 test('comments runtime follows site activation into a plugin-owned config and secret file', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-plugin-config-'));
   context.after(() => rm(root, { recursive: true, force: true }));

@@ -7,6 +7,7 @@ import {
   createRouteCatalog,
   decodePublicExport,
   digestForExport,
+  normalizePostPath,
   normalizeSubmission,
   serializePublicExport
 } from '../src/index.js';
@@ -32,6 +33,23 @@ test('normalizes bounded submission fields and applies safe defaults', () => {
     notifyReplies: false,
     consentVersion: 'm51-v1'
   });
+});
+
+test('accepts canonical UTF-8 percent-encoded post routes and rejects unsafe encodings', () => {
+  const encodedRoute = '/posts/acg/%E5%A6%B9%E7%9B%B8%E9%9A%8F/';
+  assert.equal(normalizePostPath(encodedRoute), encodedRoute);
+  assert.deepEqual(createRouteCatalog([encodedRoute]).postPaths, new Set([encodedRoute]));
+  for (const route of [
+    '/posts/acg/%E5%A6%B9%ZZ/',
+    '/posts/acg/%2E%2E/',
+    '/posts/acg/%2F/',
+    '/posts/acg/%00/',
+    '/posts/acg/%E2%80%A8/',
+    '/posts/acg/%C3%A9%20title/',
+    '/posts/acg/%41/'
+  ]) {
+    assert.throws(() => normalizePostPath(route), ValidationError, route);
+  }
 });
 
 test('rejects unknown fields, stale routes, unsafe links, and honeypots', () => {

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isCanonicalCommentsPostRoute } from '../../../../plugins/comments/config.mjs';
 
 const moduleRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const repositoryRoot = [
@@ -13,7 +14,6 @@ const defaultExportPath = path.join(repositoryRoot, 'artifacts/comments/comments
 const envelopeKeys = new Set(['schemaVersion', 'sourceRevision', 'generatedAt', 'tombstoneEpoch', 'digest', 'comments']);
 const commentKeys = new Set(['id', 'postPath', 'parentId', 'displayName', 'homepage', 'body', 'createdAt']);
 const commentIdPattern = /^c_[A-Za-z0-9_-]{3,128}$/u;
-const postPathPattern = /^\/posts\/(?:[A-Za-z0-9][A-Za-z0-9._~-]*\/)*[A-Za-z0-9][A-Za-z0-9._~-]*\/$/u;
 const controlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
 const bodyControlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
 const digestPattern = /^(?:sha256:)?[a-f0-9]{64}$/u;
@@ -57,7 +57,7 @@ function assertIsoTimestamp(value, source, label) {
 }
 
 function assertPostPath(value, source, label = 'postPath') {
-  if (typeof value !== 'string' || value.normalize('NFC') !== value || !postPathPattern.test(value)) {
+  if (!isCanonicalCommentsPostRoute(value)) {
     invalid(source, `${label} must be a normalized canonical /posts/ route.`);
   }
 }

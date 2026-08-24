@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   DEFAULT_CONSENT_VERSION,
@@ -13,6 +15,11 @@ import {
   type SubmissionInput
 } from './types.js';
 import { ExportValidationError, ValidationError } from './errors.js';
+
+type CommentsConfigModule = typeof import('../../../plugins/comments/config.mjs');
+const { isCanonicalCommentsPostRoute } = await import(
+  pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../plugins/comments/config.mjs')).href
+) as CommentsConfigModule;
 
 const SUBMISSION_KEYS = new Set([
   'postPath',
@@ -60,32 +67,11 @@ export function toRouteCatalog(input: RouteCatalogInput): RouteCatalog {
 }
 
 export function normalizePostPath(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new ValidationError('postPath must be a string.');
+  if (typeof value !== 'string') throw new ValidationError('postPath must be a string.');
+  if (value.length > 512 || !isCanonicalCommentsPostRoute(value)) {
+    throw new ValidationError('postPath must be a canonical /posts/.../ route with safe UTF-8 encoding.');
   }
-  const path = value.trim();
-  if (
-    path.length === 0 ||
-    path.length > 512 ||
-    path !== value ||
-    !path.startsWith('/posts/') ||
-    !path.endsWith('/') ||
-    path.includes('?') ||
-    path.includes('#') ||
-    path.includes('\\') ||
-    path.includes('%') ||
-    path.includes('//')
-  ) {
-    throw new ValidationError('postPath must be a canonical /posts/.../ route.');
-  }
-  const segments = path.slice('/posts/'.length, -1).split('/');
-  if (
-    segments.length === 0 ||
-    segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..' || !/^[A-Za-z0-9][A-Za-z0-9._~-]*$/u.test(segment))
-  ) {
-    throw new ValidationError('postPath contains an unsafe or non-canonical segment.');
-  }
-  return path;
+  return value;
 }
 
 export function assertKnownPostPath(path: string, catalog: RouteCatalog): void {
