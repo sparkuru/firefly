@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import test from 'node:test';
 import os from 'node:os';
 import path from 'node:path';
@@ -56,7 +56,8 @@ test('site config validates, normalizes, and deeply freezes public values', () =
   assert.equal(Object.hasOwn(config.terminal.friends[0], 'desc'), true);
   assert.equal(Object.hasOwn(config.terminal.friends[1], 'desc'), false);
   assert.equal(config.seo.robots, 'index, follow');
-  assert.equal(config.comments.enabled, false);
+  assert.equal(config.plugins.comments.enabled, false);
+  assert.equal(config.plugins.comments.configPath, 'config/plugins/comments/config.toml');
   assert.equal(config.comments.writeOrigin, null);
   assert.equal(config.comments.exportPath, 'artifacts/comments/comments.public.v1.json');
   assert.equal(config.comments.consentVersion, 'm51-v1');
@@ -74,30 +75,97 @@ test('site config validates, normalizes, and deeply freezes public values', () =
 });
 
 test('comments plugin config projects runtime settings away from the site config', () => {
-  const rawComments = {
-    enabled: false,
-    exportPath: 'artifacts/comments/comments.public.v1.json',
-    consentVersion: 'm51-v1',
-    smtp: {
-      host: 'smtppro.zoho.com',
-      port: 465,
-      secure: true,
-      user: 'noreply@example.test',
-      from: 'noreply@example.test',
-      passwordEnv: 'COMMENTS_SMTP_PASSWORD',
-      publicOrigin: 'https://comments.example.test'
+  const pluginConfig = {
+    public: {
+      writeOrigin: 'https://comments.example.test',
+      exportPath: 'artifacts/comments/comments.public.v1.json',
+      consentVersion: 'm51-v1'
     },
     runtime: {
+      postRoutes: ['/posts/example/'],
+      allowedOrigins: ['https://comments.example.test'],
+      publicOrigin: 'https://comments.example.test',
+      smtp: {
+        host: 'smtppro.zoho.com',
+        port: 465,
+        secure: true,
+        user: 'noreply@example.test',
+        from: 'noreply@example.test',
+        passwordEnv: 'COMMENTS_SMTP_PASSWORD',
+        publicOrigin: 'https://comments.example.test'
+      },
       outboxPath: '/var/lib/firefly-comments/notifications.jsonl',
       outboxStatePath: '/var/lib/firefly-comments/notifications.jsonl.state.json'
     }
   };
-  const namespace = parseCommentsNamespace(rawComments, 'fixture');
-  const config = parseSiteConfig({ ...validConfig, comments: rawComments }, 'fixture');
+  const siteConfig = {
+    ...validConfig,
+    plugins: {
+      comments: {
+        enabled: false,
+        configPath: 'config/plugins/comments/config.toml'
+      }
+    }
+  };
+  const namespace = parseCommentsNamespace(pluginConfig, 'fixture');
+  const config = parseSiteConfig(siteConfig, 'fixture', { commentsConfig: pluginConfig });
   assert.deepEqual(config.comments, namespace.public);
   assert.equal(Object.hasOwn(config.comments, 'smtp'), false);
   assert.equal(namespace.runtime.smtp?.passwordEnv, 'COMMENTS_SMTP_PASSWORD');
+  assert.equal(config.plugins.comments.enabled, false);
   assert.equal(namespace.runtime.outboxPath, '/var/lib/firefly-comments/notifications.jsonl');
+});
+
+test('site config loader follows the plugin config path and emits only its public projection', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-site-plugin-config-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const configDirectory = path.join(root, 'config');
+  const pluginDirectory = path.join(configDirectory, 'plugins/comments');
+  await mkdir(pluginDirectory, { recursive: true });
+  const sitePath = path.join(configDirectory, 'site.toml');
+  const pluginPath = path.join(pluginDirectory, 'config.toml');
+  await writeFile(sitePath, [
+    '[site]',
+    'name = "Example notes"',
+    'description = "A public static notebook."',
+    'language = "en"',
+    '',
+    '[terminal]',
+    'user = "guest"',
+    'host = "notes"',
+    'cwd = "~/blog/posts"',
+    'about = "A public about line."',
+    'friends = []',
+    '',
+    '[seo]',
+    'titleSuffix = " | Example notes"',
+    'robots = "index, follow"',
+    'twitterCard = "summary"',
+    '',
+    '[plugins.comments]',
+    'enabled = false',
+    'configPath = "config/plugins/comments/config.toml"',
+    ''
+  ].join('\n'));
+  await writeFile(pluginPath, [
+    '[public]',
+    'writeOrigin = "https://comments.example.test"',
+    'exportPath = "artifacts/comments/comments.public.v1.json"',
+    'consentVersion = "m51-v1"',
+    '',
+    '[runtime.smtp]',
+    'host = "smtp.example.test"',
+    'user = "comments@example.test"',
+    'from = "comments@example.test"',
+    ''
+  ].join('\n'));
+
+  const config = loadSiteConfig(sitePath);
+  assert.equal(config.plugins.comments.enabled, false);
+  assert.equal(config.comments.writeOrigin, 'https://comments.example.test');
+  assert.equal(config.comments.exportPath, 'artifacts/comments/comments.public.v1.json');
+  assert.equal(Object.hasOwn(config.comments, 'smtp'), false);
+  assert.equal(Object.hasOwn(config.comments, 'runtime'), false);
 });
 
 test('site config defaults omitted friend links to an empty list', () => {
@@ -147,7 +215,11 @@ test('site config rejects unknown keys, unsafe identity text, and malformed orig
     { ...validConfig, comments: { smtp: { host: 'smtp.example.test' }, COMMENTS_SMTP_HOST: 'smtp.other.test' } },
     { ...validConfig, comments: { runtime: { outboxPath: '/private/outbox.jsonl' }, COMMENTS_OUTBOX_PATH: '/private/other.jsonl' } },
     { ...validConfig, comments: { COMMENTS_SMTP_PASSWORD: 'must-not-be-stored' } },
-    { ...validConfig, comments: { smtp: { password: 'must-not-be-stored' } } }
+    { ...validConfig, comments: { smtp: { password: 'must-not-be-stored' } } },
+    { ...validConfig, plugins: { comments: { enabled: null } } },
+    { ...validConfig, plugins: { comments: { enabled: false, configPath: '../private.toml' } } },
+    { ...validConfig, plugins: { comments: { enabled: false, configPath: 'config/plugins/comments/config.toml', unknown: true } } },
+    { ...validConfig, plugins: { comments: { enabled: true, configPath: 'config/plugins/comments/config.toml' } } }
   ]) {
     assert.throws(() => parseSiteConfig(value, 'fixture'), /Invalid site configuration/u);
   }
@@ -200,7 +272,8 @@ test('the checked-in TOML example loads with documented optional defaults', () =
   assert.equal(config.site.url, null);
   assert.equal(config.site.author, null);
   assert.equal(config.seo.image, null);
-  assert.equal(config.comments.enabled, false);
+  assert.equal(config.plugins.comments.enabled, false);
+  assert.equal(config.plugins.comments.configPath, 'config/plugins/comments/config.toml');
   assert.equal(config.comments.writeOrigin, null);
   assert.deepEqual(config.terminal.friends, []);
 });

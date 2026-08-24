@@ -114,7 +114,7 @@
   behavior through `/v1/comments/*`.
 - Confirm the public artifact contains only the sanitized export and no private
   sentinels.
-- Keep tracked `comments.enabled = false`, do not promote the temporary
+- Keep owner-local `[plugins.comments].enabled = false`, do not promote the temporary
   projection as production, and record browser validation as deferred if no
   safe staging path exists.
 

@@ -47,12 +47,12 @@ services:
       COMMENTS_BIND: 127.0.0.1
       COMMENTS_PORT: 8787
       COMMENTS_DATABASE_PATH: /var/lib/firefly-comments/core.db
-      COMMENTS_CONFIG_PATH: /app/config/site.toml
+      COMMENTS_CONFIG_PATH: /app/config/plugins/comments/config.toml
       COMMENTS_SECRETS_FILE: /run/secrets/comments.env
     volumes:
       - comments-data:/var/lib/firefly-comments
-      - ./config/site.toml:/app/config/site.toml:ro
-      - ./config/secrets.env:/run/secrets/comments.env:ro
+      - ./config/plugins/comments/config.toml:/app/config/plugins/comments/config.toml:ro
+      - ./config/plugins/comments/secrets.env:/run/secrets/comments.env:ro
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s

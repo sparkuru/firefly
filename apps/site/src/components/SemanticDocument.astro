@@ -12,9 +12,10 @@ interface Props {
   document: RenderedDocument;
   comments: readonly PublicComment[];
   commentsConfig: CommentsSiteConfig;
+  commentsEnabled: boolean;
 }
 
-const { canonical, document, comments, commentsConfig } = Astro.props;
+const { canonical, document, comments, commentsConfig, commentsEnabled } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
@@ -67,7 +68,7 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
     <Content />
   </div>
 
-  {entry.collection === 'posts' && commentsConfig.enabled && (
+  {entry.collection === 'posts' && commentsEnabled && (
     <CommentSection variant="semantic" postPath={canonical.href} comments={comments} config={commentsConfig} />
   )}
 

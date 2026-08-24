@@ -33,7 +33,8 @@ decodePublicCommentsExport(
 
 loadCommentsForPosts(
   posts: readonly CanonicalDocument[],
-  config: CommentsSiteConfig
+  config: CommentsSiteConfig,
+  enabledOverride?: boolean
 ): ReadonlyMap<string, readonly PublicComment[]>
 ~~~
 
@@ -110,19 +111,22 @@ the normalized envelope without the digest field.
 
 #### Site and release handoff
 
-- `config/site.toml` contains public build-time `comments.enabled`,
-  `comments.writeOrigin`, `comments.exportPath`, and
-  `comments.consentVersion`. Enabled comments require an HTTPS origin.
-- The `comments` plugin owns the full `[comments]` namespace. Its shared
-  decoder projects only those four public fields to the site; optional
-  `[comments.smtp]` and `[comments.runtime]` values are read by the private
-  service/worker and never enter the site config or publication. `passwordEnv`
-  is only an environment-variable name: a literal SMTP password and
-  `COMMENTS_SMTP_PASSWORD` key are rejected in TOML.
-- The private service reads the same `config/site.toml` and lets explicit
-  environment variables override file values. Container deployments mount the
-  file read-only at `/app/config/site.toml`; a missing SMTP secret remains a
-  runtime configuration error and is never logged.
+- `config/site.toml` contains the core site settings and one
+  `[plugins.comments]` activation projection with `enabled` and a safe,
+  repository-relative `configPath`. Enabled comments require the separate
+  plugin file's public HTTPS `writeOrigin`.
+- The statically registered `comments` plugin owns
+  `config/plugins/comments/config.toml`. Its `[public]` section is projected
+  to `config.comments` as `writeOrigin`, `exportPath`, and `consentVersion`;
+  `[runtime]` and `[runtime.smtp]` remain service-only. The site never exposes
+  the runtime projection. A legacy `[comments]` namespace is accepted only
+  during migration and cannot coexist with `[plugins.comments]`.
+- `config/plugins/comments/secrets.env` is the owner-only secret boundary.
+  It contains only secret values, while `passwordEnv` refers to a named
+  value there. Literal SMTP passwords and non-secret `COMMENTS_*` settings are
+  rejected. The static build never reads the secret file; the private service
+  reads the plugin TOML and secret file through explicit read-only mounts, and
+  explicit runtime environment values override file values.
 - `FIREFLY_COMMENTS_EXPORT` is optional for the empty disabled build and
   mandatory for an enabled M5.1 build. `./sam` accepts only a readable,
   repository-relative JSON file and passes it into the container as
@@ -224,12 +228,18 @@ credentials.
 ```ts
 loadPostPluginData(
   posts: readonly CanonicalDocument[],
-  config: { readonly comments: CommentsSiteConfig }
+  config: {
+    readonly plugins: { readonly comments: CommentsActivationConfig }
+    readonly comments: CommentsSiteConfig
+  }
 ): Promise<readonly PluginSiteData[]>
 
 postPluginExtensions(
   canonical: CanonicalDocument,
-  config: { readonly comments: CommentsSiteConfig },
+  config: {
+    readonly plugins: { readonly comments: CommentsActivationConfig }
+    readonly comments: CommentsSiteConfig
+  },
   siteData: readonly PluginSiteData[]
 ): readonly unknown[]
 ```
@@ -246,17 +256,18 @@ parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
 parseCommentsNamespace(
   value: unknown,
   source?: string
-): {
-  readonly public: CommentsPublicConfig
-  readonly runtime: {
-    readonly smtp: Readonly<Record<string, unknown>> | null
-    readonly outboxPath: string | null
-    readonly outboxStatePath: string | null
-  }
-}
+): CommentsConfig | LegacyCommentsNamespace
+
+parseCommentsActivation(value: unknown, source?: string): CommentsActivationConfig
+parseCommentsConfig(value: unknown, source?: string, options?: { enabled?: boolean }): CommentsConfig
+resolveCommentsConfigPath(configPath?: string, repositoryRoot?: string): string
 
 loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
   readonly configPath: string | null
+  readonly siteConfigPath: string | null
+  readonly activation: CommentsActivationConfig
+  readonly public: CommentsPublicConfig
+  readonly runtime: CommentsRuntimeOptions
   readonly outboxPath: string | null
   readonly outboxStatePath: string | null
   readonly environment: NodeJS.ProcessEnv
@@ -266,8 +277,8 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 ### 3. Contracts
 
 - The plugin id is `comments`, version `0.1.0`, and configuration namespace is
-  `comments`. The site registry invokes its site hook only when
-  `comments.enabled === true` and only for `posts` documents.
+  `plugins.comments`. The site registry invokes its site hook only when
+  `config.plugins.comments.enabled === true` and only for `posts` documents.
 - `CommentSection.astro` and `CommentForm.astro` remain server-rendered
   native HTML. They receive only the sanitized public read model and the
   existing write-origin configuration.
@@ -279,7 +290,7 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
   backslashes, traversal segments, empty interior segments, controls, or
   whitespace. A single leading slash is allowed for the mounted private
   volume.
-- SMTP configuration uses the validated `[comments.smtp]` projection or its
+- SMTP configuration uses the validated plugin `[runtime.smtp]` projection or its
   `COMMENTS_SMTP_HOST`, `COMMENTS_SMTP_PORT`,
   `COMMENTS_SMTP_SECURE`, `COMMENTS_SMTP_USER`, `COMMENTS_SMTP_PASSWORD`,
   `COMMENTS_SMTP_FROM`, `COMMENTS_SMTP_FROM_NAME`, and
@@ -292,11 +303,11 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 - Delivery state is private, records attempts and a bounded next-attempt time,
   and marks an event delivered only after SMTP accepts the message. The HTTP
   submission path never opens an SMTP connection.
-- `loadCommentsRuntimeConfig()` reads an explicit `COMMENTS_CONFIG_PATH` first,
-  then the repository/package/container config candidates, and passes the
-  decoded namespace to the service. Explicit `COMMENTS_*` environment values
-  override non-secret file values; `passwordEnv` resolves only the named
-  separately injected secret into `COMMENTS_SMTP_PASSWORD`.
+- `loadCommentsRuntimeConfig()` reads an explicit plugin `COMMENTS_CONFIG_PATH`
+  first; otherwise it follows `config/site.toml`'s activation path and the
+  repository/package/container candidates. Explicit `COMMENTS_*` environment
+  values override non-secret file values; `passwordEnv` resolves only the
+  named separately injected secret into `COMMENTS_SMTP_PASSWORD`.
 - `parseSmtpConfig()` validates raw environment strings before trimming values
   used in SMTP headers or connections. Host labels, mailbox fields, origins,
   booleans, ports, and durations are bounded; a missing required field raises
@@ -307,6 +318,9 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 | Condition | Required result |
 | --- | --- |
 | comments disabled | do not load export, service data, or plugin post extension |
+| both `[comments]` and `[plugins.comments]` are present | reject before projection; there is one activation source |
+| missing/absolute/traversal/symlink-escaping plugin `configPath` | reject before site or service startup |
+| literal password or non-secret `COMMENTS_*` key in `secrets.env` | reject without exposing the value |
 | page/index/experiment/404/inline Terminal output | no comments extension |
 | partial SMTP configuration | fail with `SmtpConfigurationError` before connection |
 | unsafe host, sender, recipient, origin, port, or boolean mode | reject configuration without logging secrets |
@@ -327,8 +341,9 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 - **Base:** SMTP is not configured; comments can still persist and queue to the
   private file sink, while no public output or browser request changes.
 - **Bad:** send from Astro/request code, read private email in a static
-  component, retry an already delivered event indefinitely, or put SMTP
-  credentials in `site.toml`, a fixture, or publication output.
+  component, retry an already delivered event indefinitely, put SMTP
+  credentials in `site.toml` or plugin TOML, or put non-secret settings in
+  `secrets.env`.
 
 ### 6. Tests Required
 
@@ -339,8 +354,9 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 - Service: private factory/HTTP behavior, stable outbox ids, fake delivery
   success/failure, idempotency, redacted state, retry timing, and SMTP 465/587
   configuration/rendering; shared namespace loading, named-secret resolution,
-  environment precedence, compiled plugin-path resolution, and traversal/
-  empty-segment rejection for runtime paths.
+  environment precedence, compiled plugin-path resolution, separate site/plugin
+  path resolution, public-only site projection, non-secret secret-file
+  rejection, and traversal/empty-segment rejection for runtime paths.
 - Publication: plugin handoff, exact `comments.public.v1`, privacy scanner,
   digest, and tombstone rollback protection.
 - Full checks remain sequential when tests mutate `.generated-content`; running
@@ -394,7 +410,16 @@ loadCommentsSecrets(
 
 loadCommentsRuntimeConfig(
   env?: NodeJS.ProcessEnv
-): CommentsRuntimeConfig
+): {
+  readonly configPath: string | null
+  readonly siteConfigPath: string | null
+  readonly activation: CommentsActivationConfig
+  readonly public: CommentsPublicConfig
+  readonly runtime: CommentsRuntimeOptions
+  readonly outboxPath: string | null
+  readonly outboxStatePath: string | null
+  readonly environment: NodeJS.ProcessEnv
+}
 
 resolveCoreDatabasePath(
   env?: Readonly<Record<string, string | undefined>>
@@ -418,16 +443,20 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 ### 3. Contracts
 
 - `config/site.toml` is public, build-time configuration. The ignored
-  `config/secrets.env` is a runtime-only dotenv input and the tracked
-  `config/secrets.env.example` contains names and safe placeholders only.
-  The loader accepts `KEY=VALUE`, comments, and blank lines; it never performs
-  shell or variable expansion, rejects malformed/duplicate/control-containing
-  values, rejects symlinks and group/other permissions, and gives explicit
-  process environment values precedence without logging values.
-- The comments image and static image exclude `config/secrets.env`, SQLite
-  files, outbox files, and runtime state. The comments profile mounts the
-  secret and public TOML read-only, stores data under a private volume, and
-  publishes no host port. Its listener defaults to loopback.
+  `config/plugins/comments/config.toml` is the plugin's non-secret owner-local
+  runtime input; the tracked `config/plugins/comments/config.toml.example` is
+  its template. The ignored `config/plugins/comments/secrets.env` contains
+  only secret values and the tracked `secrets.env.example` contains names and
+  safe placeholders only. The dotenv loader accepts `KEY=VALUE`, comments,
+  and blank lines; it never performs shell or variable expansion, rejects
+  malformed/duplicate/control-containing values and known non-secret keys,
+  rejects symlinks and group/other permissions, and gives explicit process
+  environment values precedence without logging values.
+- The comments image and static image exclude
+  `config/plugins/comments/secrets.env`, SQLite files, outbox files, and
+  runtime state. The comments profile mounts the plugin TOML and secret file
+  read-only, stores data under a private volume, and publishes no host port.
+  Its listener defaults to loopback.
 - A route catalog derived from an active static publication must validate
   every candidate through the same ASCII-safe `normalizePostPath` contract
   used by submissions. Invalid candidates must be reported and excluded from
@@ -466,7 +495,7 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 | Condition | Required result |
 | --- | --- |
 | missing, symlinked, broad-permission, malformed, duplicate, or control-containing secrets file | fail before service startup without exposing a value |
-| literal SMTP password in `site.toml`, image, static output, logs, or task records | reject the configuration/release and remove the leak |
+| literal SMTP password in any TOML, image, static output, logs, or task records | reject the configuration/release and remove the leak |
 | plugin path is absolute, traverses, contains controls/whitespace, or escapes through a symlink | reject catalog/backup/restore before touching active data |
 | static publication contains a route that fails the comments path contract | report and exclude it from a disabled staging catalog; block public enablement until resolved or explicitly accepted |
 | MariaDB/MySQL is selected without a driver | fail with an unsupported-dialect error |

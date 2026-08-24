@@ -38,27 +38,36 @@ selection, and the operator-owned edge include remain outside this repository.
 
 ## Configuration and secrets
 
-`config/site.toml` is public build configuration. The tracked default keeps
-`comments.enabled = false` and contains no mailbox or password. The comments
-service reads the same TOML file read-only for non-secret settings.
+`config/site.toml` is public core/build configuration. Its single
+`[plugins.comments]` projection keeps `enabled = false` by default and points
+to the repository-relative `config/plugins/comments/config.toml`. The comments
+service reads that plugin-owned file read-only for its private runtime
+projection; the static site receives only the file's `[public]` section.
 
 Create the ignored local input from the tracked name template only when a
 private staging run is authorized:
 
 ```sh
-cp config/secrets.env.example config/secrets.env
-chmod 600 config/secrets.env
+cp config/plugins/comments/config.toml.example config/plugins/comments/config.toml
+cp config/plugins/comments/secrets.env.example config/plugins/comments/secrets.env
+chmod 600 config/plugins/comments/secrets.env
 ```
 
-`config/secrets.env` is a small dotenv file. `COMMENTS_SECRETS_FILE` selects an
-explicit path; otherwise the service may use the repository-relative file for
-local development. The loader rejects symlinks, non-regular files, broad
-permissions, malformed lines, duplicate keys, and controls; it treats values
+`config/plugins/comments/secrets.env` is a small dotenv file containing only
+secret values. `COMMENTS_SECRETS_FILE` selects an explicit path; otherwise the
+service may use the owner-local plugin file for local development. The loader
+rejects symlinks, non-regular files, broad permissions, malformed lines,
+duplicate keys, known non-secret settings, and controls; it treats values
 literally and never performs shell or variable expansion. Process environment
 values take precedence over file values. The comments container mounts the
 file read-only at `/run/secrets/comments.env`; the Docker build context
-excludes it. Production may provide the same variable contract through a
-private read-only mount or supervisor-managed environment file.
+excludes both local files. Production may provide the same variable contract
+through a private read-only mount or supervisor-managed environment file.
+
+The plugin TOML keeps post routes, allowed/public origins, SQLite/data paths,
+outbox paths, SMTP host/port/security/mailbox/from-name values, and the named
+`passwordEnv` reference. A literal SMTP password is invalid in either public
+or runtime TOML.
 
 The SMTP worker is separate from the HTTP process. Use the owner-supplied
 Zoho-compatible host and sender values only through the private runtime input,

@@ -218,7 +218,9 @@ main() {
 	local -a config_mount_flags=()
 	local -a docker_command
 	local -a comments_environment_names=(
+		COMMENTS_SITE_CONFIG_PATH
 		COMMENTS_CONFIG_PATH
+		COMMENTS_SECRETS_FILE
 		COMMENTS_SMTP_HOST
 		COMMENTS_SMTP_PORT
 		COMMENTS_SMTP_SECURE
@@ -274,6 +276,9 @@ main() {
 	fi
 	if [[ -f "${REPO_ROOT}/config/site.toml" ]]; then
 		config_mount_flags=(--mount "type=bind,src=${REPO_ROOT}/config/site.toml,dst=/app/config/site.toml,readonly")
+	fi
+	if [[ -f "${REPO_ROOT}/config/plugins/comments/config.toml" ]]; then
+		config_mount_flags+=(--mount "type=bind,src=${REPO_ROOT}/config/plugins/comments/config.toml,dst=/app/config/plugins/comments/config.toml,readonly")
 	fi
 	for env_name in "${comments_environment_names[@]}"; do
 		[[ -n "${!env_name-}" ]] && environment_flags+=(-e "${env_name}")

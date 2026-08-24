@@ -14,7 +14,7 @@ import path from 'node:path';
 export const COMMENTS_PLUGIN_MANIFEST = Object.freeze({
   id: 'comments',
   version: '0.1.0',
-  configNamespace: 'comments',
+  configNamespace: 'plugins.comments',
   capabilities: ['site-post-extension', 'publication', 'service'] as const
 });
 

@@ -1,10 +1,10 @@
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 import { loadPublicCommentsExport } from '../src/lib/comments.mjs';
 
-if (SITE_CONFIG.comments.enabled) {
+if (SITE_CONFIG.plugins.comments.enabled) {
   const handoff = process.env.FIREFLY_COMMENTS_EXPORT?.trim();
   if (!handoff) {
-    throw new Error('M5.1 build requires FIREFLY_COMMENTS_EXPORT when comments.enabled is true.');
+    throw new Error('M5.1 build requires FIREFLY_COMMENTS_EXPORT when [plugins.comments].enabled is true.');
   }
   const bundle = loadPublicCommentsExport(SITE_CONFIG.comments.exportPath);
   if (bundle.digest === undefined) {

@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
-import { access, chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { loadCommentsRuntimeConfig, loadCommentsSecrets, parseCommentsSecrets } from '../src/config.js';
+
+const { parseCommentsActivation, parseCommentsConfig } = await import(
+  pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..', 'plugins/comments/config.mjs')).href
+);
 
 test('dotenv parser accepts only the small non-expanding key/value subset', () => {
   assert.deepEqual(parseCommentsSecrets('# comment\nCOMMENTS_TOKEN_SECRET=literal-value\nCOMMENTS_SMTP_PASSWORD=value=with=equals\n'), {
@@ -123,4 +127,72 @@ test('runtime outbox paths reject traversal and empty path segments', async () =
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('comments runtime follows site activation into a plugin-owned config and secret file', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-plugin-config-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const pluginDirectory = path.join(root, 'config/plugins/comments');
+  await mkdir(pluginDirectory, { recursive: true });
+  const siteConfigPath = path.join(root, 'config/site.toml');
+  const pluginConfigPath = path.join(pluginDirectory, 'config.toml');
+  const secretsPath = path.join(pluginDirectory, 'secrets.env');
+  await writeFile(siteConfigPath, [
+    '[plugins.comments]',
+    'enabled = false',
+    'configPath = "config/plugins/comments/config.toml"',
+    ''
+  ].join('\n'));
+  await writeFile(pluginConfigPath, [
+    '[public]',
+    'writeOrigin = "https://comments.example.test"',
+    'exportPath = "artifacts/comments/comments.public.v1.json"',
+    'consentVersion = "m51-v1"',
+    '',
+    '[runtime]',
+    'postRoutes = ["/posts/example/"]',
+    'allowedOrigins = ["https://comments.example.test"]',
+    'publicOrigin = "https://comments.example.test"',
+    'outboxPath = "/var/lib/firefly-comments/notifications.jsonl"',
+    '',
+    '[runtime.smtp]',
+    'host = "smtp.example.test"',
+    'port = 465',
+    'secure = true',
+    'user = "comments@example.test"',
+    'from = "comments@example.test"',
+    'passwordEnv = "COMMENTS_SMTP_PASSWORD"',
+    ''
+  ].join('\n'));
+  await writeFile(secretsPath, 'COMMENTS_SMTP_PASSWORD=app-password\n');
+  await chmod(secretsPath, 0o600);
+
+  const config = loadCommentsRuntimeConfig({
+    COMMENTS_SITE_CONFIG_PATH: siteConfigPath,
+    COMMENTS_SECRETS_FILE: secretsPath
+  });
+  assert.equal(config.siteConfigPath, siteConfigPath);
+  assert.equal(config.configPath, pluginConfigPath);
+  assert.equal(config.activation.enabled, false);
+  assert.equal(config.activation.configPath, 'config/plugins/comments/config.toml');
+  assert.equal(config.public.writeOrigin, 'https://comments.example.test');
+  assert.deepEqual(config.runtime.postRoutes, ['/posts/example/']);
+  assert.equal(config.environment.COMMENTS_SMTP_PASSWORD, 'app-password');
+  assert.equal(config.environment.COMMENTS_SMTP_HOST, 'smtp.example.test');
+  assert.equal(Object.hasOwn(config.public, 'smtp'), false);
+});
+
+test('plugin activation and config reject unsupported or secret-shaped fields', () => {
+  assert.throws(
+    () => parseCommentsActivation({ enabled: false, unknown: true }, 'fixture'),
+    /unsupported key/u
+  );
+  assert.throws(
+    () => parseCommentsConfig({ runtime: { smtp: { password: 'must-not-be-stored' } } }, 'fixture'),
+    /password/u
+  );
+  assert.throws(
+    () => parseCommentsSecrets('COMMENTS_SMTP_HOST=smtp.example.test\n'),
+    /Non-secret comments setting/u
+  );
 });

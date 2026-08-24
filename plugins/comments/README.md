@@ -10,19 +10,26 @@ handoff, private HTTP/storage/moderation service, and private notification
 delivery. Firefly core only provides the generic plugin registry and lifecycle
 hooks.
 
-The capability remains disabled by default through `[comments].enabled = false`
-in `config/site.toml`. When disabled, the public build does not read a private
-export and does not require the comments service, database, outbox, or SMTP
-settings.
+The capability remains disabled by default through the single
+`[plugins.comments].enabled = false` projection in `config/site.toml`. Its
+`configPath` must be an explicit repository-relative path and defaults to
+`config/plugins/comments/config.toml`. When disabled, the public build does not
+read a private export and does not require the comments service, database,
+outbox, or SMTP settings.
 
-The plugin owns the `[comments]` namespace. Public settings stay at the
-namespace root; non-secret SMTP and private outbox settings may be placed under
-`[comments.smtp]` and `[comments.runtime]`. `passwordEnv` is only a reference
-to an owner-provided runtime secret. A literal SMTP password is rejected from
-`site.toml`; the site build receives only the public comments projection.
-The service resolves this same namespace from the mounted `config/site.toml`
-and applies explicit environment overrides before constructing SMTP or outbox
-settings.
+The plugin owns the separate `config/plugins/comments/config.toml` file. Its
+`[public]` section contains only the static write origin, export path, and
+consent version. Its `[runtime]` section contains post routes, allowed/public
+origins, private storage/outbox paths, and non-secret SMTP host/port/security,
+mailbox, display-name, and `passwordEnv` settings. A literal SMTP password is
+rejected. The static site receives only `[public]`; the service resolves the
+full runtime projection and reads named secrets from the protected
+`config/plugins/comments/secrets.env` boundary.
+
+For one migration window, an old `[comments]` namespace is accepted only when
+`[plugins.comments]` is absent. It is projected into the same activation and
+public/runtime objects; configuring both namespaces is rejected, so there are
+never two independent enable flags.
 
 The service writes a private notification outbox. The optional delivery worker
 consumes that queue through a provider-neutral transport. Zoho Mail can be
