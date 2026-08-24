@@ -23,14 +23,16 @@ docker compose --profile comments down
 ```
 
 The comments process and the web proxy share a private network namespace. The
-proxy forwards same-origin `/v1/*` requests to its loopback listener; all
-other paths continue to use the immutable static release. If the comments
-process is absent, `/v1/*` fails closed with a proxy error and static pages do
-not become SSR.
+proxy forwards only same-origin `/v1/comments/*` requests to its loopback
+listener; unknown `/v1/*` resources fail closed and all other paths continue
+to use the immutable static release. If the comments process is absent,
+`/v1/comments/*` fails closed with a proxy error and static pages do not become
+SSR.
 
 Production Nginx must select a host-specific `server` block before routing
-`/v1/`. The neutral example in `ops/nginx-hosts.conf.example` demonstrates
-distinct production/development upstreams and deliberately contains no real
+`/v1/comments/`. The neutral example in `ops/nginx-hosts.conf.example`
+demonstrates distinct production/development upstreams, an explicit
+fail-closed unknown `/v1/` location, and deliberately contains no real
 hostname, certificate path, or deployment identifier. DNS, TLS, certificate
 selection, and the operator-owned edge include remain outside this repository.
 

@@ -57,9 +57,10 @@ docker compose --profile comments down
 ~~~
 
 The tracked site keeps comments disabled until private health, host-scoped
-`/v1/` proxy, TLS/origin, SMTP, backup/restore, and public smoke gates are
-accepted. DNS, SSH, remote synchronization, and external SMTP operations are
-operator-owned and are not automated by this repository.
+`/v1/comments/` proxy, fail-closed unknown `/v1/` handling, TLS/origin, SMTP,
+backup/restore, and public smoke gates are accepted. DNS, SSH, remote
+synchronization, and external SMTP operations are operator-owned and are not
+automated by this repository.
 
 The default runtime listens on `127.0.0.1:8080`; set `FIREFLY_HTTP_PORT` to
 choose another host port. For runtime-only image validation, use

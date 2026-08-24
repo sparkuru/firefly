@@ -57,7 +57,7 @@ async function handleRequest(service: CommentService, request: IncomingMessage, 
     sendJson(response, 200, { ok: true, status: 'ok' });
     return;
   }
-  if (requestUrl.pathname === '/v1/submissions' && request.method === 'POST') {
+  if (requestUrl.pathname === '/v1/comments/submissions' && request.method === 'POST') {
     const body = await readSubmission(request, options.maxBodyBytes);
     await service.submit(body, {
       origin,
@@ -67,26 +67,26 @@ async function handleRequest(service: CommentService, request: IncomingMessage, 
     sendJson(response, 202, { ok: true, message: 'Check your email to continue.' });
     return;
   }
-  const verifyMatch = requestUrl.pathname.match(/^\/v1\/verify\/([^/]+)$/u);
+  const verifyMatch = requestUrl.pathname.match(/^\/v1\/comments\/verify\/([^/]+)$/u);
   if (verifyMatch && request.method === 'GET') {
     const token = decodePathToken(verifyMatch[1]);
     service.verify(token);
     sendHtml(response, 200, '<!doctype html><meta charset="utf-8"><title>Verification complete</title><p>Your comment is waiting for moderation.</p>');
     return;
   }
-  const controlMatch = requestUrl.pathname.match(/^\/v1\/control\/([^/]+)$/u);
+  const controlMatch = requestUrl.pathname.match(/^\/v1\/comments\/control\/([^/]+)$/u);
   if (controlMatch && request.method === 'GET') {
     const summary = service.inspectControlToken(decodePathToken(controlMatch[1]));
     sendJson(response, 200, { ok: true, publicId: summary.publicId, postPath: summary.postPath, status: summary.status, canRequestDeletion: summary.canRequestDeletion });
     return;
   }
-  const controlDeleteMatch = requestUrl.pathname.match(/^\/v1\/control\/([^/]+)\/delete$/u);
+  const controlDeleteMatch = requestUrl.pathname.match(/^\/v1\/comments\/control\/([^/]+)\/delete$/u);
   if (controlDeleteMatch && request.method === 'POST') {
     const summary = service.requestDeletion(decodePathToken(controlDeleteMatch[1]));
     sendJson(response, 202, { ok: true, publicId: summary.publicId, status: summary.status });
     return;
   }
-  if (requestUrl.pathname.startsWith('/v1/admin/')) {
+  if (requestUrl.pathname.startsWith('/v1/comments/admin/')) {
     assertAdmin(request, options.adminToken);
     await handleAdmin(service, request, response, requestUrl);
     return;
@@ -95,17 +95,17 @@ async function handleRequest(service: CommentService, request: IncomingMessage, 
 }
 
 async function handleAdmin(service: CommentService, request: IncomingMessage, response: ServerResponse, requestUrl: URL): Promise<void> {
-  if (requestUrl.pathname === '/v1/admin/comments' && request.method === 'GET') {
+  if (requestUrl.pathname === '/v1/comments/admin/comments' && request.method === 'GET') {
     sendJson(response, 200, { comments: service.listQueue() });
     return;
   }
-  if (requestUrl.pathname === '/v1/admin/export' && request.method === 'GET') {
+  if (requestUrl.pathname === '/v1/comments/admin/export' && request.method === 'GET') {
     const sourceRevision = requestUrl.searchParams.get('sourceRevision') ?? undefined;
     const generatedAt = requestUrl.searchParams.get('generatedAt') ?? undefined;
     sendJson(response, 200, await service.exportPublic({ sourceRevision, generatedAt }));
     return;
   }
-  const moderationMatch = requestUrl.pathname.match(/^\/v1\/admin\/comments\/([^/]+)\/(approve|reject|quarantine|spam|delete)$/u);
+  const moderationMatch = requestUrl.pathname.match(/^\/v1\/comments\/admin\/comments\/([^/]+)\/(approve|reject|quarantine|spam|delete)$/u);
   if (moderationMatch && request.method === 'POST') {
     const actionId = request.headers['idempotency-key'];
     const result = await service.moderate(decodePathToken(moderationMatch[1]), moderationMatch[2] as 'approve' | 'reject' | 'quarantine' | 'spam' | 'delete', typeof actionId === 'string' ? actionId : undefined);

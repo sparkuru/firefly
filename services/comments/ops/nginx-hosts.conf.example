@@ -1,7 +1,7 @@
 # Operator-owned edge example. Replace the neutral example names and private
 # listener ports in a deployment-only configuration; keep this file generic.
-# Host/SNI selects the server block before /v1/ is evaluated, so production and
-# development cannot cross their upstream or database boundaries.
+# Host/SNI selects the server block before /v1/comments/ is evaluated, so
+# production and development cannot cross their upstream or database boundaries.
 
 upstream firefly_comments_production {
     server 127.0.0.1:8787;
@@ -16,7 +16,13 @@ server {
     server_name production.example.invalid;
 
     # ssl_certificate and ssl_certificate_key are operator-managed.
-    location ^~ /v1/ {
+    location = /v1 {
+        default_type application/json;
+        add_header Cache-Control no-store always;
+        return 404 '{"ok":false,"error":"not_found","message":"not found."}';
+    }
+
+    location ^~ /v1/comments/ {
         proxy_pass http://firefly_comments_production;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
@@ -25,6 +31,12 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Connection "";
     }
+
+    location ^~ /v1/ {
+        default_type application/json;
+        add_header Cache-Control no-store always;
+        return 404 '{"ok":false,"error":"not_found","message":"not found."}';
+    }
 }
 
 server {
@@ -32,7 +44,13 @@ server {
     server_name development.example.invalid;
 
     # ssl_certificate and ssl_certificate_key are operator-managed.
-    location ^~ /v1/ {
+    location = /v1 {
+        default_type application/json;
+        add_header Cache-Control no-store always;
+        return 404 '{"ok":false,"error":"not_found","message":"not found."}';
+    }
+
+    location ^~ /v1/comments/ {
         proxy_pass http://firefly_comments_development;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
@@ -40,5 +58,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Connection "";
+    }
+
+    location ^~ /v1/ {
+        default_type application/json;
+        add_header Cache-Control no-store always;
+        return 404 '{"ok":false,"error":"not_found","message":"not found."}';
     }
 }

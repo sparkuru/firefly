@@ -163,7 +163,7 @@ test('comment output is post-only and follows the enabled build contract', async
   assert.match(routes.post, /class="terminal-comment-section"/u);
   assert.match(routes.post, /Reader/u);
   assert.match(routes.post, /Another reader/u);
-  assert.match(routes.post, /action="https:\/\/comments\.example\.test\/v1\/submissions"/u);
+  assert.match(routes.post, /action="https:\/\/comments\.example\.test\/v1\/comments\/submissions"/u);
   assert.doesNotMatch(routes.post, /emailCiphertext|verificationTokenHash|controlTokenHash|ipHash|userAgentHash|internalId|dedupeKey/iu);
   for (const html of excluded) assert.doesNotMatch(html, commentSurface);
 });
