@@ -765,3 +765,29 @@ Implemented and validated the opt-in same-device comments provisioning boundary:
 ### Status
 
 [OK] **Completed**
+
+
+## Session 35: M51-comments-provisioning-verification
+
+**Date**: 2026-08-24
+**Task**: M51-comments-provisioning-verification
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+M51_comments_configuration_runtime_keys_route_fix_SMTP_and_end_to_end_flow_verified_temporary_rollback_snapshots_removed_public_projection_remains_disabled_operational_details_redacted
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c61afa1` | (see git log) |
+| `2fe74df` | (see git log) |
+| `c890c15` | (see git log) |
+| `d28eaf4` | (see git log) |
+| `b6e2cd0` | (see git log) |
+| `99ce98f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
