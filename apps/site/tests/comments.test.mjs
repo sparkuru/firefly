@@ -40,6 +40,24 @@ test('public comments decode into deterministic top-level and direct-reply recor
   assert.ok(Object.isFrozen(decoded.comments));
 });
 
+test('public comments accept canonical UTF-8 percent-encoded post routes', () => {
+  const encodedRoute = '/posts/acg/%E5%A6%B9%E7%9B%B8%E9%9A%8F/';
+  const decoded = decodePublicCommentsExport(envelope([comment('c_encoded', { postPath: encodedRoute })]));
+  assert.equal(decoded.comments[0].postPath, encodedRoute);
+
+  for (const route of [
+    '/posts/acg/%E5%A6%B9%ZZ/',
+    '/posts/acg/%2E%2E/',
+    '/posts/acg/%2F/',
+    '/posts/acg/%00/',
+    '/posts/acg/%E2%80%A8/',
+    '/posts/acg/%C3%A9%20title/',
+    '/posts/acg/%41/'
+  ]) {
+    assert.throws(() => decodePublicCommentsExport(envelope([comment('c_encoded', { postPath: route })])), /canonical \/posts/u, route);
+  }
+});
+
 test('site grouping rejects stale post routes and preserves empty canonical groups', () => {
   const posts = [{ href: postPath }, { href: '/posts/main/other/' }];
   const config = { enabled: true, writeOrigin: 'https://comments.example.test', exportPath: 'artifacts/comments/comments.public.v1.json', consentVersion: 'm51-v1' };

@@ -65,7 +65,12 @@ assemblePublication({
   `parentId`, `displayName`, optional `homepage`, private `email`,
   `body`, optional boolean `notifyReplies`, `consentVersion`,
   `consent: "accepted"`, and an empty honeypot.
-- `postPath` is an existing canonical ASCII-safe `/posts/.../` route.
+- `postPath` is an existing canonical `/posts/.../` route. ASCII segments keep
+  the existing alphanumeric-starting `[A-Za-z0-9._~-]` grammar. Non-ASCII
+  characters in a URL segment must use canonical uppercase UTF-8 percent
+  escapes; escapes for ASCII or URL delimiters are not canonical. Decoding
+  must produce NFC text with no traversal segments, delimiters, whitespace,
+  control/format characters, or other unsafe segment characters.
 - Display names are NFC-normalized, trimmed, and limited to 80 Unicode code
   points. Bodies are NFC/LF plain text limited to 8192 UTF-8 bytes; markup,
   links, images, and disallowed controls are rejected.
@@ -147,7 +152,7 @@ the normalized envelope without the digest field.
 | --- | --- |
 | missing consent or wrong consent version | reject before storage |
 | unknown submission/export field | reject with field context |
-| stale, non-post, traversal, encoded, or unsafe route | reject before render/export |
+| stale, non-post, malformed/noncanonical encoded, traversal, or unsafe route | reject before render/export |
 | non-NFC, overlong, control-containing, marked-up, or linked body | reject |
 | missing/malformed parent, nested reply, or cross-post parent | reject |
 | verification replay, expired token, or invalid control token | reject without disclosure |
@@ -458,11 +463,12 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
   read-only, stores data under a private volume, and publishes no host port.
   Its listener defaults to loopback.
 - A route catalog derived from an active static publication must validate
-  every candidate through the same ASCII-safe `normalizePostPath` contract
-  used by submissions. Invalid candidates must be reported and excluded from
-  the runtime catalog; the filtered catalog must not be presented as complete
-  coverage. Public enablement is blocked until incompatible routes are fixed
-  or the operator explicitly accepts the missing coverage.
+  every candidate through the same canonical UTF-8-aware `normalizePostPath`
+  contract used by submissions. Invalid candidates must be reported and
+  excluded from the runtime catalog; the filtered catalog must not be
+  presented as complete coverage. Public enablement is blocked until
+  incompatible routes are fixed or the operator explicitly accepts the
+  missing coverage.
 - The container-local Nginx image mirrors only `^~ /v1/comments/` to the
   loopback service and returns a bounded 404 for unknown `/v1/` resources. A
   production edge must select the host/SNI `server` block first, then route
@@ -531,8 +537,9 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
   artifact handling, and rollback preservation.
 - Provisioning: comments-disabled default, no host-published comments port,
   loopback listener, host-specific upstream example, original `Host` forwarding,
-  private/read-only mounts, healthcheck shape, and route-catalog rejection or
-  explicit reporting for non-ASCII/incompatible publication paths.
+  private/read-only mounts, healthcheck shape, and route-catalog acceptance of
+  canonical UTF-8 percent-encoded paths plus rejection/reporting of malformed
+  or otherwise incompatible publication paths.
 - Full M5.1 checks/build, Compose config validation, runtime image probes,
   shell syntax/ShellCheck/shfmt, and publication static-output checks run
   sequentially through their declared boundaries.

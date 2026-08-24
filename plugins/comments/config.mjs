@@ -5,7 +5,9 @@ const emailPattern = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/u;
 const hostnameLabelPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u;
 const environmentNamePattern = /^[A-Z_][A-Z0-9_]*$/u;
 const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
-const postRoutePattern = /^\/posts\/(?:[A-Za-z0-9][A-Za-z0-9._~-]*\/)*[A-Za-z0-9][A-Za-z0-9._~-]*\/$/u;
+const safePostRouteAsciiCharacter = /^[A-Za-z0-9._~-]$/u;
+const safePostRouteAsciiStartCharacter = /^[A-Za-z0-9]$/u;
+const unsafePostRouteDecodedCharacter = /[\\/?#%\s\p{Cc}\p{Cf}]/u;
 
 export const DEFAULT_COMMENTS_CONFIG_PATH = 'config/plugins/comments/config.toml';
 
@@ -176,9 +178,67 @@ function parseStringList(value, source, label, normalize) {
   return Object.freeze([...new Set(values)]);
 }
 
+function encodeCanonicalPostRouteSegment(value) {
+  let encoded = '';
+  for (const character of value) {
+    if (safePostRouteAsciiCharacter.test(character)) {
+      encoded += character;
+      continue;
+    }
+    for (const byte of Buffer.from(character, 'utf8')) {
+      encoded += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+    }
+  }
+  return encoded;
+}
+
+function validateCanonicalPostRoute(value) {
+  if (typeof value !== 'string') return false;
+  const route = value.trim();
+  if (
+    route.length === 0 ||
+    route !== value ||
+    !route.startsWith('/posts/') ||
+    !route.endsWith('/') ||
+    route.includes('?') ||
+    route.includes('#') ||
+    route.includes('\\') ||
+    route.includes('//')
+  ) return false;
+
+  const segments = route.slice('/posts/'.length, -1).split('/');
+  if (segments.length === 0) return false;
+  for (const segment of segments) {
+    if (segment.length === 0) return false;
+    let decoded;
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      return false;
+    }
+    const characters = [...decoded];
+    const firstCharacter = characters[0];
+    if (firstCharacter === undefined) return false;
+    if (
+      decoded.length === 0 ||
+      decoded.startsWith('.') ||
+      decoded.normalize('NFC') !== decoded ||
+      unsafePostRouteDecodedCharacter.test(decoded) ||
+      (firstCharacter.codePointAt(0) <= 0x7f && !safePostRouteAsciiStartCharacter.test(firstCharacter)) ||
+      characters.some((character) => character.codePointAt(0) <= 0x7f && !safePostRouteAsciiCharacter.test(character)) ||
+      encodeCanonicalPostRouteSegment(decoded) !== segment
+    ) return false;
+  }
+  return true;
+}
+
+export function isCanonicalCommentsPostRoute(value) {
+  return validateCanonicalPostRoute(value);
+}
+
 function normalizePostRoute(value, source, label) {
   const route = safeText(value, source, label);
-  if (!postRoutePattern.test(route)) invalid(source, `${label} must be an ASCII-safe canonical /posts/ route.`);
+  if (!validateCanonicalPostRoute(route)) invalid(source, `${label} must be a canonical /posts/ route with safe UTF-8 encoding.`);
   return route;
 }
 
