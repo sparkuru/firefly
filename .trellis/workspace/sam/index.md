@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 35
-- **Last Active**: 2026-08-24
+- **Total Sessions**: 36
+- **Last Active**: 2026-08-25
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~793 | Active |
+| `journal-1.md` | ~814 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 36 | 2026-08-25 | Reorganize content and production runtime | `dd2c69b` | `anti-entropy-loss-syndrome` |
 | 35 | 2026-08-24 | M51-comments-provisioning-verification | `c61afa1`, `2fe74df`, `c890c15`, `d28eaf4`, `b6e2cd0`, `99ce98f` | `anti-entropy-loss-syndrome` |
 | 34 | 2026-08-21 | M5.1 comments private provisioning | `ab6e574` | `anti-entropy-loss-syndrome` |
 | 33 | 2026-08-21 | M5.1 WIP convergence | `433c16d`, `6f60776` | `anti-entropy-loss-syndrome` |
