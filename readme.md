@@ -48,7 +48,8 @@ docker compose down
 ~~~
 
 The private comments runtime is opt-in and has no host-published port. After
-creating an owner-only `config/secrets.env` from its tracked template, an
+creating owner-only `config/plugins/comments/config.toml` and
+`config/plugins/comments/secrets.env` from their tracked templates, an
 operator may start the same-device profile with:
 
 ~~~sh
@@ -66,16 +67,23 @@ The default runtime listens on `127.0.0.1:8080`; set `FIREFLY_HTTP_PORT` to
 choose another host port. For runtime-only image validation, use
 `./package-runtime.sh`; it does not require a second Compose file.
 
-config/site.toml is public and tracked. It is not a secrets file. The complete
-`content/` workspace is excluded from Git; publication visibility rules still
-control which restored Markdown entries are emitted for guests.
+`config/site.toml` is the owner-local public build input; its tracked template
+is `config/site.toml.example`. It contains core site settings plus the single
+`[plugins.comments]` activation projection; it is not a secrets file.
+The comments plugin's non-secret public/runtime settings live in the explicit
+repository-relative `config/plugins/comments/config.toml`. Its protected
+`secrets.env` contains only injected secret values and is never part of the
+static build. The complete `content/` workspace is excluded from Git;
+publication visibility rules still control which restored Markdown entries are
+emitted for guests.
 
 <p align = "center" style="font-size: 26px;" > <strong> Site configuration </strong> </p>
 
 Ordinary identity and metadata changes belong in config/site.toml; the
 complete commented template is config/site.toml.example. TOML is the only
 supported site-config format; do not maintain a second YAML or JSON copy. The
-supported keys are:
+comments plugin templates are kept separately under
+`config/plugins/comments/`. The supported core keys are:
 
 - site.name, site.description, site.language, optional site.url, and optional
   public site.author;

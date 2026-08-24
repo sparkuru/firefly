@@ -17,8 +17,9 @@ comments database, or put runtime credentials into the repository.
 - M5.1 service, static consumer, publication handoff, SQLite storage boundary,
   secret-file boundary, reverse-proxy examples, and rollback contracts are
   implemented and archived in the preceding M5.1 tasks.
-- The tracked site configuration keeps `comments.enabled = false`; the static
-  publication remains the default behavior when the comments service is absent.
+- The owner-local site configuration keeps `[plugins.comments].enabled = false`;
+  the static publication remains the default behavior when the comments
+  service is absent.
 - The private service owns writes, verification, moderation, notification
   delivery, storage, backup, and export. The site consumes only the reviewed
   sanitized export during a static build.
@@ -96,8 +97,10 @@ make the boundary explicit.
 
 ### R3. Keep configuration and secrets separated
 
-- Use the existing public `config/site.toml` contract for non-secret settings
-  and named secret indirection only.
+- Use `config/site.toml` for core site settings and the single
+  `[plugins.comments]` activation projection. Keep comments-owned public and
+  runtime settings in `config/plugins/comments/config.toml`, with named secret
+  indirection only.
 - Supply runtime secrets through an owner-only private input or supervisor
   environment, with read-only service access and permission preflight.
 - Never read, print, copy, rotate, or commit the real SMTP password or any

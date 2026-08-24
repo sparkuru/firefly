@@ -12,9 +12,10 @@ interface Props {
   document: RenderedDocument;
   comments: readonly PublicComment[];
   commentsConfig: CommentsSiteConfig;
+  commentsEnabled: boolean;
 }
 
-const { canonical, document, comments, commentsConfig } = Astro.props;
+const { canonical, document, comments, commentsConfig, commentsEnabled } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
@@ -91,7 +92,7 @@ function outlinePrefix(index: number, depth: number) {
     aria-label={`Read-only Vim reader for ${entry.data.title}`}
   ><Content /></div>
 
-  {entry.collection === 'posts' && commentsConfig.enabled && (
+  {entry.collection === 'posts' && commentsEnabled && (
     <CommentSection variant="terminal" postPath={canonical.href} comments={comments} config={commentsConfig} />
   )}
 

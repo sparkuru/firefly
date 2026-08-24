@@ -11,7 +11,8 @@ test('same-device provisioning keeps comments private and the tracked site disab
   assert.match(compose, /comments:\n\s+profiles:\n\s+- comments/u);
   assert.match(compose, /network_mode: service:web/u);
   assert.match(compose, /COMMENTS_SECRETS_FILE: \/run\/secrets\/comments\.env/u);
-  assert.match(compose, /\.\/config\/secrets\.env:\/run\/secrets\/comments\.env:ro/u);
+  assert.match(compose, /\.\/config\/plugins\/comments\/secrets\.env:\/run\/secrets\/comments\.env:ro/u);
+  assert.match(compose, /\.\/config\/plugins\/comments\/config\.toml:\/app\/config\/plugins\/comments\/config\.toml:ro/u);
   const commentsBlock = compose.slice(compose.indexOf('\n  comments:'));
   assert.doesNotMatch(commentsBlock, /\n\s+ports:/u);
   assert.match(nginx, /location \^~ \/v1\/comments\//u);
@@ -31,8 +32,10 @@ test('same-device provisioning keeps comments private and the tracked site disab
   assert.match(dockerfile, /COMMENTS_DATABASE_PATH=\/var\/lib\/firefly-comments\/core\.db/u);
   assert.match(dockerfile, /COMMENTS_SECRETS_FILE=\/run\/secrets\/comments\.env/u);
   assert.doesNotMatch(dockerfile, /COPY .*secrets\.env/u);
+  assert.match(siteConfig, /\[plugins\.comments\]/u);
   assert.match(siteConfig, /enabled = false/u);
-  assert.match(dockerignore, /config\/secrets\.env/u);
+  assert.match(dockerignore, /config\/plugins\/comments\/secrets\.env/u);
+  assert.doesNotMatch(dockerignore, /config\/plugins\/comments\/config\.toml\s*$/mu);
 });
 
 test('operator edge example selects distinct upstreams by host before /v1 routing', async () => {

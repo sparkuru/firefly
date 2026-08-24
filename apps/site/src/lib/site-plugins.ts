@@ -10,6 +10,7 @@ import {
 import type { CanonicalDocument } from './content';
 import { loadCommentsForPosts } from '../plugins/comments/site.mjs';
 import type { CommentsSiteConfig, PublicComment } from './comments';
+import type { CommentsActivationConfig } from '../../../../plugins/comments/config.mjs';
 
 const COMMENTS_PLUGIN_ID = 'comments' as const;
 
@@ -24,6 +25,9 @@ interface CommentsBuildData {
 }
 
 interface SitePluginConfig {
+  readonly plugins: {
+    readonly comments: CommentsActivationConfig;
+  };
   readonly comments: CommentsSiteConfig;
 }
 
@@ -32,8 +36,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function commentsEnabled(config: FireflyConfig): boolean {
-  const comments = config.comments;
-  return isRecord(comments) && comments.enabled === true;
+  const plugins = config.plugins;
+  if (!isRecord(plugins) || !isRecord(plugins.comments)) return false;
+  return plugins.comments.enabled === true;
 }
 
 function getCommentsBuildData(value: unknown): CommentsBuildData {
@@ -47,7 +52,7 @@ const commentsPlugin: FireflyPlugin = {
   manifest: {
     id: COMMENTS_PLUGIN_ID,
     version: '0.1.0',
-    configNamespace: 'comments',
+    configNamespace: 'plugins.comments',
     capabilities: ['site-post-extension', 'publication', 'service']
   },
   isEnabled: commentsEnabled,
@@ -81,7 +86,7 @@ export async function loadPostPluginData(
   posts: readonly CanonicalDocument[],
   config: SitePluginConfig
 ): Promise<readonly PluginSiteData[]> {
-  const commentsByPost = loadCommentsForPosts(posts, config.comments);
+  const commentsByPost = loadCommentsForPosts(posts, config.comments, config.plugins.comments.enabled);
   return SITE_PLUGIN_REGISTRY.loadSiteData({
     config: config as unknown as FireflyConfig,
     documents: posts.map(toBuildDocument),

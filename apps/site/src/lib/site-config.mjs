@@ -1,9 +1,14 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'astro/zod';
 import { parse as parseToml } from 'smol-toml';
-import { parseCommentsNamespace } from '../../../../plugins/comments/config.mjs';
+import {
+  parseCommentsActivation,
+  parseCommentsConfig,
+  parseCommentsNamespace,
+  resolveCommentsConfigPath
+} from '../../../../plugins/comments/config.mjs';
 
 const sourceRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const configCandidates = [
@@ -163,18 +168,96 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export function parseSiteConfig(value, source = 'config/site.toml') {
+function commentsSiteProjection(rawValue, source, commentsConfig) {
+  const rawComments = rawValue.comments;
+  const rawPlugins = rawValue.plugins;
+  if (rawComments !== undefined && rawPlugins !== undefined) {
+    throw new TypeError('the legacy [comments] namespace cannot be combined with [plugins.comments].');
+  }
+
+  if (rawComments !== undefined) {
+    const legacy = parseCommentsNamespace(rawComments, source);
+    return {
+      activation: legacy.activation,
+      public: {
+        writeOrigin: legacy.public.writeOrigin,
+        exportPath: legacy.public.exportPath,
+        consentVersion: legacy.public.consentVersion
+      }
+    };
+  }
+
+  const rawPluginActivation = rawPlugins === undefined ? undefined : rawPlugins.comments;
+  if (rawPlugins !== undefined) {
+    if (!isRecord(rawPlugins)) throw new TypeError('plugins must be a plain object.');
+    for (const key of Object.keys(rawPlugins)) {
+      if (key !== 'comments') throw new TypeError(`plugins contains unsupported key "${key}".`);
+    }
+  }
+  const activation = parseCommentsActivation(rawPluginActivation, source);
+  const parsed = parseCommentsConfig(commentsConfig, activation.configPath, { enabled: activation.enabled });
+  return { activation, public: parsed.public };
+}
+
+export function parseSiteConfig(value, source = 'config/site.toml', options = {}) {
   const rawValue = isRecord(value) ? value : {};
-  const { comments: rawComments, ...siteValue } = rawValue;
-  let comments;
+  const { comments: _legacyComments, plugins: _plugins, ...siteValue } = rawValue;
+  let commentsProjection;
   try {
-    comments = parseCommentsNamespace(rawComments, source).public;
+    commentsProjection = commentsSiteProjection(rawValue, source, options.commentsConfig);
   } catch (error) {
     throw new Error(`Invalid site configuration in ${source}: ${error instanceof Error ? error.message : String(error)}`);
   }
   const result = siteConfigSchema.safeParse(siteValue);
   if (!result.success) throw new Error(`Invalid site configuration in ${source}: ${formatIssues(result.error)}`);
-  return freezeDeep({ ...result.data, comments });
+  return freezeDeep({
+    ...result.data,
+    plugins: { comments: commentsProjection.activation },
+    comments: commentsProjection.public
+  });
+}
+
+function configRepositoryRoot(filePath) {
+  const resolved = path.resolve(filePath);
+  return path.basename(path.dirname(resolved)) === 'config'
+    ? path.dirname(path.dirname(resolved))
+    : sourceRepositoryRoot;
+}
+
+function readCommentsConfigForSite(value, filePath) {
+  if (path.basename(filePath) === 'site.toml.example') return undefined;
+  if (isRecord(value.comments)) return undefined;
+  const rawPlugins = isRecord(value.plugins) ? value.plugins : undefined;
+  const activation = parseCommentsActivation(rawPlugins?.comments, filePath);
+  const repositoryRoot = configRepositoryRoot(filePath);
+  const configPath = resolveCommentsConfigPath(activation.configPath, repositoryRoot);
+  if (!existsSync(configPath)) {
+    if (activation.enabled) throw new Error(`Comments plugin configuration is required at ${configPath} when the plugin is enabled.`);
+    return undefined;
+  }
+  let stats;
+  try {
+    stats = lstatSync(configPath);
+    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error('not a regular file');
+    const resolved = realpathSync(configPath);
+    const relative = path.relative(repositoryRoot, resolved);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('resolved path escapes repository root');
+  } catch (error) {
+    throw new Error(`Unable to use comments plugin configuration at ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  let source;
+  try {
+    source = readFileSync(configPath, 'utf8');
+  } catch (error) {
+    throw new Error(`Unable to read comments plugin configuration at ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  let parsed;
+  try {
+    parsed = parseToml(source);
+  } catch (error) {
+    throw new Error(`Invalid TOML in ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return parseCommentsConfig(parsed, configPath, { enabled: activation.enabled });
 }
 
 export function loadSiteConfig(filePath = SITE_CONFIG_PATH) {
@@ -190,7 +273,8 @@ export function loadSiteConfig(filePath = SITE_CONFIG_PATH) {
   } catch (error) {
     throw new Error(`Invalid TOML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return parseSiteConfig(value, filePath);
+  const commentsConfig = readCommentsConfigForSite(value, filePath);
+  return parseSiteConfig(value, filePath, { commentsConfig });
 }
 
 export const SITE_CONFIG = loadSiteConfig();

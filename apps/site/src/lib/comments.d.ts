@@ -26,5 +26,6 @@ export function decodePublicCommentsExport(value: unknown, source?: string): Pub
 export function loadPublicCommentsExport(): PublicCommentsExport;
 export function loadCommentsForPosts(
   posts: readonly CanonicalDocument[],
-  config: CommentsSiteConfig
+  config: CommentsSiteConfig,
+  enabledOverride?: boolean
 ): ReadonlyMap<string, readonly PublicComment[]>;

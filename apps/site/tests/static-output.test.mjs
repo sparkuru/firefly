@@ -154,7 +154,7 @@ test('comment output is post-only and follows the enabled build contract', async
   const commentSurface = /<section\b[^>]*\bclass=["'](?:terminal-)?comment-section["']/iu;
   const excluded = [routes.home, routes.postsIndex, routes.pagesIndex, routes.page, routes.lab, routes.notFound];
 
-  if (!SITE_CONFIG.comments.enabled) {
+  if (!SITE_CONFIG.plugins.comments.enabled) {
     assert.doesNotMatch(routes.post, commentSurface);
     for (const html of excluded) assert.doesNotMatch(html, commentSurface);
     return;

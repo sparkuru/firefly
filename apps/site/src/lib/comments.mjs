@@ -189,9 +189,10 @@ export function loadPublicCommentsExport(configuredPath) {
   return decodePublicCommentsExport(parsed, absolute);
 }
 
-export function loadCommentsForPosts(posts, config) {
+export function loadCommentsForPosts(posts, config, enabledOverride) {
   const result = new Map(posts.map((post) => [post.href, Object.freeze([])]));
-  if (!config.enabled) return result;
+  const enabled = enabledOverride ?? (typeof config.enabled === 'boolean' ? config.enabled : true);
+  if (!enabled) return result;
   const bundle = loadPublicCommentsExport(config.exportPath);
   const publicPosts = new Set(posts.map((post) => post.href));
   const grouped = new Map();

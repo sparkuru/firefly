@@ -58,25 +58,19 @@ robots = "index, follow"
 twitterCard = "summary"
 # image = "/social-card.png"
 
-[comments]
+[plugins.comments]
 enabled = false
-exportPath = "artifacts/comments/comments.public.v1.json"
-consentVersion = "m51-v1"
+configPath = "config/plugins/comments/config.toml"
 
-# Optional plugin-owned non-secret runtime settings. The site receives only
-# the public comments projection; service workers may read the full namespace.
-# [comments.smtp]
-# host = "smtppro.zoho.com"
-# port = 465
-# secure = true
-# user = "comments@example.com"
-# from = "comments@example.com"
-# passwordEnv = "COMMENTS_SMTP_PASSWORD"
-# publicOrigin = "https://comments.example.com"
+# The comments plugin owns its non-secret public/runtime TOML separately.
+# The site loader reads only its [public] projection; the private service may
+# read the complete file, while secrets remain in secrets.env.
 ```
 
 - `config/site.toml.example` is the complete commented template. The tracked
-  `config/site.toml` is the active public input and is loaded at build time.
+  example is copied to the owner-local `config/site.toml` input and loaded at
+  build time; the active file is intentionally ignored because it contains
+  site-specific public identity.
 - TOML duplicate keys, malformed TOML, unknown keys, missing required fields,
   control characters, unsafe prompt/path tokens, and unsafe URLs fail with an
   error naming the config source and field.
@@ -96,11 +90,24 @@ consentVersion = "m51-v1"
   known source-root fallback paths. Do not replace it with a package-relative
   path that breaks negative Astro builds using an alternate same-filesystem
   `--outDir`.
-- The `comments` plugin owns its namespace. The site parser projects only
-  `enabled`, `writeOrigin`, `exportPath`, and `consentVersion`; it rejects
-  unknown plugin keys and literal SMTP passwords. The private service may read
-  validated non-secret SMTP/outbox settings from the same file, while explicit
-  environment variables remain runtime overrides.
+- The statically registered `comments` plugin owns `[plugins.comments]`.
+  `enabled` and `configPath` are the only activation fields. The plugin file
+  `config/plugins/comments/config.toml` contains `[public]` and `[runtime]`;
+  the site parser projects only `writeOrigin`, `exportPath`, and
+  `consentVersion` into `config.comments`. The private service reads the full
+  validated runtime projection. A legacy `[comments]` namespace is accepted
+  only during the migration window and cannot coexist with `[plugins.comments]`.
+- `config/plugins/comments/config.toml.example` and
+  `config/plugins/comments/secrets.env.example` are tracked templates. The
+  owner-local `config.toml` is non-secret plugin configuration and is ignored;
+  `secrets.env` contains only secret values, is ignored, and must be a regular
+  owner-readable file with no group/other permissions. `passwordEnv` names the
+  secret; literal passwords and non-secret `COMMENTS_*` settings in
+  `secrets.env` are rejected.
+- Runtime SMTP, route, origin, storage, and outbox settings never cross the
+  public site projection. Explicit service environment variables may override
+  file values at the runtime boundary; the static build does not read the
+  secret file.
 - Plugin-owned private runtime paths use the same strict decoder as the public
   projection: absolute or relative slash-separated paths are allowed, but
   backslashes, traversal segments, empty interior segments, controls, and
@@ -186,6 +193,8 @@ not be added manually.
 | --- | --- |
 | missing/malformed TOML, duplicate key, unknown key, missing field | fail with source and field context before rendering |
 | control character, empty text, unsafe prompt token, traversal cwd, or non-NFC path | fail config/content validation |
+| missing, absolute, traversal, symlink-escaping, or malformed comments `configPath` | fail before site/service projection; an enabled plugin cannot fall back to defaults |
+| literal SMTP password or non-secret `COMMENTS_*` setting in plugin secrets.env | fail before service startup without exposing the value |
 | comments runtime path has traversal, backslash, whitespace, control, or empty interior segment | fail the shared comments namespace before site/service projection |
 | non-http(s), origin with path/query/fragment/credentials, or unsafe image | fail validation; never emit it into HTML |
 | friend link with non-http(s), credentials, fragment, controls, unknown fields, invalid desc, or duplicate URL | fail `terminal.friends` validation with record/field context |
@@ -206,18 +215,21 @@ not be added manually.
   build emits matching escaped head metadata and final discovery files.
 - **Base:** omit `site.url`; the clone still builds with relative links,
   robots, configured prompt/about output, and no misleading canonical origin.
-- **Bad:** read config in browser code, put a secret in the TOML, interpolate
-  raw about text into an HTML attribute, concatenate arbitrary canonical URLs,
-  interpolate friend-link records into HTML strings, include `/lab/nerv/` or
-  `/404` in the sitemap, or derive sitemap entries by walking source Markdown
-  instead of final Astro pages.
+- **Bad:** put runtime secrets in `site.toml` or plugin TOML, put non-secret
+  settings in `secrets.env`, read private plugin runtime fields in browser code,
+  interpolate raw about text into an HTML attribute, concatenate arbitrary
+  canonical URLs, interpolate friend-link records into HTML strings, include
+  `/lab/nerv/` or `/404` in the sitemap, or derive sitemap entries by walking
+  source Markdown instead of final Astro pages.
 
 ### 6. Tests Required
 
 - `apps/site/tests/site-config.test.mjs`: valid/frozen defaults; strict TOML
   loading and malformed input; strict unknown,
   duplicate, friend-link, control, URL, image, cwd, and identity rejection;
-  metadata fallback/override behavior; robots and sitemap normalization/filtering.
+  metadata fallback/override behavior; robots and sitemap normalization/filtering;
+  plugin activation/path loading and public-only projection from a separate
+  comments config file.
 - `apps/site/tests/content-schema.test.mjs`: valid and invalid optional SEO
   front matter, unknown-key rejection, safe canonical/image validation, and
   `noindex` default.
@@ -232,6 +244,9 @@ not be added manually.
   the default build.
 - Negative content builds use ignored same-filesystem output directories and
   clean them in `finally`; config-path resolution must work in those builds.
+- `services/comments/tests/config.test.ts`: owner-only secrets-file checks,
+  plugin activation/config loading, named-secret resolution, non-secret-key
+  rejection, literal-password rejection, and runtime path containment.
 - Main site focused/full Playwright evidence remains required for visible
   Terminal startup/recovery and document behavior; static output is the source
   of truth for metadata and route isolation.

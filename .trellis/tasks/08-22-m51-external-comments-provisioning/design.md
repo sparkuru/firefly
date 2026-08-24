@@ -15,8 +15,9 @@ Approved decisions:
   `/v1/*` resources fail closed.
 - `/healthz` remains a separate bounded health endpoint with its existing
   visibility and response contract.
-- Provisioning and verification end with `comments.enabled = false` in tracked
-  configuration. Public enablement is a later explicit release decision.
+- Provisioning and verification end with `[plugins.comments].enabled = false`
+  in the owner-local site configuration. Public enablement is a later explicit
+  release decision.
 - SQLite is the only first-release runtime driver; MariaDB/MySQL remain a
   deferred adapter boundary.
 
@@ -107,18 +108,29 @@ test; it never overwrites the active root during restore.
 ## 4. Configuration and secret flow
 
 ```text
-config/site.toml                 public/non-secret settings
-  └── comments.public + named passwordEnv indirection
+config/site.toml                 core site settings + plugin activation
+  └── [plugins.comments] enabled/configPath
 
-owner-only runtime input         SMTP password, tokens, paths, origins
-  └── private read-only mount or supervisor environment
+config/plugins/comments/config.toml
+  ├── [public] writeOrigin/exportPath/consentVersion
+  └── [runtime] routes/origins/storage/outbox/SMTP non-secrets
+
+config/plugins/comments/secrets.env
+  └── SMTP password, encryption/token/admin secrets only
 
 comments service                 runtime projection + explicit env overrides
   ├── private core/plugin storage
   └── notification worker
 
-static site/publication          sanitized export only
+static site/publication          sanitized export + public projection only
 ```
+
+The root site parser returns the activation as `config.plugins.comments` and
+the plugin's `[public]` projection as `config.comments`; runtime fields do not
+cross that boundary. The service follows `configPath` or its explicit
+`COMMENTS_CONFIG_PATH` override, then loads the protected secret file. A
+legacy `[comments]` namespace is accepted only for one migration window and
+cannot coexist with the new activation table.
 
 The route migration must not weaken the existing configuration decoder. The
 public TOML projection remains the single site-facing source, and a literal

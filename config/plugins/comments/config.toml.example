@@ -1,0 +1,30 @@
+# Non-secret comments plugin configuration. Copy this file to config.toml for
+# an owner-local deployment input. Do not put passwords, tokens, private keys,
+# or private mailbox data here; passwordEnv names a value from secrets.env.
+
+[public]
+# writeOrigin = "https://comments.example.invalid"
+exportPath = "artifacts/comments/comments.public.v1.json"
+consentVersion = "m51-v1"
+
+[runtime]
+# The service route catalog and CORS policy are runtime-owned, not site config.
+postRoutes = ["/posts/example/"]
+allowedOrigins = ["https://comments.example.invalid"]
+publicOrigin = "https://comments.example.invalid"
+dataRoot = "/var/lib/firefly-comments"
+databasePath = "/var/lib/firefly-comments/core.db"
+outboxPath = "/var/lib/firefly-comments/notifications.jsonl"
+outboxStatePath = "/var/lib/firefly-comments/notifications.jsonl.state.json"
+
+[runtime.smtp]
+host = "smtp.example.invalid"
+port = 465
+secure = true
+user = "comments@example.invalid"
+from = "comments@example.invalid"
+fromName = "Firefly comments"
+passwordEnv = "COMMENTS_SMTP_PASSWORD"
+# publicOrigin may also be set here for compatibility; if set in both places,
+# the two values must match exactly.
+# publicOrigin = "https://comments.example.invalid"
