@@ -11,7 +11,7 @@ interface Props {
 
 const { variant, postPath, comments, config } = Astro.props;
 const prefix = variant === 'semantic' ? 'comment' : 'terminal-comment';
-const action = config.writeOrigin ? new URL('/v1/submissions', config.writeOrigin).toString() : null;
+const action = config.writeOrigin ? new URL('/v1/comments/submissions', config.writeOrigin).toString() : null;
 const topLevel = comments.filter((comment) => comment.parentId === null);
 const replies = new Map<string, PublicComment[]>();
 for (const comment of comments) {

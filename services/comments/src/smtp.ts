@@ -116,10 +116,10 @@ export function renderNotificationMessage(message: NotificationMessage, config: 
     `Post: ${origin}${message.postPath}`
   ];
   if (message.kind === 'verification' && message.token !== undefined) {
-    lines.push(`Verify your comment: ${origin}/v1/verify/${encodeURIComponent(message.token)}`);
+    lines.push(`Verify your comment: ${origin}/v1/comments/verify/${encodeURIComponent(message.token)}`);
   }
   if (message.controlToken !== undefined) {
-    lines.push(`Manage or delete your comment: ${origin}/v1/control/${encodeURIComponent(message.controlToken)}`);
+    lines.push(`Manage or delete your comment: ${origin}/v1/comments/control/${encodeURIComponent(message.controlToken)}`);
   }
   lines.push('', 'Replies and moderation notifications are sent only for the choices you made in the comment form.');
   return { subject: SUBJECTS[message.kind], text: `${lines.join('\n')}\n` };

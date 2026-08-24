@@ -97,7 +97,8 @@ test('SMTP configuration supports Zoho-compatible implicit TLS and STARTTLS mode
 
 test('notification rendering keeps private links in mail content only', () => {
   const rendered = renderNotificationMessage(message, { notificationOrigin: 'https://comments.example.test' });
-  assert.match(rendered.text, /\/v1\/verify\/v_secret/u);
-  assert.match(rendered.text, /\/v1\/control\/k_secret/u);
+  assert.match(rendered.text, /\/v1\/comments\/verify\/v_secret/u);
+  assert.match(rendered.text, /\/v1\/comments\/control\/k_secret/u);
+  assert.doesNotMatch(rendered.text, /\/v1\/(?:verify|control)\//u);
   assert.doesNotMatch(JSON.stringify({ publicId: message.publicId, postPath: message.postPath }), /reader@example\.test|v_secret|k_secret/u);
 });

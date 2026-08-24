@@ -38,13 +38,13 @@ loadCommentsForPosts(
 ~~~
 
 ~~~http
-POST /v1/submissions
-GET  /v1/verify/<single-use-token>
-GET  /v1/control/<control-token>
-POST /v1/control/<control-token>/delete
-GET  /v1/admin/comments
-GET  /v1/admin/export
-POST /v1/admin/comments/<public-id>/(approve|reject|quarantine|spam|delete)
+POST /v1/comments/submissions
+GET  /v1/comments/verify/<single-use-token>
+GET  /v1/comments/control/<control-token>
+POST /v1/comments/control/<control-token>/delete
+GET  /v1/comments/admin/comments
+GET  /v1/comments/admin/export
+POST /v1/comments/admin/comments/<public-id>/(approve|reject|quarantine|spam|delete)
 GET  /healthz
 ~~~
 
@@ -352,7 +352,7 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 #### Wrong
 
 ```ts
-await smtp.send(privateEmail, token); // inside POST /v1/submissions
+await smtp.send(privateEmail, token); // inside POST /v1/comments/submissions
 ```
 
 #### Correct
@@ -375,7 +375,7 @@ if (host.split('.').some((label) => !hostnameLabelPattern.test(label))) {
 ### 1. Scope / Trigger
 
 Use this contract when changing the private comments container, the
-same-device `/v1/` proxy, the runtime secret file, SQLite migrations, plugin
+same-device `/v1/comments/` proxy, the runtime secret file, SQLite migrations, plugin
 storage, backup/restore commands, or legacy database migration. These paths
 are operationally adjacent to the static publication but must remain separate
 from its source, output, and rollback transaction.
@@ -411,7 +411,8 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 ```
 
 ```http
-<host-selected-server>/v1/*  -> matching private comments upstream
+<host-selected-server>/v1/comments/*  -> matching private comments upstream
+<host-selected-server>/v1/*          -> bounded 404 for unknown resources
 ```
 
 ### 3. Contracts
@@ -427,11 +428,19 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
   files, outbox files, and runtime state. The comments profile mounts the
   secret and public TOML read-only, stores data under a private volume, and
   publishes no host port. Its listener defaults to loopback.
-- The container-local Nginx image may mirror `^~ /v1/` to the loopback service.
-  A production edge must select the host/SNI `server` block first, then route
-  `/v1/` to that host's upstream. Production and development use distinct
-  service ports, data roots, secrets, and allowed origins. A missing private
-  service fails closed and never changes the static site into SSR.
+- A route catalog derived from an active static publication must validate
+  every candidate through the same ASCII-safe `normalizePostPath` contract
+  used by submissions. Invalid candidates must be reported and excluded from
+  the runtime catalog; the filtered catalog must not be presented as complete
+  coverage. Public enablement is blocked until incompatible routes are fixed
+  or the operator explicitly accepts the missing coverage.
+- The container-local Nginx image mirrors only `^~ /v1/comments/` to the
+  loopback service and returns a bounded 404 for unknown `/v1/` resources. A
+  production edge must select the host/SNI `server` block first, then route
+  only `/v1/comments/` to that host's upstream. Production and development
+  use distinct service ports, data roots, secrets, and allowed origins. A
+  missing private service fails closed and never changes the static site into
+  SSR.
 - The first runtime dialect is SQLite. `core.db` defaults to
   `/var/lib/firefly-comments/core.db`; `COMMENTS_DATABASE_PATH` remains an
   explicit compatibility override. Plugin data is catalogued by plugin id,
@@ -459,11 +468,12 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 | missing, symlinked, broad-permission, malformed, duplicate, or control-containing secrets file | fail before service startup without exposing a value |
 | literal SMTP password in `site.toml`, image, static output, logs, or task records | reject the configuration/release and remove the leak |
 | plugin path is absolute, traverses, contains controls/whitespace, or escapes through a symlink | reject catalog/backup/restore before touching active data |
+| static publication contains a route that fails the comments path contract | report and exclude it from a disabled staging catalog; block public enablement until resolved or explicitly accepted |
 | MariaDB/MySQL is selected without a driver | fail with an unsupported-dialect error |
 | legacy source is absent, non-regular, corrupt, or destination exists | refuse migration and preserve the source |
 | backup destination or restore destination exists | refuse overwrite |
 | backup checksum/integrity/manifest validation fails | remove only the unreferenced candidate and preserve active data |
-| comments service has no private listener | `/v1/*` fails closed; static routes remain static |
+| comments service has no private listener | `/v1/comments/*` fails closed; unknown `/v1/*` resources remain bounded 404s and static routes remain static |
 | comments disabled or no export is configured | emit no public comment surface |
 
 ### 5. Good / Base / Bad Cases
@@ -476,7 +486,8 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
   static publication still builds and serves the empty comments state.
 - **Bad:** publish the comments port, mount a secret into the static image,
   share one database between production and development by default, restore
-  over the active root, or route every host through one global `/v1/` block.
+  over the active root, or route every host through one global `/v1/comments/`
+  block.
 
 ### 6. Tests Required
 
@@ -491,7 +502,8 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
   artifact handling, and rollback preservation.
 - Provisioning: comments-disabled default, no host-published comments port,
   loopback listener, host-specific upstream example, original `Host` forwarding,
-  private/read-only mounts, and healthcheck shape.
+  private/read-only mounts, healthcheck shape, and route-catalog rejection or
+  explicit reporting for non-ASCII/incompatible publication paths.
 - Full M5.1 checks/build, Compose config validation, runtime image probes,
   shell syntax/ShellCheck/shfmt, and publication static-output checks run
   sequentially through their declared boundaries.
@@ -512,7 +524,7 @@ services:
 
 ```sh
 docker compose --profile comments up --build -d
-# comments has no host port; the web proxy owns same-origin /v1/*
+# comments has no host port; the web proxy owns same-origin /v1/comments/*
 ```
 
 ```text
