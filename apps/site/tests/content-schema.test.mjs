@@ -40,6 +40,7 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(post.updated instanceof Date);
   assert.ok(page.date instanceof Date);
   assert.deepEqual(post.access, { visibility: 'public' });
+  assert.deepEqual(post.firefly, { markers: [] });
   assert.deepEqual(post.tags, ['trellis']);
   assert.equal(post.source, 'legacy/379.md#workflow');
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
@@ -60,6 +61,27 @@ test('used tag metadata stays a strict public string list', () => {
   for (const tags of [[''], ['valid', 1], 'foundation']) {
     assert.equal(postSchema.safeParse({ ...validPost, tags }).success, false);
   }
+});
+
+test('Firefly markers accept safe unknown IDs, deduplicate, and default empty', () => {
+  const post = postSchema.parse({
+    ...validPost,
+    firefly: { markers: ['featured', 'future-marker', 'featured'] }
+  });
+  const page = pageSchema.parse({ ...validPage, firefly: { markers: ['featured'] } });
+
+  assert.deepEqual(post.firefly.markers, ['featured', 'future-marker']);
+  assert.deepEqual(page.firefly.markers, ['featured']);
+  for (const markers of [
+    ['Featured'],
+    ['../private'],
+    ['two words'],
+    ['not-normalized e\u0301']
+  ]) {
+    assert.equal(postSchema.safeParse({ ...validPost, firefly: { markers } }).success, false, markers);
+  }
+  assert.equal(postSchema.safeParse({ ...validPost, firefly: { markers: ['featured'], extra: true } }).success, false);
+  assert.equal(postSchema.safeParse({ ...validPost, firefly: 'featured' }).success, false);
 });
 
 test('access metadata is an exact public or private-owner union', () => {

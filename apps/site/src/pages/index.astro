@@ -35,6 +35,7 @@ const documents = await Promise.all(
       throw new Error(`Missing Terminal index entry for ${canonical.virtualPath}.`);
     }
     return {
+      canonical,
       entry: canonical.entry,
       terminalEntry,
       document: await renderDocument(canonical.entry)

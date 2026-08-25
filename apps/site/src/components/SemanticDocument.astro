@@ -3,6 +3,7 @@ import type { CanonicalDocument } from '../lib/content';
 import type { renderDocument } from '../lib/render-document';
 import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
 import CommentSection from '../plugins/comments/CommentSection.astro';
+import ContentMarkers from './ContentMarkers.astro';
 import ReaderStatus from './ReaderStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
@@ -25,6 +26,7 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
 <article class="semantic-document" data-terminal-reader data-terminal-reader-entry="fragment">
   <header class="article-header">
     <p class="eyebrow">{kind}</p>
+    <ContentMarkers markers={canonical.markers} />
     <h1>{entry.data.title}</h1>
     {
       entry.collection === 'posts' && (

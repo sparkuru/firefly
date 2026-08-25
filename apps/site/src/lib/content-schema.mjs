@@ -50,6 +50,15 @@ const presentation = requiredText.regex(
   /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u,
   'Presentation must be a lowercase kebab-case adapter ID'
 );
+const fireflyMarker = requiredText
+  .refine((value) => value.normalize('NFC') === value, 'Firefly marker must be NFC-normalized')
+  .regex(
+    /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u,
+    'Firefly marker must be a lowercase kebab-case identifier'
+  );
+const fireflyMetadata = z.object({
+  markers: z.array(fireflyMarker).default([]).transform((markers) => [...new Set(markers)])
+}).strict().default({ markers: [] });
 const owner = requiredText.regex(
   /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/u,
   'Private content owner must be a safe subject token'
@@ -69,6 +78,7 @@ const sharedMetadata = {
   seoImage: seoImage.optional(),
   noindex: z.boolean().optional().default(false),
   tags: z.array(requiredText).optional(),
+  firefly: fireflyMetadata,
   draft: z.boolean(),
   presentation: presentation.optional().default(DEFAULT_PRESENTATION_ID),
   aliases: z.array(alias).optional(),

@@ -3,6 +3,11 @@ title: "llm-workflow-with-trellis"
 date: 2026-05-28
 updated: 2026-07-03
 description: "A compact, authored demo of a planned Markdown workflow."
+firefly:
+  markers:
+    - featured
+    - future-marker
+    - constructor
 draft: false
 layout: post
 ---

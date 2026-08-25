@@ -3,10 +3,12 @@ import {
   GUEST_PRINCIPAL as guestPrincipal,
   projectContentForPrincipal
 } from './content-access.mjs';
+import { resolveContentMarkers } from './content-markers.mjs';
 
 export type PublicPost = CollectionEntry<'posts'>;
 export type PublicPage = CollectionEntry<'pages'>;
 export type PublicDocumentEntry = PublicPost | PublicPage;
+export type ContentMarker = ReturnType<typeof resolveContentMarkers>[number];
 
 export type ContentPrincipal =
   | { readonly kind: 'guest' }
@@ -28,6 +30,7 @@ export interface CanonicalDocument {
   readonly directoryHrefs: readonly string[];
   readonly breadcrumbs: readonly CanonicalBreadcrumb[];
   readonly aliases: readonly string[];
+  readonly markers: readonly ContentMarker[];
 }
 
 export interface ContentFile {
@@ -96,6 +99,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
   const stem = filename.slice(0, -3);
   const routeSlug = (entry.data.slug ?? stem).replace(/\s+/gu, '-');
   const virtualPath = `${collection}/${relativePath}`;
+  const markers = resolveContentMarkers(entry.data.firefly?.markers);
   const parentSegments = [collection, ...pathSegments.slice(0, -1)];
   const directoryHrefs = parentSegments.map((_, index) => directoryHref(parentSegments.slice(0, index + 1)));
   const breadcrumbs = Object.freeze([
@@ -114,7 +118,8 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     href: routeFromRelativePath(collection, relativePath, routeSlug),
     directoryHrefs: Object.freeze(directoryHrefs),
     breadcrumbs,
-    aliases: Object.freeze([...(entry.data.aliases ?? [])])
+    aliases: Object.freeze([...(entry.data.aliases ?? [])]),
+    markers
   });
 }
 

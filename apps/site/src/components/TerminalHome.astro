@@ -5,12 +5,15 @@ import {
   type TerminalExperiment
 } from '@firefly/presentation-terminal/runtime';
 import type { PublicDocument, renderDocument } from '../lib/render-document';
+import type { CanonicalDocument } from '../lib/content';
 import { SITE_CONFIG, terminalIdentityFromConfig } from '../lib/site-config.mjs';
+import ContentMarkers from './ContentMarkers.astro';
 import TerminalStreamDocument from './TerminalStreamDocument.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface HomeDocument {
+  canonical: CanonicalDocument;
   entry: PublicDocument;
   terminalEntry: TerminalEntry;
   document: RenderedDocument;
@@ -172,7 +175,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
             <p class="terminal-meta">No public posts.</p>
           ) : (
             <ul class="terminal-list">
-              {posts.map(({ terminalEntry }) => (
+              {posts.map(({ canonical, terminalEntry }) => (
                 <li
                   class="terminal-entry"
                   data-terminal-entry
@@ -186,6 +189,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
                 >
                   <a href={terminalEntry.href}>{terminalEntry.relativePath}</a>
                   <span> — {terminalEntry.title}</span>
+                  <ContentMarkers markers={canonical.markers} />
                   <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
                 </li>
               ))}
@@ -201,7 +205,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
             <p class="terminal-meta">No public pages.</p>
           ) : (
             <ul class="terminal-list">
-              {pages.map(({ terminalEntry }) => (
+              {pages.map(({ canonical, terminalEntry }) => (
                 <li
                   class="terminal-entry"
                   data-terminal-entry
@@ -215,6 +219,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
                 >
                   <a href={terminalEntry.href}>{terminalEntry.filename}</a>
                   <span> — {terminalEntry.title}</span>
+                  <ContentMarkers markers={canonical.markers} />
                   <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
                 </li>
               ))}

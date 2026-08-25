@@ -24,6 +24,7 @@
   --terminal-color-command: #63f59a;
   --terminal-color-link: #7bf7a8;
   --terminal-color-warning: #ffd166;
+  --terminal-color-marker: var(--terminal-color-warning);
   --terminal-color-error: #ff8090;
   --terminal-color-border: #2e4937;
   --terminal-color-focus: #9affbd;
@@ -148,6 +149,21 @@
 .terminal-meta,
 .terminal-stream-meta {
   color: var(--terminal-color-muted);
+}
+
+.terminal-root .content-markers {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 1ch;
+  margin-block: 0.5rem;
+  margin-inline-start: 1ch;
+}
+
+.terminal-root .content-marker {
+  border: 1px solid var(--terminal-color-marker);
+  padding-inline: 0.5ch;
+  color: var(--terminal-color-marker);
+  font-weight: 500;
 }
 
 .terminal-prompt {
