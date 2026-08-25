@@ -854,3 +854,24 @@ Implemented namespaced firefly.markers metadata with strict safe-ID validation, 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 39: Configure Terminal prompt marker
+
+**Date**: 2026-08-25
+**Task**: Configure Terminal prompt marker
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added optional terminal.promptMarker to TOML, threaded it through the site and browser Terminal identity boundary, retained the legacy default, added validation/tests, updated docs/spec, and verified package checks plus focused E2E startup behavior.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b0038d2` | (see git log) |
+
+### Status
+
+[OK] **Completed**
