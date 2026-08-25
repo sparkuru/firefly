@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { executeCat } from '../src/commands/cat.js';
 import { executeCd } from '../src/commands/cd.js';
+import { executeFind } from '../src/commands/find.js';
 import { executeGrep } from '../src/commands/grep.js';
 import { executeLs } from '../src/commands/ls.js';
 import { executeOpen, executeVim } from '../src/commands/session.js';
@@ -85,6 +86,56 @@ test('each neutral command owns an argv parser and accepts interspersed options'
   assert.deepEqual(runRshellInput('grep --ignore-case nahida', runnerOptions()), leading);
   assert.equal(runRshellInput('grep -- nahida', runnerOptions()).status, 0);
   assert.equal(runRshellInput('grep -x nahida', runnerOptions()).status, 1);
+});
+
+test('find searches visible filenames, filters public paths and dates, and explains itself', () => {
+  assert.deepEqual(executeFind(context(), args(['ALPHA'])).stdout.lines, [
+    'characters/alpha.md — 2026-05-28 — Alpha'
+  ]);
+  assert.deepEqual(executeFind(context(), args(['about'])).stdout.lines, [
+    '/pages/about.md — 2026-02-01 — About'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: 'pages' })).stdout.lines, [
+    '/pages/about.md — 2026-02-01 — About'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/' }), args(['alpha'], { path: '~/blog/posts' })).stdout.lines, [
+    'characters/alpha.md — 2026-05-28 — Alpha'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: '~/blog' })).stdout.lines, [
+    '/pages/about.md — 2026-02-01 — About'
+  ]);
+  assert.deepEqual(executeFind(context(), args(['durable'])).stdout.lines, [
+    'No matches for "durable".'
+  ]);
+  assert.deepEqual(executeFind(context(), args(['alpha'], { after: '2026-05-28', before: '2026-05-28' })).stdout.lines, [
+    'characters/alpha.md — 2026-05-28 — Alpha'
+  ]);
+  assert.deepEqual(executeFind(context(), args(['alpha'], { before: '2026-02-01' })).stdout.lines, [
+    'No matches for "alpha".'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/' }), args(['alpha'], { path: 'pages' })).stdout.lines, [
+    'No matches for "alpha".'
+  ]);
+  assert.deepEqual(executeFind(context(), args([], { help: true })).stdout.lines, [
+    'Usage: find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>',
+    'find public documents by filename substring',
+    'Options:',
+    '  --path <directory>   search recursively below one public virtual directory.',
+    '  --after YYYY-MM-DD   include documents published on or after this date.',
+    '  --before YYYY-MM-DD  include documents published on or before this date.'
+  ]);
+
+  for (const [operand, message] of [
+    ['lab', 'find --path accepts only known public virtual directories.'],
+    ['lab/nerv', 'find --path accepts only known public virtual directories.'],
+    ['pages/about.md', 'find --path accepts only known public virtual directories.'],
+    ['../../pages', 'find --path accepts only known public virtual directories.']
+  ] as const) {
+    assert.deepEqual(executeFind(context(), args(['about'], { path: operand })).stderr.lines, [message], operand);
+  }
+  assert.match(executeFind(context(), args(['alpha'], { after: '2026-02-30' })).stderr.lines[0] ?? '', /Usage:/u);
+  assert.match(executeFind(context(), args(['alpha'], { after: '2026-06-01', before: '2026-05-28' })).stderr.lines[0] ?? '', /cannot be later/u);
+  assert.match(executeFind(context(), args([])).stderr.lines[0] ?? '', /Usage:/u);
 });
 
 test('relative commands resolve the virtual root without a double slash', () => {
@@ -174,6 +225,10 @@ test('neutral runner wires stdout only and keeps final values and controls separ
   assert.deepEqual(piped.stderr.lines, []);
   assert.deepEqual(piped.stdout.lines, ['2:nahida keeps the archive']);
   assert.equal(piped.value?.kind, 'grep-report');
+
+  const findPiped = runRshellInput('find alpha | cat', runnerOptions());
+  assert.equal(findPiped.status, 0);
+  assert.deepEqual(findPiped.stdout.lines, ['characters/alpha.md — 2026-05-28 — Alpha']);
 
   const opened = runRshellInput('open ~/blog/lab/nerv', runnerOptions());
   assert.deepEqual(opened.controls, [{ kind: 'open-experiment', id: 'nerv' }]);

@@ -1,16 +1,12 @@
 import type { ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
+import { formatDocument } from './document-format.js';
 import type { DirectoryListing, PublicDocument, VfsNode } from '../vfs/contracts.js';
 import { parentVirtualPath } from '../vfs/paths.js';
 
 export const LS_USAGE = 'ls [path|pattern]';
 export const LS_SUMMARY = 'list a public or session virtual directory';
-
-function formatDocument(document: PublicDocument): string {
-  const displayPath = document.kind === 'post' ? document.relativePath : document.path;
-  return `${displayPath} — ${document.date} — ${document.title}`;
-}
 
 function listingLines(listing: DirectoryListing): readonly string[] {
   const lines = [

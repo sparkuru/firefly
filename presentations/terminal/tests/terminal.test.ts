@@ -297,9 +297,28 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(help, /cls/u);
   assert.doesNotMatch(help, /dynamic transcript/u);
   assert.match(help, /ls \[path\|pattern\]/u);
+  assert.match(help, /find \[--path <directory>\] \[--after YYYY-MM-DD\] \[--before YYYY-MM-DD\] <keyword>/u);
+  assert.match(help, /find public documents by filename substring/u);
   assert.match(help, /open <path>/u);
   assert.match(help, /list curated friend links/u);
   assert.equal(run('ls').effect?.kind, 'entries');
+  assert.deepEqual(run('find alpha').effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['characters/alpha.md — 2026-05-28 — Alpha']
+  });
+  assert.deepEqual(run('find --help').effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: [
+      'Usage: find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>',
+      'find public documents by filename substring',
+      'Options:',
+      '  --path <directory>   search recursively below one public virtual directory.',
+      '  --after YYYY-MM-DD   include documents published on or after this date.',
+      '  --before YYYY-MM-DD  include documents published on or before this date.'
+    ]
+  });
   const posts = run('ls ~/blog/posts').effect;
   const pages = run('ls ~/blog/pages').effect;
   assert.deepEqual(posts?.kind === 'entries' ? posts.entries : [], []);
@@ -473,7 +492,7 @@ test('every command has deterministic output and strict usage errors', () => {
       ]
     }, option);
   }
-  for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'vim', 'tree /private', 'open', 'open lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
+  for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'find', 'vim', 'tree /private', 'open', 'open lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
     assert.match(JSON.stringify(run(command).effect), /Usage:/u, command);
   }
   assert.match(JSON.stringify(run('wat').effect), /Unknown command: wat/u);
@@ -696,8 +715,8 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('', entries, experiments), {
     kind: 'ambiguous',
     value: '',
-    candidates: ['?', 'about', 'alias', 'cat', 'cd', 'clear', 'cls', 'date', 'friends', 'grep', 'help', 'history', 'id', 'l', 'll', 'ls', 'open', 'pwd', 'tree', 'vim', 'whoami'],
-    candidateValues: ['? ', 'about ', 'alias ', 'cat ', 'cd ', 'clear ', 'cls ', 'date ', 'friends ', 'grep ', 'help ', 'history ', 'id ', 'l ', 'll ', 'ls ', 'open ', 'pwd ', 'tree ', 'vim ', 'whoami '],
+    candidates: ['?', 'about', 'alias', 'cat', 'cd', 'clear', 'cls', 'date', 'find', 'friends', 'grep', 'help', 'history', 'id', 'l', 'll', 'ls', 'open', 'pwd', 'tree', 'vim', 'whoami'],
+    candidateValues: ['? ', 'about ', 'alias ', 'cat ', 'cd ', 'clear ', 'cls ', 'date ', 'find ', 'friends ', 'grep ', 'help ', 'history ', 'id ', 'l ', 'll ', 'ls ', 'open ', 'pwd ', 'tree ', 'vim ', 'whoami '],
     ownsTab: false
   });
   const listCompletion = completeCommand('ls p', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog');
