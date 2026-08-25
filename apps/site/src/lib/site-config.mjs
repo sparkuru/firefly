@@ -24,7 +24,7 @@ const unsafeSingleLineCharacters = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
 const unsafeBrowserPayloadCharacters = /[<>"'`]/u;
 const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
 const safePromptToken = /^[^\\/?#%\s\u0000-\u001f\u007f]+$/u;
-const defaultTerminalPromptMarker = '(.ᗜ ᴗ ᗜ.)';
+const defaultTerminalPromptMarker = '@';
 
 function safeText(message, { multiline = false, browserPayload = false } = {}) {
   return z.string().refine((value) => {

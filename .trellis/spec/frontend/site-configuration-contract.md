@@ -46,7 +46,7 @@ user = "guest"
 host = "firefly"
 cwd = "~/blog"
 about = "Public text"
-promptMarker = "(.ᗜ ᴗ ᗜ.)"
+promptMarker = "@"
 
 [[terminal.friends]]
 name = "Example"
@@ -76,7 +76,7 @@ configPath = "config/plugins/comments/config.toml"
   control characters, unsafe prompt/path tokens, and unsafe URLs fail with an
   error naming the config source and field.
 - `terminal.promptMarker` is optional for backward compatibility and defaults
-  to `(.ᗜ ᴗ ᗜ.)`. When supplied, it must be non-empty, trimmed, safe
+  to `@`. When supplied, it must be non-empty, trimmed, safe
   single-line public text that is safe to transport through the browser
   identity payload.
 - `terminal.friends` is an optional strict array. Each record contains `name`,
