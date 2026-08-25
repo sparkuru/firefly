@@ -188,8 +188,8 @@ test('site config defaults omitted prompt markers and rejects unsafe prompt mark
     terminal: terminalWithoutPromptMarker
   }, 'fixture');
 
-  assert.equal(config.terminal.promptMarker, '(.ᗜ ᴗ ᗜ.)');
-  assert.equal(terminalIdentityFromConfig(config).promptMarker, '(.ᗜ ᴗ ᗜ.)');
+  assert.equal(config.terminal.promptMarker, '@');
+  assert.equal(terminalIdentityFromConfig(config).promptMarker, '@');
   for (const promptMarker of ['', ' [firefly]', '[firefly] ', '[firefly]\n', '[firefly]\tmarker', '[firefly]\u0000', '<script>', '"quoted"']) {
     assert.throws(() => parseSiteConfig({
       ...validConfig,
@@ -295,7 +295,7 @@ test('the checked-in TOML example loads with documented optional defaults', () =
   assert.equal(config.plugins.comments.configPath, 'config/plugins/comments/config.toml');
   assert.equal(config.comments.writeOrigin, null);
   assert.deepEqual(config.terminal.friends, []);
-  assert.equal(config.terminal.promptMarker, '(.ᗜ ᴗ ᗜ.)');
+  assert.equal(config.terminal.promptMarker, '@');
 });
 
 test('site metadata resolves fallback and explicit document overrides', () => {

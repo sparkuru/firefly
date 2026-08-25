@@ -53,7 +53,7 @@ const friendLinks = decodeTerminalFriendLinks([
 ]);
 
 test('default prompt stays derived from the default identity', () => {
-  assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #');
+  assert.equal(DEFAULT_TERMINAL_PROMPT, 'guest@firefly:~/blog/posts #');
   assert.equal(formatTerminalPrompt(DEFAULT_TERMINAL_IDENTITY, createTerminalState()), DEFAULT_TERMINAL_PROMPT);
 });
 
@@ -85,7 +85,7 @@ test('configured identity initializes the prompt and rejects unsafe browser payl
     workingDirectory: '~/blog/notes',
     about: 'First line.\nSecond line.'
   });
-  assert.equal(legacyIdentity.promptMarker, '(.ᗜ ᴗ ᗜ.)');
+  assert.equal(legacyIdentity.promptMarker, '@');
 });
 
 function input(tree: HastRoot): NormalizedDocumentInput {

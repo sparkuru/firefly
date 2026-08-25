@@ -203,7 +203,7 @@ export interface TerminalCommandRegistry {
   resolve(name: string): TerminalCommandDefinition | undefined;
 }
 
-const defaultTerminalPromptMarker = '(.ᗜ ᴗ ᗜ.)';
+const defaultTerminalPromptMarker = '@';
 
 export const DEFAULT_TERMINAL_IDENTITY: TerminalIdentity = Object.freeze({
   user: 'guest',

@@ -26,7 +26,7 @@ Mostly about things I've worked on, broken, fixed, or found interesting.
 Source: https://github.com/sparkuru/firefly.git
 """
 # Decorative marker inserted between the user and host in every Terminal prompt.
-promptMarker = "(.ᗜ ᴗ ᗜ.)"
+promptMarker = "@"
 # Curated public links shown by the `friends` command and Terminal recovery.
 friends = []
 # Example:
