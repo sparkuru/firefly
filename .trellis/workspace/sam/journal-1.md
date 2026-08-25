@@ -896,3 +896,24 @@ Made marker output tests data-independent for schema-valid content workspaces, c
 ### Status
 
 [OK] **Completed**
+
+
+## Session 41: Add Terminal find command
+
+**Date**: 2026-08-25
+**Task**: Add Terminal find command
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented filename-based find with public path scoping, inclusive date filters, help output, shared bounded traversal/formatting, fail-closed grep behavior, and tests. check, test, build, and diff validation passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2aa4151` | (see git log) |
+
+### Status
+
+[OK] **Completed**
