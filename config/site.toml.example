@@ -16,6 +16,8 @@ language = "en"
 [terminal]
 # Safe single-line prompt identity values.
 user = "guest"
+# Decorative marker inserted between the user and host in every Terminal prompt.
+promptMarker = "@"
 host = "firefly"
 # The initial virtual working directory. It must begin with ~/blog.
 cwd = "~/blog/posts"
@@ -25,8 +27,6 @@ A personal space for notes, experiments, and technical things I don't want to fi
 Mostly about things I've worked on, broken, fixed, or found interesting.
 Source: https://github.com/sparkuru/firefly.git
 """
-# Decorative marker inserted between the user and host in every Terminal prompt.
-promptMarker = "@"
 # Curated public links shown by the `friends` command and Terminal recovery.
 friends = []
 # Example:
