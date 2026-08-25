@@ -20,13 +20,17 @@ export const SITE_CONFIG_PATH = configCandidates.find((candidate) => existsSync(
 
 const controlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
 const lineBreaks = /[\r\n\u2028\u2029]/u;
+const unsafeSingleLineCharacters = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
+const unsafeBrowserPayloadCharacters = /[<>"'`]/u;
 const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
 const safePromptToken = /^[^\\/?#%\s\u0000-\u001f\u007f]+$/u;
+const defaultTerminalPromptMarker = '(.ᗜ ᴗ ᗜ.)';
 
-function safeText(message, { multiline = false } = {}) {
+function safeText(message, { multiline = false, browserPayload = false } = {}) {
   return z.string().refine((value) => {
     if (value.trim().length === 0 || controlCharacters.test(value)) return false;
     if (!multiline && value !== value.trim()) return false;
+    if (browserPayload && (unsafeSingleLineCharacters.test(value) || unsafeBrowserPayloadCharacters.test(value))) return false;
     return multiline || !lineBreaks.test(value);
   }, message);
 }
@@ -129,6 +133,7 @@ const terminalSchema = z.object({
   host: z.string().trim().min(1).refine((value) => safePromptToken.test(value), 'terminal.host must be one safe prompt token'),
   cwd: z.string().trim().min(1).refine((value) => normalizeCwd(value) !== false, 'terminal.cwd must be a safe virtual path beginning with ~/blog').transform(normalizeCwd),
   about: safeText('terminal.about must be non-empty safe text', { multiline: true }).transform(normalizeAbout),
+  promptMarker: safeText('terminal.promptMarker must be non-empty safe single-line public text', { browserPayload: true }).optional().default(defaultTerminalPromptMarker),
   friends
 }).strict();
 
@@ -284,6 +289,7 @@ export function terminalIdentityFromConfig(config = SITE_CONFIG) {
     user: config.terminal.user,
     host: config.terminal.host,
     workingDirectory: config.terminal.cwd,
-    about: config.terminal.about
+    about: config.terminal.about,
+    promptMarker: config.terminal.promptMarker ?? defaultTerminalPromptMarker
   });
 }

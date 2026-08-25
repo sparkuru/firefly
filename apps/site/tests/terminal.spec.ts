@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
-
-const promptName = /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u;
+import { terminalPrompt, terminalPromptName } from './terminal-prompt';
 
 async function expectNoHorizontalOverflow(page: Page) {
   const width = await page.evaluate(() => ({
@@ -87,6 +86,10 @@ test('successful startup preserves the boot log before the shell prompt', async 
   await expect(input).toHaveAttribute('enterkeyhint', 'send');
   await expect(input).toHaveAttribute('aria-controls', 'terminal-transcript');
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute(
+    'data-terminal-identity-prompt-marker',
+    SITE_CONFIG.terminal.promptMarker
+  );
   await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
   await expect(page.locator('[data-terminal-boot-log] .terminal-boot-line')).toHaveCount(12);
@@ -98,7 +101,7 @@ test('successful startup preserves the boot log before the shell prompt', async 
   await expect(page.getByText('Browse public documents')).toBeHidden();
   const markup = await page.locator('body').innerHTML();
   expect(markup).not.toMatch(/PRIVATE_(?:TITLE|BODY)_FIREFLY_7f2a|hidden-draft|owner-fixture/u);
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt());
   expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 
   await page.keyboard.press('Tab');
@@ -168,7 +171,7 @@ test('pending startup exposes the direct boot log before the shell is ready', as
   await expect(page.locator('[data-terminal-boot-separator]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-boot-status]')).toHaveCount(0);
   const bootPrompt = page.locator('[data-terminal-boot-prompt]');
-  await expect(bootPrompt).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #');
+  await expect(bootPrompt).toHaveText(terminalPrompt());
   expect(await bootPrompt.evaluate((prompt) => {
     const style = getComputedStyle(prompt);
     return {
@@ -261,7 +264,7 @@ test('refresh starts a fresh session with the boot log as its first record', asy
 
   await page.reload();
 
-  await expect(page.getByRole('textbox', { name: promptName })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toBeVisible();
   await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-transcript] .terminal-record')).toHaveCount(1);
   await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
@@ -270,7 +273,7 @@ test('refresh starts a fresh session with the boot log as its first record', asy
 
 test('commands render continuous typed results, lab discovery, and latest announcements', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
   const announcer = page.locator('[data-terminal-announcer]');
 
@@ -352,8 +355,8 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(input).toHaveValue('cd ai/');
   await expect(input).toBeFocused();
   await input.press('Enter');
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts/ai #');
-  await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts\/ai #$/u })).toBeFocused();
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog/posts/ai'));
+  await expect(page.getByRole('textbox', { name: terminalPromptName('~/blog/posts/ai') })).toBeFocused();
   await submit(page, 'ls');
   const nestedListing = transcript.locator('.terminal-entry-list').last();
   await expect(nestedListing.locator('.terminal-entry-row--document')).toHaveCount(4);
@@ -361,7 +364,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(nestedListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(4);
   await expect(nestedListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
   await expect(nestedListing).toContainText('2026-05-28');
-  const nestedInput = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts\/ai #$/u });
+  const nestedInput = page.getByRole('textbox', { name: terminalPromptName('~/blog/posts/ai') });
   await nestedInput.fill('cat ll');
   await nestedInput.press('Tab');
   await expect(nestedInput).toHaveValue('cat llm-workflow-with-trellis.md');
@@ -376,14 +379,14 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(wildcardListing).toContainText('llm-workflow-with-trellis');
 
   await submit(page, 'cd ../../');
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog #');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog'));
   await submit(page, 'ls');
   await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
   await submit(page, 'cd ~/blog/posts');
 
   await submit(page, 'cd ~/blog');
   const rootInput = page.locator('#terminal-command');
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog #');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog'));
   await rootInput.fill('cd ');
   await rootInput.press('Tab');
   await expect(rootInput).toBeFocused();
@@ -504,7 +507,7 @@ test('friends renders validated configuration records as native anchors', async 
   await expect(recoveryRows.nth(1).locator('.terminal-link-url')).toHaveText(friendWithoutDescription.url);
   releaseScript();
 
-  await expect(page.getByRole('textbox', { name: promptName })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toBeVisible();
   const transcript = page.locator('[data-terminal-transcript]');
   await submit(page, 'friends');
   const record = transcript.locator('.terminal-record').last();
@@ -538,7 +541,7 @@ test('ls and tree entries expose document links and safe directory cd links', as
   await expect(lsDirectory).toHaveAttribute('href', '/posts/ai/');
   await expect(lsDirectory).toHaveAttribute('data-terminal-cd-path', '/posts/ai');
   await lsDirectory.click();
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts/ai #');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog/posts/ai'));
   await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd ~/blog/posts/ai/');
   await expect(page).toHaveURL(/\/$/u);
 
@@ -549,13 +552,13 @@ test('ls and tree entries expose document links and safe directory cd links', as
   const treeDirectory = tree.getByRole('link', { name: 'ai/' });
   await treeDirectory.focus();
   await treeDirectory.press('Enter');
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts/ai #');
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog/posts/ai'));
   await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd ~/blog/posts/ai/');
 });
 
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
 
   await submit(page, 'alias la=ls');
@@ -609,8 +612,8 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   const transcript = page.locator('[data-terminal-transcript]');
 
   await submit(page, 'cd ~/blog/pages');
-  await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/pages #$/u })).toBeVisible();
-  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText('guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/pages #');
+  await expect(page.getByRole('textbox', { name: terminalPromptName('~/blog/pages') })).toBeVisible();
+  await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog/pages'));
 
   await submit(page, 'cat about.md | grep -in about');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About');
@@ -644,7 +647,7 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
 
 test('history preserves a draft and clear returns a fresh prompt with history intact', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
   const completion = page.locator('[data-terminal-completion]');
 
@@ -677,7 +680,7 @@ test('history preserves a draft and clear returns a fresh prompt with history in
 
 test('clear, cls, and Ctrl+L center the empty-session prompt without overflow', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const session = page.locator('[data-terminal-session]');
   const transcript = page.locator('[data-terminal-transcript]');
 
@@ -705,7 +708,7 @@ test('tall desktop keeps startup, output, and clear in one reading band', async 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const session = page.locator('[data-terminal-session]');
   await expect(input).toBeVisible();
   await expect(session).toHaveAttribute('data-terminal-session-initial', '');
@@ -738,7 +741,7 @@ test('tall desktop keeps startup, output, and clear in one reading band', async 
 
 test('Ctrl+L clears the transcript without consuming command history and cls aliases clear', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
 
   await submit(page, 'pwd');
@@ -756,7 +759,7 @@ test('Ctrl+L clears the transcript without consuming command history and cls ali
 
 test('Control+C cancels only the current prompt and completion state', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
   const completion = page.locator('[data-terminal-completion]');
   await submit(page, 'pwd');
@@ -795,7 +798,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
 
 test('the prompt owns unmodified Tab while completion only rewrites safe matches', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.focus();
   await input.fill('hel');
   await input.press('Tab');
@@ -873,7 +876,7 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
 
 test('ambiguous completion exposes a vertical active list and commits before submission', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
 
   await input.fill('c');
@@ -990,7 +993,7 @@ test('ambiguous completion exposes a vertical active list and commits before sub
 
 test('IME composition leaves text controls native while prompt Tab remains owned', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   await submit(page, 'pwd');
   await input.fill('about');
 
@@ -1020,12 +1023,12 @@ test('native Enter submission works at desktop and mobile viewport contracts', a
   await page.goto('/');
   await submit(page, 'about');
   await expect(page.locator('[data-terminal-transcript]')).toContainText('A personal space for notes, experiments, and technical things I don\'t want to figure out twice.');
-  await expect(page.getByRole('textbox', { name: promptName })).toBeFocused();
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toBeFocused();
 });
 
 test('short output settles the active prompt and document output settles its reading start', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   for (let index = 0; index < 12; index += 1) {
     await submit(page, 'help');
   }
@@ -1053,7 +1056,7 @@ test('short output settles the active prompt and document output settles its rea
 
 test('eligible printable typing returns to the prompt while protected interactions stay native', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   await submit(page, 'cat ai/llm-workflow-with-trellis.md');
   const streamedDocument = page.locator('[data-terminal-stream-document]').last();
   const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
@@ -1306,7 +1309,7 @@ test('malformed startup preserves the untouched native recovery product', async 
   });
   await page.goto('/');
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
-  await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
@@ -1348,7 +1351,7 @@ test('an executable document template prevents startup without disturbing recove
     observer.observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
-  await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
 });
@@ -1365,7 +1368,7 @@ test('an extra template element prevents startup without disturbing recovery', a
     observer.observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
-  await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
 });
@@ -1387,7 +1390,7 @@ test('a template title not owned by its article prevents startup', async ({ page
     observer.observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
-  await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
 });
@@ -1432,7 +1435,7 @@ test('post-start renderer failure restores one focused recovery target', async (
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.locator('[data-terminal-failure] .terminal-status-label')).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: promptName })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
 });
 
@@ -1454,7 +1457,7 @@ test('post-start executor failure restores the same native recovery product', as
 test('reduced motion and responsive checkpoints preserve full-page containment', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: promptName });
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
   expect(await input.evaluate((element) => getComputedStyle(element).animationDuration)).toBe('1e-06s');
   const bootLine = page.locator('[data-terminal-boot-log] .terminal-boot-line').first();
   await expect(bootLine).toHaveCSS('opacity', '1');

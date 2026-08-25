@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
+import { terminalPromptName } from './terminal-prompt';
 
 async function expectNoHorizontalOverflow(page: Page) {
   const documentWidth = await page.evaluate(() => ({
@@ -88,7 +89,7 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
     await expect(friendRows.first().locator('a')).toHaveAttribute('href', SITE_CONFIG.terminal.friends[0].url);
   }
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
-  await expect(page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'ai/Learning-with-LLM.md' })).toBeVisible();
   await expect(
     page.locator('template[data-terminal-template][data-terminal-template-path="posts/ai/llm-workflow-with-trellis.md"]')

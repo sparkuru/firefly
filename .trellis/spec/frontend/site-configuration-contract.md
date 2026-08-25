@@ -46,6 +46,7 @@ user = "guest"
 host = "firefly"
 cwd = "~/blog"
 about = "Public text"
+promptMarker = "(.ᗜ ᴗ ᗜ.)"
 
 [[terminal.friends]]
 name = "Example"
@@ -74,6 +75,10 @@ configPath = "config/plugins/comments/config.toml"
 - TOML duplicate keys, malformed TOML, unknown keys, missing required fields,
   control characters, unsafe prompt/path tokens, and unsafe URLs fail with an
   error naming the config source and field.
+- `terminal.promptMarker` is optional for backward compatibility and defaults
+  to `(.ᗜ ᴗ ᗜ.)`. When supplied, it must be non-empty, trimmed, safe
+  single-line public text that is safe to transport through the browser
+  identity payload.
 - `terminal.friends` is an optional strict array. Each record contains `name`,
   `url`, and optional `desc`; descriptions are trimmed, non-empty, safe
   single-line public text. URLs preserve list order, must be absolute `http(s)`
@@ -132,11 +137,12 @@ documentation drift.
 #### Terminal identity boundary
 
 `terminalIdentityFromConfig()` maps `terminal.user`, `terminal.host`,
-`terminal.cwd`, and `terminal.about` to `TerminalIdentity`. The server renders
-the same identity into the prompt, `about`, `whoami`, `pwd`, and inert recovery
-markup. `terminal.about` is URL-encoded when placed in a `data-*` attribute;
-`terminal-home.ts` decodes it and then calls strict `decodeTerminalIdentity()`.
-The browser never fetches configuration or Markdown.
+`terminal.cwd`, `terminal.about`, and `terminal.promptMarker` to
+`TerminalIdentity`. The server renders the same identity into the prompt,
+`about`, `whoami`, `pwd`, and inert recovery markup. `terminal.about` is
+URL-encoded when placed in a `data-*` attribute; `terminal-home.ts` decodes the
+payload and then calls strict `decodeTerminalIdentity()`. The browser never
+fetches configuration or Markdown.
 
 `terminal.friends` remains separate from `TerminalIdentity`. `TerminalHome.astro`
 renders the validated records as native recovery links and a strict
@@ -193,6 +199,7 @@ not be added manually.
 | --- | --- |
 | missing/malformed TOML, duplicate key, unknown key, missing field | fail with source and field context before rendering |
 | control character, empty text, unsafe prompt token, traversal cwd, or non-NFC path | fail config/content validation |
+| empty, multiline, control-containing, or browser-unsafe `terminal.promptMarker` | fail config validation with the source and `terminal.promptMarker` field |
 | missing, absolute, traversal, symlink-escaping, or malformed comments `configPath` | fail before site/service projection; an enabled plugin cannot fall back to defaults |
 | literal SMTP password or non-secret `COMMENTS_*` setting in plugin secrets.env | fail before service startup without exposing the value |
 | comments runtime path has traversal, backslash, whitespace, control, or empty interior segment | fail the shared comments namespace before site/service projection |
@@ -202,7 +209,7 @@ not be added manually.
 | omitted `site.url` (normalized as `null`) | emit robots only; omit automatic canonical, `og:url`, and sitemap |
 | explicit safe `htmlTitle`/`canonical`/`seoImage` | use the validated override for that document only |
 | `noindex: true` | emit `noindex, follow` for the document |
-| malformed `data-terminal-identity-about` or identity shape | browser enhancement fails closed; native recovery remains usable |
+| malformed `data-terminal-identity-about`, `data-terminal-identity-prompt-marker`, or identity shape | browser enhancement fails closed; native recovery remains usable |
 | root/no-leading-slash/`.html` sitemap input | normalize to one canonical trailing-slash path |
 | `/404` or non-main `/lab/<experiment>/` sitemap input | exclude from sitemap |
 | missing public route in final build | do not invent a sitemap entry from source paths |
@@ -225,7 +232,7 @@ not be added manually.
 ### 6. Tests Required
 
 - `apps/site/tests/site-config.test.mjs`: valid/frozen defaults; strict TOML
-  loading and malformed input; strict unknown,
+  loading and malformed input; prompt-marker default/custom/unsafe cases; strict unknown,
   duplicate, friend-link, control, URL, image, cwd, and identity rejection;
   metadata fallback/override behavior; robots and sitemap normalization/filtering;
   plugin activation/path loading and public-only projection from a separate
@@ -271,7 +278,7 @@ const sitemap = createSitemapXml(paths, config.site.url);
 
 // Transport multiline public text safely; decode and validate at the browser boundary.
 root.dataset.terminalIdentityAbout = encodeURIComponent(identity.about);
-const identity = decodeTerminalIdentity({ user, host, workingDirectory, about });
+const identity = decodeTerminalIdentity({ user, host, workingDirectory, about, promptMarker });
 const links = decodeTerminalFriendLinks(friendRecords);
 renderFriendLinksWithNativeAnchors(links);
 ```

@@ -100,8 +100,9 @@ comments plugin templates are kept separately under
 
 - site.name, site.description, site.language, optional site.url, and optional
   public site.author;
-- terminal.user, terminal.host, terminal.cwd, multi-line terminal.about, and
-  optional terminal.friends records with name, desc, and URL;
+- terminal.user, terminal.host, terminal.cwd, multi-line terminal.about,
+  optional terminal.promptMarker, and optional terminal.friends records with
+  name, desc, and URL;
 - seo.titleSuffix, seo.robots, seo.twitterCard, and optional seo.image.
 
 site.url must be an absolute http or https origin. Leave optional TOML keys

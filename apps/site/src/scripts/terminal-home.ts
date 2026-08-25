@@ -238,11 +238,13 @@ function readIdentity(root: HTMLElement): TerminalIdentity {
   } catch {
     throw new TypeError('Terminal identity about text is not valid encoding.');
   }
+  const promptMarker = root.dataset.terminalIdentityPromptMarker;
   return decodeTerminalIdentity({
     user: root.dataset.terminalIdentityUser,
     host: root.dataset.terminalIdentityHost,
     workingDirectory: root.dataset.terminalIdentityCwd,
-    about
+    about,
+    ...(promptMarker === undefined ? {} : { promptMarker })
   });
 }
 

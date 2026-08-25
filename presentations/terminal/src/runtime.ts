@@ -46,6 +46,7 @@ export interface TerminalIdentity {
   readonly host: string;
   readonly workingDirectory: string;
   readonly about: string;
+  readonly promptMarker?: string;
 }
 
 export type TerminalFriendLink = ShellLink;
@@ -202,17 +203,20 @@ export interface TerminalCommandRegistry {
   resolve(name: string): TerminalCommandDefinition | undefined;
 }
 
+const defaultTerminalPromptMarker = '(.ᗜ ᴗ ᗜ.)';
+
 export const DEFAULT_TERMINAL_IDENTITY: TerminalIdentity = Object.freeze({
   user: 'guest',
   host: 'firefly',
   workingDirectory: '~/blog/posts',
-  about: 'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.\nMostly about things I\'ve worked on, broken, fixed, or found interesting.\nSource: https://github.com/sparkuru/firefly.git'
+  about: 'A personal space for notes, experiments, and technical things I don\'t want to figure out twice.\nMostly about things I\'ve worked on, broken, fixed, or found interesting.\nSource: https://github.com/sparkuru/firefly.git',
+  promptMarker: defaultTerminalPromptMarker
 });
 
 export const DEFAULT_TERMINAL_FRIEND_LINKS: readonly TerminalFriendLink[] = Object.freeze([]);
 
 function terminalPrompt(identity: TerminalIdentity, cwd: string): string {
-  return `${identity.user}(.ᗜ ᴗ ᗜ.)${identity.host}:${cwd} #`;
+  return `${identity.user}${identity.promptMarker ?? defaultTerminalPromptMarker}${identity.host}:${cwd} #`;
 }
 
 export const DEFAULT_TERMINAL_PROMPT = terminalPrompt(
@@ -224,6 +228,7 @@ const commandToken = /^[a-z][a-z0-9-]*$/u;
 const unsafePathSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
 const unsafeControlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
 const unsafeSingleLineCharacters = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
+const unsafeBrowserPayloadCharacters = /[<>"'`]/u;
 
 const terminalCommandGroups: readonly TerminalCommandGroup[] = Object.freeze([
   'Explore',
@@ -281,14 +286,15 @@ function requireSafeText(value: unknown, field: string): string {
   return value;
 }
 
-function requireIdentityText(value: unknown, field: string, multiline = false): string {
+function requireIdentityText(value: unknown, field: string, multiline = false, browserPayload = false): string {
   if (
     typeof value !== 'string' ||
     value.length === 0 ||
     value !== value.trim() ||
     (multiline
       ? unsafeControlCharacters.test(value)
-      : unsafeSingleLineCharacters.test(value))
+      : unsafeSingleLineCharacters.test(value)) ||
+    (browserPayload && unsafeBrowserPayloadCharacters.test(value))
   ) {
     throw new TypeError('Terminal identity "' + field + '" must be safe text.');
   }
@@ -341,12 +347,14 @@ export function decodeTerminalIdentity(value: unknown): TerminalIdentity {
     throw new TypeError('Terminal identity must be a plain object.');
   }
   const descriptors = ownDataDescriptors(value);
-  const expected = ['user', 'host', 'workingDirectory', 'about'];
+  const required = ['user', 'host', 'workingDirectory', 'about'];
+  const optional = ['promptMarker'];
   const keys = [...descriptors.keys()];
   if (
-    keys.some((key) => typeof key !== 'string' || !expected.includes(key)) ||
-    expected.some((key) => !descriptors.has(key)) ||
-    keys.length !== expected.length
+    keys.some((key) => typeof key !== 'string' || (!required.includes(key) && !optional.includes(key))) ||
+    required.some((key) => !descriptors.has(key)) ||
+    keys.length < required.length ||
+    keys.length > required.length + optional.length
   ) {
     throw new TypeError('Terminal identity contains unknown or missing fields.');
   }
@@ -367,7 +375,10 @@ export function decodeTerminalIdentity(value: unknown): TerminalIdentity {
     throw new TypeError('Terminal identity workingDirectory must be a safe ~/blog path.');
   }
   const about = requireIdentityText(readDataField(descriptors, 'about'), 'about', true);
-  return Object.freeze({ user, host, workingDirectory, about });
+  const promptMarker = descriptors.has('promptMarker')
+    ? requireIdentityText(readDataField(descriptors, 'promptMarker'), 'promptMarker', false, true)
+    : defaultTerminalPromptMarker;
+  return Object.freeze({ user, host, workingDirectory, about, promptMarker });
 }
 
 function isSafeCommandToken(value: string): boolean {
