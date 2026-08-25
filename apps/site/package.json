@@ -11,7 +11,7 @@
     "check": "npm run prepare:content && astro check",
     "build": "npm run prepare:content && node scripts/validate-comments-build.mjs && astro check && astro build && node --test tests/static-output.test.mjs",
     "build:workspace": "npm run prepare:content && node scripts/validate-comments-build.mjs && astro check && astro build",
-    "test:content": "node --test --test-concurrency=1 tests/content-access.test.mjs tests/content-materializer.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs tests/site-config.test.mjs tests/comments.test.mjs",
+    "test:content": "node --test --test-concurrency=1 tests/content-access.test.mjs tests/content-materializer.test.mjs tests/firefly-ignore.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs tests/site-config.test.mjs tests/comments.test.mjs",
     "test:x-core": "node --test tests/x-core-integration.test.mjs",
     "test:e2e": "playwright test",
     "review:m5": "playwright test --config playwright.review.config.ts",
@@ -25,6 +25,7 @@
     "@firefly/validate-experiments": "file:../../tooling/validate-experiments",
     "@firefly/x-core": "file:../../packages/x-core",
     "astro": "7.1.6",
+    "ignore": "7.0.5",
     "smol-toml": "1.8.0"
   },
   "devDependencies": {

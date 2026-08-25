@@ -29,13 +29,25 @@ FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
 Materialization and access:
 
 ```js
-scanMarkdownWorkspace(sourceRoot): Promise<readonly ScannedMarkdownFile[]>
+scanMarkdownWorkspace(sourceRoot, options?: {
+  collection?: 'posts' | 'pages';
+  policyRoot?: string | null;
+  policyPrefix?: readonly string[];
+  policyContext?: FireflyIgnorePolicyContext;
+}): Promise<readonly ScannedMarkdownFile[]>
 materializeMarkdownWorkspace(options?: {
   sourceRoot?: string;
   targetRoot?: string;
+  policyRoot?: string | null;
+  policyContext?: FireflyIgnorePolicyContext;
   beforeCopy?: () => Promise<void> | void;
   beforePromote?: () => Promise<void> | void;
 }): Promise<readonly string[]>
+
+interface FireflyIgnorePolicyContext {
+  readonly rootPath: string;
+  readonly rootPolicy: unknown;
+}
 
 scanContentWorkspace(sourceRoot?: string): Promise<{
   readonly posts: readonly ScannedMarkdownFile[];
@@ -199,6 +211,23 @@ startTerminalReader(root: HTMLElement): void
   to `## `; the document title owns the rendered h1. New authored documents
   should write body headings from level two and do not rely on this migration
   rule.
+- An optional `.fireflyignore` at the blog root and in safe nested directories
+  is the only source-path publication filter. Root patterns receive logical
+  `posts/...` or `pages/...` paths; a nested policy receives paths relative to
+  its containing directory. Rules are ordered Gitignore patterns, and the
+  nearest lower-directory policy overrides inherited matches only when the
+  parent directory is not blocked. A blocked parent cannot be re-included by a
+  descendant negation.
+- The scanner loads `.fireflyignore` as a regular control file, rejects a
+  symlinked, special, unreadable, undecodable, or malformed policy with its
+  logical policy path and line where available, and never materializes the
+  control file. `.gitignore`, global Git excludes, and repository state have no
+  publication effect. Attachments remain outside this Markdown-only filter and
+  are deferred.
+- Policy decisions occur after Markdown type/empty-file and link-safety checks
+  but before collision reservation and inventory insertion. Excluded files and
+  directories therefore reserve no public path or route, while included files
+  retain their source-relative identity and existing race-safe copy behavior.
 - Every Astro command that reads content runs `prepare:content` first. The posts
   and pages collections load only `.generated-content/{posts,pages}/**/*.md`;
   authored workspace paths are not Astro loader bases.
@@ -593,6 +622,10 @@ startTerminalReader(root: HTMLElement): void
 | broken/cyclic chain, broad hop, or special linked target | wrapper/materializer fails; no build or partial stage |
 | hidden/unsafe/non-NFC path or Unicode/case/file-directory collision | materialization/canonical build fails naming only the virtual path |
 | source changes to a symlink or different inode after scan | `Content source changed during materialization`; prior stage restored |
+| missing `.fireflyignore` | preserve the existing Markdown inventory and generated stage behavior |
+| malformed, undecodable, unreadable, special, or symlinked `.fireflyignore` | fail with the logical policy path/line and preserve the prior generated stage |
+| excluded Markdown or directory | omit it before collision reservation, inventory, generated output, Astro loading, and route generation |
+| `.gitignore` without `.fireflyignore` | no publication filtering; `.gitignore` remains repository tracking policy only |
 | private entry without owner, public entry with owner, or unknown access key | schema failure |
 | draft/private guest entry | valid authored input but absent from every public artifact |
 | unsafe or colliding canonical slug/route | canonical-model build failure |
@@ -687,7 +720,10 @@ startTerminalReader(root: HTMLElement): void
   write-denial, broad/broken/cycle/FIFO rejection, labels, and cleanup.
 - Content Node tests: native and linked files/directories; hidden/unsafe/special/
   broken/cyclic paths; Unicode/case/file-directory collisions; scan-copy race;
-  promote rollback; access projection; schema; negative Astro builds.
+  promote rollback; `.fireflyignore` matcher grammar, nested precedence,
+  parent blocking, control-file exclusion, `.gitignore` isolation, malformed
+  diagnostics, and prior-stage preservation; access projection; schema;
+  negative Astro builds.
 - Terminal unit tests: exact entry decoder, custom command/alias/help/execute/
   completion, collision rejection, definition-owned default dispatch, shell and
   command argv parser compatibility/order/cluster/`--` behavior, virtual-root
