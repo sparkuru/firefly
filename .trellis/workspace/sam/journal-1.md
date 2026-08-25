@@ -833,3 +833,24 @@ Implemented a scanner-owned .fireflyignore layer with Gitignore-compatible root 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 38: Implement content metadata markers
+
+**Date**: 2026-08-25
+**Task**: Implement content metadata markers
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented namespaced firefly.markers metadata with strict safe-ID validation, unknown-marker no-op behavior, a featured registry descriptor, immutable CanonicalDocument projection, shared Semantic/Terminal/list badges, documentation, and regression coverage. npm ci, content tests 55/55, Astro check, static build tests 17/17, diff checks, and task validation passed. Focused Playwright still has four pre-existing article-body assertion failures; unrelated terminal-prompt-config work remains in the workspace.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3bcfcb7` | (see git log) |
+
+### Status
+
+[OK] **Completed**
