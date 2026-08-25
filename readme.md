@@ -169,6 +169,33 @@ field is optional provenance only: when present it must be a safe relative
 Markdown reference with an optional fragment, and it never controls routing or
 public output. Omit it for new content.
 
+<p align = "center" style="font-size: 26px;" > <strong> Markdown publication filter </strong> </p>
+
+An optional `.fireflyignore` at the blog root controls which non-empty Markdown
+files under `posts/` and `pages/` enter the generated publication. Root rules
+are relative to the blog root, so they include the collection name; a nested
+`.fireflyignore` is relative to its own directory:
+
+~~~text
+# blog/.fireflyignore
+posts/archive/
+pages/internal.md
+
+# blog/posts/notes/.fireflyignore
+*.md
+!keep.md
+~~~
+
+Rules use Gitignore-style comments, blank lines, escaped literals, trailing
+spaces, `/`, `*`, `?`, ranges, `**`, directory-only patterns, and ordered
+negation. The last matching rule wins within a file; a lower-directory policy
+can override an inherited result when its parent directory remains reachable.
+An excluded parent directory cannot be bypassed by re-including a descendant.
+`.gitignore` is never used for publication. Excluded Markdown remains in the
+source workspace, while control files are never copied to the generated stage.
+Non-Markdown attachments are outside this filter and their publication remains
+deferred.
+
 The build materializes both collections atomically under
 `apps/site/.generated-content/{posts,pages}` before Astro loads them. Draft and
 private-owner entries remain in the source inventory for access projection but

@@ -14,6 +14,10 @@ import {
 import { constants } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  decideFireflyIgnore,
+  loadFireflyIgnorePolicy
+} from './firefly-ignore.mjs';
 
 const siteRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaultContentRoot = path.resolve(siteRoot, '../../content');
@@ -69,6 +73,14 @@ async function requireSourceRoot(sourceRoot) {
 export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
   const collection = collectionName(options);
   const source = await requireSourceRoot(sourceRoot);
+  const policyRoot = options.policyRoot === undefined || options.policyRoot === null
+    ? null
+    : await requireSourceRoot(options.policyRoot);
+  const policyEnabled = policyRoot !== null;
+  const policyPrefix = options.policyPrefix ?? (
+    policyEnabled && path.resolve(policyRoot) !== source ? [collection] : []
+  );
+  const policyChain = [];
   const files = [];
   const publicPaths = new Map();
   const directoryRoutes = new Map();
@@ -92,7 +104,33 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
     (kind === 'file' ? fileRoutes : directoryRoutes).set(routeKey, virtualPath);
   }
 
-  async function walk(physicalPath, virtualSegments, resolvedAncestors) {
+  function logicalSegments(virtualSegments) {
+    return [...policyPrefix, ...virtualSegments];
+  }
+
+  function policyDecision(virtualSegments, { directory = false, blockedByIgnoredParent = false } = {}) {
+    if (!policyEnabled) {
+      return { ignored: false, blockedByIgnoredParent: false };
+    }
+    return decideFireflyIgnore(policyChain, logicalSegments(virtualSegments), {
+      directory,
+      blockedByIgnoredParent
+    });
+  }
+
+  async function appendPolicy(directoryPath, directorySegments, { rootPolicy } = {}) {
+    if (!policyEnabled) {
+      return;
+    }
+    const policy = rootPolicy === undefined
+      ? await loadFireflyIgnorePolicy(directoryPath, directorySegments)
+      : rootPolicy;
+    if (policy !== null) {
+      policyChain.push({ baseSegments: directorySegments, policy });
+    }
+  }
+
+  async function walk(physicalPath, virtualSegments, resolvedAncestors, blockedByIgnoredParent) {
     let nodeStat = await lstat(physicalPath).catch(() => null);
     if (nodeStat === null) {
       throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments, collection)}`);
@@ -117,22 +155,44 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
       if (resolvedAncestors.has(resolvedDirectory)) {
         throw new Error(`Content link cycle: ${safeDiagnosticPath(virtualSegments, collection)}`);
       }
-      if (virtualSegments.length > 0) {
+      const decision = policyDecision(virtualSegments, {
+        directory: true,
+        blockedByIgnoredParent
+      });
+      const directoryBlocked = blockedByIgnoredParent || decision.ignored;
+      if (virtualSegments.length > 0 && !directoryBlocked) {
         reservePath(virtualSegments.join('/'), 'directory');
       }
       const nextAncestors = new Set(resolvedAncestors);
       nextAncestors.add(resolvedDirectory);
-      const children = await readdir(resolvedPath, { withFileTypes: true });
-      children.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
-      for (const child of children) {
-        if (child.name.startsWith('.')) {
-          if (child.isSymbolicLink()) {
-            throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([...virtualSegments, child.name], collection)}`);
+      const previousPolicyCount = policyChain.length;
+      await appendPolicy(resolvedPath, logicalSegments(virtualSegments));
+      try {
+        const children = await readdir(resolvedPath, { withFileTypes: true });
+        children.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+        for (const child of children) {
+          if (child.name === '.fireflyignore') {
+            if (child.isSymbolicLink()) {
+              throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([...virtualSegments, child.name], collection)}`);
+            }
+            continue;
           }
-          continue;
+          if (child.name.startsWith('.')) {
+            if (child.isSymbolicLink()) {
+              throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([...virtualSegments, child.name], collection)}`);
+            }
+            continue;
+          }
+          validateSegment(child.name, virtualSegments, collection);
+          await walk(
+            path.join(resolvedPath, child.name),
+            [...virtualSegments, child.name],
+            nextAncestors,
+            directoryBlocked
+          );
         }
-        validateSegment(child.name, virtualSegments, collection);
-        await walk(path.join(resolvedPath, child.name), [...virtualSegments, child.name], nextAncestors);
+      } finally {
+        policyChain.length = previousPolicyCount;
       }
       return;
     }
@@ -151,6 +211,10 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
     if (nodeStat.size === 0) {
       return;
     }
+    const decision = policyDecision(virtualSegments, { blockedByIgnoredParent });
+    if (decision.ignored) {
+      return;
+    }
     const virtualPath = virtualSegments.join('/');
     reservePath(virtualPath, 'file');
     files.push(Object.freeze({
@@ -162,9 +226,39 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
   }
 
   const rootRealPath = await realpath(source);
+  let sourceBlocked = false;
+  if (policyEnabled) {
+    const context = options.policyContext;
+    const contextRoot = context?.rootPath === undefined ? undefined : path.resolve(context.rootPath);
+    const rootPolicy = contextRoot === policyRoot && Object.hasOwn(context ?? {}, 'rootPolicy')
+      ? context.rootPolicy
+      : policyPrefix.length === 0 && path.resolve(policyRoot) === source
+        ? await loadFireflyIgnorePolicy(source, [])
+        : await loadFireflyIgnorePolicy(policyRoot, []);
+    if (policyPrefix.length === 0 && path.resolve(policyRoot) === source) {
+      await appendPolicy(source, [], { rootPolicy });
+    } else {
+      if (rootPolicy !== null) {
+        policyChain.push({ baseSegments: [], policy: rootPolicy });
+      }
+      await appendPolicy(source, policyPrefix);
+    }
+    // A policy rooted at the scan source cannot ignore that source directory
+    // itself. Only a blog-root policy can block the collection root.
+    if (policyPrefix.length > 0) {
+      const sourceDecision = policyDecision([], { directory: true });
+      sourceBlocked = sourceDecision.ignored;
+    }
+  }
   const children = await readdir(source, { withFileTypes: true });
   children.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
   for (const child of children) {
+    if (child.name === '.fireflyignore') {
+      if (child.isSymbolicLink()) {
+        throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([child.name], collection)}`);
+      }
+      continue;
+    }
     if (child.name.startsWith('.')) {
       if (child.isSymbolicLink()) {
         throw new Error(`Unsafe hidden content link: ${safeDiagnosticPath([child.name], collection)}`);
@@ -172,7 +266,7 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
       continue;
     }
     validateSegment(child.name, [], collection);
-    await walk(path.join(source, child.name), [child.name], new Set([rootRealPath]));
+    await walk(path.join(source, child.name), [child.name], new Set([rootRealPath]), sourceBlocked);
   }
   return Object.freeze(files);
 }
@@ -270,10 +364,16 @@ async function replaceStage(targetRoot, { beforeCopy, beforePromote, copy }) {
 export async function materializeMarkdownWorkspace({
   sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? path.join(defaultContentRoot, 'posts'),
   targetRoot = generatedPostsRoot,
+  policyRoot,
+  policyContext,
   beforeCopy,
   beforePromote
 } = {}) {
-  const files = await scanMarkdownWorkspace(sourceRoot, { collection: 'posts' });
+  const files = await scanMarkdownWorkspace(sourceRoot, {
+    collection: 'posts',
+    ...(policyRoot === null ? {} : { policyRoot: policyRoot ?? sourceRoot }),
+    ...(policyContext === undefined ? {} : { policyContext })
+  });
   await replaceStage(targetRoot, {
     beforeCopy,
     beforePromote,
@@ -284,10 +384,16 @@ export async function materializeMarkdownWorkspace({
 
 export async function scanContentWorkspace(sourceRoot = process.env.FIREFLY_CONTENT_ROOT ?? defaultContentRoot) {
   const root = await requireSourceRoot(sourceRoot);
+  const rootPolicy = await loadFireflyIgnorePolicy(root, []);
+  const policyContext = Object.freeze({ rootPath: root, rootPolicy });
   const inventory = {};
   for (const collection of collections) {
     const collectionRoot = path.join(root, collection);
-    const scanned = await scanMarkdownWorkspace(collectionRoot, { collection });
+    const scanned = await scanMarkdownWorkspace(collectionRoot, {
+      collection,
+      policyRoot: root,
+      policyContext
+    });
     inventory[collection] = Object.freeze(scanned.map((file) => Object.freeze({ ...file, collection })));
   }
   return Object.freeze(inventory);
