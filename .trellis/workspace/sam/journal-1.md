@@ -875,3 +875,24 @@ Added optional terminal.promptMarker to TOML, threaded it through the site and b
 ### Status
 
 [OK] **Completed**
+
+
+## Session 40: External content validation boundary
+
+**Date**: 2026-08-25
+**Task**: External content validation boundary
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Made marker output tests data-independent for schema-valid content workspaces, clarified that the formatter checks frontmatter presence only, validated default and external Astro checks/builds, and archived the privacy-safe task. External runtime details remain outside project records.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `302e80d` | (see git log) |
+
+### Status
+
+[OK] **Completed**
