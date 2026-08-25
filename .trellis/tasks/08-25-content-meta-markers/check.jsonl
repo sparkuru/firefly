@@ -1,5 +1,0 @@
-{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check metadata-to-CanonicalDocument flow, public projection boundaries, and preservation of route/materializer invariants."}
-{"file":".trellis/spec/frontend/type-safety.md","reason":"Check schema defaults, safe marker identifiers, immutable descriptor types, and no raw metadata casts in components."}
-{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check shared badge rendering across Semantic, Terminal, directory, and home surfaces without duplicated parsing or accessibility regressions."}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check static output, no uncontrolled marker payload, legacy content compatibility, and required validation evidence."}
-{"file":".trellis/tasks/08-25-content-meta-markers/research/metadata-marker-boundary.md","reason":"Check implementation against the approved unknown-marker no-op and featured-only MVP decisions."}
