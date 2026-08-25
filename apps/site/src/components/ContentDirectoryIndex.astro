@@ -4,6 +4,7 @@ import {
 } from '@firefly/presentation-terminal/runtime';
 import type { ContentDirectory } from '../lib/content';
 import { terminalIdentityFromConfig } from '../lib/site-config.mjs';
+import ContentMarkers from './ContentMarkers.astro';
 
 interface Props {
   directory: ContentDirectory;
@@ -28,7 +29,12 @@ const parentHref = directory.virtualPath.includes('/')
         {directory.children.map((child) => (
           <li data-kind={child.kind}>
             <a href={child.href}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
-            {child.kind === 'file' && <span> — {child.document.entry.data.title}</span>}
+            {child.kind === 'file' && (
+              <>
+                <span> — {child.document.entry.data.title}</span>
+                <ContentMarkers markers={child.document.markers} />
+              </>
+            )}
           </li>
         ))}
       </ul>

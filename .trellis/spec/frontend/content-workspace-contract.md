@@ -74,6 +74,12 @@ type ContentPrincipal =
   | { readonly kind: 'user'; readonly subject: string }
   | { readonly kind: 'admin' };
 
+interface ContentMarker {
+  readonly id: string;
+  readonly label: string;
+  readonly tone: string;
+}
+
 interface CanonicalDocument {
   readonly entry: PublicDocumentEntry;
   readonly collection: 'posts' | 'pages';
@@ -84,6 +90,7 @@ interface CanonicalDocument {
   readonly directoryHrefs: readonly string[];
   readonly breadcrumbs: readonly CanonicalBreadcrumb[];
   readonly aliases: readonly string[];
+  readonly markers: readonly ContentMarker[];
 }
 
 getCanonicalContent(): Promise<CanonicalContent>
@@ -237,6 +244,19 @@ startTerminalReader(root: HTMLElement): void
 - `access` is an exact discriminated union: omitted means
   `{ visibility: 'public' }`; private requires a safe non-empty `owner`; public
   cannot carry an owner. Unknown keys are rejected.
+- The optional strict `firefly` metadata namespace contains an ordered
+  `markers` list of safe NFC-normalized lowercase kebab-case identifiers.
+  Duplicate identifiers are reduced to their first declaration. Unknown but
+  safe identifiers remain accepted metadata for a future checker, but ordinary
+  builds resolve only registry-supported descriptors and render no effect for
+  unsupported IDs. The current supported marker is `featured`; its label and
+  presentation tone come from the site registry, never from authored HTML/CSS.
+- `firefly.markers` is presentation/editorial metadata only. It cannot publish
+  drafts, bypass `access`, change routes, replace `tags`/`noindex`, or alter
+  the `.fireflyignore` source-path publication filter.
+  `createCanonicalDocument()` is the single projection boundary: consumers
+  use immutable `CanonicalDocument.markers` and do not parse raw front matter
+  independently.
 - Projection is draft-first. `guest` sees public documents; future
   `user(subject)` additionally sees private documents owned by the exact subject;
   future `admin` sees every non-draft document. Production calls only the frozen
@@ -723,7 +743,9 @@ startTerminalReader(root: HTMLElement): void
   promote rollback; `.fireflyignore` matcher grammar, nested precedence,
   parent blocking, control-file exclusion, `.gitignore` isolation, malformed
   diagnostics, and prior-stage preservation; access projection; schema;
-  negative Astro builds.
+  negative Astro builds; marker schema defaults/validation, registry
+  resolution, unsupported-marker no-op behavior, canonical marker projection,
+  and duplicate ordering.
 - Terminal unit tests: exact entry decoder, custom command/alias/help/execute/
   completion, collision rejection, definition-owned default dispatch, shell and
   command argv parser compatibility/order/cluster/`--` behavior, virtual-root
@@ -745,7 +767,8 @@ startTerminalReader(root: HTMLElement): void
   prompt adjacency.
 - Site build/static tests: canonical document/directory routes, breadcrumbs,
   exact route-owned scripts/styles/fonts/licenses, guest-only templates/indexes,
-  no source/private sentinel, no maps/symlinks/unknown files.
+  marker badges on supported public surfaces, no source/private sentinel, no
+  maps/symlinks/unknown files.
 - Site Playwright at `1440x900` and `375x812`: static/no-JS route and breadcrumb
   coverage; tree/cat/vim plus native document/experiment links and directory
   link-to-`cd` prompt/cwd updates; grouped-help usage readability; root ambiguous `cd`

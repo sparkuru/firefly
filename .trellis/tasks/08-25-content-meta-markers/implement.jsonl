@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"CanonicalDocument, guest projection, staged content, and cross-layer content contracts affected by metadata projection."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict metadata typing, normalized schema boundaries, and typed projections for Astro content consumers."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Shared Astro component boundaries, semantic/Terminal presentation ownership, and safe rendered markup."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Schema, static-output, accessibility, isolation, and required ./sam validation gates for site changes."}
+{"file":".trellis/tasks/08-25-content-meta-markers/research/metadata-marker-boundary.md","reason":"Task-local evidence and decisions for the firefly namespace, unknown no-op behavior, registry, and future checker boundary."}

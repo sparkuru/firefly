@@ -1,0 +1,22 @@
+---
+import type { ContentMarker } from '../lib/content';
+
+interface Props {
+  markers: readonly ContentMarker[];
+}
+
+const { markers } = Astro.props;
+---
+
+{markers.length > 0 && (
+  <span class="content-markers">
+    {markers.map((marker) => (
+      <span
+        class:list={['content-marker', `content-marker--${marker.tone}`]}
+        data-content-marker={marker.id}
+      >
+        {marker.label}
+      </span>
+    ))}
+  </span>
+)}

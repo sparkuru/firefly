@@ -190,6 +190,20 @@ test('shared head metadata and public discovery files follow site configuration'
   assert.equal(robots, createRobotsText(SITE_CONFIG));
 });
 
+test('supported content markers render across canonical public surfaces', async () => {
+  const routes = {
+    home: await readFile(path.join(distRoot, 'index.html'), 'utf8'),
+    directory: await readFile(path.join(distRoot, 'posts/ai/index.html'), 'utf8'),
+    article: await readFile(path.join(distRoot, workflowRoute), 'utf8')
+  };
+
+  for (const [route, html] of Object.entries(routes)) {
+    assert.match(html, /data-content-marker="featured"/u, route);
+    assert.match(html, />Featured<\/span>/u, route);
+    assert.doesNotMatch(html, /future-marker|constructor/u, route);
+  }
+});
+
 test('comment output is post-only and follows the enabled build contract', async () => {
   const routes = {
     home: await readFile(path.join(distRoot, 'index.html'), 'utf8'),

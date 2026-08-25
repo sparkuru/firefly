@@ -3,6 +3,7 @@ import type { CanonicalDocument } from '../lib/content';
 import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
 import type { renderDocument } from '../lib/render-document';
 import CommentSection from '../plugins/comments/CommentSection.astro';
+import ContentMarkers from './ContentMarkers.astro';
 import ReaderStatus from './ReaderStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
@@ -41,6 +42,7 @@ function outlinePrefix(index: number, depth: number) {
 
 <article class="terminal-document" data-terminal-reader data-terminal-reader-entry="always">
   <header class="terminal-document-header">
+    <ContentMarkers markers={canonical.markers} />
     <h1>{entry.data.title}</h1>
     {
       entry.collection === 'posts' && (

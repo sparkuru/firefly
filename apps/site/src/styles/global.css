@@ -9,6 +9,7 @@
   --link: #174a7e;
   --link-active: #0d3157;
   --focus: #9b5b00;
+  --content-marker-color: var(--focus);
   color-scheme: light;
   font-family:
     ui-sans-serif,
@@ -144,6 +145,27 @@ a:hover {
   font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.content-markers {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-block: 0.35rem 0.75rem;
+  margin-inline-start: 0.5rem;
+}
+
+.content-marker {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--content-marker-color);
+  padding: 0.1rem 0.45rem;
+  color: var(--content-marker-color);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
   text-transform: uppercase;
 }
 

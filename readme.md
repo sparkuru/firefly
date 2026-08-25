@@ -169,6 +169,26 @@ field is optional provenance only: when present it must be a safe relative
 Markdown reference with an optional fragment, and it never controls routing or
 public output. Omit it for new content.
 
+<p align = "center" style="font-size: 26px;" > <strong> Firefly metadata markers </strong> </p>
+
+Project-specific presentation markers live under the optional `firefly`
+front-matter namespace. The first supported marker is `featured`:
+
+~~~yaml
+firefly:
+  markers:
+    - featured
+~~~
+
+Marker IDs use safe lowercase kebab-case. Duplicate IDs are reduced to their
+first declaration. The registry owns the visible label and presentation data;
+front matter cannot provide HTML, CSS, icons, or scripts. The `featured`
+marker renders a `Featured` badge on document headers and public content
+indexes. Other safe IDs are accepted as silent no-ops until they receive an
+explicit registry entry. A future checker will report unsupported IDs without
+making ordinary builds fail. Markers do not replace `.fireflyignore`, `draft`,
+or `access`: those remain the owners of publication and visibility.
+
 <p align = "center" style="font-size: 26px;" > <strong> Markdown publication filter </strong> </p>
 
 An optional `.fireflyignore` at the blog root controls which non-empty Markdown
