@@ -340,6 +340,94 @@ startTerminalReader(root: HTMLElement): void
   explicitly traverse `list(...).directories` and enforce their own visited and
   work-limit rules; they must not restore a descendant-document projection to
   make `ls` or grep convenient.
+
+### Terminal `find` Command Contract
+
+#### 1. Scope / Trigger
+
+Use this contract when adding or changing the Terminal command that discovers
+public Markdown documents by their user-visible filename. `find` is metadata
+discovery; `grep` remains the line-oriented body-text search command.
+
+#### 2. Signature
+
+```ts
+const FIND_USAGE =
+  'find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>';
+const FIND_SUMMARY = 'find public documents by filename substring';
+
+executeFind(context: ProcessContext, args: ParsedCommandArguments): ProcessResult;
+
+interface PublicDocumentWalk {
+  readonly paths: readonly string[];
+  readonly complete: boolean;
+}
+
+walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWalk;
+```
+
+#### 3. Contracts
+
+- The positional keyword is a case-insensitive NFC-normalized substring of
+  `PublicDocument.filename`; it does not search title, body, tags, or other
+  front matter.
+- Without `--path`, search starts at `/posts` and `/pages`, regardless of the
+  current working directory. `--path` resolves one safe public directory using
+  the current virtual cwd and recursively searches below it. A root path maps
+  to `/posts` and `/pages`; it never traverses `/lab` or `/.rshell`.
+- Results are sorted by canonical virtual path and use the existing plain-text
+  row format `<display path> — <date> — <title>`. The text remains available to
+  pipelines and scratch redirects.
+- `--after` and `--before` are inclusive canonical calendar-date filters.
+  `find -h` and `find --help` return the complete usage/options block without a
+  keyword; the grouped `help` command derives its row from the registry.
+- Recursive collection is bounded by a visited-directory work limit. A walker
+  returns `complete: false` when the limit is exceeded, and every caller must
+  fail closed instead of consuming partial paths. The same rule applies when
+  the walker is shared by `grep`.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| Missing keyword, extra operand, unknown option, empty/control-character keyword | Return the usage error without scanning. |
+| Invalid or missing option value | Return the usage error. |
+| Unknown, non-public, document, experiment, scratch, or unsafe `--path` | Reject with a bounded public-directory error. |
+| Invalid date or `after > before` | Reject before walking the VFS. |
+| Walker work limit exceeded | Return a non-zero bounded scope-limit error; never return partial search results. |
+| No matching filename | Return a successful no-match message and no document rows. |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: `find alpha`, `find --path ~/blog/posts alpha`, and inclusive date
+  filters return deterministic rows for public documents only.
+- Base: a keyword with no matches returns `No matches for "<keyword>".`.
+- Bad: `find --path ~/blog/lab alpha`, `find --after 2026-02-30 alpha`, or a
+  search over an incomplete walk must not expose experiment/scratch data or
+  silently omit documents.
+
+#### 6. Tests Required
+
+- Unit: filename-only matching, case folding, root/cwd-relative/absolute
+  public paths, recursive nested documents, inclusive date bounds, invalid
+  paths/dates/operands, no-match output, and command-specific help.
+- Integration: registry/grouped-help metadata, terminal adapter output,
+  completion candidates, `find | cat`, and the existing `grep` behavior after
+  sharing the bounded document walker.
+
+#### 7. Wrong vs Correct
+
+```ts
+// Wrong: a bounded walk can be partial; returning it silently hides matches.
+const walked = walkPublicDocuments(fs, '/posts');
+return successResult(walked.paths.map(render));
+
+// Correct: fail closed before projecting any partial result.
+const walked = walkPublicDocuments(fs, '/posts');
+if (!walked.complete) return failureResult('Search scope exceeds the work limit.');
+return successResult(walked.paths.map(render));
+```
+
 - `shell/runner.ts` is the neutral owner of stage expansion, pipe wiring,
   stderr/status handling, state-patch application, and bounded session scratch
   redirects. Its `runRshellInput` wrapper delegates to `parseRshell`; it must

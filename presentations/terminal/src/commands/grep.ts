@@ -1,6 +1,7 @@
 import type { GrepMatch, GrepReport, ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
+import { walkPublicDocuments, type PublicDocumentWalk } from '../vfs/public-documents.js';
 
 export const GREP_USAGE = 'grep [-inF] <pattern> [path ...]';
 export const GREP_SUMMARY = 'filter stdin or public text';
@@ -314,43 +315,26 @@ function formatMatch(match: GrepMatch): string {
   return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
 }
 
-function childDirectoryPath(parent: string, name: string): string {
-  const segment = name.endsWith('/') ? name.slice(0, -1) : name;
-  return parent === '/' ? `/${segment}` : `${parent}/${segment}`;
+function allDocumentPaths(context: ProcessContext): PublicDocumentWalk {
+  const walks = ['/posts', '/pages'].map((path) => walkPublicDocuments(context.fs, path));
+  return Object.freeze({
+    paths: Object.freeze([...new Set(walks.flatMap(({ paths }) => paths))].sort()),
+    complete: walks.every(({ complete }) => complete)
+  });
 }
 
-function documentPathsUnder(context: ProcessContext, root: string): readonly string[] {
-  const pending = [root];
-  const visited = new Set<string>();
-  const documents: string[] = [];
-  while (pending.length > 0) {
-    const path = pending.shift()!;
-    if (visited.has(path)) continue;
-    visited.add(path);
-    const node = context.fs.stat(path);
-    if (node?.kind === 'document') {
-      documents.push(path);
-      continue;
-    }
-    if (node?.kind !== 'directory') continue;
-    const listing = context.fs.list(path);
-    if (listing === undefined) continue;
-    documents.push(...listing.documents.map(({ path: documentPath }) => documentPath));
-    pending.push(...listing.directories.map((name) => childDirectoryPath(path, name)));
-  }
-  return Object.freeze([...new Set(documents)].sort());
-}
-
-function allDocumentPaths(context: ProcessContext): readonly string[] {
-  return Object.freeze([...new Set(['/posts', '/pages'].flatMap((path) => documentPathsUnder(context, path)))].sort());
-}
-
-function resourcePaths(context: ProcessContext, path: string): readonly string[] | undefined {
+function resourcePaths(context: ProcessContext, path: string): PublicDocumentWalk | undefined {
   const node = context.fs.stat(path);
-  if (node?.kind === 'document' || node?.kind === 'scratch') return Object.freeze([path]);
+  if (node?.kind === 'document' || node?.kind === 'scratch') {
+    return Object.freeze({ paths: Object.freeze([path]), complete: true });
+  }
   if (node?.kind !== 'directory') return undefined;
   const scratchPaths = path === '/.rshell/tmp' ? context.fs.glob('/.rshell/tmp/*') : [];
-  return Object.freeze([...documentPathsUnder(context, path), ...scratchPaths].sort());
+  const walk = walkPublicDocuments(context.fs, path);
+  return Object.freeze({
+    paths: Object.freeze([...walk.paths, ...scratchPaths].sort()),
+    complete: walk.complete
+  });
 }
 
 export function executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
@@ -367,14 +351,19 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
 
   const sourcePaths: string[] = [];
   if (context.stdin !== undefined) sourcePaths.push('-');
-  else if (resources.length === 0) sourcePaths.push(...allDocumentPaths(context));
+  else if (resources.length === 0) {
+    const documents = allDocumentPaths(context);
+    if (!documents.complete) return failureResult('grep resource scope exceeds the session work limit.');
+    sourcePaths.push(...documents.paths);
+  }
   else {
     for (const operand of resources) {
       const resolution = context.fs.resolve(operand, context.cwd, 'resource');
       if (!resolution.ok) return failureResult('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
       const resources = resourcePaths(context, resolution.path);
       if (resources === undefined) return failureResult('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
-      sourcePaths.push(...resources);
+      if (!resources.complete) return failureResult('grep resource scope exceeds the session work limit.');
+      sourcePaths.push(...resources.paths);
     }
   }
   const uniqueSourcePaths = [...new Set(sourcePaths)];

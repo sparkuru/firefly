@@ -1,5 +1,6 @@
 import { CAT_SUMMARY, CAT_USAGE, executeCat } from './cat.js';
 import { CD_SUMMARY, CD_USAGE, executeCd } from './cd.js';
+import { FIND_SUMMARY, FIND_USAGE, executeFind } from './find.js';
 import { GREP_SUMMARY, GREP_USAGE, executeGrep } from './grep.js';
 import { FRIENDS_SUMMARY, FRIENDS_USAGE, executeFriends } from './links.js';
 import { LS_SUMMARY, LS_USAGE, executeLs } from './ls.js';
@@ -70,6 +71,16 @@ const grepArguments = createCommandArgumentParser({
     { name: 'fixed-strings', aliases: ['-F', '--fixed-strings'] }
   ]
 });
+const findArguments = createCommandArgumentParser({
+  usage: FIND_USAGE,
+  maxOperands: 1,
+  options: [
+    { name: 'path', aliases: ['--path'], value: 'required' },
+    { name: 'after', aliases: ['--after'], value: 'required' },
+    { name: 'before', aliases: ['--before'], value: 'required' },
+    { name: 'help', aliases: ['-h', '--help'] }
+  ]
+});
 
 const coreCommandSpecs: readonly CommandSpec[] = Object.freeze([
   {
@@ -79,6 +90,10 @@ const coreCommandSpecs: readonly CommandSpec[] = Object.freeze([
   {
     name: 'grep', aliases: Object.freeze([]), usage: GREP_USAGE, summary: GREP_SUMMARY,
     group: 'Explore', order: 30, policy: textPolicy, parse: grepArguments, execute: executeGrep
+  },
+  {
+    name: 'find', aliases: Object.freeze([]), usage: FIND_USAGE, summary: FIND_SUMMARY,
+    group: 'Explore', order: 25, policy: textPolicy, parse: findArguments, execute: executeFind
   },
   {
     name: 'cat', aliases: Object.freeze([]), usage: CAT_USAGE, summary: CAT_SUMMARY,
