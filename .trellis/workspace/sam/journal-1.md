@@ -812,3 +812,24 @@ Implemented configurable blog-root content loading, tracked demo content, legacy
 ### Status
 
 [OK] **Completed**
+
+
+## Session 37: Implement .fireflyignore publication filter
+
+**Date**: 2026-08-25
+**Task**: Implement .fireflyignore publication filter
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented a scanner-owned .fireflyignore layer with Gitignore-compatible root and nested policies for posts and pages, parent-directory blocking, atomic-stage safety, tests, documentation, and content-workspace spec updates. Validation: npm ci, content tests 51/51, astro check 0 errors/0 warnings, production build 28 pages and 16 static-output tests passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `961677e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
