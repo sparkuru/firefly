@@ -56,18 +56,18 @@ default.
 
 ## Acceptance Criteria
 
-- [ ] A TOML value such as `terminal.promptMarker = "[firefly]"` is accepted,
+- [x] A TOML value such as `terminal.promptMarker = "[firefly]"` is accepted,
       reaches `formatTerminalPrompt()`, and is rendered in place of the
       built-in marker across server and enhanced-browser prompt consumers.
-- [ ] Omitting `terminal.promptMarker` preserves
+- [x] Omitting `terminal.promptMarker` preserves
       `guest(.ᗜ ᴗ ᗜ.)firefly:~/blog/posts #` and existing standalone package
       behavior.
-- [ ] Unsafe, empty, multiline, or unknown marker values fail strict config or
+- [x] Unsafe, empty, multiline, or unknown marker values fail strict config or
       Terminal identity decoding with actionable field context; native
       recovery remains available when browser enhancement rejects its payload.
-- [ ] The active TOML, tracked example, site-config tests, Terminal runtime
+- [x] The active TOML, tracked example, site-config tests, Terminal runtime
       tests, and relevant generated prompt assertions agree on the new field.
-- [ ] Applicable package checks pass through `./sam`, and `git diff --check`
+- [x] Applicable package checks pass through `./sam`, and `git diff --check`
       reports no whitespace errors.
 
 ## Technical Notes
