@@ -95,6 +95,21 @@ package suite from the single profile in `index.md`.
 
 ## Content and Static-Output Review
 
+- Optional content metadata is not a fixture requirement. Because
+  `firefly.markers` defaults to an empty list, static-output tests must accept a
+  schema-valid workspace with no marker, validate the identifier/label of every
+  marker that is actually rendered, and keep positive marker coverage when the
+  active fixture supplies one.
+- `tooling/format-content.sh --check` is a frontmatter-presence check: success
+  means that no non-empty Markdown file lacks an opening frontmatter delimiter.
+  It does not parse existing metadata or replace the Astro schema, rendered
+  output, or build/test gates. Use a generic runtime root for both boundaries:
+
+  ```bash
+  ./tooling/format-content.sh --root "$CONTENT_ROOT" --check
+  FIREFLY_CONTENT_ROOT="$CONTENT_ROOT" ./sam npm --prefix apps/site run check
+  ```
+
 - Posts consume only the fresh ordinary-file materialized stage; pages use their
   repository loader. Both use the shared strict schema.
 - Routes consume the guest canonical projection; draft/access/layout/path checks are not

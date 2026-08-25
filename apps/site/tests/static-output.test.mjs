@@ -4,6 +4,10 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mjs';
+import {
+  resolveContentMarkers,
+  supportedContentMarkerIds
+} from '../src/lib/content-markers.mjs';
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 import { createRobotsText } from '../src/lib/site-seo.mjs';
 
@@ -17,6 +21,31 @@ const workflowRoute = 'posts/ai/llm-workflow-with-trellis/index.html';
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
+function hasFeaturedMarker(frontmatter) {
+  let inFirefly = false;
+  let inMarkers = false;
+
+  for (const line of frontmatter.split('\n')) {
+    if (/^firefly:\s*$/u.test(line)) {
+      inFirefly = true;
+      inMarkers = false;
+      continue;
+    }
+    if (inFirefly && /^\S/u.test(line)) {
+      inFirefly = false;
+      inMarkers = false;
+    }
+    if (!inFirefly) continue;
+    if (/^[ \t]+markers:\s*$/u.test(line)) {
+      inMarkers = true;
+      continue;
+    }
+    if (inMarkers && /^[ \t]+-\s*featured\s*$/u.test(line)) return true;
+  }
+
+  return false;
 }
 
 async function listFiles(directory, prefix = '') {
@@ -102,7 +131,8 @@ async function findWorkflowDocument() {
             virtualPath,
             filename: entry.name,
             visiblePath: `~/blog/${virtualPath}`,
-            date: date.slice(0, 10)
+            date: date.slice(0, 10),
+            hasFeaturedMarker: hasFeaturedMarker(frontmatter)
           });
         }
         return undefined;
@@ -190,7 +220,8 @@ test('shared head metadata and public discovery files follow site configuration'
   assert.equal(robots, createRobotsText(SITE_CONFIG));
 });
 
-test('supported content markers render across canonical public surfaces', async () => {
+test('supported content markers render correctly on canonical public surfaces when provided', async () => {
+  const workflowDocument = await findWorkflowDocument();
   const routes = {
     home: await readFile(path.join(distRoot, 'index.html'), 'utf8'),
     directory: await readFile(path.join(distRoot, 'posts/ai/index.html'), 'utf8'),
@@ -198,9 +229,27 @@ test('supported content markers render across canonical public surfaces', async 
   };
 
   for (const [route, html] of Object.entries(routes)) {
-    assert.match(html, /data-content-marker="featured"/u, route);
-    assert.match(html, />Featured<\/span>/u, route);
-    assert.doesNotMatch(html, /future-marker|constructor/u, route);
+    const markerIds = [...html.matchAll(/data-content-marker="([^"]+)"/gu)].map(([, markerId]) => markerId);
+
+    for (const markerId of markerIds) {
+      assert.ok(supportedContentMarkerIds.includes(markerId), `${route}: unsupported content marker ${markerId}`);
+      const marker = resolveContentMarkers([markerId])[0];
+      assert.ok(marker, `${route}: no registry descriptor for content marker ${markerId}`);
+      const renderedMarkers = [
+        ...html.matchAll(
+          new RegExp(`<span\\b[^>]*data-content-marker="${escapeRegExp(markerId)}"[^>]*>([\\s\\S]*?)<\\/span>`, 'gu')
+        )
+      ];
+      assert.ok(renderedMarkers.length > 0, `${route}: malformed content marker ${markerId}`);
+      for (const [, label] of renderedMarkers) {
+        assert.equal(label.trim(), marker.label, route);
+      }
+    }
+
+    if (workflowDocument.hasFeaturedMarker) {
+      assert.match(html, /data-content-marker="featured"/u, route);
+      assert.match(html, />Featured<\/span>/u, route);
+    }
   }
 });
 
