@@ -62,19 +62,30 @@ test('configured identity initializes the prompt and rejects unsafe browser payl
     user: 'reader',
     host: 'station',
     workingDirectory: '~/blog/notes',
-    about: 'First line.\nSecond line.'
+    about: 'First line.\nSecond line.',
+    promptMarker: '[firefly]'
   });
-  assert.equal(formatTerminalPrompt(identity, createTerminalState(identity)), 'reader(.ᗜ ᴗ ᗜ.)station:~/blog/notes #');
+  assert.equal(formatTerminalPrompt(identity, createTerminalState(identity)), 'reader[firefly]station:~/blog/notes #');
   assert.equal(Object.isFrozen(identity), true);
   for (const value of [
     { ...identity, user: 'reader name' },
     { ...identity, host: 'station/' },
     { ...identity, workingDirectory: '~/blog/../private' },
     { ...identity, about: 'line\u0000' },
+    { ...identity, promptMarker: '<script>' },
+    { ...identity, promptMarker: 'line\nbreak' },
     { ...identity, extra: 'unknown' }
   ]) {
     assert.throws(() => decodeTerminalIdentity(value), /Terminal identity/u);
   }
+
+  const legacyIdentity = decodeTerminalIdentity({
+    user: 'reader',
+    host: 'station',
+    workingDirectory: '~/blog/notes',
+    about: 'First line.\nSecond line.'
+  });
+  assert.equal(legacyIdentity.promptMarker, '(.ᗜ ᴗ ᗜ.)');
 });
 
 function input(tree: HastRoot): NormalizedDocumentInput {

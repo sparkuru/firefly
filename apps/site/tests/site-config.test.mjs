@@ -35,6 +35,7 @@ const validConfig = {
     host: 'notes',
     cwd: '~/blog/posts',
     about: 'A public about line.\nAnother line.',
+    promptMarker: '[firefly]',
     friends: [
       { name: 'Example', desc: 'A useful example site.', url: 'https://example.test/blog' },
       { name: 'Docs', url: 'http://docs.example.test/?from=site' }
@@ -70,7 +71,8 @@ test('site config validates, normalizes, and deeply freezes public values', () =
     user: 'guest',
     host: 'notes',
     workingDirectory: '~/blog/posts',
-    about: 'A public about line.\nAnother line.'
+    about: 'A public about line.\nAnother line.',
+    promptMarker: '[firefly]'
   });
 });
 
@@ -179,6 +181,23 @@ test('site config defaults omitted friend links to an empty list', () => {
   assert.ok(Object.isFrozen(config.terminal.friends));
 });
 
+test('site config defaults omitted prompt markers and rejects unsafe prompt markers', () => {
+  const { promptMarker: _promptMarker, ...terminalWithoutPromptMarker } = validConfig.terminal;
+  const config = parseSiteConfig({
+    ...validConfig,
+    terminal: terminalWithoutPromptMarker
+  }, 'fixture');
+
+  assert.equal(config.terminal.promptMarker, '(.ᗜ ᴗ ᗜ.)');
+  assert.equal(terminalIdentityFromConfig(config).promptMarker, '(.ᗜ ᴗ ᗜ.)');
+  for (const promptMarker of ['', ' [firefly]', '[firefly] ', '[firefly]\n', '[firefly]\tmarker', '[firefly]\u0000', '<script>', '"quoted"']) {
+    assert.throws(() => parseSiteConfig({
+      ...validConfig,
+      terminal: { ...validConfig.terminal, promptMarker }
+    }, 'fixture'), /terminal\.promptMarker|Invalid site configuration/u);
+  }
+});
+
 test('site config rejects unknown keys, unsafe identity text, and malformed origins', () => {
   for (const value of [
     { ...validConfig, unsupported: true },
@@ -276,6 +295,7 @@ test('the checked-in TOML example loads with documented optional defaults', () =
   assert.equal(config.plugins.comments.configPath, 'config/plugins/comments/config.toml');
   assert.equal(config.comments.writeOrigin, null);
   assert.deepEqual(config.terminal.friends, []);
+  assert.equal(config.terminal.promptMarker, '(.ᗜ ᴗ ᗜ.)');
 });
 
 test('site metadata resolves fallback and explicit document overrides', () => {

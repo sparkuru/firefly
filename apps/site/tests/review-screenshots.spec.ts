@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { terminalPromptName } from './terminal-prompt';
 
 const screenshotRoot = '../../.trellis/tasks/08-13-m5-content-filesystem-vim-reader/research/screenshots';
 
@@ -10,7 +11,7 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   });
 
   await page.goto('/');
-  const prompt = page.getByRole('textbox', { name: /Command for guest\(\.ᗜ ᴗ ᗜ\.\)firefly:~\/blog\/posts #$/u });
+  const prompt = page.getByRole('textbox', { name: terminalPromptName() });
   await prompt.fill('tree ~/blog');
   await prompt.press('Enter');
   await expect(page.locator('.terminal-tree')).toBeVisible();
