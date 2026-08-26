@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 42
+- **Total Sessions**: 43
 - **Last Active**: 2026-08-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~940 | Active |
+| `journal-1.md` | ~961 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 43 | 2026-08-26 | Keep Terminal help summaries readable | `1b4f8ed` | `anti-entropy-loss-syndrome` |
 | 42 | 2026-08-26 | Make Terminal find results clickable | `dcae65d` | `anti-entropy-loss-syndrome` |
 | 41 | 2026-08-25 | Add Terminal find command | `2aa4151` | `anti-entropy-loss-syndrome` |
 | 40 | 2026-08-25 | External content validation boundary | `302e80d` | `anti-entropy-loss-syndrome` |

@@ -938,3 +938,24 @@ Implemented structured document-search data through the neutral shell and runtim
 ### Status
 
 [OK] **Completed**
+
+
+## Session 43: Keep Terminal help summaries readable
+
+**Date**: 2026-08-26
+**Task**: Keep Terminal help summaries readable
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Fixed the Terminal help grid so long find usage wraps within a bounded desktop track and the summary remains readable; preserved the mobile one-column layout. Added focused responsive geometry and overflow coverage, updated the frontend hook guideline, and verified site check, build/static tests 17/17, focused E2E 2/2, diff check, and task validation. Existing full command-flow E2E still has an unrelated pre-existing LLM title fixture mismatch.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1b4f8ed` | (see git log) |
+
+### Status
+
+[OK] **Completed**
