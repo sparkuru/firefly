@@ -441,6 +441,53 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(rootInput).toBeFocused();
 });
 
+test('help keeps the long find row readable across responsive layouts', async ({ page }) => {
+  await page.goto('/');
+  const transcript = page.locator('[data-terminal-transcript]');
+  await submit(page, 'help');
+
+  const findRow = transcript.locator('.terminal-help-command').filter({ hasText: 'find [--path <directory>]' });
+  await expect(findRow).toHaveCount(1);
+  await expect(findRow.locator('code')).toHaveText('find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>');
+  await expect(findRow.locator('.terminal-help-summary')).toHaveText('find public documents by filename substring');
+
+  const geometry = await findRow.evaluate((row) => {
+    const usage = row.querySelector<HTMLElement>('code');
+    const detail = row.querySelector<HTMLElement>('.terminal-help-detail');
+    const summary = row.querySelector<HTMLElement>('.terminal-help-summary');
+    if (usage === null || detail === null || summary === null) throw new Error('Missing find help layout targets.');
+    const usageRect = usage.getBoundingClientRect();
+    const detailRect = detail.getBoundingClientRect();
+    const summaryRect = summary.getBoundingClientRect();
+    const usageLineHeight = Number.parseFloat(getComputedStyle(usage).lineHeight);
+    const summaryLineHeight = Number.parseFloat(getComputedStyle(summary).lineHeight);
+    const rowRect = row.getBoundingClientRect();
+    return {
+      columnCount: getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/u).length,
+      detailWidth: detailRect.width,
+      rowLeft: rowRect.left,
+      rowRight: rowRect.right,
+      rowWidth: rowRect.width,
+      summaryLines: Math.ceil(summaryRect.height / summaryLineHeight),
+      usageLines: Math.ceil(usageRect.height / usageLineHeight),
+      viewportWidth: document.documentElement.clientWidth
+    };
+  });
+
+  expect(geometry.rowLeft).toBeGreaterThanOrEqual(-1);
+  expect(geometry.rowRight).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+  if (await page.evaluate(() => window.innerWidth >= 768)) {
+    expect(geometry.columnCount).toBe(2);
+    expect(geometry.usageLines).toBeGreaterThan(1);
+    expect(geometry.detailWidth).toBeGreaterThan(120);
+    expect(geometry.summaryLines).toBeLessThanOrEqual(3);
+  } else {
+    expect(geometry.columnCount).toBe(1);
+    expect(geometry.detailWidth).toBeGreaterThanOrEqual(geometry.rowWidth - 1);
+  }
+  await expectNoHorizontalOverflow(page);
+});
+
 test('friends renders validated configuration records as native anchors', async ({ page }) => {
   let releaseScript = () => {};
   let markScriptStarted = () => {};

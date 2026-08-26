@@ -77,6 +77,14 @@ projection. The controller must not fetch
 or probe the destinations, and malformed friend data follows the same fatal
 recovery path as malformed identity/index/template data.
 
+Help rows render registry-owned usage and summary text in a bounded flexible
+desktop grid: both columns keep a readable minimum width, long usage wraps
+inside the usage track, and the summary must never be forced into a
+one-character vertical column. The narrow responsive override stacks each row
+into one column. Do not use an unbounded `max-content` usage track for help
+metadata; validate the long-signature case at desktop and mobile widths with
+geometry and no-horizontal-overflow assertions.
+
 - Keep recovery visible without JavaScript and after early failure. While the
   marker has set the internal `connecting` state, the bounded direct boot-log
   staging view suppresses recovery. Its layout is reserved immediately and any
