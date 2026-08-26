@@ -32,6 +32,17 @@ The external root is mounted read-only and only its `posts/` and `pages/`
 trees are scanned. Symlinks are dereferenced into the generated workspace;
 generated files never retain symlink metadata or host absolute paths.
 
+For machine-local development defaults, copy the ignored config template and
+edit its content root, bind address, or ports:
+
+~~~sh
+cp config.dev.example config.dev
+~~~
+
+Both `./sam` and `./dev.sh` load `config.dev` when it exists. Explicit
+environment variables take precedence, and a clone without `config.dev` keeps
+the repository `content/` default.
+
 The default clone path is:
 
 ~~~sh

@@ -24,6 +24,8 @@ FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
 ./sam npm run test:m4
 ./sam npm run build:m4
 ./package-runtime.sh
+
+cp config.dev.example config.dev
 ```
 
 Materialization and access:
@@ -187,7 +189,9 @@ startTerminalReader(root: HTMLElement): void
 
 - `FIREFLY_CONTENT_ROOT` is optional. It defaults to the blog root
   `<repo>/content`, which must contain readable `posts/` and `pages/` children.
-  When set, it must name an absolute readable blog root with the same shape.
+  `sam` and `dev.sh` load the ignored `config.dev` shell defaults file when it
+  exists; explicit environment variables take precedence. When configured, the
+  value must name an absolute readable blog root with the same shape.
 - `sam` mounts the resolved root and every recursively discovered symlink hop and
   final target below only the `posts/` and `pages/` source trees at the same
   absolute container path, read-only. It rejects `/`, a broad system/home
@@ -833,7 +837,7 @@ return successResult(walked.paths.map(render));
   clicking a public directory with an unmodified primary activation submits a
   safe `cd ~/blog/posts/characters/`, updates the prompt, and leaves the home URL
   unchanged. Ctrl/Cmd/Alt/Shift activation remains a native directory link.
-- Base: omitted `FIREFLY_CONTENT_ROOT` builds the repository fixture; omitted
+- Base: omitted `FIREFLY_CONTENT_ROOT` and `config.dev` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
 - Bad: mount `$HOME`, let Astro follow the authored link directly, serialize all
   documents then hide private ones in the browser, derive a URL from a `vim`
