@@ -1,0 +1,11 @@
+# shellcheck shell=bash
+# Local development defaults for ./sam and ./dev.sh.
+# Copy this file to config.dev and edit the values for the current machine.
+# The := form keeps explicit environment variables higher priority.
+
+: "${FIREFLY_CONTENT_ROOT:=/absolute/path/to/blog}"
+: "${SAM_BIND_HOST:=127.0.0.1}"
+: "${WEB_HOST_PORT:=4321}"
+: "${WEB_CONTAINER_PORT:=4321}"
+: "${SAM_IMAGE:=node:22-alpine}"
+: "${SAM_IPC:=private}"

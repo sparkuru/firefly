@@ -13,14 +13,21 @@ SCRIPT_NAME=$(basename "$0")
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_LABEL="sam.repo=${REPO_ROOT}"
 SCOPE_LABEL="sam.scope=dev.sh"
+DEV_CONFIG_PATH="${REPO_ROOT}/config.dev"
+
+readonly SCRIPT_NAME REPO_ROOT PROJECT_LABEL SCOPE_LABEL DEV_CONFIG_PATH
+
+if [[ -f "${DEV_CONFIG_PATH}" ]]; then
+	# shellcheck source=/dev/null
+	source "${DEV_CONFIG_PATH}"
+fi
 
 SAM_BIND_HOST="${SAM_BIND_HOST:-0.0.0.0}"
 WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
 WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
 ASTRO_DEV_LOCK_PATH="${REPO_ROOT}/apps/site/.astro/dev.json"
-DEFAULT_BUILD_CONTENT_ROOT="/home/wkyuu/cargo/repo/04-flyMe2theStar/03-genshin/blog"
 
-readonly SCRIPT_NAME REPO_ROOT PROJECT_LABEL SCOPE_LABEL ASTRO_DEV_LOCK_PATH DEFAULT_BUILD_CONTENT_ROOT
+readonly ASTRO_DEV_LOCK_PATH
 
 service_pids=()
 
@@ -108,7 +115,7 @@ start_services() {
 	local -a required_binaries=("apps/site/node_modules/.bin/astro")
 
 	if [[ "${mode}" == preview ]]; then
-		local content_root=${FIREFLY_CONTENT_ROOT:-${DEFAULT_BUILD_CONTENT_ROOT}}
+		local content_root=${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}
 		required_binaries=(
 			"tooling/validate-experiments/node_modules/.bin/tsc"
 			"packages/x-core/node_modules/.bin/tsc"

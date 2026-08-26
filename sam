@@ -17,19 +17,27 @@
 # Service commands must bind to 0.0.0.0 to be reachable from the host.
 set -Eeuo pipefail
 
-IMAGE="${SAM_IMAGE:-node:22-alpine}"
-SAM_IPC="${SAM_IPC-private}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEVHOME="${REPO_ROOT}/.devhome"
+DEV_CONFIG_PATH="${REPO_ROOT}/config.dev"
 STEP_INDEX=0
 
+readonly REPO_ROOT DEVHOME DEV_CONFIG_PATH
+
+if [[ -f "${DEV_CONFIG_PATH}" ]]; then
+	# shellcheck source=/dev/null
+	source "${DEV_CONFIG_PATH}"
+fi
+
+IMAGE="${SAM_IMAGE:-node:22-alpine}"
+SAM_IPC="${SAM_IPC-private}"
 SAM_BIND_HOST="${SAM_BIND_HOST:-127.0.0.1}"
 WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
 WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
 COMMENTS_EXPORT_PATH="${FIREFLY_COMMENTS_EXPORT:-}"
 COMMENTS_EXPORT_CONTAINER_PATH=""
 
-readonly IMAGE SAM_IPC REPO_ROOT DEVHOME
+readonly IMAGE SAM_IPC SAM_BIND_HOST WEB_HOST_PORT WEB_CONTAINER_PORT COMMENTS_EXPORT_PATH
 
 content_mounts=()
 

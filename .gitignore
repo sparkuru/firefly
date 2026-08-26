@@ -19,6 +19,7 @@ presentations/terminal/dist/
 tooling/sync-server/
 
 config/site.toml
+config.dev
 config/secrets.env
 config/plugins/comments/config.toml
 config/plugins/comments/secrets.env
