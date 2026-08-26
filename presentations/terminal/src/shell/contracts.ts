@@ -88,6 +88,11 @@ export interface HelpGroup {
 export type CommandValue =
   | { readonly kind: 'directory-listing'; readonly listing: import('../vfs/contracts.js').DirectoryListing }
   | { readonly kind: 'document'; readonly document: import('../vfs/contracts.js').PublicDocument }
+  | {
+      readonly kind: 'document-search';
+      readonly keyword: string;
+      readonly documents: readonly import('../vfs/contracts.js').PublicDocument[];
+    }
   | { readonly kind: 'grep-report'; readonly report: GrepReport }
   | { readonly kind: 'help'; readonly groups: readonly HelpGroup[] }
   | { readonly kind: 'links'; readonly links: readonly ShellLink[] }

@@ -556,6 +556,37 @@ test('ls and tree entries expose document links and safe directory cd links', as
   await expect(transcript.locator('.terminal-command-line').last()).toContainText('cd ~/blog/posts/ai/');
 });
 
+test('find results expose canonical keyboard-accessible document links while pipes stay text', async ({ page }) => {
+  await page.goto('/');
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await submit(page, 'find llm-workflow');
+  const postRecord = transcript.locator('.terminal-record').last();
+  const postLink = postRecord.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' });
+  await expect(postLink).toHaveAttribute('href', '/posts/ai/llm-workflow-with-trellis/');
+  await expect(postRecord).toContainText('ai/llm-workflow-with-trellis.md');
+  await expect(postRecord).toContainText('2026-05-28');
+  await expect(postRecord).toContainText('llm-workflow-with-trellis');
+  await postLink.focus();
+  await expect(postLink).toBeFocused();
+  await postLink.press('Enter');
+  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/$/u);
+
+  await page.goto('/');
+  await submit(page, 'find about');
+  const pageRecord = transcript.locator('.terminal-record').last();
+  const pageLink = pageRecord.getByRole('link', { name: '/pages/about.md' });
+  await expect(pageLink).toHaveAttribute('href', '/pages/about/');
+  await pageLink.focus();
+  await expect(pageLink).toBeFocused();
+
+  await page.goto('/');
+  await submit(page, 'find llm-workflow | cat');
+  const pipedRecord = transcript.locator('.terminal-record').last();
+  await expect(pipedRecord.getByRole('link')).toHaveCount(0);
+  await expect(pipedRecord).toContainText('ai/llm-workflow-with-trellis.md — 2026-05-28 — llm-workflow-with-trellis');
+});
+
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });

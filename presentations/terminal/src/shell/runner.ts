@@ -164,7 +164,7 @@ function applyRedirect(
   fs: ReadonlyVirtualFs
 ): ProcessResult {
   if (stage.redirect === undefined) return result;
-  if (result.controls !== undefined || result.value !== undefined) {
+  if (result.controls !== undefined) {
     return commandFailure('Only final text output can be redirected to rshell scratch.', state, result.stderr.lines);
   }
   const target = stage.target === undefined ? undefined : fs.resolve(stage.target, state.cwd, 'resource');

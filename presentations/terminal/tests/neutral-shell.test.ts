@@ -89,9 +89,23 @@ test('each neutral command owns an argv parser and accepts interspersed options'
 });
 
 test('find searches visible filenames, filters public paths and dates, and explains itself', () => {
-  assert.deepEqual(executeFind(context(), args(['ALPHA'])).stdout.lines, [
+  const alpha = executeFind(context(), args(['ALPHA']));
+  assert.deepEqual(alpha.stdout.lines, [
     'characters/alpha.md — 2026-05-28 — Alpha'
   ]);
+  assert.deepEqual(alpha.value, {
+    kind: 'document-search',
+    keyword: 'ALPHA',
+    documents: [{
+      kind: 'post',
+      path: '/posts/characters/alpha.md',
+      relativePath: 'characters/alpha.md',
+      filename: 'alpha.md',
+      title: 'Alpha',
+      href: '/posts/characters/alpha/',
+      date: '2026-05-28'
+    }]
+  });
   assert.deepEqual(executeFind(context(), args(['about'])).stdout.lines, [
     '/pages/about.md — 2026-02-01 — About'
   ]);
@@ -274,6 +288,16 @@ test('neutral runner applies state patches and bounded scratch redirects', () =>
       'Options: -h, --help; * matches known public names.'
     ]
   }]);
+
+  const findRedirect = runRshellInput('find alpha > ~/blog/.rshell/tmp/find', runnerOptions());
+  assert.equal(findRedirect.status, 0);
+  assert.deepEqual(findRedirect.stdout.lines, []);
+  assert.deepEqual(findRedirect.statePatch?.kind === 'session' ? findRedirect.statePatch.session.scratch : undefined, [
+    {
+      name: 'find',
+      lines: ['characters/alpha.md — 2026-05-28 — Alpha']
+    }
+  ]);
 
   const session = written.statePatch.session;
   const scratchFs = createPublicIndex({

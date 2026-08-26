@@ -441,6 +441,33 @@ function createDirectoryLink(path: string, label: string): HTMLAnchorElement {
   return link;
 }
 
+function findDisplayPath(entry: TerminalEntry): string {
+  return entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
+}
+
+function appendDocumentRow(
+  listing: HTMLElement,
+  entry: TerminalEntry,
+  label: string,
+  accessibleName = formatDocumentOperand(entry)
+): void {
+  const row = document.createElement('li');
+  row.className = 'terminal-entry-row terminal-entry-row--document';
+  row.dataset.terminalEntryKind = 'document';
+  const link = document.createElement('a');
+  link.href = entry.href;
+  link.textContent = label;
+  link.setAttribute('aria-label', accessibleName);
+  const date = document.createElement('time');
+  date.dateTime = entry.date;
+  date.textContent = entry.date;
+  const title = document.createElement('span');
+  title.className = 'terminal-entry-title';
+  title.textContent = entry.title;
+  row.append(link, date, title);
+  listing.append(row);
+}
+
 function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>, record: HTMLElement): void {
   if (effect.directories.length === 0 && effect.entries.length === 0) {
     appendTextLine(record, `No public ${effect.label}.`);
@@ -458,22 +485,16 @@ function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>
     row.append(label);
     listing.append(row);
   }
+  for (const entry of effect.entries) appendDocumentRow(listing, entry, entry.filename);
+  record.append(listing);
+}
+
+function renderFindEffect(effect: Extract<TerminalEffect, { kind: 'find' }>, record: HTMLElement): void {
+  const listing = document.createElement('ul');
+  listing.className = 'terminal-entry-list terminal-find-results';
   for (const entry of effect.entries) {
-    const row = document.createElement('li');
-    row.className = 'terminal-entry-row terminal-entry-row--document';
-    row.dataset.terminalEntryKind = 'document';
-    const link = document.createElement('a');
-    link.href = entry.href;
-    link.textContent = entry.filename;
-    link.setAttribute('aria-label', formatDocumentOperand(entry));
-    const date = document.createElement('time');
-    date.dateTime = entry.date;
-    date.textContent = entry.date;
-    const title = document.createElement('span');
-    title.className = 'terminal-entry-title';
-    title.textContent = entry.title;
-    row.append(link, date, title);
-    listing.append(row);
+    const displayPath = findDisplayPath(entry);
+    appendDocumentRow(listing, entry, displayPath, displayPath);
   }
   record.append(listing);
 }
@@ -610,6 +631,9 @@ function renderEffect(
       return { focusTarget: null };
     case 'grep':
       renderGrepEffect(effect, record);
+      return { focusTarget: null };
+    case 'find':
+      renderFindEffect(effect, record);
       return { focusTarget: null };
     case 'entries': {
       renderEntryListing(effect, record);
