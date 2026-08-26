@@ -16,9 +16,15 @@ test('same-device provisioning keeps comments private and the tracked site disab
   assert.match(compose, /COMMENTS_PLUGIN_ROOT:-\.\/plugins\/comments\}\/config\.toml:\/app\/config\/plugins\/comments\/config\.toml:ro/u);
   assert.match(compose, /COMMENTS_DATA_ROOT:-\.\/plugins\/comments\/data\}:/u);
   assert.match(pluginCompose, /network_mode: host/u);
+  assert.match(pluginCompose, /user: "\$\{COMMENTS_RUNTIME_USER:\?COMMENTS_RUNTIME_USER must be set to the owner UID:GID\}"/u);
+  assert.doesNotMatch(pluginCompose, /user:\s+"node"/u);
   assert.match(pluginCompose, /\.\/data:\/var\/lib\/firefly-comments/u);
   assert.match(pluginCompose, /\.\/config\.toml:\/app\/config\/plugins\/comments\/config\.toml:ro/u);
   assert.match(pluginCompose, /\.\/secrets\.env:\/run\/secrets\/comments\.env:ro/u);
+  assert.match(pluginCompose, /read_only:\s+true/u);
+  assert.match(pluginCompose, /cap_drop:\n\s+- ALL/u);
+  assert.match(pluginCompose, /no-new-privileges:true/u);
+  assert.doesNotMatch(pluginCompose, /\n\s+ports:/u);
   const commentsBlock = compose.slice(compose.indexOf('\n  comments:'));
   assert.doesNotMatch(commentsBlock, /\n\s+ports:/u);
   assert.match(nginx, /location \^~ \/v1\/comments\//u);
@@ -37,6 +43,7 @@ test('same-device provisioning keeps comments private and the tracked site disab
   assert.match(nginx, /location = \/v1\s*\{/u);
   assert.match(dockerfile, /COMMENTS_DATABASE_PATH=\/var\/lib\/firefly-comments\/core\.db/u);
   assert.match(dockerfile, /COMMENTS_SECRETS_FILE=\/run\/secrets\/comments\.env/u);
+  assert.match(dockerfile, /USER node/u);
   assert.doesNotMatch(dockerfile, /COPY .*secrets\.env/u);
   assert.match(siteConfig, /\[plugins\.comments\]/u);
   assert.match(siteConfig, /enabled = false/u);
