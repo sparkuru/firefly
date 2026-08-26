@@ -83,7 +83,7 @@ syntax check.
 | `SAM_BIND_HOST` | `dev.sh` defaults to `0.0.0.0` for LAN-accessible development; direct `sam` defaults to `127.0.0.1`; override with a narrower address when needed. |
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
-| `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; defaults to `<repo>/content`. `sam` resolves and passes it into the container. |
+| `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; direct `sam` commands default to `<repo>/content`, while `dev.sh build`/`preview` supplies its owner-local build root when this variable is unset. `sam` resolves and passes it into the container. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
 | Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit assembled-publication server path. |
@@ -140,6 +140,10 @@ so Playwright owns and terminates that preview process.
 - Good: `SAM_BIND_HOST=127.0.0.1 WEB_HOST_PORT=4322 ./dev.sh preview` keeps the
   assembled publication preview loopback-only when LAN access is not wanted;
   the default `dev.sh` binding is `0.0.0.0` for review from another host.
+- Good: `FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./dev.sh build` uses the
+  explicit blog root; without the variable, `dev.sh build` uses its configured
+  owner-local build root while direct `./sam` commands retain the repository
+  fixture default.
 - Base: site or NERV check/build uses plain `./sam`, private IPC, no published
   port, UID mapping, and repository-local HOME.
 - Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,

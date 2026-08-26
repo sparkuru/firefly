@@ -18,8 +18,9 @@ SAM_BIND_HOST="${SAM_BIND_HOST:-0.0.0.0}"
 WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
 WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
 ASTRO_DEV_LOCK_PATH="${REPO_ROOT}/apps/site/.astro/dev.json"
+DEFAULT_BUILD_CONTENT_ROOT="/home/wkyuu/cargo/repo/04-flyMe2theStar/03-genshin/blog"
 
-readonly SCRIPT_NAME REPO_ROOT PROJECT_LABEL SCOPE_LABEL ASTRO_DEV_LOCK_PATH
+readonly SCRIPT_NAME REPO_ROOT PROJECT_LABEL SCOPE_LABEL ASTRO_DEV_LOCK_PATH DEFAULT_BUILD_CONTENT_ROOT
 
 service_pids=()
 
@@ -107,6 +108,7 @@ start_services() {
 	local -a required_binaries=("apps/site/node_modules/.bin/astro")
 
 	if [[ "${mode}" == preview ]]; then
+		local content_root=${FIREFLY_CONTENT_ROOT:-${DEFAULT_BUILD_CONTENT_ROOT}}
 		required_binaries=(
 			"tooling/validate-experiments/node_modules/.bin/tsc"
 			"packages/x-core/node_modules/.bin/tsc"
@@ -132,7 +134,7 @@ start_services() {
 
 	if [[ "${mode}" == preview ]]; then
 		printf '[dev.sh] building the assembled publication for preview\n' >&2
-		SAM_SCOPE=dev.sh ./sam npm run build:m4
+		FIREFLY_CONTENT_ROOT="${content_root}" SAM_SCOPE=dev.sh ./sam npm run build:m4
 		printf '[dev.sh] publication preview: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
 		run_service web \
 			./sam env PUBLICATION_PORT="${WEB_CONTAINER_PORT}" \
