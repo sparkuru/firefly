@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 43
+- **Total Sessions**: 44
 - **Last Active**: 2026-08-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~961 | Active |
+| `journal-1.md` | ~982 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 44 | 2026-08-26 | M5.1 production enablement gates | `d04584d` | `anti-entropy-loss-syndrome` |
 | 43 | 2026-08-26 | Keep Terminal help summaries readable | `1b4f8ed` | `anti-entropy-loss-syndrome` |
 | 42 | 2026-08-26 | Make Terminal find results clickable | `dcae65d` | `anti-entropy-loss-syndrome` |
 | 41 | 2026-08-25 | Add Terminal find command | `2aa4151` | `anti-entropy-loss-syndrome` |

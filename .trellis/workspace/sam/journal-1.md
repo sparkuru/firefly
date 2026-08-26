@@ -959,3 +959,24 @@ Fixed the Terminal help grid so long find usage wraps within a bounded desktop t
 ### Status
 
 [OK] **Completed**
+
+
+## Session 44: M5.1 production enablement gates
+
+**Date**: 2026-08-26
+**Task**: M5.1 production enablement gates
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and validated M5.1 production enablement gates. Added a release-bound route catalog preflight and explicit runtime UID:GID enforcement. Local and redacted remote probes passed; route reconciliation and the enabled browser/publication gate remain deferred, so tracked comments stay disabled.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d04584d` | (see git log) |
+
+### Status
+
+[OK] **Completed**
