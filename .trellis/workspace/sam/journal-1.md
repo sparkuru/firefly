@@ -917,3 +917,24 @@ Implemented filename-based find with public path scoping, inclusive date filters
 ### Status
 
 [OK] **Completed**
+
+
+## Session 42: Make Terminal find results clickable
+
+**Date**: 2026-08-26
+**Task**: Make Terminal find results clickable
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented structured document-search data through the neutral shell and runtime, rendering validated post/page hrefs as native keyboard-accessible find links while keeping pipe, substitution, and redirect output text-only. Added unit, runtime, redirect, and focused Playwright coverage; updated the content-workspace contract. Terminal checks/tests/build, site check/build, static output tests, focused find E2E, diff check, and task validation passed. Full terminal E2E had four unrelated pre-existing fixture/assertion failures.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dcae65d` | (see git log) |
+
+### Status
+
+[OK] **Completed**
