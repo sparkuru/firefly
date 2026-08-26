@@ -438,6 +438,7 @@ resolvePluginStoragePath(dataRoot: string, entry: StorageCatalogEntry): string
 services/comments/ops/backup.sh <database|data-root> <backup> [--outbox <path>] [--state <path>]
 services/comments/ops/restore.sh <backup-file|backup-directory> <database|data-root>
 services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
+services/comments/scripts/validate-route-catalog.mjs --release <release-root> --config <plugin-config> [--output <catalog>]
 ```
 
 ```http
@@ -479,6 +480,18 @@ services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
   presented as complete coverage. Public enablement is blocked until
   incompatible routes are fixed or the operator explicitly accepts the
   missing coverage.
+- `validate-route-catalog.mjs` is the release-bound preflight for that
+  comparison. It walks only regular files and directories, rejects symlinks
+  and special entries, classifies emitted `posts/**/index.html` documents by
+  their article metadata marker, derives canonical uppercase UTF-8 percent-
+  encoded routes, validates both sides through the shared route predicate, and
+  fails on invalid, duplicate, missing, or stale routes. Its normal output is
+  status and counts only; an optional catalog is written only after a complete
+  valid inventory has been established and never contains secret data.
+- The production Compose template requires `COMMENTS_RUNTIME_USER` as the
+  operator-supplied UID:GID matching the owner-only secret and private-data
+  mounts. The image retains its portable non-root `USER node` default; the
+  explicit runtime identity must not be committed to source or image metadata.
 - The container-local Nginx image mirrors only `^~ /v1/comments/` to the
   loopback service and returns a bounded 404 for unknown `/v1/` resources. A
   production edge must select the host/SNI `server` block first, then route

@@ -18,7 +18,8 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    user: "node"
+    # Production must use the owner UID:GID of the owner-only secret/data mounts.
+    user: "${COMMENTS_RUNTIME_USER:?COMMENTS_RUNTIME_USER must be set to the owner UID:GID}"
     environment:
       NODE_ENV: production
       COMMENTS_BIND: 127.0.0.1

@@ -29,6 +29,26 @@ to use the immutable static release. If the comments process is absent,
 `/v1/comments/*` fails closed with a proxy error and static pages do not become
 SSR.
 
+The plugin-local production Compose template requires
+`COMMENTS_RUNTIME_USER` as an explicit numeric UID:GID. It must match the
+owner of the owner-only `secrets.env` file and the private `data/` directory;
+the image's portable default remains `USER node`. Discover the identity from
+the mounted entries with `stat` rather than reading or copying their contents:
+
+```sh
+test -f secrets.env && test ! -L secrets.env || exit 1
+test -d data && test ! -L data || exit 1
+runtime_user="$(stat -c '%u:%g' -- secrets.env)" || exit 1
+data_user="$(stat -c '%u:%g' -- data)" || exit 1
+test -n "$runtime_user" && test "$runtime_user" = "$data_user" || exit 1
+COMMENTS_RUNTIME_USER="$runtime_user" docker compose --profile comments up --build -d
+unset runtime_user data_user
+```
+
+Keep the discovered value in the owner-operated environment only. Do not put
+an owner UID:GID, secret, mailbox, or deployment path in the image, tracked
+configuration, task records, or logs.
+
 Production Nginx must select a host-specific `server` block before routing
 `/v1/comments/`. The neutral example in `ops/nginx-hosts.conf.example`
 demonstrates distinct production/development upstreams, an explicit
