@@ -435,7 +435,7 @@
 
 .terminal-help-command {
   display: grid;
-  grid-template-columns: minmax(18ch, max-content) minmax(0, 1fr);
+  grid-template-columns: minmax(18ch, 1.6fr) minmax(18ch, 1fr);
   gap: 0.85rem;
   align-items: baseline;
   min-width: 0;
