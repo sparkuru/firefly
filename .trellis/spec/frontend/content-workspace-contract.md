@@ -378,6 +378,22 @@ walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWal
 - Results are sorted by canonical virtual path and use the existing plain-text
   row format `<display path> — <date> — <title>`. The text remains available to
   pipelines and scratch redirects.
+- A successful direct search also carries a closed neutral `document-search`
+  value with the bounded keyword and validated public documents. The runtime
+  adapter maps it by exact virtual path to a closed `find` effect containing
+  decoded `TerminalEntry` records; it never constructs a browser URL from the
+  keyword or shell operand.
+- The direct Terminal renderer displays each find match as a native anchor to
+  the entry's already validated canonical `href`, with the complete display
+  path, date, and title. The anchor remains keyboard reachable and native
+  modified activation is preserved. The directory-only `data-terminal-cd-path`
+  handler must not intercept document links.
+- In a pipeline, substitution, or redirect, only the bounded deterministic
+  text projection crosses the shell boundary. Structured find metadata and
+  HTML anchors never enter `stdin` or scratch output.
+- A text-policy redirect may carry a structured find value at the command
+  boundary; the neutral runner must write only `stdout` to scratch and discard
+  that value. Navigation controls remain non-redirectable.
 - `--after` and `--before` are inclusive canonical calendar-date filters.
   `find -h` and `find --help` return the complete usage/options block without a
   keyword; the grouped `help` command derives its row from the registry.
@@ -455,10 +471,12 @@ return successResult(walked.paths.map(render));
   directory, document, experiment, or session file with its virtual `path`.
   `lines` remains the only stdout/pipeline projection; the runtime adapter
   carries `nodes` to the browser without parsing tree glyphs back into paths.
-- The closed effect union includes structured `help` groups and structured
-  `grep` results. `help` carries command metadata for semantic group rendering;
-  `grep` carries the original matched line, canonical source path, optional
-  one-based line number, bounded match ranges, `noResults`, and `truncated`.
+- The closed effect union includes structured `help` groups, structured `grep`
+  results, and structured `find` results. `help` carries command metadata for
+  semantic group rendering; `grep` carries the original matched line,
+  canonical source path, optional one-based line number, bounded match ranges,
+  `noResults`, and `truncated`; `find` carries the bounded keyword and decoded
+  public entries for native document links.
   `links` carries validated `{ name, desc?, url }` friend records for direct
   browser rendering; its deterministic `name — url` or `name — desc — url`
   projection is used for pipes and scratch redirects. Plain stdout is derived from those effects only for

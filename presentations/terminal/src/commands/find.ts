@@ -97,5 +97,13 @@ export function executeFind(context: ProcessContext, args: ParsedCommandArgument
     .map(({ document }) => document)
     .sort((left, right) => left.path.localeCompare(right.path));
 
-  return matches.length === 0 ? noResults(keyword) : successResult(matches.map(formatDocument));
+  return matches.length === 0
+    ? noResults(keyword)
+    : successResult(matches.map(formatDocument), {
+      value: {
+        kind: 'document-search',
+        keyword,
+        documents: Object.freeze(matches)
+      }
+    });
 }

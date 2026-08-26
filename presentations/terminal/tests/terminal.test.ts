@@ -303,9 +303,9 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(help, /list curated friend links/u);
   assert.equal(run('ls').effect?.kind, 'entries');
   assert.deepEqual(run('find alpha').effect, {
-    kind: 'lines',
-    tone: 'normal',
-    lines: ['characters/alpha.md — 2026-05-28 — Alpha']
+    kind: 'find',
+    keyword: 'alpha',
+    entries: [entries[0]]
   });
   assert.deepEqual(run('find --help').effect, {
     kind: 'lines',

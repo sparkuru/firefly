@@ -115,6 +115,11 @@ export type TerminalEffect =
       readonly truncated: boolean;
     }
   | {
+      readonly kind: 'find';
+      readonly keyword: string;
+      readonly entries: readonly TerminalEntry[];
+    }
+  | {
       readonly kind: 'entries';
       readonly directories: readonly string[];
       readonly entries: readonly TerminalEntry[];
@@ -908,6 +913,11 @@ function formatGrepMatch(match: TerminalGrepMatch): string {
   return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
 }
 
+function formatFindMatch(entry: TerminalEntry): string {
+  const displayPath = entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
+  return `${displayPath} — ${entry.date} — ${entry.title}`;
+}
+
 function stdoutForEffect(effect: TerminalEffect): readonly string[] {
   if (effect.kind === 'lines') return effect.lines;
   if (effect.kind === 'help') return Object.freeze(effect.groups.flatMap((group) => [group.name, ...group.commands.map(formatHelpCommand)]));
@@ -915,6 +925,7 @@ function stdoutForEffect(effect: TerminalEffect): readonly string[] {
     ? Object.freeze(['No friend links.'])
     : Object.freeze(effect.links.map(formatFriendLink));
   if (effect.kind === 'grep') return Object.freeze(effect.matches.map(formatGrepMatch));
+  if (effect.kind === 'find') return Object.freeze(effect.entries.map(formatFindMatch));
   if (effect.kind === 'entries') return Object.freeze([
     ...effect.directories,
     ...effect.entries.map((entry) => `${formatDocumentOperand(entry)} — ${entry.date} — ${entry.title}`)
@@ -931,6 +942,7 @@ function announcementFor(effect: TerminalEffect): string {
   if (effect.kind === 'clear') return 'Command transcript cleared.';
   if (effect.kind === 'experiments') return `${effect.experiments.length} experiments listed.`;
   if (effect.kind === 'entries') return `${effect.directories.length + effect.entries.length} ${effect.label} listed.`;
+  if (effect.kind === 'find') return `${effect.entries.length} find match${effect.entries.length === 1 ? '' : 'es'} for "${effect.keyword}".`;
   if (effect.kind === 'tree') return `${effect.lines.length} tree entries listed.`;
   if (effect.kind === 'help') return `${effect.groups.reduce((total, group) => total + group.commands.length, 0)} commands listed.`;
   if (effect.kind === 'links') return effect.links.length === 0 ? 'No friend links.' : `${effect.links.length} friend link${effect.links.length === 1 ? '' : 's'} listed.`;
@@ -939,7 +951,7 @@ function announcementFor(effect: TerminalEffect): string {
 }
 
 function isTextEffect(effect: TerminalEffect): boolean {
-  return effect.kind === 'lines' || effect.kind === 'help' || effect.kind === 'links' || effect.kind === 'grep' || effect.kind === 'entries' || effect.kind === 'experiments' || effect.kind === 'tree';
+  return effect.kind === 'lines' || effect.kind === 'help' || effect.kind === 'links' || effect.kind === 'grep' || effect.kind === 'find' || effect.kind === 'entries' || effect.kind === 'experiments' || effect.kind === 'tree';
 }
 
 function publicDocumentFromEntry(entry: TerminalEntry): PublicDocument {
@@ -1061,6 +1073,16 @@ function adaptShellValue(value: NonNullable<ShellProcessResult['value']>, contex
   if (value.kind === 'document') {
     const entry = entryAt(value.document.path, context.entries);
     return entry === undefined ? undefined : { kind: 'document', entry };
+  }
+  if (value.kind === 'document-search') {
+    const entries = value.documents.map((document) => entryAt(document.path, context.entries));
+    const validEntries = entries.filter((entry): entry is TerminalEntry => entry !== undefined);
+    if (validEntries.length !== entries.length) return undefined;
+    return {
+      kind: 'find',
+      keyword: value.keyword,
+      entries: Object.freeze(validEntries)
+    };
   }
   if (value.kind === 'grep-report') {
     return {
@@ -1347,7 +1369,7 @@ function executeRshellStages(
     state = output.state;
     stdin = output.stdout;
     if (stage.redirect !== undefined) {
-      if (pure || index !== stages.length - 1 || (output.effect.kind !== 'lines' && output.effect.kind !== 'links')) return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
+      if (pure || index !== stages.length - 1 || (output.effect.kind !== 'lines' && output.effect.kind !== 'links' && output.effect.kind !== 'find')) return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
       const target = stage.target === undefined ? undefined : normaliseVirtualPath(stage.target, state.cwd);
       const name = target === undefined ? undefined : scratchName(target);
       if (name === undefined) return rshellError(state, 'Redirect only targets ~/blog/.rshell/tmp/<safe-name>.');
