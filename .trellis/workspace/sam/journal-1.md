@@ -1023,3 +1023,24 @@ Implemented and verified Unicode-to-canonical comments route conversion while pr
 ### Status
 
 [OK] **Completed**
+
+
+## Session 47: Documentation convergence
+
+**Date**: 2026-08-28
+**Task**: Documentation convergence
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Reconciled the root PRD, mainline, and durable frontend specs with the implemented repository state; qualified mutable inventory evidence, closed stale M5.1 Unicode wording, separated repository assembly from deployment, and recorded known coupling deviations for later remediation children.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6edc880` | (see git log) |
+
+### Status
+
+[OK] **Completed**
