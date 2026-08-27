@@ -59,16 +59,29 @@ interface PresentationAdapter {
   objects with enumerable string data properties. Symbols, accessors, cycles,
   custom prototypes, sparse/decorated arrays, forbidden prototype keys, and
   unexpected metadata fields are invalid; validation must not invoke getters.
-- The production semantic and Terminal adapters both support post/post and
+- The production semantic and Terminal adapters must both support post/post and
   page/page contexts, clone without mutating input, preserve headings/node IDs,
   recursively wrap `pre`/`table` in presentation-owned named focusable
-  local-scroll regions, and emit empty enhancement manifests.
-- The Astro registry registers the `firefly` Terminal adapter as default and
-  semantic second; explicit `semantic` remains supported.
+  local-scroll regions, and emit empty enhancement manifests. Terminal currently
+  satisfies the cloning boundary; Semantic currently wraps the supplied HAST in
+  place. That audited contract violation belongs to the later adapter-boundary
+  cleanup and is not the pattern for another Presentation.
+- The Astro registry registers both production adapters; omission resolves
+  through the shared default ID to the `firefly` Terminal adapter, while
+  explicit `semantic` remains supported.
   `DocumentPresentation.astro` dispatches the exact validated metadata; the
   canonical routes and every inert Terminal-home document template pass through
   `renderDocument()` and the selected X Core adapter at build time. The browser
   command engine and template-cloning controller do not import or execute X Core.
+- The durable X Core API ends at framework-neutral document analysis,
+  presentation selection, metadata, and diagnostics. The package entry currently
+  re-exports a generic site/publication/service registry from `plugins.ts`; the
+  site currently consumes its site branch for the static comments integration,
+  while its publication and service host branches have no production consumer.
+  That audited transitional coupling is scheduled for the later X
+  Core/plugin-boundary cleanup. It does not authorize X Core to own site
+  extensions, routes, service lifecycle, publication, or deployment, and new
+  consumers must not depend on it.
 
 ### 4. Validation & Error Matrix
 
@@ -118,8 +131,9 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
 - `apps/site run test:content`: schema/materializer/access plus isolated real
   negative builds for route/path collision, unsupported layout, unregistered
   adapter, private leakage, and raw HTML.
-- `apps/site run build`: validate ten default site HTML, one semantic CSS, one
-  home command JS, one canonical-document reader JS, zero maps/unknown files,
+- `apps/site run build`: validate the exact HTML route inventory derived from the
+  explicitly selected fixture/workspace, one semantic CSS, one home command JS,
+  one canonical-document reader JS, zero maps/unknown files,
   JavaScript-free directory routes, and bidirectional presentation-package/
   style closure. Semantic document HTML remains complete without JavaScript and
   activates the reader only for the explicit `#terminal-reader` fragment. Home

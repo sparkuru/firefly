@@ -2,11 +2,13 @@
 
 ## Current Scope
 
-The main site, X Core, semantic presentation, Terminal presentation, NERV
-experiment, manifest validator, and publication assembler are separately locked
-packages. Repository-root `content/` is framework-neutral input for the main
-site, not an Astro source directory. `prototypes/typecho-terminal/` is reference
-material only.
+The main site, private comments service, X Core, semantic presentation, Terminal
+presentation, NERV experiment, manifest validator, and publication assembler are
+separately locked packages. The internal comments plugin is a repository-owned
+capability manifest whose entrypoints remain in their owning packages.
+Repository-root `content/` is framework-neutral input for the main site, not an
+Astro source directory. `prototypes/typecho-terminal/` is reference material
+only.
 
 ## Implemented Layout
 
@@ -159,9 +161,13 @@ routes before their milestone supplies real semantics.
 - `tooling/validate-experiments/` owns manifest parsing, exact schema/path/
   ownership checks, deterministic discovery, and public projection. It imports
   no application, adapter, or Experiment source.
-- `tooling/assemble-publication/` depends only on the validator. It invokes
-  already validated repository-controlled build commands, copies safe trees,
-  validates a fresh candidate, and promotes `artifacts/` plus `dist/` together.
+- The target boundary for `tooling/assemble-publication/` is the validator plus
+  static, versioned publication contracts. It invokes already validated
+  repository-controlled build commands, copies safe trees, validates a fresh
+  candidate, and promotes `artifacts/` plus `dist/` together. The current
+  comments publication bridge imports `apps/site/src/lib/comments.mjs` by
+  repository source path; that is an audited temporary extraction gap, not an
+  approved assembler-to-site dependency or a pattern for new capabilities.
 - Package-local `dist/` paths are build inputs, never the public release. Root
   `artifacts/` and `dist/` are generated ignored outputs, never authored source.
 - The assembler never rewrites Experiment HTML, combines bundles, follows
@@ -172,11 +178,15 @@ routes before their milestone supplies real semantics.
 
 - `packages/x-core/` contains framework-neutral build-time logic and cannot import
   Astro, the main site, presentations, experiments, or reference prototypes.
-- `presentations/semantic/` depends on the X Core public contract through its
-  exact `file:../../packages/x-core` dependency. It does not import site source.
-- `presentations/terminal/` depends on X Core only for the adapter entry. Its
+- `presentations/semantic/` imports the X Core public contract through the exact
+  local `file:../../packages/x-core` package edge. It does not import site source.
+- `presentations/terminal/` imports X Core only for the adapter entry. Its
   exported `./runtime` subpath is side-effect-free and does not import X Core,
-  HAST, Astro, the adapter entry, or site code.
+  HAST, Astro, the adapter entry, or site code. Both presentation manifests
+  currently classify X Core under `devDependencies`, while the Terminal adapter
+  entry imports `DEFAULT_PRESENTATION_ID` at runtime. The later
+  adapter-boundary cleanup owns validating and correcting that package metadata;
+  the current classification must not be copied to a new runtime consumer.
 - Semantic and Terminal do not import one another. `apps/site/` consumes built
   X Core and both presentation package entries through exact `file:`
   dependencies; rebuild them before clean-installing/building the site.
