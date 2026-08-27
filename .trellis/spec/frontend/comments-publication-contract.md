@@ -439,6 +439,7 @@ services/comments/ops/backup.sh <database|data-root> <backup> [--outbox <path>] 
 services/comments/ops/restore.sh <backup-file|backup-directory> <database|data-root>
 services/comments/ops/migrate-legacy.sh <legacy-comments.sqlite> <core.db>
 services/comments/scripts/validate-route-catalog.mjs --release <release-root> --config <plugin-config> [--output <catalog>]
+services/comments/scripts/reconcile-route-catalog.mjs --release <release-root> --config <plugin-config> --output <private-candidate>
 ```
 
 ```http
@@ -486,12 +487,29 @@ services/comments/scripts/validate-route-catalog.mjs --release <release-root> --
   their article metadata marker, derives canonical uppercase UTF-8 percent-
   encoded routes, validates both sides through the shared route predicate, and
   fails on invalid, duplicate, missing, or stale routes. Its normal output is
-  status and counts only; an optional catalog is written only after a complete
-  valid inventory has been established and never contains secret data.
+  status and counts only; an optional `{ schemaVersion: 1, routes: [...] }`
+  catalog is written with sorted canonical routes only after a complete valid
+  inventory has been established and never contains secret data. Symlinked or
+  special existing path components in the supplied config and catalog-output
+  parents are rejected as well.
+- `reconcile-route-catalog.mjs` uses the same release inventory and writes a
+  private, owner-only TOML candidate. Its only semantic change is the sorted
+  `runtime.postRoutes` array; it preserves the input file, validates the
+  generated TOML against the same route set, writes atomically, and emits only
+  redacted status/count fields. It must never target the input config, an
+  output path inside the immutable release, a symlink/special path, or a
+  secret/data/outbox file. The candidate must pass `validate-route-catalog.mjs`
+  before an operator replaces the active config.
 - The production Compose template requires `COMMENTS_RUNTIME_USER` as the
   operator-supplied UID:GID matching the owner-only secret and private-data
   mounts. The image retains its portable non-root `USER node` default; the
-  explicit runtime identity must not be committed to source or image metadata.
+  explicit runtime identity must not be committed to the repository template
+  or image metadata. Before a production restart, the effective container
+  identity must be compared with the existing secret/data owner metadata; a
+  stale `node` default is a deployment drift, not a reason to weaken the
+  owner-only boundary. The approved repair is to align the production
+  runtime UID:GID and retain a rollback copy, without changing secret/data
+  content or modes.
 - The container-local Nginx image mirrors only `^~ /v1/comments/` to the
   loopback service and returns a bounded 404 for unknown `/v1/` resources. A
   production edge must select the host/SNI `server` block first, then route
@@ -527,6 +545,9 @@ services/comments/scripts/validate-route-catalog.mjs --release <release-root> --
 | literal SMTP password in any TOML, image, static output, logs, or task records | reject the configuration/release and remove the leak |
 | plugin path is absolute, traverses, contains controls/whitespace, or escapes through a symlink | reject catalog/backup/restore before touching active data |
 | static publication contains a route that fails the comments path contract | report and exclude it from a disabled staging catalog; block public enablement until resolved or explicitly accepted |
+| candidate output equals the active config or is inside the immutable release | reject before writing; preserve the input and release |
+| malformed/unsafe release or configured route inventory | reject candidate generation; leave the active config untouched |
+| effective production comments UID:GID cannot read owner-only secret/data mounts | block restart/apply; align the runtime identity with the existing owners and preserve modes/content; never broaden permissions |
 | MariaDB/MySQL is selected without a driver | fail with an unsupported-dialect error |
 | legacy source is absent, non-regular, corrupt, or destination exists | refuse migration and preserve the source |
 | backup destination or restore destination exists | refuse overwrite |
@@ -544,8 +565,9 @@ services/comments/scripts/validate-route-catalog.mjs --release <release-root> --
   static publication still builds and serves the empty comments state.
 - **Bad:** publish the comments port, mount a secret into the static image,
   share one database between production and development by default, restore
-  over the active root, or route every host through one global `/v1/comments/`
-  block.
+  over the active root, route every host through one global `/v1/comments/`
+  block, or make a stale runtime readable by changing a `0600` secret to a
+  broader mode.
 
 ### 6. Tests Required
 
@@ -563,6 +585,13 @@ services/comments/scripts/validate-route-catalog.mjs --release <release-root> --
   private/read-only mounts, healthcheck shape, and route-catalog acceptance of
   canonical UTF-8 percent-encoded paths plus rejection/reporting of malformed
   or otherwise incompatible publication paths.
+- Route catalog: shared inventory between validation and reconciliation,
+  `<head>`-only metadata, canonical Unicode encoding, symlink/special-file and
+  realpath containment, redacted summaries, preservation of the input and
+  non-route TOML values, atomic candidate creation, and rejection of unsafe or
+  partial output paths. Provisioning must also assert effective runtime
+  UID:GID compatibility with owner-only secret/data modes before restart and
+  preserve a rollback copy for any approved identity repair.
 - Full M5.1 checks/build, Compose config validation, runtime image probes,
   shell syntax/ShellCheck/shfmt, and publication static-output checks run
   sequentially through their declared boundaries.
@@ -587,6 +616,26 @@ docker compose --profile comments up --build -d
 ```
 
 ```text
+# Wrong: stale image default plus a permission broadening to make restart pass.
+user: "node"
+secrets.env mode: 0644
+
+# Correct: align the production runtime with the existing owner and retain
+# the owner-only secret/data modes and a rollback copy.
+user: "<owner-uid>:<owner-gid>"
+secrets.env mode: 0600
+```
+
+```text
 production Host/SNI -> production server block -> production comments DB
 development Host/SNI -> development server block -> development comments DB
+```
+
+```sh
+# Correct: generate and validate a private candidate before an explicit,
+# separately backed-up owner-config replacement.
+node services/comments/scripts/reconcile-route-catalog.mjs \
+  --release <release-root> --config <plugin-config> --output <private-candidate>
+node services/comments/scripts/validate-route-catalog.mjs \
+  --release <release-root> --config <private-candidate>
 ```
