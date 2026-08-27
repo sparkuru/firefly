@@ -25,7 +25,7 @@
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
-| 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The private runtime, host-specific `/v1/comments/*` proxy, static-release backup, and SQLite backup/restore drill passed owner-authorized production checks. The static site remains disabled by default; SMTP delivery, public browser smoke, and the one incompatible non-ASCII route remain enablement gates. The main site must not become SSR or directly read the database. |
+| 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The private runtime, host-specific `/v1/comments/*` proxy, static-release backup, SQLite backup/restore drill, and release-bound route-catalog reconciliation passed owner-authorized production checks. The production comments runtime is aligned with the existing owner-only secret/data boundary and healthy; the static site remains disabled by default. SMTP delivery, public browser smoke, and the one incompatible non-ASCII route remain enablement gates. The main site must not become SSR or directly read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 
@@ -86,6 +86,13 @@
   and a restore to an absent candidate left active data untouched. One
   non-ASCII publication path was reported and excluded by the existing
   comments route contract; no public comments surface was enabled.
+- M5.1 route-catalog reconciliation evidence (2026-08-27): the owner-approved
+  private runtime catalog was regenerated from the exact immutable release and
+  now has zero missing, stale, invalid, or duplicate routes. A stale
+  production runtime identity was aligned with the existing owner-only
+  secret/data boundary without changing secret content or modes; the comments
+  service is healthy, loopback-only, and has no published Docker port. Public
+  comments remain disabled, and operational identifiers remain local-only.
 - Roadmap reconciliation evidence: the root `prd.md` now separates the
   original SQL input baseline (93 posts / 7 pages) from the current authored
   inventory (95 posts / 8 pages), classifies M0–M5, M6, M7, M5.1, and P0 with
@@ -100,7 +107,7 @@ planning/design and implementation were previously committed in `41e0207` and
 are now reconciled with the WIP convergence commits `433c16d` and `6f60776`;
 the serial child tasks are archived. Historic counters remain private unless
 a separate task defines their schema and presentation. Production provisioning
-has passed, but the static site remains disabled by default. The next decision
-is whether to provide SMTP/test inputs and resolve or explicitly accept the
-incompatible route gap before running controlled delivery/browser gates and
-approving public enablement.
+and route-catalog reconciliation have passed, but the static site remains
+disabled by default. The next decision is whether to provide SMTP/test inputs
+and resolve or explicitly accept the incompatible route gap before running
+controlled delivery/browser gates and approving public enablement.
