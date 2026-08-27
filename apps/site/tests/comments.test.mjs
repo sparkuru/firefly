@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decodePublicCommentsExport, loadCommentsForPosts } from '../src/lib/comments.mjs';
+import {
+  commentsPostPathFromSiteHref,
+  decodePublicCommentsExport,
+  loadCommentsForPosts
+} from '../src/lib/comments.mjs';
 
 const postPath = '/posts/main/example/';
 const timestamp = '2026-08-20T00:00:00.000Z';
@@ -56,6 +60,55 @@ test('public comments accept canonical UTF-8 percent-encoded post routes', () =>
   ]) {
     assert.throws(() => decodePublicCommentsExport(envelope([comment('c_encoded', { postPath: route })])), /canonical \/posts/u, route);
   }
+});
+
+test('site Unicode href conversion preserves the raw public route boundary', () => {
+  const href = '/posts/交流/萤火虫/';
+  assert.equal(
+    commentsPostPathFromSiteHref(href),
+    '/posts/%E4%BA%A4%E6%B5%81/%E8%90%A4%E7%81%AB%E8%99%AB/'
+  );
+  assert.equal(commentsPostPathFromSiteHref('/posts/main/example/'), '/posts/main/example/');
+
+  for (const unsafe of [
+    '/posts/交流/%E8%90%A4%E7%81%AB%E8%99%AB/',
+    '/posts/交流/萤火虫?draft/',
+    '/posts/交流/萤火虫#reply/',
+    '/posts/交流/e\u0301/',
+    '/posts/交流/../',
+    '/posts/交流/.private/',
+    '/posts/交流/萤 火虫/',
+    '/posts/交流/萤\u200B火虫/',
+    `/posts/交流/${String.fromCharCode(0xd800)}/`,
+    '/posts/交流/萤火虫!/'
+  ]) {
+    assert.equal(commentsPostPathFromSiteHref(unsafe), null, unsafe);
+  }
+});
+
+test('site grouping resolves encoded Unicode comments under the raw href', () => {
+  const rawHref = '/posts/交流/萤火虫/';
+  const posts = [{ href: rawHref }, { href: '/posts/main/other/' }];
+  const config = {
+    enabled: true,
+    writeOrigin: 'https://comments.example.test',
+    exportPath: 'apps/site/tests/fixtures/comments-unicode.json',
+    consentVersion: 'm51-v1'
+  };
+  const grouped = loadCommentsForPosts(posts, config);
+
+  assert.equal(grouped.get(rawHref)?.[0]?.postPath, '/posts/%E4%BA%A4%E6%B5%81/%E8%90%A4%E7%81%AB%E8%99%AB/');
+  assert.equal(grouped.get(rawHref)?.[0]?.body, 'A sanitized Unicode route comment.');
+  assert.deepEqual(grouped.get('/posts/main/other/'), []);
+  assert.equal(grouped.has('/posts/%E4%BA%A4%E6%B5%81/%E8%90%A4%E7%81%AB%E8%99%AB/'), false);
+  assert.throws(
+    () => loadCommentsForPosts([{ href: '/posts/main/unsafe!/' }], config),
+    /cannot be represented by the comments protocol/u
+  );
+  assert.deepEqual(
+    loadCommentsForPosts([{ href: '/posts/main/unsafe!/' }], config, false).get('/posts/main/unsafe!/'),
+    []
+  );
 });
 
 test('site grouping rejects stale post routes and preserves empty canonical groups', () => {

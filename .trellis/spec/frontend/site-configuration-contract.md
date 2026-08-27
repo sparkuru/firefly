@@ -15,6 +15,7 @@ also contain non-secret runtime settings. It is never a secret store.
 ```js
 parseSiteConfig(value: unknown, source?: string): Readonly<SiteConfig>
 loadSiteConfig(filePath?: string): Readonly<SiteConfig>
+resolveSiteConfigOverridePath(value: unknown, repositoryRoot?: string): string | null
 terminalIdentityFromConfig(config?: SiteConfig): Readonly<TerminalIdentity>
 
 resolveSiteMetadata(options: SiteMetadataOptions, config?: SiteConfig): SiteMetadata
@@ -95,6 +96,13 @@ configPath = "config/plugins/comments/config.toml"
   known source-root fallback paths. Do not replace it with a package-relative
   path that breaks negative Astro builds using an alternate same-filesystem
   `--outDir`.
+- `FIREFLY_SITE_CONFIG_PATH` is an optional, repository-relative `.toml` path
+  for contained build/test projections. It must resolve to a regular,
+  non-symlink file inside the repository and never accepts absolute paths,
+  traversal, backslashes, empty segments, or unsafe names. A config stored as
+  `<projection-root>/config/site.toml` resolves its plugin `configPath` from
+  `<projection-root>` so sanitized fixtures do not read the owner-local
+  repository config.
 - The statically registered `comments` plugin owns `[plugins.comments]`.
   `enabled` and `configPath` are the only activation fields. The plugin file
   `config/plugins/comments/config.toml` contains `[public]` and `[runtime]`;
@@ -198,6 +206,7 @@ not be added manually.
 | Condition | Required result |
 | --- | --- |
 | missing/malformed TOML, duplicate key, unknown key, missing field | fail with source and field context before rendering |
+| unsafe, missing, non-regular, symlinked, or escaping `FIREFLY_SITE_CONFIG_PATH` | fail before the site config or owner-local plugin config is read |
 | control character, empty text, unsafe prompt token, traversal cwd, or non-NFC path | fail config/content validation |
 | empty, multiline, control-containing, or browser-unsafe `terminal.promptMarker` | fail config validation with the source and `terminal.promptMarker` field |
 | missing, absolute, traversal, symlink-escaping, or malformed comments `configPath` | fail before site/service projection; an enabled plugin cannot fall back to defaults |
@@ -236,7 +245,8 @@ not be added manually.
   duplicate, friend-link, control, URL, image, cwd, and identity rejection;
   metadata fallback/override behavior; robots and sitemap normalization/filtering;
   plugin activation/path loading and public-only projection from a separate
-  comments config file.
+  comments config file; contained `FIREFLY_SITE_CONFIG_PATH` acceptance plus
+  traversal, absolute, wrong-extension, missing-file, and symlink rejection.
 - `apps/site/tests/content-schema.test.mjs`: valid and invalid optional SEO
   front matter, unknown-key rejection, safe canonical/image validation, and
   `noindex` default.

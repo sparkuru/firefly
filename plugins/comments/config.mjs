@@ -8,6 +8,7 @@ const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f
 const safePostRouteAsciiCharacter = /^[A-Za-z0-9._~-]$/u;
 const safePostRouteAsciiStartCharacter = /^[A-Za-z0-9]$/u;
 const unsafePostRouteDecodedCharacter = /[\\/?#%\s\p{Cc}\p{Cf}]/u;
+const unpairedSurrogate = /\p{Cs}/u;
 
 export const DEFAULT_COMMENTS_CONFIG_PATH = 'config/plugins/comments/config.toml';
 
@@ -234,6 +235,27 @@ function validateCanonicalPostRoute(value) {
 
 export function isCanonicalCommentsPostRoute(value) {
   return validateCanonicalPostRoute(value);
+}
+
+export function commentsPostPathFromSiteHref(value) {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    value.trim() !== value ||
+    value.normalize('NFC') !== value ||
+    unpairedSurrogate.test(value) ||
+    !value.startsWith('/posts/') ||
+    !value.endsWith('/') ||
+    value.includes('?') ||
+    value.includes('#') ||
+    value.includes('\\') ||
+    value.includes('//')
+  ) return null;
+
+  const segments = value.slice('/posts/'.length, -1).split('/');
+  if (segments.length === 0 || segments.some((segment) => segment.length === 0)) return null;
+  const route = `/posts/${segments.map(encodeCanonicalPostRouteSegment).join('/')}/`;
+  return validateCanonicalPostRoute(route) ? route : null;
 }
 
 function normalizePostRoute(value, source, label) {

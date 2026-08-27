@@ -1,4 +1,5 @@
 export {
+  commentsPostPathFromSiteHref,
   decodePublicCommentsExport,
   loadCommentsForPosts,
   loadPublicCommentsExport

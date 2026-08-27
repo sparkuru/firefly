@@ -8,7 +8,10 @@ import {
   type PostExtensionContext
 } from '@firefly/x-core';
 import type { CanonicalDocument } from './content';
-import { loadCommentsForPosts } from '../plugins/comments/site.mjs';
+import {
+  commentsPostPathFromSiteHref,
+  loadCommentsForPosts
+} from '../plugins/comments/site.mjs';
 import type { CommentsSiteConfig, PublicComment } from './comments';
 import type { CommentsActivationConfig } from '../../../../plugins/comments/config.mjs';
 
@@ -62,9 +65,13 @@ const commentsPlugin: FireflyPlugin = {
     },
     postExtension(context: PostExtensionContext): CommentsPostExtension {
       const buildData = getCommentsBuildData(context.buildData);
+      const postPath = commentsPostPathFromSiteHref(context.document.route);
+      if (postPath === null) {
+        throw new TypeError(`The comments plugin cannot represent public post route ${context.document.route}.`);
+      }
       return Object.freeze({
         pluginId: COMMENTS_PLUGIN_ID,
-        postPath: context.document.route,
+        postPath,
         comments: buildData.commentsByPost.get(context.document.route) ?? Object.freeze([])
       });
     }
@@ -106,14 +113,14 @@ export function postPluginExtensions(
   );
 }
 
-export function commentsFromPostExtensions(
+export function commentsPresentationFromPostExtensions(
   extensions: readonly unknown[] | undefined
-): readonly PublicComment[] {
+): CommentsPostExtension | null {
   const extension = extensions?.find((value): value is CommentsPostExtension => (
     isRecord(value) &&
     value.pluginId === COMMENTS_PLUGIN_ID &&
     typeof value.postPath === 'string' &&
     Array.isArray(value.comments)
   ));
-  return extension?.comments ?? Object.freeze([]);
+  return extension ?? null;
 }

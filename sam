@@ -36,8 +36,9 @@ WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"
 WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT:-4321}"
 COMMENTS_EXPORT_PATH="${FIREFLY_COMMENTS_EXPORT:-}"
 COMMENTS_EXPORT_CONTAINER_PATH=""
+SITE_CONFIG_OVERRIDE_PATH="${FIREFLY_SITE_CONFIG_PATH:-}"
 
-readonly IMAGE SAM_IPC SAM_BIND_HOST WEB_HOST_PORT WEB_CONTAINER_PORT COMMENTS_EXPORT_PATH
+readonly IMAGE SAM_IPC SAM_BIND_HOST WEB_HOST_PORT WEB_CONTAINER_PORT COMMENTS_EXPORT_PATH SITE_CONFIG_OVERRIDE_PATH
 
 content_mounts=()
 
@@ -122,6 +123,39 @@ validate_comments_export() {
 		return 2
 	}
 	COMMENTS_EXPORT_CONTAINER_PATH="/app/${configured_path}"
+}
+
+validate_site_config_override() {
+	local configured_path=${SITE_CONFIG_OVERRIDE_PATH}
+	local resolved_path
+	local segment
+	local -a segments=()
+
+	[[ -n "${configured_path}" ]] || return 0
+	require_command realpath
+	[[ "${configured_path}" != /* && "${configured_path}" != *$'\n'* && "${configured_path}" != *$'\r'* && "${configured_path}" != *\\* && "${configured_path}" != *'//' && "${configured_path}" != */ ]] || {
+		printf '[sam] FIREFLY_SITE_CONFIG_PATH must be a repository-relative TOML path\n' >&2
+		return 2
+	}
+	[[ "${configured_path}" == *.toml ]] || {
+		printf '[sam] FIREFLY_SITE_CONFIG_PATH must name a TOML file\n' >&2
+		return 2
+	}
+	IFS='/' read -r -a segments <<<"${configured_path}"
+	for segment in "${segments[@]}"; do
+		[[ -n "${segment}" && "${segment}" != '.' && "${segment}" != '..' ]] || {
+			printf '[sam] FIREFLY_SITE_CONFIG_PATH contains an unsafe path segment\n' >&2
+			return 2
+		}
+	done
+	resolved_path=$(realpath -e -- "${REPO_ROOT}/${configured_path}") || {
+		printf '[sam] FIREFLY_SITE_CONFIG_PATH does not resolve to an existing file\n' >&2
+		return 2
+	}
+	[[ "${resolved_path}" == "${REPO_ROOT}/"* && -f "${resolved_path}" && -r "${resolved_path}" ]] || {
+		printf '[sam] FIREFLY_SITE_CONFIG_PATH must resolve to a readable file inside the repository\n' >&2
+		return 2
+	}
 }
 
 discover_content_mounts() {
@@ -257,6 +291,7 @@ main() {
 	}
 
 	validate_comments_export
+	validate_site_config_override
 	require_command docker
 	require_command id
 	require_command mkdir
@@ -287,6 +322,9 @@ main() {
 
 	if [[ -n "${COMMENTS_EXPORT_CONTAINER_PATH}" ]]; then
 		environment_flags=(-e "FIREFLY_COMMENTS_EXPORT=${COMMENTS_EXPORT_CONTAINER_PATH}")
+	fi
+	if [[ -n "${SITE_CONFIG_OVERRIDE_PATH}" ]]; then
+		environment_flags+=(-e "FIREFLY_SITE_CONFIG_PATH=${SITE_CONFIG_OVERRIDE_PATH}")
 	fi
 	if [[ -f "${REPO_ROOT}/config/site.toml" ]]; then
 		config_mount_flags=(--mount "type=bind,src=${REPO_ROOT}/config/site.toml,dst=/app/config/site.toml,readonly")

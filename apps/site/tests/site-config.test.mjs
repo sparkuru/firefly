@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import test from 'node:test';
 import os from 'node:os';
 import path from 'node:path';
@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   loadSiteConfig,
   parseSiteConfig,
+  resolveSiteConfigOverridePath,
   terminalIdentityFromConfig
 } from '../src/lib/site-config.mjs';
 import {
@@ -168,6 +169,38 @@ test('site config loader follows the plugin config path and emits only its publi
   assert.equal(config.comments.exportPath, 'artifacts/comments/comments.public.v1.json');
   assert.equal(Object.hasOwn(config.comments, 'smtp'), false);
   assert.equal(Object.hasOwn(config.comments, 'runtime'), false);
+});
+
+test('site config override accepts only a contained repository-relative TOML file', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-site-config-override-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const configDirectory = path.join(root, '.private/fixture/config');
+  await mkdir(configDirectory, { recursive: true });
+  const configPath = path.join(configDirectory, 'site.toml');
+  await writeFile(configPath, '[site]\n');
+  await symlink('site.toml', path.join(configDirectory, 'site-link.toml'));
+
+  assert.equal(
+    resolveSiteConfigOverridePath('.private/fixture/config/site.toml', root),
+    configPath
+  );
+  assert.equal(resolveSiteConfigOverridePath(undefined, root), null);
+  for (const value of [
+    '/tmp/site.toml',
+    '../outside.toml',
+    '.private//site.toml',
+    '.private/fixture/config/missing.toml',
+    '.private/fixture/config/site-link.toml',
+    '.private/fixture/config/site.json',
+    '.private/fixture/config\\site.toml',
+    ' .private/fixture/config/site.toml'
+  ]) {
+    assert.throws(
+      () => resolveSiteConfigOverridePath(value, root),
+      /FIREFLY_SITE_CONFIG_PATH/u,
+      value
+    );
+  }
 });
 
 test('site config defaults omitted friend links to an empty list', () => {

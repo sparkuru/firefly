@@ -36,6 +36,8 @@ loadCommentsForPosts(
   config: CommentsSiteConfig,
   enabledOverride?: boolean
 ): ReadonlyMap<string, readonly PublicComment[]>
+
+commentsPostPathFromSiteHref(value: unknown): string | null
 ~~~
 
 ~~~http
@@ -136,9 +138,18 @@ the normalized envelope without the digest field.
   mandatory for an enabled M5.1 build. `./sam` accepts only a readable,
   repository-relative JSON file and passes it into the container as
   `/app/<relative-path>`.
+- `CanonicalDocument.href` remains the site's readable NFC Unicode route.
+  `commentsPostPathFromSiteHref()` is the single conversion owner at the
+  comments boundary: it preserves safe ASCII routes, emits canonical uppercase
+  UTF-8 percent escapes for non-ASCII segments, reuses the comments route
+  validator, and returns `null` for encoded, non-NFC, traversal, delimiter,
+  whitespace, control/format, or otherwise unsafe site hrefs. An enabled build
+  fails closed when a public post cannot be represented.
 - The site decodes the export during build, cross-checks every route against
-  the guest canonical post catalog, and passes only post-scoped public records
-  into Semantic or Terminal canonical document components.
+  the guest canonical post catalog through that converter, groups accepted
+  records under the original raw `CanonicalDocument.href`, and passes only
+  post-scoped public records plus the encoded submission `postPath` into
+  Semantic or Terminal canonical document components.
 - Pages, indexes, home, experiments, 404, and inline Terminal `cat` output do
   not receive a comment section. There is no public runtime read/count request.
 - Publication evidence stores `enabled`, `schemaVersion`,
@@ -181,9 +192,10 @@ the normalized envelope without the digest field.
   generic responses, retry/idempotency, verification replay/expiry, reply
   eligibility, moderation, deletion/tombstones, retention, SQLite migration,
   export ordering/digest, and private-field exclusion.
-- Site: strict decoder, Unicode/route/body/homepage/date rejection, digest
-  mismatch, stale route rejection, direct-reply grouping, empty export, and
-  config defaults.
+- Site: strict decoder, raw-Unicode-to-encoded-route conversion, ASCII identity,
+  unsafe site-href rejection, Unicode/route/body/homepage/date rejection,
+  digest mismatch, stale route rejection, direct-reply grouping under the raw
+  href, empty export, and config defaults.
 - Static site: disabled output contains no comment section; an enabled fixture
   renders top-level/direct replies and native forms only on canonical posts,
   with no private sentinels in HTML.

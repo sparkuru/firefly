@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "scripts": {
     "prepare:content": "node scripts/materialize-content.mjs",
+    "prepare:test:unicode-comments": "node scripts/prepare-unicode-comments-fixture.mjs",
     "dev": "npm run prepare:content && astro dev",
     "start": "npm run prepare:content && astro dev",
     "start:e2e": "astro preview",
@@ -12,8 +13,10 @@
     "build": "npm run prepare:content && node scripts/validate-comments-build.mjs && astro check && astro build && node --test tests/static-output.test.mjs",
     "build:workspace": "npm run prepare:content && node scripts/validate-comments-build.mjs && astro check && astro build",
     "test:content": "node --test --test-concurrency=1 tests/content-access.test.mjs tests/content-materializer.test.mjs tests/firefly-ignore.test.mjs tests/content-markers.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs tests/site-config.test.mjs tests/comments.test.mjs",
+    "test:unicode-comments-static": "node --test tests/unicode-comments-static.test.mjs",
     "test:x-core": "node --test tests/x-core-integration.test.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:unicode-comments": "playwright test --config playwright.unicode-comments.config.ts",
     "review:m5": "playwright test --config playwright.review.config.ts",
     "preview": "astro preview",
     "astro": "npm run prepare:content && astro"

@@ -50,6 +50,7 @@ export interface ResolvedCommentsRuntimeOptions extends CommentsConfig {
 export const DEFAULT_COMMENTS_CONFIG_PATH: string;
 
 export function isCanonicalCommentsPostRoute(value: unknown): value is string;
+export function commentsPostPathFromSiteHref(value: unknown): string | null;
 export function parseCommentsActivation(value: unknown, source?: string): CommentsActivationConfig;
 export function parseCommentsConfig(value: unknown, source?: string, options?: { readonly enabled?: boolean }): CommentsConfig;
 export function parseCommentsNamespace(value: unknown, source?: string): CommentsConfig | LegacyCommentsNamespace;
