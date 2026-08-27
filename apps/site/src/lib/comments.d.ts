@@ -22,8 +22,9 @@ export interface PublicCommentsExport {
 
 export type CommentsSiteConfig = CommentsPublicConfig;
 
+export function commentsPostPathFromSiteHref(value: unknown): string | null;
 export function decodePublicCommentsExport(value: unknown, source?: string): PublicCommentsExport;
-export function loadPublicCommentsExport(): PublicCommentsExport;
+export function loadPublicCommentsExport(configuredPath?: string): PublicCommentsExport;
 export function loadCommentsForPosts(
   posts: readonly CanonicalDocument[],
   config: CommentsSiteConfig,

@@ -87,6 +87,7 @@ syntax check.
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | `config.dev` | Optional ignored shell defaults file loaded by `sam` and `dev.sh`; copy `config.dev.example` and edit it for the current machine. Explicit environment variables take precedence. |
 | `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; it may be set in `config.dev` and otherwise defaults to `<repo>/content`. `sam` resolves and passes it into the container. |
+| `FIREFLY_SITE_CONFIG_PATH` | Optional repository-relative `.toml` override for contained build/test projections. `sam` requires an existing readable file whose real path stays inside the repository, then passes the same relative path into the container; the site loader additionally rejects a symlinked file and unsafe segments. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
 | Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit assembled-publication server path. |

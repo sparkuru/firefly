@@ -6,7 +6,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { loadCommentsRuntimeConfig, loadCommentsSecrets, parseCommentsSecrets } from '../src/config.js';
 
-const { parseCommentsActivation, parseCommentsConfig } = await import(
+const {
+  commentsPostPathFromSiteHref,
+  parseCommentsActivation,
+  parseCommentsConfig
+} = await import(
   pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..', 'plugins/comments/config.mjs')).href
 );
 
@@ -154,6 +158,38 @@ test('comments route catalog accepts canonical UTF-8 percent escapes and rejects
     '/posts/main/é/'
   ]) {
     assert.throws(() => parseRoutes([route]), /canonical \/posts/u, route);
+  }
+});
+
+test('site hrefs convert once into canonical comments routes and fail closed', () => {
+  assert.equal(
+    commentsPostPathFromSiteHref('/posts/acg/妹相随-黑白世界-游玩记录/'),
+    '/posts/acg/%E5%A6%B9%E7%9B%B8%E9%9A%8F-%E9%BB%91%E7%99%BD%E4%B8%96%E7%95%8C-%E6%B8%B8%E7%8E%A9%E8%AE%B0%E5%BD%95/'
+  );
+  assert.equal(commentsPostPathFromSiteHref('/posts/main/a~._-safe/'), '/posts/main/a~._-safe/');
+  assert.equal(commentsPostPathFromSiteHref('/posts/main/萤火虫✨/'), '/posts/main/%E8%90%A4%E7%81%AB%E8%99%AB%E2%9C%A8/');
+
+  for (const href of [
+    null,
+    '',
+    '/posts/',
+    '/pages/main/example/',
+    '/posts/main/%E8%90%A4%E7%81%AB%E8%99%AB/',
+    '/posts/main/e\u0301/',
+    '/posts/main/../',
+    '/posts/main/.hidden/',
+    '/posts/main/-leading/',
+    '/posts/main/title!/',
+    '/posts/main/title:part/',
+    '/posts/main/title with space/',
+    '/posts/main/title\u200Djoiner/',
+    `/posts/main/${String.fromCharCode(0xd800)}/`,
+    '/posts/main/doubled//segment/',
+    '/posts/main/query/?value=1',
+    '/posts/main/fragment/#value',
+    '/posts/main\\windows/'
+  ]) {
+    assert.equal(commentsPostPathFromSiteHref(href), null, String(href));
   }
 });
 

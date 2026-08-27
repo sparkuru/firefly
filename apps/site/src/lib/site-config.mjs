@@ -10,13 +10,53 @@ import {
   resolveCommentsConfigPath
 } from '../../../../plugins/comments/config.mjs';
 
-const sourceRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
+const moduleRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
+const sourceRepositoryRoot = [
+  path.resolve(process.cwd()),
+  path.resolve(process.cwd(), '../..'),
+  moduleRepositoryRoot
+].find((candidate) => (
+  existsSync(path.join(candidate, 'apps/site/package.json')) &&
+  existsSync(path.join(candidate, 'plugins/comments/config.mjs'))
+)) ?? moduleRepositoryRoot;
+const siteConfigPathSegment = /^(?!\.{1,2}$)[A-Za-z0-9._~-]+$/u;
 const configCandidates = [
   path.resolve(process.cwd(), 'config/site.toml'),
   path.resolve(process.cwd(), '../../config/site.toml'),
   path.join(sourceRepositoryRoot, 'config/site.toml')
 ];
-export const SITE_CONFIG_PATH = configCandidates.find((candidate) => existsSync(candidate)) ?? configCandidates[0];
+
+export function resolveSiteConfigOverridePath(value, repositoryRoot = sourceRepositoryRoot) {
+  if (value === undefined || value === null || value === '') return null;
+  if (
+    typeof value !== 'string' ||
+    value.trim() !== value ||
+    path.isAbsolute(value) ||
+    value.includes('\\') ||
+    !value.endsWith('.toml') ||
+    value.split('/').some((segment) => !siteConfigPathSegment.test(segment))
+  ) {
+    throw new TypeError('FIREFLY_SITE_CONFIG_PATH must be a safe repository-relative TOML path.');
+  }
+
+  const candidate = path.resolve(repositoryRoot, value);
+  let resolved;
+  try {
+    const stats = lstatSync(candidate);
+    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error('not a regular file');
+    resolved = realpathSync(candidate);
+  } catch {
+    throw new Error('Unable to use FIREFLY_SITE_CONFIG_PATH: expected a regular, non-symlink TOML file inside the repository.');
+  }
+  const relative = path.relative(repositoryRoot, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new TypeError('FIREFLY_SITE_CONFIG_PATH must remain inside the repository.');
+  }
+  return resolved;
+}
+
+const configuredSiteConfigPath = resolveSiteConfigOverridePath(process.env.FIREFLY_SITE_CONFIG_PATH);
+export const SITE_CONFIG_PATH = configuredSiteConfigPath ?? configCandidates.find((candidate) => existsSync(candidate)) ?? configCandidates[0];
 
 const controlCharacters = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029]/u;
 const lineBreaks = /[\r\n\u2028\u2029]/u;

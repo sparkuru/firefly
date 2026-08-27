@@ -2,7 +2,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isCanonicalCommentsPostRoute } from '../../../../plugins/comments/config.mjs';
+import {
+  commentsPostPathFromSiteHref,
+  isCanonicalCommentsPostRoute
+} from '../../../../plugins/comments/config.mjs';
+
+export { commentsPostPathFromSiteHref } from '../../../../plugins/comments/config.mjs';
 
 const moduleRepositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const repositoryRoot = [
@@ -194,14 +199,26 @@ export function loadCommentsForPosts(posts, config, enabledOverride) {
   const enabled = enabledOverride ?? (typeof config.enabled === 'boolean' ? config.enabled : true);
   if (!enabled) return result;
   const bundle = loadPublicCommentsExport(config.exportPath);
-  const publicPosts = new Set(posts.map((post) => post.href));
+  const publicPosts = new Map();
+  for (const post of posts) {
+    const commentsPostPath = commentsPostPathFromSiteHref(post.href);
+    if (commentsPostPath === null) {
+      throw new Error(`Public post route cannot be represented by the comments protocol: ${post.href}`);
+    }
+    const existing = publicPosts.get(commentsPostPath);
+    if (existing !== undefined && existing !== post.href) {
+      throw new Error(`Public post routes collide in the comments protocol: ${existing} and ${post.href}`);
+    }
+    publicPosts.set(commentsPostPath, post.href);
+  }
   const grouped = new Map();
   for (const comment of bundle.comments) {
-    if (!publicPosts.has(comment.postPath)) throw new Error(`Comments export references a non-public post route: ${comment.postPath}`);
-    const current = grouped.get(comment.postPath) ?? [];
+    const siteHref = publicPosts.get(comment.postPath);
+    if (siteHref === undefined) throw new Error(`Comments export references a non-public post route: ${comment.postPath}`);
+    const current = grouped.get(siteHref) ?? [];
     current.push(comment);
-    grouped.set(comment.postPath, current);
+    grouped.set(siteHref, current);
   }
-  for (const [postPath, comments] of grouped) result.set(postPath, Object.freeze(comments));
+  for (const [siteHref, comments] of grouped) result.set(siteHref, Object.freeze(comments));
   return result;
 }
