@@ -25,11 +25,11 @@
 | 已确认 | 有 189 条已批准评论，另有独立 memo 数据 | M5 只做私有 handoff；公开评论与动态身份服务进入 M5.1 |
 | 已确认 | 数据库备份已通过 SHA-256 校验 | 私有备份不得进入公开 Git 历史 |
 | 已确认 | 已有 Typecho Terminal 原型 | 作为 Terminal Presentation 的交互和视觉参考，不作为运行时依赖 |
-| 已确认 | 当前仓库包含主站、Semantic/Terminal Presentation、NERV Experiment、发布汇编与不可变发布工具 | 各 Experiment 独立构建，Publication Assembler 只消费已验证静态产物 |
-| 已确认 | 当前 authored workspace 包含 95 篇 post、8 个 page；原始 SQL 的 93/7 仍作为历史输入保留 | 当前发布库存以受管 Markdown 和页面清单为准，不能用历史数量替代现状 |
+| 已确认 | 当前仓库包含主站、Semantic/Terminal Presentation、NERV Experiment、Publication Assembler、内部 comments plugin 与私有 comments service | 各 Experiment 独立构建；Assembler 的目标边界只消费已验证静态产物与清单，当前到站点 comments decoder 的源码桥接是待 comments-contract extraction 修复的临时偏差 |
+| 2026-08-20 观察 | M5 完成时的 authored workspace 包含 95 篇 post、8 个 page；原始 SQL 的 93/7 仍作为历史输入保留 | 95/8 是当时工作区快照，不是持久架构或验收常量；每次发布以明确选择的受管 Markdown 与页面清单为准 |
 | 已确认 | M0–M5 已完成；M6 本地 TLS 方案已 superseded，M7 反向隧道 staging rehearsal 已完成 | M7 是当前主线的 staging 证据，M6 仅保留历史记录 |
-| 已确认 | v1.0.0 静态发布已通过构建、汇编、原子 promotion、公开路由、错误页、安全响应头和静态缓存验证 | 当前生产边界是静态发布；上一份不可变 release 保留为 rollback 目标 |
-| 待后续决策 | M5.1 动态评论与身份服务 | 保持 deferred；不得因此把主站改为 SSR 或直读数据库 |
+| 已确认 | v1.0.0 静态发布已通过构建、仓库候选汇编、部署侧不可变 release 切换、公开路由、错误页、安全响应头和静态缓存验证 | 仓库负责生成并验证静态 publication；外部不可变 release 与 rollback 切换由部署环境负责 |
+| 已实现、待启用决策 | M5.1 动态评论与身份服务已实现并完成私有运行时 provisioning；Unicode 文章路由兼容边界已关闭 | 跟踪配置仍保持 `comments.enabled = false`；公开启用、SMTP 和生产浏览器验证必须另行授权，主站不得改为 SSR 或直读数据库 |
 
 数据库备份保存在新工作区的 `.private/backups/`，由 `.gitignore` 排除。公开仓库只记录备份存在、时间和校验状态，不记录数据库内容。
 
@@ -54,7 +54,7 @@
 ### 3.3 成功标准
 
 - 默认文章输出完整语义 HTML，不在浏览器解析 Markdown。
-- 同一 Markdown 可选择默认阅读表现或 Terminal 表现。
+- 同一 Markdown 默认采用 `firefly`/Terminal 表现，也可显式选择 `semantic` 阅读表现。
 - Terminal 支持 `ls`、`cat`、`help`、`about` 等核心命令。
 - `nerv` 可独立构建并发布到 `/lab/nerv/`。
 - 新增第二个 Experiment 不需要修改主站渲染核心。
@@ -160,45 +160,36 @@ firefly/
 ├── package.json
 ├── content/
 │   ├── posts/
-│   ├── pages/
-│   └── assets/
+│   └── pages/
 ├── apps/
 │   └── site/
-│       ├── src/
-│       │   ├── content.config.ts
-│       │   ├── pages/
-│       │   ├── layouts/
-│       │   ├── components/
-│       │   └── styles/
-│       └── public/
 ├── packages/
-│   ├── content-contract/
 │   └── x-core/
 ├── presentations/
 │   ├── semantic/
 │   └── terminal/
 ├── experiments/
 │   └── nerv/
-│       ├── experiment.json
-│       ├── package.json
-│       ├── astro.config.mjs
-│       ├── src/
-│       ├── public/
-│       ├── reference/
-│       └── license
+├── plugins/
+│   └── comments/
+├── services/
+│   └── comments/
 ├── prototypes/
 │   └── typecho-terminal/
 ├── tooling/
-│   ├── validate-content/
-│   ├── validate-experiments/
-│   └── assemble-publication/
+│   ├── assemble-publication/
+│   ├── sync-server/
+│   └── validate-experiments/
+├── config/
+│   └── plugins/
+├── .trellis/
 ├── artifacts/
 ├── dist/
 └── .private/
     └── backups/
 ```
 
-上面的边界已经在当前仓库落地：`content/`、`apps/`、`packages/`、`presentations/`、`experiments/`、`tooling/` 与 `.trellis/` 分别承担内容、主站、核心契约、表现层、独立实验、发布验证和工作流职责。`artifacts/`、`dist/` 与 `.private/` 只保存生成物或私有备份，不作为公开源代码契约。
+上面的边界已经在当前仓库落地：`content/`、`apps/`、`packages/`、`presentations/`、`experiments/`、`plugins/`、`services/`、`tooling/` 与 `.trellis/` 分别承担受管内容、主站、核心契约、表现层、独立实验、内部集成、私有动态服务、发布工具和工作流职责。`artifacts/` 与 `dist/` 是忽略的仓库构建输出，`.private/` 只保存私有输入或备份；三者都不是公开源代码契约。
 
 ## 8. 技术决策
 
@@ -237,27 +228,29 @@ X 是内容与 Presentation 之间的薄层，不是第二套站点生成器。
 
 ```ts
 interface PresentationAdapter {
-  id: string
+  readonly id: string
   supports(context: DocumentContext): boolean
-  transform(tree: HastRoot, context: DocumentContext): HastRoot
-  enhancements(context: DocumentContext): Enhancement[]
+  transform(input: NormalizedDocumentInput): HastRoot
+  enhancements(input: NormalizedDocumentInput): readonly Enhancement[]
 }
 
 interface Enhancement {
-  nodeId: string
-  feature: string
-  module: string
-  load: 'eager' | 'idle' | 'visible'
-  props: Record<string, unknown>
+  readonly nodeId: string
+  readonly feature: string
+  readonly module: string
+  readonly load: 'eager' | 'idle' | 'visible'
+  readonly props: Readonly<Record<string, JsonValue>>
 }
 ```
+
+`NormalizedDocumentInput` 统一携带只读的 `context`、`summary`、`references` 与 HAST `tree`；`JsonValue` 只允许可安全序列化的 JSON 值。X Core 仍只拥有内容规范化与 Presentation 契约，不拥有站点路由、通用插件宿主或部署流程。
 
 ### 8.3 Presentation
 
 MVP 包含：
 
-- `semantic`：默认文章与页面的可读表现；特殊页面语义需有独立产品决定后再扩展。
-- `terminal`：站点首页与可选文章表现，支持命令浏览内容。
+- `firefly`：默认文档 Presentation，由 `presentations/terminal` 实现；同时承担站点首页的 shell-first 入口与命令式内容浏览。
+- `semantic`：显式 opt-in 的可读文章与页面表现；特殊页面语义需有独立产品决定后再扩展。
 
 Presentation 必须输出合法语义 HTML，不修改源 Markdown，不读取生产数据库。客户端 props 必须安全序列化，未使用的增强模块不得进入页面 bundle。
 
@@ -406,9 +399,9 @@ MVP 命令：
 2. build apps/site -> artifacts/site
 3. build each listed experiment -> artifacts/experiments/<id>
 4. validate output paths, links and secrets
-5. assemble into a fresh release directory
-6. run smoke and browser tests
-7. publish the immutable release
+5. assemble and promote repository `artifacts/` plus `dist/` as one build-candidate transaction
+6. run smoke and browser tests against the verified repository candidate
+7. let the deployment environment publish that candidate as an immutable release
 ```
 
 不得直接让多个构建任务向同一个 `dist/` 写入。Publication Assembler 在空目录中汇编：
@@ -427,16 +420,16 @@ dist/
 └── media/
 ```
 
-### 13.2 生产发布
+### 13.2 生产与部署边界
 
 当前生产基线是 v1.0.0 的完整静态 publication，而不是早期仅包含单个实验的 runtime：
 
-- 主站与已列出的 Experiment 分别构建，Publication Assembler 在 fresh release 中验证清单、路径、链接和敏感信息后汇编。
-- 发布前通过静态输出、路由与 404、浏览器、响应头、缓存、文件清单和运行时约束检查；候选通过后才进行原子 promotion。
+- 主站与已列出的 Experiment 分别构建；Publication Assembler 在仓库内验证清单、路径、链接和敏感信息，并将候选 `artifacts/` 与 `dist/` 协调 promotion，避免只提交一半构建结果。
+- 仓库候选通过静态输出、路由与 404、浏览器、文件清单和运行时约束检查后，才可交给部署环境；响应头、缓存和外部路由在部署边界验证。
 - 生产只需要能够托管已汇编的静态文件，不依赖 PHP、MySQL、Node 服务或动态 CMS；容器 runtime 是可复现的验证边界，不是产品运行时的唯一形态。
 - 当前公开验证覆盖主站、文章、页面、实验和缺失路由；此前的不可变 release 保留为 rollback 目标，详细操作记录留在本地私有执行记录。
 
-不可变发布采用下列逻辑结构：
+部署环境可采用下列不可变发布逻辑结构；它不是 Publication Assembler 管理的仓库目录：
 
 ```text
 publication-root/
@@ -444,7 +437,7 @@ publication-root/
 └── current -> releases/<release-id>/
 ```
 
-外部 TLS、反向代理和边缘缓存属于部署环境边界；仓库只记录可验证的静态发布契约，不记录 operational endpoint、SSH、DNS 或凭据。旧 Typecho 仅作为迁移历史和私有回退参考，当前生产流量由静态 publication 承担。
+不可变 release 建立、`current` 原子切换、崩溃恢复和 rollback 都属于 operator-owned 部署边界。外部 TLS、反向代理和边缘缓存同样属于部署环境；仓库只记录可验证的静态 publication 契约，不记录 operational endpoint、SSH、DNS 或凭据。旧 Typecho 仅作为迁移历史和私有回退参考，当前生产流量由静态 publication 承担。
 
 ## 14. 质量要求
 
@@ -507,7 +500,7 @@ publication-root/
 
 ### 15.4 迁移验收与现状对照
 
-- 原始 SQL 输入的 93 篇文章和 7 个页面作为历史基线保留；当前 authored workspace 的 95 篇文章和 8 个页面已纳入受管清单并通过发布验证。
+- 原始 SQL 输入的 93 篇文章和 7 个页面作为历史基线保留；M5 在 2026-08-20 观察到的 authored workspace 快照为 95 篇文章和 8 个页面，并已按当时受管清单通过发布验证。后续验证必须从明确选择的 fixture 或 workspace 推导库存，不能固定复用 95/8。
 - 标题、slug、日期、分类文件夹、标签和正文规范化结果一致。
 - 私有 memo 导出保留权限/删除状态，私有评论 handoff 保留不透明对应关系；两者均不进入公开构建。
 - 资源清单不存在未解释缺失项；旧 URL 只在选择兼容 alias 时逐条验证。
@@ -521,7 +514,8 @@ publication-root/
 | M2 X Core | contracts、AST 管道、registry、diagnostics | complete | 同一内容可切换 Presentation，核心契约与测试已归档 |
 | M3 Terminal MVP | Terminal Presentation 与内容索引 | complete | 核心命令、静态 fallback、键盘和浏览器回归通过 |
 | M4 Experiment pipeline | manifest 校验、独立构建、发布汇编 | complete | `nerv` 挂载成功，普通 bundle 无污染，汇编与运行时检查通过 |
-| M5 全量迁移 | 当前 95 篇 post、8 个 page、私有 memo/comment handoff、资源与原生 folder routes | complete | 当前清单、正文、元数据、资源和隐私边界通过验证；93/7 仅是历史 SQL 输入基线 |
+| M5 全量迁移 | 受管 authored workspace、私有 memo/comment handoff、资源与原生 folder routes | complete | 2026-08-20 的 95/8 工作区快照通过当时清单、正文、元数据、资源和隐私边界验证；93/7 仅是历史 SQL 输入基线，后续库存按所选 workspace 推导 |
+| M5.1 动态评论与身份服务 | 私有写入/审核服务、静态公开读模型、发布与路由兼容边界 | production_provisioned_pending_enablement | 实现、私有 provisioning、route catalog 与 Unicode canonical route 兼容已完成；跟踪配置保持禁用，公开启用仍需单独授权 |
 | M6 Staging | 本地 TLS 方案 | superseded / historical | 原计划被 M7 实际 staging rehearsal 取代，记录保留但不再是当前路径 |
 | M7 Staging rehearsal | 反向隧道、边缘代理、静态发布验证与 rollback | complete | 公开/direct-origin 路由、TLS、Basic Auth、浏览器和独立清理证据已归档 |
 | P0 Production | v1.0.0 不可变发布与原子切换 | complete | 构建、汇编、promotion、公开路由、错误页、安全头、缓存和 rollback 目标均已验证 |
@@ -532,7 +526,7 @@ publication-root/
 
 - [x] `content/` 不含 Astro import、client 指令或表现型 class。
 - [x] 所有公开 Markdown 通过 schema 校验。
-- [x] 原始 SQL 的 93 篇文章与 7 个页面已完成迁移对照；当前 authored workspace 的 95 篇文章与 8 个页面生成受管静态页面。
+- [x] 原始 SQL 的 93 篇文章与 7 个页面已完成历史迁移对照；M5 于 2026-08-20 验证了当时 95/8 authored workspace 快照，后续静态页面库存由明确选择的 workspace 清单推导。
 - [x] 189 条评论只进入私有 handoff；M5 不公开渲染评论或身份字段。
 - [x] memo discovery 导出保留权限/删除状态但不生成公开路由。
 - [x] 默认文章禁用 JavaScript 后仍完整可读。
@@ -562,7 +556,7 @@ publication-root/
 | Adapter 污染正文 | 中等 | 内容 schema 禁止组件路径与表现 class |
 | 旧资源和 URL 丢失 | 遗留、非当前发布阻断 | 全量资源清单、可选 alias、M7 staging 与生产 smoke 证据；未承诺的旧 URL 不自动重建 |
 | 评论或身份泄露 | 高 | M5 只生成私有 handoff；公开产物扫描邮箱、IP、用户代理、身份字段和 memo |
-| 发布候选与生产内容不一致 | 已控制 | fresh release 汇编、不可变 promotion、文件清单、公开路由与 hashed-asset 检查；上一份 release 保留为 rollback 目标 |
+| 发布候选与生产内容不一致 | 已控制 | 仓库内 `artifacts/`/`dist/` 协调 promotion 与文件清单保证候选一致；部署侧不可变 release 切换、公开路由与 hashed-asset 检查保证上线一致，上一份 release 保留为 rollback 目标 |
 
 ## 19. 默认决策与后续决策
 
@@ -571,11 +565,11 @@ publication-root/
 - 项目与仓库统一命名为 `firefly`。
 - Astro 作为主站静态外壳，Unified 作为显式 Markdown 管道。
 - X Core 只处理内容与 Presentation，不管理独立 Experiment。
-- Terminal 是首个非默认 Presentation。
+- `firefly`/Terminal 是默认文档 Presentation；`semantic` 通过 Front Matter 显式选择。
 - Experiment 是可独立构建的完整静态子项目，统一挂载到 `/lab/<id>/`。
 - `nerv` 是首个 Experiment，也是其唯一公开身份。
 - Experiment 可保留自己的框架版本和 lockfile。
-- M5 不公开历史评论；M5.1 单独决定公开读模型、新评论、审核与身份服务。
+- M5 不公开历史评论；M5.1 已实现公开读模型、新评论、审核与身份服务，但跟踪配置默认禁用，公开启用仍是独立 owner 决策。
 - M5 保留 `views`、`stars`、`commentsNum` 为私有历史统计；未来展示必须另行设计 schema、隐私边界和回归覆盖。
 - 私有数据库备份不进入公开 Git。
 - M7 是当前主线认可的 staging rehearsal；P0 生产发布已经完成，生产只消费通过 guard 的静态 publication。
@@ -588,7 +582,7 @@ publication-root/
 - 分类关系按源结构生成文章文件夹；使用中的 tags 是否公开由元数据候选审查决定。
 - `cross.php` 与 `files.php` 先作为 page/template 候选记录，不自动生成 `/timeline/` 或 `/files/` 特殊路由。
 - 原站本地上传资源迁入受管静态资源，可信第三方链接保留为外链，其余逐项记录例外；当前 v1.0.0 不因未迁移的历史特殊语义回退到 CMS。
-- 后续 M5.1 单独实现动态评论与身份服务：独立写 API/数据库、审核和公开读模型导出，不让主站 SSR 或直读数据库。该事项保持 deferred，需重新授权。
+- M5.1 已按独立写 API/数据库、审核与静态公开读模型边界实现和 provision，且 Unicode canonical post route 兼容已完成；主站继续静态生成且不直读数据库。SMTP、受控生产浏览器验证与公开启用必须在后续 guided 决策中单独授权。
 - 仓库 owner、canonical 元数据和未来内容统计展示属于独立产品决策，不写入当前生产部署细节。
 
 ## 20. 技术依据

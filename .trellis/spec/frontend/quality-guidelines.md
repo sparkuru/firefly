@@ -114,13 +114,18 @@ package suite from the single profile in `index.md`.
   repository loader. Both use the shared strict schema.
 - Routes consume the guest canonical projection; draft/access/layout/path checks are not
   scattered across pages.
-- The default site inventory is exactly ten HTML routes, one semantic CSS,
-  one Terminal-home JS, and one canonical-document reader JS, with zero maps or
-  unknown files. Only home references the command script; canonical document
-  routes reference the reader, with semantic documents activating it only for
-  the explicit `#terminal-reader` fragment; directory indexes remain
-  script-free. Semantic/About/lab/404/directory routes link semantic CSS;
-  Terminal home/documents contain Terminal styles.
+- For each explicitly selected fixture or content workspace, derive the exact
+  expected HTML inventory from its guest canonical projection, all non-empty
+  document-directory indexes, and the fixed home, lab, and 404 surfaces. Tests
+  may pin an exact count for their declared immutable fixture, but no count from
+  a mutable owner workspace is a durable whole-site invariant. Every valid
+  inventory still contains one semantic CSS, one Terminal-home JS, and one
+  canonical-document reader JS, with zero maps or unknown files. Only home
+  references the command script; canonical document routes reference the reader,
+  with semantic documents activating it only for the explicit
+  `#terminal-reader` fragment; directory indexes remain script-free.
+  Semantic/About/lab/404/directory routes link semantic CSS; Terminal
+  home/documents contain Terminal styles.
 - The exact home script predicate returns `false` only for Astro's generated
   `TerminalHome...js` filename after POSIX/Windows separator normalization and
   returns Vite's `undefined` default for every other or non-string input.

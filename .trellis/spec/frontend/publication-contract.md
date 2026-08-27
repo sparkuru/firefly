@@ -169,6 +169,18 @@ commands, and only then assembles the release.
   Candidate cleanup targets only transaction paths created inside the repository.
 - `artifacts/publication.json` is deterministic evidence containing schema
   version, safe catalog, and sorted inventory. It is not a browser registry.
+- This promotion is a repository build transaction: root `artifacts/` is its
+  evidence target and root `dist/` is its assembled release candidate. The
+  assembler does not create operator release IDs, populate an immutable
+  `releases/<release-id>/` tree, switch a deployed `current` pointer, retain
+  deployment history, or prove edge/TLS rollout. Those actions and their
+  rollback evidence belong to the external deployment boundary.
+- The repository transaction rolls back caught filesystem failures, but two
+  target renames are not crash-atomic if the assembler process is terminated
+  between them and no recovery journal currently exists. A stronger
+  crash-recovery guarantee is a tracked release-boundary remediation item; do
+  not infer it from ordinary exception rollback or from an external deployment
+  switch.
 
 #### Site, Terminal, and runtime
 
@@ -217,6 +229,7 @@ commands, and only then assembles the release.
 | missing required entry/license or mount-escaping URL | reject release candidate without rewriting it |
 | safe local reference has no emitted target | warn with source and raw reference; preserve output and promote |
 | first or second target promotion fails | restore all prior `artifacts/` and `dist/`; clean candidates |
+| assembler process terminates between target renames | do not claim a crash-atomic transaction; rebuild and reconcile exact inventories before reuse |
 | unknown/unlisted Terminal experiment | error-line effect; no navigation |
 | JavaScript disabled or Terminal startup fails | native document and lab recovery links remain available |
 | reduced motion requested in NERV | continuous CSS and scroll-driven decorative motion freeze |
@@ -248,8 +261,9 @@ commands, and only then assembles the release.
   target preservation and rollback.
 - Terminal unit tests: exact Experiment decoder, lab commands/usage/errors,
   completion, frozen effects, and canonical href-only navigation.
-- Site static/Playwright: exactly ten default site HTML routes; JavaScript-free
-  directory indexes and `/lab/`; reader JS on canonical document routes only,
+- Site static/Playwright: the exact HTML route inventory derived from the
+  explicitly selected immutable fixture/workspace; JavaScript-free directory
+  indexes and `/lab/`; reader JS on canonical document routes only,
   with semantic documents activating it only for the explicit
   `#terminal-reader` fragment; no Experiment asset edge on ordinary pages; lab
   recovery; nested tree/cat/vim; all existing recovery/content behavior.
@@ -257,9 +271,10 @@ commands, and only then assembles the release.
   return, desktop/mobile overflow, and reduced motion. Serve the already built
   artifact; do not substitute `astro dev` for publication evidence.
 - Container: build the runtime-only image from the minimal release context,
-  compare exact 23-file manifest/release/image inventories, probe health/site/
-  nested content/lab/NERV, redirects, distinct 404s, reader/font cache and
-  security headers, non-root/read-only confinement, then tear down exact labels.
+  compare the exact fixture-derived manifest/release/image inventories, probe
+  health/site/nested content/lab/NERV, redirects, distinct 404s, reader/font
+  cache and security headers, non-root/read-only confinement, then tear down
+  exact labels.
 
 ### 7. Wrong vs Correct
 

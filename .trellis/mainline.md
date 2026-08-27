@@ -2,11 +2,11 @@
 
 ## Initiative
 
-- **Title:** firefly MVP
-- **Objective:** Deliver the Markdown-first static blog described in `prd.md`, with semantic and terminal presentations, isolated experiments, staging, and production rollout.
+- **Title:** Repository audit remediation
+- **Objective:** Reconcile Firefly's authoritative documentation and incrementally reduce validation, comments-contract, X Core, adapter, and release-quality risks without changing the working static-publication architecture.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-20 — The v1.0.0 static release was built, atomically promoted through the established immutable-release procedure, and publicly verified. M5.1 was re-authorized as the next product task; the converged planning summary was approved and the task was activated for implementation with serial service, site, and publication child tasks. M7 remains the historical staging rehearsal; M6 remains superseded.
+- **Owner decision:** 2026-08-28 — The P1 repository-audit remediation parent was approved after the M5.1 Unicode route-compatibility task was completed and archived. Its documentation-convergence child is the active first deliverable; each later child still requires its own planned transition. M5.1 is implemented and privately provisioned but remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 
@@ -25,9 +25,10 @@
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
-| 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The private runtime, host-specific `/v1/comments/*` proxy, static-release backup, SQLite backup/restore drill, and release-bound route-catalog reconciliation passed owner-authorized production checks. The production comments runtime is aligned with the existing owner-only secret/data boundary and healthy; the static site remains disabled by default. SMTP delivery, public browser smoke, and the one incompatible non-ASCII route remain enablement gates. The main site must not become SSR or directly read the database. |
+| 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The service, static consumer, publication boundary, private provisioning, release-bound route catalog, and Unicode canonical-route compatibility are implemented and verified. Tracked configuration remains disabled by default. SMTP delivery, controlled public browser validation, and public enablement remain separate owner-authorized gates; the main site must not become SSR or directly read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
+| 10 | `.trellis/tasks/08-27-repository-audit-remediation/` — P1 repository audit remediation | active | The Unicode compatibility prerequisite is archived. `.trellis/tasks/08-28-repository-docs-convergence/` is the in-progress first child; deterministic validation, comments-contract extraction, X Core/route cleanup, adapter cleanup, and release/observability hardening remain separately verifiable follow-up children with the dependencies recorded in the parent PRD. |
 
 ## Evidence
 
@@ -61,7 +62,7 @@
 - M5 durable contract: `.trellis/spec/frontend/content-workspace-contract.md` records workspace/link/materializer/access/path/registry/reader signatures, validation matrix, cases, tests, and wrong/correct patterns; adjacent frontend specs were reconciled from the flat M4 route/index assumptions.
 - M5 human residuals: subjective visuals, real devices, assistive technology, and private deployment environments. Linked attachments, staging, and production remain later milestones.
 - M5-prelude completion commits: `58ab2d9` (implementation/tests), `4433b6a` (contracts/evidence), `a837107` (task archive), and `ac152c2` (journal). The content workspace and reader remain the approved Markdown authoring boundary.
-- M5.1 was initially deferred, then re-authorized by the owner on 2026-08-20. The final planning summary was approved and the parent task activated; implementation is proceeding through serial child tasks with the static-only boundary preserved.
+- M5.1 was initially deferred, then re-authorized by the owner on 2026-08-20. The approved parent and serial implementation children are archived; the static-only boundary remains preserved and tracked comments configuration remains disabled.
 - M5.1 planning and implementation artifacts are archived under `.trellis/tasks/archive/2026-08/08-14-m51-dynamic-comments-identity/`, `.trellis/tasks/archive/2026-08/08-20-m51-comments-service-core/`, `.trellis/tasks/archive/2026-08/08-20-m51-static-comment-consumer/`, and `.trellis/tasks/archive/2026-08/08-20-m51-comments-publication-ops/`. The approved contracts define the self-built write/moderation service, static export, post-only scope, plain-text body, privacy controls, and rollback gates.
 - M5.1 implementation evidence: the service child passes 15/15 tests plus check/build, including consent, encrypted private email, hashed tokens, verification/moderation/replies, retention, SQLite, export, and backup/restore. The site child passes 35/35 content tests, 15/15 static-output tests in both disabled and enabled-fixture builds, Astro check, and full site Playwright 122/122. The publication/ops child passes assembler 7/7, assembled-publication Playwright 4/4, default publication build, `check:m51`, `test:m51`, shell syntax/ShellCheck/shfmt, and `package-runtime.sh` runtime probes. The tracked config remains `comments.enabled = false`; no deployment or credentials were used.
 - M5.1 WIP convergence evidence (2026-08-21): `433c16d` integrates the
@@ -93,21 +94,34 @@
   secret/data boundary without changing secret content or modes; the comments
   service is healthy, loopback-only, and has no published Docker port. Public
   comments remain disabled, and operational identifiers remain local-only.
+- M5.1 Unicode route compatibility evidence (2026-08-27):
+  `.trellis/tasks/archive/2026-08/08-27-m51-unicode-route-compatibility/` and
+  commit `bb7ee81` preserve readable Unicode public URLs while converting them
+  at the comments boundary to canonical uppercase UTF-8 percent-encoded post
+  routes. Focused unit, static-build, and browser checks passed locally without
+  enabling comments, contacting deployment, or using credentials.
 - Roadmap reconciliation evidence: the root `prd.md` now separates the
-  original SQL input baseline (93 posts / 7 pages) from the current authored
-  inventory (95 posts / 8 pages), classifies M0–M5, M6, M7, M5.1, and P0 with
-  their current states, and records the cwd-relative/`~/blog` Terminal path
-  grammar. The archived M6/M7 records and targeted journal entry contain only
-  neutral staging references; operational execution details remain local.
+  original SQL input baseline (93 posts / 7 pages) from the authored
+  workspace snapshot observed during M5 (95 posts / 8 pages), classifies
+  M0–M5, M6, M7, M5.1, and P0 with their current states, and records the
+  cwd-relative/`~/blog` Terminal path grammar. Mutable inventory is derived
+  from the explicitly selected workspace rather than fixed as a durable count.
+  The archived M6/M7 records and targeted journal entry contain only neutral
+  staging references; operational execution details remain local.
 
 ## Next Decision
 
-Production and the P1 roadmap reconciliation are complete. M5.1
-planning/design and implementation were previously committed in `41e0207` and
-are now reconciled with the WIP convergence commits `433c16d` and `6f60776`;
-the serial child tasks are archived. Historic counters remain private unless
-a separate task defines their schema and presentation. Production provisioning
-and route-catalog reconciliation have passed, but the static site remains
-disabled by default. The next decision is whether to provide SMTP/test inputs
-and resolve or explicitly accept the incompatible route gap before running
-controlled delivery/browser gates and approving public enablement.
+The approved P1 remediation parent is the current initiative. Its ordered
+deliverables are documentation convergence, deterministic validation,
+comments-contract extraction, X Core/canonical-route cleanup, adapter/package
+cleanup, and release/observability hardening; the active task is documentation
+convergence. After each child is checked and archived, Project Pulse must
+present the next dependency-ready child for a fresh guided decision rather than
+assuming serial authorization.
+
+Public comments enablement is intentionally outside that remediation sequence.
+M5.1 implementation, private provisioning, route-catalog reconciliation, and
+Unicode route compatibility have passed, while tracked configuration remains
+disabled. SMTP inputs, controlled public browser gates, and public enablement
+may proceed only through a separate owner-approved task. Historic counters
+remain private unless another task defines their schema and presentation.
