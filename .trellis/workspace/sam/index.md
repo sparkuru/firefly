@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 45
+- **Total Sessions**: 46
 - **Last Active**: 2026-08-27
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1003 | Active |
+| `journal-1.md` | ~1025 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 46 | 2026-08-27 | M5.1 Unicode comments compatibility | `bb7ee81`, `fa42d18` | `anti-entropy-loss-syndrome` |
 | 45 | 2026-08-27 | M5.1 route catalog reconciliation | `d6c0cd4` | `anti-entropy-loss-syndrome` |
 | 44 | 2026-08-26 | M5.1 production enablement gates | `d04584d` | `anti-entropy-loss-syndrome` |
 | 43 | 2026-08-26 | Keep Terminal help summaries readable | `1b4f8ed` | `anti-entropy-loss-syndrome` |

@@ -1001,3 +1001,25 @@ Implemented shared release-bound route catalog validation and reconciliation, br
 ### Status
 
 [OK] **Completed**
+
+
+## Session 46: M5.1 Unicode comments compatibility
+
+**Date**: 2026-08-27
+**Task**: M5.1 Unicode comments compatibility
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and verified Unicode-to-canonical comments route conversion while preserving readable site hrefs, isolated the enabled static/browser fixture, synchronized code specs, and created the repository-audit remediation task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bb7ee81` | (see git log) |
+| `fa42d18` | (see git log) |
+
+### Status
+
+[OK] **Completed**
