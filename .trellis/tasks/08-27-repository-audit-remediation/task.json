@@ -19,7 +19,8 @@
   "pr_url": null,
   "subtasks": [],
   "children": [
-    "08-28-repository-docs-convergence"
+    "08-28-repository-docs-convergence",
+    "08-28-deterministic-validation-gate"
   ],
   "parent": null,
   "relatedFiles": [],

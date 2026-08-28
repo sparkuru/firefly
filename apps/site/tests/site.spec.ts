@@ -150,12 +150,12 @@ test('post deep link uses the firefly default with a reader fragment', async ({ 
   await expect(outline).toBeVisible();
   await expect(outline.locator('ul')).toHaveCount(1);
   await expect(outline.locator('ol')).toHaveCount(0);
-  await expect(outline.locator('li')).toHaveCount(22);
+  await expect(outline.locator('li')).toHaveCount(21);
   await expect(outline.getByRole('link', { name: 'install' })).toHaveAttribute('href', '#install');
   await expect(outline.getByRole('link', { name: 'usage' })).toHaveAttribute('href', '#usage');
   await outline.getByRole('link', { name: 'usage' }).click();
   await expect(page).toHaveURL(/#usage$/u);
-  await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
+  await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 4, 4]);
   await expect(article.locator('.terminal-document-header')).toBeVisible();
   await expect(outline.locator('ul')).toHaveCSS('list-style-type', 'none');
 
@@ -193,14 +193,14 @@ test('firefly article remains complete and exposes one canonical route', async (
   await expect(article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'usage' })).toBeVisible();
-  await expect(article.getByRole('link', { name: 'https://github.com/mindfold-ai/Trellis.git' })).toHaveAttribute(
+  await expect(article.getByRole('link', { name: 'Trellis repository' })).toHaveAttribute(
     'href',
     'https://github.com/mindfold-ai/Trellis.git'
   );
   await expect(article.getByRole('table').first()).toBeVisible();
   await expect(article.getByText('flowchart TD')).toBeVisible();
   const outline = page.getByRole('navigation', { name: 'Document outline' });
-  await expect(outline.locator('li')).toHaveCount(22);
+  await expect(outline.locator('li')).toHaveCount(21);
   await expect(outline.locator('ul')).toHaveCount(1);
   const codeRegion = article.getByRole('region', { name: /^Code content:/u }).first();
   const tableRegion = article.getByRole('region', { name: /^Table content:/u }).first();
@@ -214,7 +214,7 @@ test('firefly article remains complete and exposes one canonical route', async (
   await expect(article.locator('.terminal-path')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expect(page.getByRole('textbox')).toHaveCount(0);
-  await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4]);
+  await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 4, 4]);
   await expectNoHorizontalOverflow(page);
 });
 

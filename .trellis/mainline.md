@@ -6,7 +6,7 @@
 - **Objective:** Reconcile Firefly's authoritative documentation and incrementally reduce validation, comments-contract, X Core, adapter, and release-quality risks without changing the working static-publication architecture.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-28 — The P1 repository-audit remediation parent was approved after the M5.1 Unicode route-compatibility task was completed and archived. Its documentation-convergence child is the active first deliverable; each later child still requires its own planned transition. M5.1 is implemented and privately provisioned but remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
+- **Owner decision:** 2026-08-28 — The P1 repository-audit remediation parent was approved after the M5.1 Unicode route-compatibility task was completed and archived. Documentation convergence is complete and archived; the deterministic-validation child is the current implementation item, and each later child still requires its own planned transition. M5.1 is implemented and privately provisioned but remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 
@@ -28,7 +28,7 @@
 | 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The service, static consumer, publication boundary, private provisioning, release-bound route catalog, and Unicode canonical-route compatibility are implemented and verified. Tracked configuration remains disabled by default. SMTP delivery, controlled public browser validation, and public enablement remain separate owner-authorized gates; the main site must not become SSR or directly read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
-| 10 | `.trellis/tasks/08-27-repository-audit-remediation/` — P1 repository audit remediation | active | The Unicode compatibility prerequisite is archived. `.trellis/tasks/08-28-repository-docs-convergence/` is the in-progress first child; deterministic validation, comments-contract extraction, X Core/route cleanup, adapter cleanup, and release/observability hardening remain separately verifiable follow-up children with the dependencies recorded in the parent PRD. |
+| 10 | `.trellis/tasks/08-27-repository-audit-remediation/` — P1 repository audit remediation | active | The Unicode compatibility prerequisite, documentation-convergence child, and deterministic-validation child are archived. Comments-contract extraction, X Core/route cleanup, adapter cleanup, and release/observability hardening remain separately verifiable follow-up children with the dependencies recorded in the parent PRD. |
 
 ## Evidence
 
@@ -100,6 +100,20 @@
   at the comments boundary to canonical uppercase UTF-8 percent-encoded post
   routes. Focused unit, static-build, and browser checks passed locally without
   enabling comments, contacting deployment, or using credentials.
+- Documentation convergence evidence (2026-08-28):
+  `.trellis/tasks/archive/2026-08/08-28-repository-docs-convergence/` and
+  commit `6edc880` reconcile the root PRD, mainline, and durable frontend
+  specs. Historical inventory evidence, default Presentation behavior,
+  repository-versus-deployment publication ownership, and audited remediation
+  gaps are now explicitly separated.
+- Deterministic validation evidence (2026-08-28):
+  `.trellis/tasks/archive/2026-08/08-28-deterministic-validation-gate/` and
+  the complete `./verify.sh` fixture run passed all package checks/tests/builds,
+  site Playwright 130/130, NERV Playwright 8/8, and assembled-publication
+  Playwright 4/4 with the tracked fixture, Playwright Noble image, and host IPC.
+  The gate preserves package-local failure reports, keeps the owner-workspace
+  build separate, and leaves comments disabled; the site build emitted only its
+  existing CSS optimizer notices for `::highlight` selectors.
 - Roadmap reconciliation evidence: the root `prd.md` now separates the
   original SQL input baseline (93 posts / 7 pages) from the authored
   workspace snapshot observed during M5 (95 posts / 8 pages), classifies
@@ -114,10 +128,10 @@
 The approved P1 remediation parent is the current initiative. Its ordered
 deliverables are documentation convergence, deterministic validation,
 comments-contract extraction, X Core/canonical-route cleanup, adapter/package
-cleanup, and release/observability hardening; the active task is documentation
-convergence. After each child is checked and archived, Project Pulse must
-present the next dependency-ready child for a fresh guided decision rather than
-assuming serial authorization.
+cleanup, and release/observability hardening; documentation convergence and
+deterministic validation are archived. After each child is checked and archived,
+Project Pulse must present the next dependency-ready child for a fresh guided
+decision rather than assuming serial authorization.
 
 Public comments enablement is intentionally outside that remediation sequence.
 M5.1 implementation, private provisioning, route-catalog reconciliation, and

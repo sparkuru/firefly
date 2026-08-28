@@ -43,6 +43,39 @@ Both `./sam` and `./dev.sh` load `config.dev` when it exists. Explicit
 environment variables take precedence, and a clone without `config.dev` keeps
 the repository `content/` default.
 
+<p align = "center" style="font-size: 26px;" > <strong> Deterministic validation </strong> </p>
+
+After the M5.1 package dependencies are installed, run the complete repository
+fixture gate:
+
+~~~sh
+./sam npm run install:m51
+./verify.sh
+~~~
+
+`verify.sh` selects the tracked `content/` root before `sam` reads `config.dev`.
+It then runs `check:m51`, `test:m51`, `build:m51`, the main-site Playwright
+suite, the NERV Playwright suite, and the assembled-publication Playwright suite
+in that order. Browser runs use
+`mcr.microsoft.com/playwright:v1.62.0-noble` and `SAM_IPC=host` by default;
+missing Docker, images, browser binaries, or package dependencies fail with
+the original command and diagnostic. Reports, screenshots, and traces remain
+in each package's ignored output directories, and no phase is silently skipped.
+
+For a phase-level diagnostic that still uses the container boundary, select the
+repository root explicitly:
+
+~~~sh
+FIREFLY_CONTENT_ROOT="$PWD/content" \
+  SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+  ./sam npm run verify:m51
+~~~
+
+`verify:m51` is valid only through `./sam`; direct host npm is not validation
+evidence. It does not install dependencies or run the host release probe.
+`package-runtime.sh` remains a separate host-side probe for the assembled
+runtime after the verification gate when that evidence is required.
+
 The default clone path is:
 
 ~~~sh

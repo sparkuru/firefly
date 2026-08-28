@@ -45,6 +45,8 @@ are not validation contracts.
 ./sam npm run check:m4
 ./sam npm run test:m4
 ./sam npm run build:m4
+./sam npm run install:m51
+./verify.sh
 ./package-runtime.sh
 ```
 
@@ -52,6 +54,25 @@ A successful build is necessary but not sufficient. For main-site work, inspect
 the exact emitted route set, draft absence, and relevant content-invariant error
 paths. For isolation work, check/build all affected packages and the consumer,
 then scan for cross-imports.
+
+`verify.sh` is the complete repository-fixture gate. It fixes the tracked
+`content/` root before `sam` reads `config.dev`, defaults to
+`mcr.microsoft.com/playwright:v1.62.0-noble` with `SAM_IPC=host`, and invokes
+`verify:m51` inside the wrapper. The inner command runs, in order,
+`check:m51`, `test:m51`, `build:m51`, site Playwright, NERV Playwright, and
+assembled-publication Playwright. Each phase short-circuits on failure; missing
+dependencies or browser infrastructure remain failures with their exact
+diagnostics, and existing reports/screenshots/traces are retained. The command
+does not install dependencies or invoke `package-runtime.sh`.
+
+The explicit owner-workspace path remains separate:
+
+```bash
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm --prefix apps/site run build:workspace
+```
+
+Owner content is not validation input for fixture-specific route or browser
+assertions. Direct host npm invocations are not repository validation evidence.
 
 ## Browser Validation
 
@@ -110,6 +131,11 @@ package suite from the single profile in `index.md`.
   FIREFLY_CONTENT_ROOT="$CONTENT_ROOT" ./sam npm --prefix apps/site run check
   ```
 
+- Negative Astro builds write their temporary invalid Markdown below the
+  repository fixture and pass that same container-visible `/app/content` root
+  to the spawned build. They retain same-filesystem output and `finally`
+  cleanup; an external `config.dev` root cannot redirect the child process.
+
 - Posts consume only the fresh ordinary-file materialized stage; pages use their
   repository loader. Both use the shared strict schema.
 - Routes consume the guest canonical projection; draft/access/layout/path checks are not
@@ -126,6 +152,12 @@ package suite from the single profile in `index.md`.
   `#terminal-reader` fragment; directory indexes remain script-free.
   Semantic/About/lab/404/directory routes link semantic CSS; Terminal
   home/documents contain Terminal styles.
+- Browser fixture assertions must follow rendered output, not raw Markdown
+  syntax or frontmatter. The Terminal template exposes normalized visible body
+  lines (heading markers and metadata are not source lines), while the article
+  heading sequence is measured from the emitted DOM. Use a stable repeated body
+  word for browser `grep` checks and retain raw-line preservation coverage in
+  Terminal unit tests.
 - The exact home script predicate returns `false` only for Astro's generated
   `TerminalHome...js` filename after POSIX/Windows separator normalization and
   returns Vite's `undefined` default for every other or non-string input.

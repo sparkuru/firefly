@@ -63,12 +63,20 @@ cp config.dev.example config.dev
 ./sam npm run test:m4
 ./sam npm run build:m4
 ./sam npm run publication:m4
+./sam npm run install:m51
+./verify.sh
+FIREFLY_CONTENT_ROOT="$PWD/content" \
+  SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+  ./sam npm run verify:m51
 ./package-runtime.sh
 ```
 
 Browser signatures are recorded in the single Playwright profile in `index.md`.
 Root npm scripts are delegators and are valid only when already invoked inside
-`./sam` with the appropriate image.
+`./sam` with the appropriate image. `verify.sh` is the host-facing complete
+repository-fixture gate; it pins the tracked root before `sam` loads the
+optional `config.dev`. Its inner `verify:m51` form is for phase-level diagnosis
+and is valid only through `./sam`.
 
 Docker Compose configuration syntax is a host Docker boundary, not a wrapped
 Node command. Use `docker compose config --quiet` to validate Compose files;
@@ -87,6 +95,7 @@ syntax check.
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | `config.dev` | Optional ignored shell defaults file loaded by `sam` and `dev.sh`; copy `config.dev.example` and edit it for the current machine. Explicit environment variables take precedence. |
 | `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; it may be set in `config.dev` and otherwise defaults to `<repo>/content`. `sam` resolves and passes it into the container. |
+| `verify.sh` / `verify:m51` | `verify.sh` fixes the tracked `<repo>/content` root before the wrapper reads `config.dev`, defaults to the Playwright Noble image and `SAM_IPC=host`, and invokes the inner command. `verify:m51` uses `/app/content` for each phase and runs check → test → build → site → NERV → publication, short-circuiting on failure; direct host npm is not evidence. |
 | `FIREFLY_SITE_CONFIG_PATH` | Optional repository-relative `.toml` override for contained build/test projections. `sam` requires an existing readable file whose real path stays inside the repository, then passes the same relative path into the container; the site loader additionally rejects a symlinked file and unsafe segments. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
@@ -121,6 +130,8 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
 | browser image/server/fixture cannot start | record exact unavailable error; never report pass |
 | browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
+| complete fixture gate is invoked without installed dependencies | fail at the exact missing phase; do not install or mutate lockfiles implicitly |
+| `verify.sh` receives an unexpected argument or incomplete tracked fixture | print usage/error and fail before Docker |
 | site `dist/` is missing or stale before Playwright | run the complete site build/static-output gate; do not make `start:e2e` mutate the artifact under test |
 | manifest validation fails | stop before every product build; do not run a direct NERV/Docker build shortcut |
 | publication candidate validation/promotion fails | preserve prior `artifacts/` and `dist/`, clean only current contained candidates, and report the exact phase |
@@ -175,9 +186,10 @@ and failure artifacts.
 When `sam`, `dev.sh`, or runtime packaging changes:
 
 ```bash
-bash -n sam dev.sh package-runtime.sh
-shellcheck sam dev.sh package-runtime.sh
-shfmt -d sam dev.sh package-runtime.sh
+bash -n sam dev.sh package-runtime.sh verify.sh
+shellcheck sam dev.sh package-runtime.sh verify.sh
+shfmt -d sam dev.sh package-runtime.sh verify.sh
+./verify.sh --help
 ./sam node --version
 # Fast visual review; no M5 build.
 WEB_HOST_PORT=4322 ./dev.sh
@@ -195,7 +207,12 @@ host binding (default `0.0.0.0`), closed port after teardown, and zero matching
 containers. The Astro dev lock must be absent after teardown and a subsequent
 start with a pre-existing stale lock must reach `astro ... ready` without
 passing `--force`.
-For workspace changes, also prove chained file/directory mounts are read-only,
+For the deterministic gate, run `./verify.sh` after installation and retain any
+package-local Playwright reports on failure. The negative Astro build fixtures
+must write and spawn their child build with the same container-visible
+`/app/content` root; the tracked fixture gate remains separate from the
+explicit owner-workspace `build:workspace` command. For workspace changes, also
+prove chained file/directory mounts are read-only,
 broad/broken/FIFO inputs fail, the generated stage has zero symlinks, and host
 paths/private sentinels do not enter output. For packaging, compare the manifest,
 release, and image inventories exactly before route/header probes.

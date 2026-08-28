@@ -232,13 +232,13 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
   const search = page.getByRole('searchbox', { name: /Search document backward/u });
   await expect(search).toHaveAttribute('placeholder', 'Search backward…');
   await expect(page.locator('[data-reader-search-prefix]')).toHaveText('?');
-  await search.fill('trellis');
+  await search.fill('the');
   await search.press('Enter');
 
   const status = page.locator('[data-reader-search-status]');
   const statusSection = page.locator('[data-terminal-reader-status]');
   await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
-  await expect(status).toHaveText(/^\d+\/\d+ matches for “trellis”\.$/u);
+  await expect(status).toHaveText(/^\d+\/\d+ matches for “the”\.$/u);
   const state = await page.evaluate(() => {
     const all = CSS.highlights.get('terminal-reader-search');
     const active = CSS.highlights.get('terminal-reader-search-active');
@@ -258,19 +258,19 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
     };
   });
   expect(state.ranges.length).toBeGreaterThan(1);
-  expect(state.ranges.every(({ text }) => text.toLocaleLowerCase() === 'trellis')).toBe(true);
+  expect(state.ranges.every(({ text }) => text.toLocaleLowerCase() === 'the')).toBe(true);
   const rangesByUnit = state.ranges.reduce<Record<string, number>>((counts, { unit }) => ({
     ...counts,
     [unit]: (counts[unit] ?? 0) + 1
   }), {});
   expect(Object.values(rangesByUnit).some((count) => count > 1)).toBe(true);
-  expect(state.activeText.toLocaleLowerCase()).toBe('trellis');
+  expect(state.activeText.toLocaleLowerCase()).toBe('the');
   const initialStatus = state.status;
 
   await region.press('n');
   await expect(status).not.toHaveText(initialStatus);
   const nextActiveText = await page.evaluate(() => [...(CSS.highlights.get('terminal-reader-search-active') ?? [])][0]?.toString() ?? '');
-  expect(nextActiveText.toLocaleLowerCase()).toBe('trellis');
+  expect(nextActiveText.toLocaleLowerCase()).toBe('the');
 
   await region.press('N');
   await expect(status).toHaveText(initialStatus);
@@ -282,7 +282,7 @@ test('reader keeps committed search status visible while scrolling and clears it
   await region.focus();
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
-  await search.fill('trellis');
+  await search.fill('the');
   await search.press('Enter');
 
   const statusSection = page.locator('[data-terminal-reader-status]');
@@ -327,7 +327,7 @@ test('reader keeps committed search status visible while scrolling and clears it
 
   await page.keyboard.press('/');
   const cancelledSearch = page.getByRole('searchbox', { name: /Search document forward/u });
-  await cancelledSearch.fill('trellis');
+  await cancelledSearch.fill('the');
   await cancelledSearch.press('Enter');
   await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
   await page.keyboard.press('/');
@@ -340,12 +340,12 @@ test('reader search cycles keep transient prompt chrome separate in both directi
     {
       path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
       regionName: /Read-only Vim reader for llm-workflow-with-trellis/u,
-      query: 'trellis'
+      query: 'the'
     },
     {
       path: '/pages/about/#terminal-reader',
       regionName: /Read-only Vim reader for About this foundation/u,
-      query: 'foundation'
+      query: 'the'
     }
   ];
 
@@ -618,7 +618,7 @@ test('Terminal reader keeps committed search status visible while scrolling', as
 test('reader preserves links, local-scroll regions, modifier keys, IME, and manual selection', async ({ page }) => {
   const region = await openReader(page);
   const initialPosition = await page.locator('[data-reader-position]').textContent();
-  const link = page.getByRole('link', { name: 'https://github.com/mindfold-ai/Trellis.git' });
+  const link = page.getByRole('link', { name: 'Trellis repository' });
   await link.focus();
   await page.keyboard.press('j');
   await expect(link).toBeFocused();

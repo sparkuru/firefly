@@ -23,6 +23,7 @@ FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
 ./sam npm run check:m4
 ./sam npm run test:m4
 ./sam npm run build:m4
+./verify.sh
 ./package-runtime.sh
 
 cp config.dev.example config.dev
@@ -192,6 +193,11 @@ startTerminalReader(root: HTMLElement): void
   `sam` and `dev.sh` load the ignored `config.dev` shell defaults file when it
   exists; explicit environment variables take precedence. When configured, the
   value must name an absolute readable blog root with the same shape.
+- `verify.sh` is the deterministic repository-fixture entry point. It fixes the
+  tracked `<repo>/content` root before `sam` loads `config.dev`; its inner
+  `verify:m51` command uses `/app/content` for every phase and runs the complete
+  non-browser and browser gate. The explicit owner-workspace `build:workspace`
+  command remains an authoring check and is not fixture evidence.
 - `sam` mounts the resolved root and every recursively discovered symlink hop and
   final target below only the `posts/` and `pages/` source trees at the same
   absolute container path, read-only. It rejects `/`, a broad system/home
@@ -811,9 +817,10 @@ return successResult(walked.paths.map(render));
   routed under `/posts/characters/`, and published without a host path.
 - Good: a test-only custom command with alias is visible in active-registry help,
   executes through either token, and completes without changing default logic.
-- Good: `help` renders sparse semantic groups and `grep -nF "# "` returns
-  multiple canonical source lines with bounded highlight ranges; a missing
-  pattern produces an explicit no-result state.
+- Good: `help` renders sparse semantic groups and a fixed-string `grep` against
+  a document with repeated visible body text returns multiple canonical lines
+  with bounded highlight ranges; a missing pattern produces an explicit
+  no-result state.
 - Good: `ls posts` renders `characters/` and the two root-level documents in one
   flat directory-first list, aligns the filename/date/title fields, keeps each
   document row a native canonical link, and collapses only the title column on a
