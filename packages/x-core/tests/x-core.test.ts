@@ -7,6 +7,7 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
+import * as xCore from '../src/index.js';
 import {
   createXCorePlugins,
   DEFAULT_PRESENTATION_ID,
@@ -19,6 +20,13 @@ import {
   type NormalizedDocumentInput,
   type PresentationAdapter
 } from '../src/index.js';
+
+test('the X Core entrypoint does not export a site, publication, or service host', () => {
+  assert.equal(Object.hasOwn(xCore, 'FireflyPluginRegistry'), false);
+  assert.equal(Object.hasOwn(xCore, 'PluginRegistry'), false);
+  assert.equal(Object.hasOwn(xCore, 'publicationContributions'), false);
+  assert.equal(Object.hasOwn(xCore, 'servicePlugins'), false);
+});
 
 const semanticContext: DocumentContext = {
   documentId: 'posts/fixture.md',

@@ -7,8 +7,10 @@ public runtime dependency.
 The manifest is the ownership index. Its adapters own the post-only public
 section and form, build-time sanitized export consumer, publication metadata
 handoff, private HTTP/storage/moderation service, and private notification
-delivery. Firefly core only provides the generic plugin registry and lifecycle
-hooks.
+delivery. The site owns the static registry that invokes its site adapter;
+publication and service adapters remain separate package-owned entrypoints.
+X Core provides the document/Presentation pipeline, not a generic plugin
+lifecycle host.
 
 `public.mjs` and `public.d.mts` are the repository-local public/build contract.
 They own the sanitized `comments.public.v1` model, canonical route facade,

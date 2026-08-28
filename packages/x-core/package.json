@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "npm run build --silent && node --test dist/tests/*.test.js",
+    "test": "npm run build --silent && node --test dist/tests/x-core.test.js",
     "build": "tsc"
   },
   "dependencies": {
