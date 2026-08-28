@@ -18,8 +18,11 @@ content/
 └── pages/**/*.md                 # Default nested pages collection
 plugins/comments/
 ├── plugin.json                   # Internal Firefly capability manifest
-├── config.mjs                    # Shared comments namespace decoder
-├── config.d.mts                  # Type declaration for service consumers
+├── config.mjs                    # Comments configuration namespace owner
+├── config.d.mts                  # Configuration declaration for service consumers
+├── public.mjs                    # Pure sanitized public/build contract
+├── public.d.mts                  # Shared public model and helper declarations
+├── tests/public.test.mjs         # Package-independent public contract tests
 ├── compose.yml                   # Plugin-local runtime template
 └── README.md                     # Ownership and private/public boundary
 packages/x-core/
@@ -164,10 +167,9 @@ routes before their milestone supplies real semantics.
 - The target boundary for `tooling/assemble-publication/` is the validator plus
   static, versioned publication contracts. It invokes already validated
   repository-controlled build commands, copies safe trees, validates a fresh
-  candidate, and promotes `artifacts/` plus `dist/` together. The current
-  comments publication bridge imports `apps/site/src/lib/comments.mjs` by
-  repository source path; that is an audited temporary extraction gap, not an
-  approved assembler-to-site dependency or a pattern for new capabilities.
+  candidate, and promotes `artifacts/` plus `dist/` together. Its comments
+  publication bridge consumes `plugins/comments/public.mjs` directly and has
+  no dependency on site source.
 - Package-local `dist/` paths are build inputs, never the public release. Root
   `artifacts/` and `dist/` are generated ignored outputs, never authored source.
 - The assembler never rewrites Experiment HTML, combines bundles, follows

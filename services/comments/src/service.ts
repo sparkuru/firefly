@@ -38,8 +38,7 @@ import {
   assertKnownPostPath,
   assertRequestSize,
   comparePublicComments,
-  decodePublicExport,
-  digestForExport,
+  createPublicExport,
   normalizeSubmission,
   toRouteCatalog
 } from './validation.js';
@@ -404,8 +403,7 @@ export class CommentService {
       tombstoneEpoch: this.repository.getTombstoneEpoch(),
       comments
     };
-    result.digest = digestForExport(result);
-    return decodePublicExport(result, this.routeCatalog);
+    return createPublicExport(result, this.routeCatalog);
   }
 
   runRetention(): number {

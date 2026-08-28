@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { commentsPostPathFromSiteHref } from '../../../plugins/comments/config.mjs';
+import { commentsPostPathFromSiteHref } from '../../../plugins/comments/public.mjs';
 
 const repositoryRoot = path.resolve(import.meta.dirname, '../../..');
 const fixtureRoot = path.join(repositoryRoot, '.private/m51-unicode-comments');

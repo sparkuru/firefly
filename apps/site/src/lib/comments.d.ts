@@ -1,24 +1,8 @@
 import type { CanonicalDocument } from './content';
 import type { CommentsPublicConfig } from '../../../../plugins/comments/config.mjs';
+import type { PublicCommentsExport } from '../../../../plugins/comments/public.mjs';
 
-export interface PublicComment {
-  readonly id: string;
-  readonly postPath: string;
-  readonly parentId: string | null;
-  readonly displayName: string;
-  readonly homepage?: string;
-  readonly body: string;
-  readonly createdAt: string;
-}
-
-export interface PublicCommentsExport {
-  readonly schemaVersion: 1;
-  readonly sourceRevision: string;
-  readonly generatedAt: string;
-  readonly tombstoneEpoch: number;
-  readonly digest?: string;
-  readonly comments: readonly PublicComment[];
-}
+export type { PublicComment, PublicCommentsExport } from '../../../../plugins/comments/public.mjs';
 
 export type CommentsSiteConfig = CommentsPublicConfig;
 

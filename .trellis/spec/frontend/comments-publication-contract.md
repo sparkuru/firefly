@@ -13,6 +13,12 @@ the approved sanitized read model.
 The first implementation does not import historical comments, expose a public
 read API, deploy a relay, or turn the static site into SSR.
 
+The repository-local semantic owner is `plugins/comments/public.mjs` with its
+`public.d.mts` declaration. It is pure build-time code and has no filesystem,
+environment, site, assembler, service, storage, SMTP, or private-configuration
+dependency. `plugins/comments/config.mjs` remains the configuration namespace
+owner and is used only as the route implementation behind the public facade.
+
 ### 2. Signatures
 
 ~~~ts
@@ -28,7 +34,8 @@ createPublicExport(
 
 decodePublicCommentsExport(
   value: unknown,
-  source?: string
+  source?: string,
+  options?: { routeCatalog?: RouteCatalogInput }
 ): PublicCommentsExport
 
 loadCommentsForPosts(
@@ -114,7 +121,31 @@ The only public service artifact is a local JSON envelope:
 The comment allowlist is exactly `id`, `postPath`, `parentId`,
 `displayName`, optional `homepage`, `body`, and `createdAt`.
 Records sort by post path, creation time, then opaque ID. The digest covers
-the normalized envelope without the digest field.
+the normalized envelope without the digest field. `public.mjs` is the single
+owner of these semantics and returns frozen public records; it accepts the
+legacy `sha256:` digest input spelling for compatibility while serializing a
+bare digest. The decoder accepts only plain, dense data arrays and exact plain
+object fields, so sparse or decorated input cannot execute consumer-provided
+array methods.
+
+The site, service, and publication code are adapters rather than alternate
+contract owners. The site keeps file/environment resolution, disabled behavior,
+and readable-href grouping. The private service selects approved rows and
+keeps submission, moderation, storage, and HTTP rules, translating generic
+contract failures to `ValidationError`/`ExportValidationError`. The publication
+assembler keeps emitted-surface, contained-file, route-to-output,
+digest-presence, privacy, and metadata checks while loading the repository
+contract directly.
+
+Build/package resolution is part of this boundary. The site adapter derives the
+repository root from its known `apps/site` module location (including a
+pre-rendered bundle path) and never probes `process.cwd()` or parent candidates.
+The service's compiled loader resolves `plugins/comments/public.mjs` relative to
+its emitted module and the service image copies that file into the matching
+repository-local path. The assembler builds an emitted map by converting raw
+`posts/**/index.html` hrefs through `commentsPostPathFromSiteHref()` before
+checking encoded export routes; direct string concatenation does not handle
+Unicode routes correctly.
 
 #### Site and release handoff
 
@@ -301,8 +332,9 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
   existing write-origin configuration.
 - The service always writes a private NDJSON outbox before a notification can
   be delivered. Queued messages have a stable `n_<32 lowercase hex>` id.
-- The shared plugin decoder is the single source of truth for the public
-  projection and private runtime namespace. Runtime outbox paths may be
+- The shared public contract is the single source of truth for the public
+  projection. `config.mjs` remains the single source of truth for the private
+  runtime namespace. Runtime outbox paths may be
   absolute or relative, but must be non-empty, slash-separated paths with no
   backslashes, traversal segments, empty interior segments, controls, or
   whitespace. A single leading slash is allowed for the mounted private
@@ -376,6 +408,10 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
   rejection, and traversal/empty-segment rejection for runtime paths.
 - Publication: plugin handoff, exact `comments.public.v1`, privacy scanner,
   digest, and tombstone rollback protection.
+- Shared contract: exact allowlist, frozen output and empty export, Unicode
+  route conversion, normalization, parent relationships, deterministic order,
+  digest compatibility, and private-field rejection under
+  `plugins/comments/tests/`.
 - Full checks remain sequential when tests mutate `.generated-content`; running
   content negative builds concurrently with Astro production builds is invalid
   evidence because both use the same staging directory.

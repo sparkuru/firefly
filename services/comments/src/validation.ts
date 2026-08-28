@@ -1,11 +1,8 @@
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   DEFAULT_CONSENT_VERSION,
-  MAX_BODY_BYTES,
-  MAX_DISPLAY_NAME_CODE_POINTS,
   MAX_REQUEST_BYTES,
   type NormalizedSubmission,
   type PublicComment,
@@ -16,13 +13,13 @@ import {
 } from './types.js';
 import { ExportValidationError, ValidationError } from './errors.js';
 
-type CommentsConfigModule = typeof import('../../../plugins/comments/config.mjs');
-const { isCanonicalCommentsPostRoute: isCanonicalRoute } = await import(
-  pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../plugins/comments/config.mjs')).href
-) as CommentsConfigModule;
+type CommentsPublicModule = typeof import('../../../plugins/comments/public.mjs');
+const publicContract = await import(
+  pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../plugins/comments/public.mjs')).href
+) as CommentsPublicModule;
 
 export function isCanonicalCommentsPostRoute(value: unknown): value is string {
-  return isCanonicalRoute(value);
+  return publicContract.isCanonicalCommentsPostRoute(value);
 }
 
 const SUBMISSION_KEYS = new Set([
@@ -37,96 +34,54 @@ const SUBMISSION_KEYS = new Set([
   'consent',
   'honeypot'
 ]);
-const PUBLIC_EXPORT_KEYS = new Set([
-  'schemaVersion',
-  'sourceRevision',
-  'generatedAt',
-  'tombstoneEpoch',
-  'comments',
-  'digest'
-]);
-const PUBLIC_COMMENT_KEYS = new Set([
-  'id',
-  'postPath',
-  'parentId',
-  'displayName',
-  'homepage',
-  'body',
-  'createdAt'
-]);
 const CONTROL_CHARACTER = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
-const PUBLIC_ID = /^c_[A-Za-z0-9_-]{3,128}$/u;
-const SOURCE_REVISION = /^[A-Za-z0-9._~-]{1,256}$/u;
+function contractMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function translateValidation<T>(operation: () => T): T {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof ValidationError) throw error;
+    throw new ValidationError(contractMessage(error));
+  }
+}
 
 export function createRouteCatalog(postPaths: Iterable<string>): RouteCatalog {
-  const normalized = new Set<string>();
-  for (const path of postPaths) {
-    normalized.add(normalizePostPath(path));
-  }
-  return { postPaths: normalized };
+  return translateValidation(() => publicContract.createRouteCatalog(postPaths));
 }
 
 export function toRouteCatalog(input: RouteCatalogInput): RouteCatalog {
-  return isRouteCatalog(input) ? input : createRouteCatalog(input);
+  return translateValidation(() => publicContract.toRouteCatalog(input));
 }
 
 export function normalizePostPath(value: unknown): string {
-  if (typeof value !== 'string') throw new ValidationError('postPath must be a string.');
-  if (value.length > 512 || !isCanonicalCommentsPostRoute(value)) {
-    throw new ValidationError('postPath must be a canonical /posts/.../ route with safe UTF-8 encoding.');
-  }
-  return value;
+  return translateValidation(() => publicContract.normalizePostPath(value));
 }
 
-export function assertKnownPostPath(path: string, catalog: RouteCatalog): void {
-  if (!catalog.postPaths.has(path)) {
-    throw new ValidationError('postPath is not in the current public post catalog.', 'stale_post_path');
+export function assertKnownPostPath(postPath: string, catalog: RouteCatalog): void {
+  try {
+    publicContract.assertKnownPostPath(postPath, catalog);
+  } catch (error) {
+    const message = contractMessage(error);
+    if (message.includes('not in the current public post catalog')) {
+      throw new ValidationError('postPath is not in the current public post catalog.', 'stale_post_path');
+    }
+    throw new ValidationError(message);
   }
 }
 
 export function normalizeDisplayName(value: unknown): string {
-  const name = requireString(value, 'displayName').normalize('NFC').trim();
-  if (name.length === 0 || [...name].length > MAX_DISPLAY_NAME_CODE_POINTS) {
-    throw new ValidationError('displayName must contain 1–80 Unicode code points.');
-  }
-  if (CONTROL_CHARACTER.test(name) || /[\r\n\u2028\u2029]/u.test(name)) {
-    throw new ValidationError('displayName contains a control character or line break.');
-  }
-  return name;
+  return translateValidation(() => publicContract.normalizeDisplayName(value));
 }
 
 export function normalizeBody(value: unknown): string {
-  const body = requireString(value, 'body').replace(/\r\n?/gu, '\n').normalize('NFC').trim();
-  if (body.length === 0 || Buffer.byteLength(body, 'utf8') > MAX_BODY_BYTES) {
-    throw new ValidationError('body must contain 1–8192 UTF-8 bytes.');
-  }
-  if (CONTROL_CHARACTER.test(body)) {
-    throw new ValidationError('body contains a disallowed control character.');
-  }
-  if (/[<>]/u.test(body) || /(?:https?:\/\/|www\.)/iu.test(body) || /!?\[[^\]]*\]\([^)]*\)/u.test(body)) {
-    throw new ValidationError('body accepts plain text only; links, markup, and images are not allowed.');
-  }
-  return body;
+  return translateValidation(() => publicContract.normalizeBody(value));
 }
 
 export function normalizeHomepage(value: unknown): string | null {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-  const raw = requireString(value, 'homepage').trim();
-  if (raw.length > 2048 || CONTROL_CHARACTER.test(raw)) {
-    throw new ValidationError('homepage is too long or contains a control character.');
-  }
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new ValidationError('homepage must be an absolute HTTPS URL.');
-  }
-  if (url.protocol !== 'https:' || url.username || url.password || url.hash || !url.hostname) {
-    throw new ValidationError('homepage must be a credential-free HTTPS URL without a fragment.');
-  }
-  return url.toString();
+  return translateValidation(() => publicContract.normalizeHomepage(value));
 }
 
 export function normalizeEmail(value: unknown): string {
@@ -144,10 +99,7 @@ export function normalizeEmail(value: unknown): string {
 }
 
 export function normalizePublicId(value: unknown): string {
-  if (typeof value !== 'string' || !PUBLIC_ID.test(value)) {
-    throw new ValidationError('comment IDs must be opaque c_ identifiers.');
-  }
-  return value;
+  return translateValidation(() => publicContract.normalizePublicId(value));
 }
 
 export function normalizeConsentVersion(value: unknown, expected: string = DEFAULT_CONSENT_VERSION): string {
@@ -209,199 +161,53 @@ export function assertRequestSize(input: unknown): void {
 }
 
 export function decodePublicExport(input: unknown, catalogInput?: RouteCatalogInput): PublicExport {
-  const catalog = catalogInput ? toRouteCatalog(catalogInput) : undefined;
-  if (!isRecord(input)) {
-    throw new ExportValidationError('public export must be an object.');
+  try {
+    const options = catalogInput === undefined ? undefined : { routeCatalog: toRouteCatalog(catalogInput) };
+    return publicContract.decodePublicCommentsExport(input, 'comments.public.v1.json', options);
+  } catch (error) {
+    if (error instanceof ExportValidationError) throw error;
+    throw new ExportValidationError(contractMessage(error));
   }
-  const topLevelIssues = Object.keys(input).filter((key) => !PUBLIC_EXPORT_KEYS.has(key)).map((key) => `unknown export field: ${key}`);
-  if (topLevelIssues.length > 0) {
-    throw new ExportValidationError(topLevelIssues);
-  }
-  if (input.schemaVersion !== 1) {
-    throw new ExportValidationError('schemaVersion must be 1.');
-  }
-  const sourceRevision = requireExportString(input.sourceRevision, 'sourceRevision', SOURCE_REVISION);
-  const generatedAt = requireCanonicalDate(input.generatedAt, 'generatedAt');
-  const tombstoneEpoch = requireNonNegativeInteger(input.tombstoneEpoch, 'tombstoneEpoch');
-  if (!Array.isArray(input.comments)) {
-    throw new ExportValidationError('comments must be an array.');
-  }
-  const seen = new Set<string>();
-  const comments: PublicComment[] = input.comments.map((value, index) => {
-    try {
-      return decodePublicComment(value, catalog, seen);
-    } catch (error) {
-      if (error instanceof ExportValidationError) {
-        throw new ExportValidationError(`comments[${index}]: ${error.message}`);
-      }
-      throw error;
-    }
-  });
-  const byId = new Map(comments.map((comment) => [comment.id, comment]));
-  for (const comment of comments) {
-    if (!comment.parentId) {
-      continue;
-    }
-    const parent = byId.get(comment.parentId);
-    if (!parent) {
-      throw new ExportValidationError(`comment ${comment.id} references a missing parent.`);
-    }
-    if (parent.parentId !== null || parent.postPath !== comment.postPath) {
-      throw new ExportValidationError(`comment ${comment.id} has an invalid parent relationship.`);
-    }
-  }
-  const sorted = [...comments].sort(comparePublicComments);
-  const digest = input.digest === undefined ? undefined : requireExportString(input.digest, 'digest', /^[a-f0-9]{64}$/u);
-  const result: PublicExport = { schemaVersion: 1, sourceRevision, generatedAt, tombstoneEpoch, comments: sorted };
-  if (digest !== undefined) {
-    result.digest = digest;
-    if (digest !== digestForExport(result)) {
-      throw new ExportValidationError('digest does not match the export payload.');
-    }
-  }
-  return result;
 }
 
 export function validatePublicComment(value: unknown, catalogInput?: RouteCatalogInput, seen = new Set<string>()): PublicComment {
-  return decodePublicComment(value, catalogInput ? toRouteCatalog(catalogInput) : undefined, seen);
-}
-
-function decodePublicComment(value: unknown, catalog: RouteCatalog | undefined, seen: Set<string>): PublicComment {
-  if (!isRecord(value)) {
-    throw new ExportValidationError('comment must be an object.');
-  }
-  const unknown = Object.keys(value).filter((key) => !PUBLIC_COMMENT_KEYS.has(key));
-  if (unknown.length > 0) {
-    throw new ExportValidationError(`unknown comment field: ${unknown[0]}`);
-  }
-  let id: string;
   try {
-    id = normalizePublicId(value.id);
+    const options = catalogInput === undefined ? undefined : { routeCatalog: toRouteCatalog(catalogInput) };
+    return publicContract.validatePublicComment(value, options?.routeCatalog, seen);
   } catch (error) {
-    throw new ExportValidationError(error instanceof Error ? error.message : 'invalid comment ID.');
+    if (error instanceof ExportValidationError) throw error;
+    throw new ExportValidationError(contractMessage(error));
   }
-  if (seen.has(id)) {
-    throw new ExportValidationError(`duplicate comment ID: ${id}`);
-  }
-  seen.add(id);
-  const postPath = normalizeExportPath(value.postPath, catalog);
-  let parentId: string | null;
-  if (value.parentId === null) {
-    parentId = null;
-  } else {
-    try {
-      parentId = normalizePublicId(value.parentId);
-    } catch (error) {
-      throw new ExportValidationError(error instanceof Error ? error.message : 'invalid parent ID.');
-    }
-  }
-  const displayName = requireNfcExportText(value.displayName, 'displayName', MAX_DISPLAY_NAME_CODE_POINTS, false);
-  const body = requireNfcExportText(value.body, 'body', MAX_BODY_BYTES, true);
-  let homepage: string | undefined;
-  if (value.homepage !== undefined) {
-    try {
-      const normalizedHomepage = normalizeHomepage(value.homepage);
-      if (normalizedHomepage === null || normalizedHomepage !== value.homepage) {
-        throw new ExportValidationError('homepage must be canonical when present.');
-      }
-      homepage = normalizedHomepage;
-    } catch (error) {
-      if (error instanceof ExportValidationError) {
-        throw error;
-      }
-      throw new ExportValidationError(error instanceof Error ? error.message : 'homepage is invalid.');
-    }
-  }
-  const createdAt = requireCanonicalDate(value.createdAt, 'createdAt');
-  return { id, postPath, parentId, displayName, ...(homepage ? { homepage } : {}), body, createdAt };
 }
 
 export function comparePublicComments(left: PublicComment, right: PublicComment): number {
-  return compareStableString(left.postPath, right.postPath) || compareStableString(left.createdAt, right.createdAt) || compareStableString(left.id, right.id);
+  return publicContract.comparePublicComments(left, right);
 }
 
 export function digestForExport(value: Pick<PublicExport, 'schemaVersion' | 'sourceRevision' | 'generatedAt' | 'tombstoneEpoch'> & { comments: readonly PublicComment[] }): string {
-  const payload = {
-    schemaVersion: value.schemaVersion,
-    sourceRevision: value.sourceRevision,
-    generatedAt: value.generatedAt,
-    tombstoneEpoch: value.tombstoneEpoch,
-    comments: [...value.comments].sort(comparePublicComments)
-  };
-  return createHashHex(JSON.stringify(payload));
+  return publicContract.digestForExport(value);
 }
 
 export function serializePublicExport(value: PublicExport): string {
-  const decoded = decodePublicExport(value);
-  const digest = decoded.digest ?? digestForExport(decoded);
-  return `${JSON.stringify({ ...decoded, digest }, null, 2)}\n`;
+  try {
+    return publicContract.serializePublicExport(value);
+  } catch (error) {
+    if (error instanceof ExportValidationError) throw error;
+    throw new ExportValidationError(contractMessage(error));
+  }
 }
 
 export function createPublicExport(
   value: Omit<PublicExport, 'digest'>,
   catalogInput?: RouteCatalogInput
 ): PublicExport {
-  const decoded = decodePublicExport(value, catalogInput);
-  decoded.digest = digestForExport(decoded);
-  return decoded;
-}
-
-function normalizeExportPath(value: unknown, catalog?: RouteCatalog): string {
   try {
-    const path = normalizePostPath(value);
-    if (catalog) {
-      assertKnownPostPath(path, catalog);
-    }
-    return path;
+    const options = catalogInput === undefined ? undefined : { routeCatalog: toRouteCatalog(catalogInput) };
+    return publicContract.createPublicExport(value, options?.routeCatalog);
   } catch (error) {
-    throw new ExportValidationError(error instanceof Error ? error.message : 'invalid postPath');
+    if (error instanceof ExportValidationError) throw error;
+    throw new ExportValidationError(contractMessage(error));
   }
-}
-
-function requireNfcExportText(value: unknown, field: string, max: number, bytes: boolean): string {
-  if (typeof value !== 'string' || value !== value.normalize('NFC')) {
-    throw new ExportValidationError(`${field} must be normalized NFC text.`);
-  }
-  try {
-    const normalized = field === 'body' ? normalizeBody(value) : normalizeDisplayName(value);
-    if (normalized !== value) {
-      throw new ExportValidationError(`${field} must already be normalized.`);
-    }
-    if (bytes ? Buffer.byteLength(normalized, 'utf8') > max : [...normalized].length > max) {
-      throw new ExportValidationError(`${field} exceeds its limit.`);
-    }
-    return normalized;
-  } catch (error) {
-    if (error instanceof ExportValidationError) {
-      throw error;
-    }
-    throw new ExportValidationError(error instanceof Error ? error.message : `${field} is invalid.`);
-  }
-}
-
-function requireCanonicalDate(value: unknown, field: string): string {
-  if (typeof value !== 'string') {
-    throw new ExportValidationError(`${field} must be an ISO UTC timestamp.`);
-  }
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime()) || date.toISOString() !== value) {
-    throw new ExportValidationError(`${field} must be a canonical ISO UTC timestamp.`);
-  }
-  return value;
-}
-
-function requireExportString(value: unknown, field: string, pattern: RegExp): string {
-  if (typeof value !== 'string' || !pattern.test(value)) {
-    throw new ExportValidationError(`${field} has an invalid format.`);
-  }
-  return value;
-}
-
-function requireNonNegativeInteger(value: unknown, field: string): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-    throw new ExportValidationError(`${field} must be a non-negative integer.`);
-  }
-  return value;
 }
 
 function requireString(value: unknown, field: string): string {
@@ -413,16 +219,4 @@ function requireString(value: unknown, field: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isRouteCatalog(value: RouteCatalogInput): value is RouteCatalog {
-  return typeof value === 'object' && value !== null && 'postPaths' in value;
-}
-
-function createHashHex(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
-}
-
-function compareStableString(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
