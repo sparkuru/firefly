@@ -1065,3 +1065,24 @@ Added verify.sh and verify:m51 with tracked-fixture isolation, fixed negative-bu
 ### Status
 
 [OK] **Completed**
+
+
+## Session 49: Extract shared comments public contract
+
+**Date**: 2026-08-28
+**Task**: Extract shared comments public contract
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Extracted plugins/comments/public.mjs plus declaration and focused contract tests; reduced site, service, and publication consumers to thin adapters, fixed compiled Docker resolution and Unicode emitted-route mapping, updated specs/README, and archived the approved child task. Node 22 container checks, test:m51, comments 7/7 + 57/57, site content 58/58, assembler 8/8, site check/build, and check:m51 passed. Full verify reached build/publication but existing generated publication metadata epoch 4 rejected the disabled epoch 0 candidate; no source change was made for that generated-state residual.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0d6c806` | (see git log) |
+
+### Status
+
+[OK] **Completed**
