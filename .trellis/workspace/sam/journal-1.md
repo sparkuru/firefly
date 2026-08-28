@@ -1086,3 +1086,24 @@ Extracted plugins/comments/public.mjs plus declaration and focused contract test
 ### Status
 
 [OK] **Completed**
+
+
+## Session 50: X Core and canonical route boundary cleanup
+
+**Date**: 2026-08-29
+**Task**: X Core and canonical route boundary cleanup
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Removed the generic publication/service host from X Core, moved comments site integration to a static site-owned registry, and unified canonical route projection for content and Astro context. Package/site checks, 66 content tests, static build, main-site 130-test browser suite, and NERV 8-test suite passed. The complete verify gate and publication E2E remained blocked by the pre-existing publication tombstone/release state; exact failures are recorded in the archived task evidence.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8291996` | (see git log) |
+
+### Status
+
+[OK] **Completed**
