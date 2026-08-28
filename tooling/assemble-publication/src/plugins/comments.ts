@@ -43,23 +43,22 @@ export async function loadCommentsPublication(repositoryRoot: string): Promise<C
   if (resolvedRelative.startsWith('..') || path.isAbsolute(resolvedRelative) || !stats.isFile()) {
     throw new Error('FIREFLY_COMMENTS_EXPORT must resolve to a regular file inside the repository.');
   }
-  const decoder = await import(pathToFileURL(path.join(repositoryRoot, 'apps/site/src/lib/comments.mjs')).href) as {
-    decodePublicCommentsExport(value: unknown, source?: string): {
-      schemaVersion: 1;
-      sourceRevision: string;
-      generatedAt: string;
-      tombstoneEpoch: number;
-      digest?: string;
-      comments: readonly { postPath: string }[];
-    };
-  };
+  type CommentsPublicModule = typeof import('../../../../plugins/comments/public.mjs');
+  const decoder = await import(pathToFileURL(path.join(repositoryRoot, 'plugins/comments/public.mjs')).href) as CommentsPublicModule;
   const bundle = decoder.decodePublicCommentsExport(JSON.parse(await readFile(candidate, 'utf8')), candidate);
   if (bundle.digest === undefined) {
     throw new Error('comments export must contain a SHA-256 digest before publication.');
   }
+  const emittedPostPaths = new Set<string>();
+  const indexSuffix = '/index.html';
+  for (const relative of tree.files) {
+    if (!relative.startsWith('posts/') || !relative.endsWith(indexSuffix)) continue;
+    const rawHref = `/${relative.slice(0, -indexSuffix.length)}/`;
+    const postPath = decoder.commentsPostPathFromSiteHref(rawHref);
+    if (postPath !== null) emittedPostPaths.add(postPath);
+  }
   for (const comment of bundle.comments) {
-    const relativeRoute = `${comment.postPath.slice(1, -1)}/index.html`;
-    if (!tree.files.includes(relativeRoute)) {
+    if (!emittedPostPaths.has(comment.postPath)) {
       throw new Error(`comments export references a post route absent from site output: ${comment.postPath}`);
     }
   }

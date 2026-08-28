@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "08-28-repository-docs-convergence",
-    "08-28-deterministic-validation-gate"
+    "08-28-deterministic-validation-gate",
+    "08-28-comments-contract-extraction"
   ],
   "parent": null,
   "relatedFiles": [],

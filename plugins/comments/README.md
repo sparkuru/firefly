@@ -10,6 +10,22 @@ handoff, private HTTP/storage/moderation service, and private notification
 delivery. Firefly core only provides the generic plugin registry and lifecycle
 hooks.
 
+`public.mjs` and `public.d.mts` are the repository-local public/build contract.
+They own the sanitized `comments.public.v1` model, canonical route facade,
+normalization, parent checks, ordering, digest, serialization, and immutable
+empty export. The module is pure build-time code: it reads no files, secrets,
+environment, database, SMTP configuration, or site components. `config.mjs`
+remains the configuration namespace owner and supplies the route implementation
+used by the public facade.
+
+The three consumers stay thin around that contract. The site adapter reads a
+contained export and groups encoded routes under readable post hrefs; the
+private service selects approved rows and translates contract failures into its
+service error classes; the publication adapter checks the emitted site,
+contained handoff, and release metadata. The assembler imports only
+`plugins/comments/public.mjs`, never site source. The focused contract tests
+live under `plugins/comments/tests/` and run independently of any package.
+
 The capability remains disabled by default through the single
 `[plugins.comments].enabled = false` projection in `config/site.toml`. Its
 build-time `configPath` must be an explicit repository-relative path and

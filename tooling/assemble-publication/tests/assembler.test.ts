@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { decodeExperimentManifest } from '@firefly/validate-experiments';
 import { assemblePublication, validateRelease, walkSafeTree, type CommentsPublicationMetadata } from '../src/index.js';
@@ -50,6 +51,17 @@ async function captureWarnings(action: () => Promise<void>): Promise<readonly st
   }
   return warnings;
 }
+
+test('comments publication adapter consumes the repository public contract', async () => {
+  const testDirectory = path.dirname(fileURLToPath(import.meta.url));
+  const sourcePath = testDirectory.endsWith(`${path.sep}dist${path.sep}tests`)
+    ? path.resolve(testDirectory, '../../src/plugins/comments.ts')
+    : path.resolve(testDirectory, '../src/plugins/comments.ts');
+  const source = await readFile(sourcePath, 'utf8');
+  assert.match(source, /plugins\/comments\/public\.mjs/u);
+  assert.match(source, /commentsPostPathFromSiteHref/u);
+  assert.doesNotMatch(source, /apps\/site\/src/u);
+});
 
 test('safe walker rejects symlinks and source maps', async (context) => {
   const { root } = await fixture(context);

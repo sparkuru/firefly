@@ -8,6 +8,8 @@ COPY services/comments/src ./src
 COPY services/comments/scripts ./scripts
 COPY plugins/comments/config.mjs /app/plugins/comments/config.mjs
 COPY plugins/comments/config.d.mts /app/plugins/comments/config.d.mts
+COPY plugins/comments/public.mjs /app/plugins/comments/public.mjs
+COPY plugins/comments/public.d.mts /app/plugins/comments/public.d.mts
 RUN npm run build
 
 FROM node:22-alpine
@@ -28,6 +30,7 @@ COPY --from=build --chown=node:node /app/services/comments/dist/src ./dist/src
 COPY --from=build --chown=node:node /app/services/comments/migrations ./migrations
 COPY --from=build --chown=node:node /app/services/comments/scripts ./scripts
 COPY --from=build --chown=node:node /app/plugins/comments/config.mjs /app/plugins/comments/config.mjs
+COPY --from=build --chown=node:node /app/plugins/comments/public.mjs /app/plugins/comments/public.mjs
 
 USER node
 VOLUME ["/var/lib/firefly-comments"]

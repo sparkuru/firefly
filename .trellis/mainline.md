@@ -6,7 +6,7 @@
 - **Objective:** Reconcile Firefly's authoritative documentation and incrementally reduce validation, comments-contract, X Core, adapter, and release-quality risks without changing the working static-publication architecture.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-28 — The P1 repository-audit remediation parent was approved after the M5.1 Unicode route-compatibility task was completed and archived. Documentation convergence is complete and archived; the deterministic-validation child is the current implementation item, and each later child still requires its own planned transition. M5.1 is implemented and privately provisioned but remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
+- **Owner decision:** 2026-08-28 — The P1 repository-audit remediation parent was approved after the M5.1 Unicode route-compatibility task was completed and archived. Documentation convergence and deterministic validation are complete and archived; comments-contract extraction is the current planning item, and each later child still requires its own planned transition. M5.1 is implemented and privately provisioned but remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 

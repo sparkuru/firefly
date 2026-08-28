@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 
-import { isCanonicalCommentsPostRoute } from '../../../plugins/comments/config.mjs';
+import { isCanonicalCommentsPostRoute } from '../../../plugins/comments/public.mjs';
 
 export const SCHEMA_VERSION = 1;
 

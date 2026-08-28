@@ -1,10 +1,18 @@
-export const PUBLIC_EXPORT_SCHEMA_VERSION = 1 as const;
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+type CommentsPublicModule = typeof import('../../../plugins/comments/public.mjs');
+const publicContract = await import(
+  pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../plugins/comments/public.mjs')).href
+) as CommentsPublicModule;
+
+export const PUBLIC_EXPORT_SCHEMA_VERSION = publicContract.PUBLIC_EXPORT_SCHEMA_VERSION;
 export const DEFAULT_CONSENT_VERSION = 'm51-v1' as const;
 export const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 export const CONTROL_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 export const ABUSE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-export const MAX_DISPLAY_NAME_CODE_POINTS = 80;
-export const MAX_BODY_BYTES = 8 * 1024;
+export const MAX_DISPLAY_NAME_CODE_POINTS = publicContract.MAX_DISPLAY_NAME_CODE_POINTS;
+export const MAX_BODY_BYTES = publicContract.MAX_BODY_BYTES;
 export const MAX_REQUEST_BYTES = 32 * 1024;
 
 export const COMMENT_STATUSES = [
@@ -140,30 +148,13 @@ export interface NotificationDeliveryTransport {
   deliver(message: NotificationMessage): void | Promise<void>;
 }
 
-export interface RouteCatalog {
-  postPaths: ReadonlySet<string>;
-}
-
-export type RouteCatalogInput = RouteCatalog | Iterable<string>;
-
-export interface PublicComment {
-  id: string;
-  postPath: string;
-  parentId: string | null;
-  displayName: string;
-  homepage?: string;
-  body: string;
-  createdAt: string;
-}
-
-export interface PublicExport {
-  schemaVersion: typeof PUBLIC_EXPORT_SCHEMA_VERSION;
-  sourceRevision: string;
-  generatedAt: string;
-  tombstoneEpoch: number;
-  comments: PublicComment[];
-  digest?: string;
-}
+export type {
+  PublicComment,
+  PublicCommentsExport,
+  PublicExport,
+  RouteCatalog,
+  RouteCatalogInput
+} from '../../../plugins/comments/public.mjs';
 
 export interface ExportOptions {
   sourceRevision?: string;
