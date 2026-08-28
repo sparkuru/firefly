@@ -74,14 +74,13 @@ interface PresentationAdapter {
   `renderDocument()` and the selected X Core adapter at build time. The browser
   command engine and template-cloning controller do not import or execute X Core.
 - The durable X Core API ends at framework-neutral document analysis,
-  presentation selection, metadata, and diagnostics. The package entry currently
-  re-exports a generic site/publication/service registry from `plugins.ts`; the
-  site currently consumes its site branch for the static comments integration,
-  while its publication and service host branches have no production consumer.
-  That audited transitional coupling is scheduled for the later X
-  Core/plugin-boundary cleanup. It does not authorize X Core to own site
-  extensions, routes, service lifecycle, publication, or deployment, and new
-  consumers must not depend on it.
+  presentation selection, metadata, and diagnostics. The package entrypoint
+  exports only that document/Presentation pipeline. Site extensions and
+  canonical routes belong to the site: `apps/site` owns its statically
+  registered comments site-plugin registry and its pure canonical-route
+  projection. Publication and service adapters remain owned and invoked by
+  their existing packages; their lifecycle, private state, runtime
+  configuration, and publication metadata do not enter X Core.
 
 ### 4. Validation & Error Matrix
 

@@ -3,6 +3,7 @@ import {
   GUEST_PRINCIPAL as guestPrincipal,
   projectContentForPrincipal
 } from './content-access.mjs';
+import { projectCanonicalRoute } from './canonical-route.mjs';
 import { resolveContentMarkers } from './content-markers.mjs';
 
 export type PublicPost = CollectionEntry<'posts'>;
@@ -77,13 +78,6 @@ function normalizeMarkdownPath(id: string) {
   return relativePath;
 }
 
-function routeFromRelativePath(collection: 'posts' | 'pages', relativePath: string, slug: string) {
-  if (collection === 'pages') return `/pages/${slug}/`;
-  const segments = relativePath.split('/');
-  const parentSegments = segments.slice(0, -1);
-  return `/posts/${[...parentSegments, slug].join('/')}/`;
-}
-
 function directoryHref(segments: readonly string[]) {
   return `/${segments.join('/')}/`;
 }
@@ -97,7 +91,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     throw new Error(`Invalid Markdown identity for ${collection}/${entry.id}.`);
   }
   const stem = filename.slice(0, -3);
-  const routeSlug = (entry.data.slug ?? stem).replace(/\s+/gu, '-');
+  const routeSlug = entry.data.slug ?? stem;
   const virtualPath = `${collection}/${relativePath}`;
   const markers = resolveContentMarkers(entry.data.firefly?.markers);
   const parentSegments = [collection, ...pathSegments.slice(0, -1)];
@@ -115,7 +109,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     relativePath,
     virtualPath,
     filename: filename as `${string}.md`,
-    href: routeFromRelativePath(collection, relativePath, routeSlug),
+    href: projectCanonicalRoute({ collection, relativePath, slug: routeSlug }),
     directoryHrefs: Object.freeze(directoryHrefs),
     breadcrumbs,
     aliases: Object.freeze([...(entry.data.aliases ?? [])]),

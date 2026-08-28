@@ -4,6 +4,7 @@ import {
   type DocumentContext,
   type DocumentContextResolver
 } from '@firefly/x-core';
+import { projectCanonicalRoute } from './canonical-route.mjs';
 
 interface AuthoredDocumentMetadata {
   readonly slug?: string;
@@ -78,26 +79,28 @@ export const resolveDocumentContext: DocumentContextResolver = (file) => {
   const relativePath = stagedRelativePath(file.path, collection);
   const slug = (collection === 'posts'
     ? metadata.slug ?? relativePath?.split('/').at(-1)?.replace(/\.md$/u, '')
-    : metadata.slug)?.replace(/\s+/gu, '-');
+    : metadata.slug);
   if (slug === undefined) {
     throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
   }
-  const relativeRoute = collection === 'posts'
-    ? (() => {
-        const physicalPath = relativePath?.replace(/\.md$/u, '');
-        if (physicalPath === undefined || slug === undefined) return undefined;
-        const parent = physicalPath.slice(0, physicalPath.lastIndexOf('/'));
-        return parent.length === 0 ? slug : `${parent}/${slug}`;
-      })()
-    : slug;
-  if (relativeRoute === undefined) {
-    throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
+
+  let route: string;
+  try {
+    route = projectCanonicalRoute({ collection, relativePath, slug });
+  } catch (error) {
+    throw xCoreError(
+      'XCORE_CONTEXT_RESOLUTION',
+      'Astro document path cannot be mapped to a canonical route.',
+      undefined,
+      undefined,
+      error
+    );
   }
 
   return {
     documentId: `${collection}/${relativePath ?? `${slug}.md`}`,
     sourcePath: `${collection}/${relativePath ?? `${slug}.md`}`,
-    route: `/${collection}/${relativeRoute}/`,
+    route,
     collection,
     slug,
     layout: metadata.layout,
