@@ -1044,3 +1044,24 @@ Reconciled the root PRD, mainline, and durable frontend specs with the implement
 ### Status
 
 [OK] **Completed**
+
+
+## Session 48: Deterministic validation gate
+
+**Date**: 2026-08-28
+**Task**: Deterministic validation gate
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added verify.sh and verify:m51 with tracked-fixture isolation, fixed negative-build child-root propagation, aligned stale fixture assertions, and updated runtime/quality specs. Full Docker gate passed: package checks/tests/builds, site Playwright 130/130, NERV 8/8, assembled publication 4/4. Archived the completed child; parent remediation remains active for the next guided decision.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e519fe5` | (see git log) |
+
+### Status
+
+[OK] **Completed**
