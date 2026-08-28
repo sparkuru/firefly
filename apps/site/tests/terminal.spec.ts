@@ -370,7 +370,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(nestedInput).toHaveValue('cat llm-workflow-with-trellis.md');
   await expect(nestedInput).toBeFocused();
   await nestedInput.press('Enter');
-  await expect(transcript).toContainText('llm workflow with trellis');
+  await expect(transcript).toContainText('llm-workflow-with-trellis');
   await submit(page, 'cd ~/blog/posts/ai');
   await submit(page, 'ls *.md');
   const wildcardListing = transcript.locator('.terminal-entry-list').last();
@@ -423,7 +423,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'cat ./pages/about.md');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
   await submit(page, 'cat posts/ai/llm-workflow-with-trellis.md');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('llm workflow with trellis');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('llm-workflow-with-trellis');
   await submit(page, 'grep -i about pages/about.md');
   await expect(transcript.locator('.terminal-record').last()).toContainText('/pages/about.md:');
   await submit(page, 'cat ~/blog/pages/about.md');
@@ -707,7 +707,7 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
   await submit(page, 'grep -F definitely-not-in-the-public-corpus');
   await expect(transcript.locator('.terminal-grep-summary').last()).toHaveText('No matches for "definitely-not-in-the-public-corpus".');
-  await submit(page, 'grep -nF "# " ~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await submit(page, 'grep -nF "build" ~/blog/posts/ai/llm-workflow-with-trellis.md');
   const sourceMatches = transcript.locator('.terminal-record').last().locator('.terminal-grep-line');
   await expect.poll(async () => sourceMatches.count()).toBeGreaterThan(1);
   expect((await sourceMatches.allTextContents()).every((line) => line.length < 5000)).toBe(true);

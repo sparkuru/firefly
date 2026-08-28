@@ -26,7 +26,11 @@ async function expectNegativeBuild({ collection, filename, source, patterns }) {
       {
         cwd: siteRoot,
         encoding: 'utf8',
-        env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' },
+        env: {
+          ...process.env,
+          ASTRO_TELEMETRY_DISABLED: '1',
+          FIREFLY_CONTENT_ROOT: contentRoot
+        },
         maxBuffer: 4 * 1024 * 1024
       }
     );
