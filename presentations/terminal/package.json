@@ -23,8 +23,10 @@
     "test": "npm run build --silent && node --test dist/tests/*.test.js",
     "build": "tsc"
   },
+  "dependencies": {
+    "@firefly/x-core": "file:../../packages/x-core"
+  },
   "devDependencies": {
-    "@firefly/x-core": "file:../../packages/x-core",
     "@types/hast": "3.0.5",
     "@types/node": "24.3.0",
     "typescript": "6.0.3"

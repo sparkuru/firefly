@@ -22,7 +22,8 @@
     "08-28-repository-docs-convergence",
     "08-28-deterministic-validation-gate",
     "08-28-comments-contract-extraction",
-    "08-28-x-core-route-boundary-cleanup"
+    "08-28-x-core-route-boundary-cleanup",
+    "08-29-adapter-package-contract-cleanup"
   ],
   "parent": null,
   "relatedFiles": [],

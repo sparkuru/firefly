@@ -98,7 +98,13 @@ test('semantic presentation preserves native nodes and wraps only wide content',
       }
     ]
   };
+  const source = structuredClone(tree);
   const result = semanticPresentation.transform(input(tree));
+
+  assert.deepEqual(tree, source);
+  assert.notEqual(result, tree);
+  assert.notEqual(result.children[0], tree.children[0]);
+  assert.notEqual(result.children[2], tree.children[2]);
 
   assert.equal(result.children[0]?.type, 'element');
   assert.equal(result.children[0]?.type === 'element' && result.children[0].tagName, 'h2');

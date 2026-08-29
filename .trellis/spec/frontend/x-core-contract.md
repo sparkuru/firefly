@@ -62,10 +62,11 @@ interface PresentationAdapter {
 - The production semantic and Terminal adapters must both support post/post and
   page/page contexts, clone without mutating input, preserve headings/node IDs,
   recursively wrap `pre`/`table` in presentation-owned named focusable
-  local-scroll regions, and emit empty enhancement manifests. Terminal currently
-  satisfies the cloning boundary; Semantic currently wraps the supplied HAST in
-  place. That audited contract violation belongs to the later adapter-boundary
-  cleanup and is not the pattern for another Presentation.
+  local-scroll regions, and emit empty enhancement manifests. Both production
+  adapters satisfy the cloning boundary; their focused tests must keep the
+  supplied source tree unchanged while checking the transformed output. The
+  clone is an adapter-owned build-time detail and must not introduce
+  semantic-to-Terminal coupling or a browser transform runtime.
 - The Astro registry registers both production adapters; omission resolves
   through the shared default ID to the `firefly` Terminal adapter, while
   explicit `semantic` remains supported.
@@ -121,7 +122,8 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   raw HTML/HAST; transform/support/context failures; identity collision/drift;
   manifest target checks; adversarial JSON and exact metadata parsing.
 - `presentations/semantic`: supported/unsupported contexts, recursive wide-content
-  wrapping, native semantics, stable identity preservation, empty enhancements.
+  wrapping, native semantics, stable identity preservation, source-tree
+  immutability with distinct output identity, and empty enhancements.
 - `presentations/terminal`: the same adapter invariants plus a runtime-subpath
   graph check proving browser code does not import X Core/HAST/Astro/adapter code.
 - `apps/site run test:x-core`: import the shared schema and run unchanged Markdown
