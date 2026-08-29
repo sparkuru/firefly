@@ -1143,3 +1143,39 @@ Moved X Core to production dependencies in both presentation packages, made the 
 ### Next Steps
 
 - Wait for a fresh owner decision before creating or starting release/observability hardening; guided mode does not grant serial authorization.
+
+
+## Session 52: Private comments observability hardening
+
+**Date**: 2026-08-30
+**Task**: Private comments observability hardening
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and archived the owner-approved private comments observability child; preserved comments-disabled and static publication boundaries, and deferred deployment-owned crash recovery.
+
+### Main Changes
+
+- Added fail-closed /readyz, process-local bounded Prometheus metrics, and privacy-safe structured request records.
+- Added HTTP regression coverage and documented retention/access, private exposure, and repository/deployment recovery ownership.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0c2f553` | (see git log) |
+
+### Testing
+
+- [OK] ./sam npm run install:comments; check:comments; test:comments (59/59); build:comments
+- [OK] ./sam npm run check:assembler; test:assembler (8/8); build:assembler
+- [OK] ./verify.sh reached the existing comments tombstone epoch rollback guard after preceding stages; no publication state changed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Run Project Pulse and wait for a fresh owner decision before creating the next product task; public comments enablement and deployment crash recovery remain separate gates.
