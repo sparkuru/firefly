@@ -29,7 +29,7 @@
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 | 10 | `.trellis/tasks/archive/2026-08/08-27-repository-audit-remediation/` — P1 repository audit remediation | complete | The Unicode compatibility prerequisite, documentation-convergence, deterministic-validation, comments-contract, and X Core/route children are archived. The remaining adapter and release/observability work stays separately verifiable. |
-| 11 | `.trellis/tasks/08-29-adapter-package-contract-cleanup/` — Adapter/package contract cleanup | active | Owner approved the plan and implementation is in progress. The child remains limited to production adapter package declarations plus the Semantic non-mutating transform contract; focused gates are green and the full fixture gate is blocked only at the existing publication epoch guard. |
+| 11 | `.trellis/tasks/archive/2026-08/08-29-adapter-package-contract-cleanup/` — Adapter/package contract cleanup | complete | The approved child moved X Core to production dependencies in both presentation packages, made the Semantic transform non-mutating with source-identity regression coverage, and reconciled the durable X Core contract. Focused install/check/test/build gates are green; the full fixture gate reached the existing publication epoch rollback guard after all preceding stages passed. |
 
 ## Evidence
 
@@ -107,6 +107,13 @@
   specs. Historical inventory evidence, default Presentation behavior,
   repository-versus-deployment publication ownership, and audited remediation
   gaps are now explicitly separated.
+- Adapter/package contract cleanup evidence (2026-08-30):
+  `.trellis/tasks/archive/2026-08/08-29-adapter-package-contract-cleanup/` and
+  commit `c06c27f` move `@firefly/x-core` to production dependencies in both
+  presentation packages and clone the Semantic HAST input before wrapping.
+  Focused install/check/test/build gates pass, as do the package and site
+  fixture stages of `./verify.sh`; publication assembly remains protected by
+  the pre-existing comments tombstone/publication epoch rollback guard.
 - Deterministic validation evidence (2026-08-28):
   `.trellis/tasks/archive/2026-08/08-28-deterministic-validation-gate/` and
   the complete `./verify.sh` fixture run passed all package checks/tests/builds,
@@ -129,10 +136,10 @@
 The approved P1 remediation parent is the current initiative. Its ordered
 deliverables are documentation convergence, deterministic validation,
 comments-contract extraction, X Core/canonical-route cleanup, adapter/package
-cleanup, and release/observability hardening; the first four deliverables are
-archived and adapter/package cleanup is now in progress. After each child is
-checked and archived, Project Pulse must present the next dependency-ready
-child for a fresh guided decision rather than assuming serial authorization.
+cleanup, and release/observability hardening; the first five deliverables are
+archived. The next dependency-ready child is release/observability hardening,
+but guided mode requires a fresh owner decision before that task is created or
+started.
 
 Public comments enablement is intentionally outside that remediation sequence.
 M5.1 implementation, private provisioning, route-catalog reconciliation, and
