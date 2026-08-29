@@ -6,7 +6,7 @@
 - **Objective:** Reconcile Firefly's authoritative documentation and incrementally reduce validation, comments-contract, X Core, adapter, and release-quality risks without changing the working static-publication architecture.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-29 — The P1 repository-audit remediation parent and its X Core/plugin-host and canonical-route child are complete and archived. The owner approved planning the adapter/package contract cleanup child as the next guided item. M5.1 is implemented and privately provisioned but remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
+- **Owner decision:** 2026-08-30 — The P1 repository-audit remediation parent and all six ordered children are complete and archived. The release/observability child delivered the owner-approved private comments observability contract and explicitly deferred deployment crash recovery to the operator-owned boundary. M5.1 remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 
@@ -28,9 +28,9 @@
 | 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The service, static consumer, publication boundary, private provisioning, release-bound route catalog, and Unicode canonical-route compatibility are implemented and verified. Tracked configuration remains disabled by default. SMTP delivery, controlled public browser validation, and public enablement remain separate owner-authorized gates; the main site must not become SSR or directly read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
-| 10 | `.trellis/tasks/archive/2026-08/08-27-repository-audit-remediation/` — P1 repository audit remediation | complete | The Unicode compatibility prerequisite, documentation-convergence, deterministic-validation, comments-contract, and X Core/route children are archived. The remaining adapter and release/observability work stays separately verifiable. |
+| 10 | `.trellis/tasks/archive/2026-08/08-27-repository-audit-remediation/` — P1 repository audit remediation | complete | The Unicode compatibility prerequisite, documentation-convergence, deterministic-validation, comments-contract, X Core/route, adapter, and release/observability children are archived. |
 | 11 | `.trellis/tasks/archive/2026-08/08-29-adapter-package-contract-cleanup/` — Adapter/package contract cleanup | complete | The approved child moved X Core to production dependencies in both presentation packages, made the Semantic transform non-mutating with source-identity regression coverage, and reconciled the durable X Core contract. Focused install/check/test/build gates are green; the full fixture gate reached the existing publication epoch rollback guard after all preceding stages passed. |
-| 12 | `.trellis/tasks/08-30-release-observability-hardening/` — Release and observability hardening | in_progress | Owner approved the observability-only scope and final planning summary. Private comments readiness, bounded metrics, privacy-safe request evidence, and durable release-boundary documentation are implemented; focused gates pass and the full fixture gate reaches the existing publication epoch guard. |
+| 12 | `.trellis/tasks/archive/2026-08/08-30-release-observability-hardening/` — Release and observability hardening | complete | The owner-approved private comments observability scope is implemented and archived. Readiness is fail-closed, metrics and request evidence are bounded/privacy-safe, comments remain disabled, and deployment crash recovery is explicitly deferred; focused gates pass and the full fixture gate retains the existing publication epoch guard. |
 
 ## Evidence
 
@@ -115,6 +115,15 @@
   Focused install/check/test/build gates pass, as do the package and site
   fixture stages of `./verify.sh`; publication assembly remains protected by
   the pre-existing comments tombstone/publication epoch rollback guard.
+- Release/observability hardening evidence (2026-08-30):
+  `.trellis/tasks/archive/2026-08/08-30-release-observability-hardening/` and
+  commit `0c2f553` add private `/readyz`, in-memory bounded Prometheus metrics,
+  privacy-safe request records, readiness regression coverage, and the durable
+  repository/deployment recovery boundary. Comments check/test/build and
+  assembler check/test/build pass; the full `./verify.sh` fixture gate reaches
+  the existing `comments tombstone epoch 0 predates the published epoch 4;
+  refusing rollback.` guard after all preceding stages pass, and publication
+  state remains unchanged.
 - Deterministic validation evidence (2026-08-28):
   `.trellis/tasks/archive/2026-08/08-28-deterministic-validation-gate/` and
   the complete `./verify.sh` fixture run passed all package checks/tests/builds,
@@ -137,10 +146,9 @@
 The approved P1 remediation parent is the current initiative. Its ordered
 deliverables are documentation convergence, deterministic validation,
 comments-contract extraction, X Core/canonical-route cleanup, adapter/package
-cleanup, and release/observability hardening; the first five deliverables are
-archived. Release/observability hardening is in implementation under the
-owner-approved observability-only scope; its focused gates pass and its full
-fixture run retains the existing publication epoch guard.
+cleanup, and release/observability hardening; all six deliverables are now
+archived. No next product task is created automatically: guided mode requires
+a fresh owner decision after Project Pulse.
 
 Public comments enablement is intentionally outside that remediation sequence.
 M5.1 implementation, private provisioning, route-catalog reconciliation, and
