@@ -1107,3 +1107,39 @@ Removed the generic publication/service host from X Core, moved comments site in
 ### Status
 
 [OK] **Completed**
+
+
+## Session 51: Adapter/package contract cleanup
+
+**Date**: 2026-08-30
+**Task**: Adapter/package contract cleanup
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Moved X Core to production dependencies in both presentation packages, made the Semantic transform non-mutating with source-tree regression coverage, reconciled the durable X Core contract, and completed the focused/full pre-publication validation flow.
+
+### Main Changes
+
+- Moved @firefly/x-core from devDependencies to dependencies in Semantic and Terminal, including lockfile metadata.
+- Cloned Semantic HAST input before wide-content wrapping and added source immutability and distinct-node regression assertions.
+- Updated the X Core contract spec and archived the approved Trellis task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c06c27f` | (see git log) |
+
+### Testing
+
+- [OK] ./sam npm run install:m3, check:m3, test:m3, and build:m3 all pass.
+- [OK] ./verify.sh passed all check, test, and build stages before the existing comments tombstone/publication epoch rollback guard.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Wait for a fresh owner decision before creating or starting release/observability hardening; guided mode does not grant serial authorization.
