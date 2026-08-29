@@ -56,6 +56,44 @@ fail-closed unknown `/v1/` location, and deliberately contains no real
 hostname, certificate path, or deployment identifier. DNS, TLS, certificate
 selection, and the operator-owned edge include remain outside this repository.
 
+## Private observability
+
+The service keeps `/healthz` as its liveness endpoint and preserves its
+existing `200` response, `{"ok":true,"status":"ok"}`. The process-local
+`GET /readyz` endpoint checks that the service is open and that its repository
+can answer the existing metadata query. It returns
+`{"ok":true,"status":"ready"}` with `200`, or
+`{"ok":false,"status":"not_ready"}` with `503`; dependency details are never
+returned. `GET /metrics` is a private Prometheus text endpoint. Neither
+`/readyz` nor `/metrics` is added to the public Nginx proxy route.
+
+After every completed request, the process emits one newline-delimited JSON
+record to its process stream with only these fields:
+
+```json
+{"requestId":"opaque-uuid","method":"GET","route":"liveness","statusCode":200,"outcome":"success","durationMs":3}
+```
+
+`method` is one of `GET`, `POST`, `OPTIONS`, or `OTHER`. `route` is one of the
+fixed classes `liveness`, `readiness`, `metrics`, `submission`,
+`verification`, `control`, `admin_queue`, `admin_export`,
+`admin_moderation`, or `unknown`. Records never contain raw URLs or query
+strings, request bodies, headers, tokens, public IDs, email addresses, IP
+addresses, user agents, origins, secrets, filesystem paths, or exception text.
+
+Metrics use the same finite labels and numeric status codes for request totals
+and duration sum/count series. They are held in memory only and reset when the
+process restarts. A metrics scrape is rendered before that scrape is counted,
+so it does not include itself in its response.
+
+Request records and metrics are private operator evidence. Retention, access
+control, collection, and deletion follow the existing private host/container
+policy; this package does not create a log file or persistent telemetry store.
+Repository-local candidate promotion and rollback remain the assembler
+boundary. Immutable deployment releases, `current` switching, crash recovery,
+and production rollback remain deferred to the operator-owned deployment
+boundary and require a separate approved operational task.
+
 ## Configuration and secrets
 
 `config/site.toml` is public core/build configuration. Its single

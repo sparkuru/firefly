@@ -118,6 +118,7 @@ export class CommentService {
   private readonly notificationTransport: NotificationTransport;
   private readonly clock: Clock;
   private readonly rateLimiter: SlidingWindowRateLimiter;
+  private closed = false;
 
   constructor(options: CommentServiceOptions) {
     this.repository = options.repository;
@@ -414,7 +415,23 @@ export class CommentService {
     return this.repository.listAuditEvents();
   }
 
+  isReady(): boolean {
+    if (this.closed) {
+      return false;
+    }
+    try {
+      const tombstoneEpoch = this.repository.getTombstoneEpoch();
+      return Number.isSafeInteger(tombstoneEpoch) && tombstoneEpoch >= 0;
+    } catch {
+      return false;
+    }
+  }
+
   close(): void {
+    if (this.closed) {
+      return;
+    }
+    this.closed = true;
     this.repository.close();
   }
 
