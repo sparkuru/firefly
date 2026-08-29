@@ -2,7 +2,39 @@ import type {
   NormalizedDocumentInput,
   PresentationAdapter
 } from '@firefly/x-core';
-import type { Element, Parent, Root as HastRoot, RootContent } from 'hast';
+import type {
+  Element,
+  ElementContent,
+  Parent,
+  Root as HastRoot,
+  RootContent
+} from 'hast';
+
+function cloneElementContent(node: ElementContent): ElementContent {
+  if (node.type !== 'element') {
+    return { ...node };
+  }
+
+  return {
+    ...node,
+    properties: { ...node.properties },
+    children: node.children.map(cloneElementContent)
+  };
+}
+
+function cloneRootContent(node: RootContent): RootContent {
+  if (node.type === 'doctype') {
+    return { ...node };
+  }
+  return cloneElementContent(node);
+}
+
+function cloneRoot(tree: HastRoot): HastRoot {
+  return {
+    ...tree,
+    children: tree.children.map(cloneRootContent)
+  };
+}
 
 function wrapWideChildren(parent: Parent): void {
   const children: RootContent[] = [];
@@ -49,6 +81,6 @@ export const semanticPresentation: PresentationAdapter = {
   supports: (context) =>
     (context.collection === 'posts' && context.layout === 'post') ||
     (context.collection === 'pages' && context.layout === 'page'),
-  transform: ({ tree }: NormalizedDocumentInput) => wrapWideContent(tree),
+  transform: ({ tree }: NormalizedDocumentInput) => wrapWideContent(cloneRoot(tree)),
   enhancements: () => []
 };
