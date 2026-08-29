@@ -4,6 +4,7 @@ export * from './export.js';
 export * from './http.js';
 export * from './memory-repository.js';
 export * from './notifications.js';
+export * from './observability.js';
 export * from './smtp.js';
 export * from './service.js';
 export * from './sqlite-repository.js';

@@ -44,6 +44,9 @@ artifact, not a project source directory.
   what may be reconciled and what must remain initializer-owned.
 - [Project-record privacy](../guides/project-record-privacy.md) remains the
   authority for handling task, journal, and evidence records.
+- [Private comments observability and release boundary](./comments-observability-release-boundary.md)
+  records the bounded HTTP evidence contract and the deferred deployment
+  recovery boundary.
 - The standalone frontend contracts remain under `../frontend/`; the
   template-derived files that had mixed provenance were quarantined for
   review rather than copied over the fresh initializer output.

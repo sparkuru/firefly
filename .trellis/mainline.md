@@ -30,6 +30,7 @@
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 | 10 | `.trellis/tasks/archive/2026-08/08-27-repository-audit-remediation/` — P1 repository audit remediation | complete | The Unicode compatibility prerequisite, documentation-convergence, deterministic-validation, comments-contract, and X Core/route children are archived. The remaining adapter and release/observability work stays separately verifiable. |
 | 11 | `.trellis/tasks/archive/2026-08/08-29-adapter-package-contract-cleanup/` — Adapter/package contract cleanup | complete | The approved child moved X Core to production dependencies in both presentation packages, made the Semantic transform non-mutating with source-identity regression coverage, and reconciled the durable X Core contract. Focused install/check/test/build gates are green; the full fixture gate reached the existing publication epoch rollback guard after all preceding stages passed. |
+| 12 | `.trellis/tasks/08-30-release-observability-hardening/` — Release and observability hardening | in_progress | Owner approved the observability-only scope and final planning summary. Private comments readiness, bounded metrics, privacy-safe request evidence, and durable release-boundary documentation are implemented; focused gates pass and the full fixture gate reaches the existing publication epoch guard. |
 
 ## Evidence
 
@@ -137,9 +138,9 @@ The approved P1 remediation parent is the current initiative. Its ordered
 deliverables are documentation convergence, deterministic validation,
 comments-contract extraction, X Core/canonical-route cleanup, adapter/package
 cleanup, and release/observability hardening; the first five deliverables are
-archived. The next dependency-ready child is release/observability hardening,
-but guided mode requires a fresh owner decision before that task is created or
-started.
+archived. Release/observability hardening is in implementation under the
+owner-approved observability-only scope; its focused gates pass and its full
+fixture run retains the existing publication epoch guard.
 
 Public comments enablement is intentionally outside that remediation sequence.
 M5.1 implementation, private provisioning, route-catalog reconciliation, and

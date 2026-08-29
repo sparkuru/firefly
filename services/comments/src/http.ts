@@ -4,22 +4,69 @@ import { URL } from 'node:url';
 import { CommentService } from './service.js';
 import { CommentServiceError, UnauthorizedError, ValidationError } from './errors.js';
 import { MAX_REQUEST_BYTES, type SubmissionInput } from './types.js';
+import {
+  classifyCommentHttpMethod,
+  classifyCommentHttpRoute,
+  CommentHttpMetrics,
+  createCommentHttpRequestRecord,
+  defaultCommentHttpMonotonicNow,
+  defaultCommentHttpRequestIdFactory,
+  logCommentHttpRequest,
+  type CommentHttpLogger,
+  type CommentHttpMonotonicNow,
+  type CommentHttpRequestIdFactory
+} from './observability.js';
 
 export interface CommentHttpOptions {
   allowedOrigins?: ReadonlySet<string>;
   adminToken?: string;
   maxBodyBytes?: number;
+  logger?: CommentHttpLogger;
+  metrics?: CommentHttpMetrics;
+  monotonicNow?: CommentHttpMonotonicNow;
+  now?: CommentHttpMonotonicNow;
+  requestIdFactory?: CommentHttpRequestIdFactory;
 }
 
 export function createCommentHttpServer(service: CommentService, options: CommentHttpOptions = {}): Server {
   const allowedOrigins = options.allowedOrigins ?? new Set<string>();
   const maxBodyBytes = options.maxBodyBytes ?? MAX_REQUEST_BYTES;
+  const logger = options.logger ?? logCommentHttpRequest;
+  const metrics = options.metrics ?? new CommentHttpMetrics();
+  const monotonicNow = options.monotonicNow ?? options.now ?? defaultCommentHttpMonotonicNow;
+  const requestIdFactory = options.requestIdFactory ?? defaultCommentHttpRequestIdFactory;
   return createServer((request, response) => {
-    void handleRequest(service, request, response, { ...options, allowedOrigins, maxBodyBytes }).catch((error: unknown) => {
+    const method = classifyCommentHttpMethod(request.method);
+    const route = classifyCommentHttpRoute(getPathname(request.url));
+    const requestId = safeRequestId(requestIdFactory);
+    const startedAt = safeMonotonicNow(monotonicNow);
+    let handlerFailed = false;
+    void handleRequest(service, request, response, { ...options, allowedOrigins, maxBodyBytes, metrics }).catch((error: unknown) => {
+      handlerFailed = true;
       if (!response.headersSent) {
         sendError(response, error);
       } else {
         response.destroy();
+      }
+    }).finally(() => {
+      const durationMs = safeMonotonicNow(monotonicNow) - startedAt;
+      const record = createCommentHttpRequestRecord({
+        requestId,
+        method,
+        route,
+        statusCode: response.statusCode,
+        outcome: handlerFailed || response.statusCode >= 400 ? 'failure' : 'success',
+        durationMs
+      });
+      try {
+        metrics.record(record);
+      } catch {
+        // Observability must not replace or alter the completed response.
+      }
+      try {
+        logger(record);
+      } catch {
+        // A logger failure is intentionally bounded to this request.
       }
     });
   });
@@ -41,7 +88,7 @@ export async function listenCommentHttpServer(server: Server, port: number, host
   });
 }
 
-async function handleRequest(service: CommentService, request: IncomingMessage, response: ServerResponse, options: Required<Pick<CommentHttpOptions, 'maxBodyBytes'>> & Pick<CommentHttpOptions, 'adminToken'> & { allowedOrigins: ReadonlySet<string> }): Promise<void> {
+async function handleRequest(service: CommentService, request: IncomingMessage, response: ServerResponse, options: Required<Pick<CommentHttpOptions, 'maxBodyBytes'>> & Pick<CommentHttpOptions, 'adminToken'> & { allowedOrigins: ReadonlySet<string>; metrics: CommentHttpMetrics }): Promise<void> {
   const requestUrl = new URL(request.url ?? '/', 'http://comments.invalid');
   const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
   applyCors(response, origin, options.allowedOrigins);
@@ -55,6 +102,18 @@ async function handleRequest(service: CommentService, request: IncomingMessage, 
   }
   if (requestUrl.pathname === '/healthz' && request.method === 'GET') {
     sendJson(response, 200, { ok: true, status: 'ok' });
+    return;
+  }
+  if (requestUrl.pathname === '/readyz' && request.method === 'GET') {
+    if (service.isReady()) {
+      sendJson(response, 200, { ok: true, status: 'ready' });
+    } else {
+      sendJson(response, 503, { ok: false, status: 'not_ready' });
+    }
+    return;
+  }
+  if (requestUrl.pathname === '/metrics' && request.method === 'GET') {
+    sendMetrics(response, options.metrics.toPrometheus());
     return;
   }
   if (requestUrl.pathname === '/v1/comments/submissions' && request.method === 'POST') {
@@ -202,6 +261,13 @@ function sendHtml(response: ServerResponse, status: number, value: string): void
   response.end(value);
 }
 
+function sendMetrics(response: ServerResponse, value: string): void {
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  response.setHeader('Cache-Control', 'no-store');
+  response.end(value);
+}
+
 function sendError(response: ServerResponse, error: unknown): void {
   if (error instanceof CommentServiceError) {
     if (error instanceof UnauthorizedError) {
@@ -229,4 +295,32 @@ function decodePathToken(value: string | undefined): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getPathname(value: string | undefined): string {
+  try {
+    return new URL(value ?? '/', 'http://comments.invalid').pathname;
+  } catch {
+    return '';
+  }
+}
+
+function safeRequestId(factory: CommentHttpRequestIdFactory): string {
+  try {
+    return factory();
+  } catch {
+    return defaultCommentHttpRequestIdFactory();
+  }
+}
+
+function safeMonotonicNow(factory: CommentHttpMonotonicNow): number {
+  try {
+    const value = factory();
+    if (Number.isFinite(value)) {
+      return value;
+    }
+  } catch {
+    // Use the production monotonic clock if an injected test clock fails.
+  }
+  return defaultCommentHttpMonotonicNow();
 }
