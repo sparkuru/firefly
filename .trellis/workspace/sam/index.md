@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 52
-- **Last Active**: 2026-08-30
+- **Total Sessions**: 53
+- **Last Active**: 2026-09-05
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1181 | Active |
+| `journal-1.md` | ~1202 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 53 | 2026-09-05 | Complete public comments enablement | `e28ad4f` | `anti-entropy-loss-syndrome` |
 | 52 | 2026-08-30 | Private comments observability hardening | `0c2f553` | `anti-entropy-loss-syndrome` |
 | 51 | 2026-08-30 | Adapter/package contract cleanup | `c06c27f` | `anti-entropy-loss-syndrome` |
 | 50 | 2026-08-29 | X Core and canonical route boundary cleanup | `8291996` | `anti-entropy-loss-syndrome` |

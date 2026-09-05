@@ -1179,3 +1179,24 @@ Implemented and archived the owner-approved private comments observability child
 ### Next Steps
 
 - Run Project Pulse and wait for a fresh owner decision before creating the next product task; public comments enablement and deployment crash recovery remain separate gates.
+
+
+## Session 53: Complete public comments enablement
+
+**Date**: 2026-09-05
+**Task**: Complete public comments enablement
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed and verified public comments enablement, including privacy-safe publication path scanning, enabled-build test generalization, browser regressions, redacted production evidence, and durable reset/recovery contracts. Archived the task after full quality review; credential rotation remains owner-operated.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e28ad4f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
