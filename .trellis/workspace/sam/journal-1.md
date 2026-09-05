@@ -1200,3 +1200,24 @@ Completed and verified public comments enablement, including privacy-safe public
 ### Status
 
 [OK] **Completed**
+
+
+## Session 54: Add grep word and extended flags
+
+**Date**: 2026-09-05
+**Task**: Add grep word and extended flags
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented Terminal grep -w/--word-regexp with ASCII whole-word boundaries for fixed and safe-regex matching, candidate-time filtering, later-candidate discovery, and zero-width exclusion. Added -E/--extended-regexp as an explicit safe-regex mode and deterministic -E/-F rejection; updated registry, help/browser/unit coverage, and the content workspace contract. All required Terminal/site/static/browser checks passed through ./sam; task archived.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `09ce8fe` | (see git log) |
+
+### Status
+
+[OK] **Completed**
