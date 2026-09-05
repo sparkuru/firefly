@@ -584,7 +584,7 @@ test('history keeps 50 submissions and Arrow navigation preserves the draft', ()
 test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, and regex resources isolated', () => {
   let state = createTerminalState();
   assert.deepEqual(runShell('grep -i nahida', state).effect, runShell('grep nahida -i', state).effect);
-  assert.match(JSON.stringify(runShell('?').effect), /grep \[-inF\]/u);
+  assert.match(JSON.stringify(runShell('?').effect), /grep \[-inFwE\]/u);
   let result = runShell('cd ~/blog/pages', state);
   state = result.state;
   assert.equal(state.cwd, '~/blog/pages');
@@ -598,6 +598,25 @@ test('rshell keeps virtual state, bounded text pipes, substitutions, scratch, an
     matches: [{ path: '-', lineNumber: 2, line: 'nahida keeps the archive', ranges: [[0, 6]] }],
     noResults: false,
     truncated: false
+  });
+  assert.deepEqual(runShell('cat ~/blog/posts/characters/alpha.md | grep -Ew nahida', state).effect, {
+    kind: 'grep',
+    pattern: 'nahida',
+    matches: [{ path: '-', line: 'nahida keeps the archive', ranges: [[0, 6]] }],
+    noResults: false,
+    truncated: false
+  });
+  assert.deepEqual(runShell('grep -iwF about ~/blog/pages/about.md', state).effect, {
+    kind: 'grep',
+    pattern: 'about',
+    matches: [{ path: '/pages/about.md', line: 'About this garden', ranges: [[0, 5]] }],
+    noResults: false,
+    truncated: false
+  });
+  assert.deepEqual(runShell('grep -EF nahida ~/blog/posts/characters/alpha.md', state).effect, {
+    kind: 'lines',
+    tone: 'error',
+    lines: ['grep cannot combine --extended-regexp with --fixed-strings.']
   });
   assert.deepEqual(runShell("cat ~/blog/posts/characters/alpha.md | grep -in 'nahida|furina' | cat", state).effect, {
     kind: 'lines',

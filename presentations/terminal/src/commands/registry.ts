@@ -68,7 +68,9 @@ const grepArguments = createCommandArgumentParser({
   options: [
     { name: 'ignore-case', aliases: ['-i', '--ignore-case'] },
     { name: 'line-number', aliases: ['-n', '--line-number'] },
-    { name: 'fixed-strings', aliases: ['-F', '--fixed-strings'] }
+    { name: 'fixed-strings', aliases: ['-F', '--fixed-strings'] },
+    { name: 'word-regexp', aliases: ['-w', '--word-regexp'] },
+    { name: 'extended-regexp', aliases: ['-E', '--extended-regexp'] }
   ]
 });
 const findArguments = createCommandArgumentParser({

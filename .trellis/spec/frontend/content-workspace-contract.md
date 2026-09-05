@@ -645,12 +645,19 @@ return successResult(walked.paths.map(render));
   `alias cls` query one mapping. Safe `alias name=command` creates an
   in-memory session alias; it may resolve only to a known command/alias, is
   visible to help and alias queries, and disappears when the session refreshes.
-- `grep` accepts only bounded `-i`, `-n`, and `-F` flags, a safe literal/regular
-  subset, and validated public or `~/blog/.rshell/tmp` user operands. It preserves source
-  line boundaries, reports `/posts/...`, `/pages/...`, `/.rshell/tmp/...`, or `-`
-  for stdin, and returns a safe no-result effect instead of conflating “no
-  matches” with an invalid resource. Resource, scanned-line, match-count, and
-  output-size limits remain enforced before rendering.
+- `grep` accepts only bounded `-i`, `-n`, `-F`, `-w`, and `-E` flags, plus their
+  long aliases `--ignore-case`, `--line-number`, `--fixed-strings`,
+  `--word-regexp`, and `--extended-regexp`. Its default and explicit `-E` mode
+  use the same safe literal/regular subset; `-E` combined with `-F` is rejected.
+  `-w` accepts only matches whose adjacent characters are absent or outside the
+  ASCII `[A-Za-z0-9_]` word set, for both fixed and safe-regex modes; zero-width
+  matches do not count. The boundary check runs during candidate search so a
+  rejected occurrence cannot hide a later valid one. Validated public or
+  `~/blog/.rshell/tmp` user operands preserve source line boundaries, report
+  `/posts/...`, `/pages/...`, `/.rshell/tmp/...`, or `-` for stdin, and return a
+  safe no-result effect instead of conflating “no matches” with an invalid
+  resource. Resource, scanned-line, match-count, and output-size limits remain
+  enforced before rendering.
 - Non-document command output settles the newest record and fresh prompt as one
   centered reading band when the group fits the viewport. Oversized output keeps
   the fresh prompt focused and visible at the viewport's lower edge while earlier
@@ -836,8 +843,8 @@ return successResult(walked.paths.map(render));
   the listed experiment; `open lab/nerv` fails rather than acting as a hidden
   root alias, while `open ~/blog/lab/nerv` remains explicit. The catalog row has no
   default list marker while following the document-list alignment language.
-- Good: `grep -i a`, `grep a -i`, and `grep -inF a` share one argv parser;
-  `grep -- -pattern` keeps the dash-prefixed value as an operand.
+- Good: `grep -i a`, `grep a -i`, `grep -inF a`, and `grep -Ew a` share one
+  argv parser; `grep -- -pattern` keeps the dash-prefixed value as an operand.
 - Good: after `cd ../` reaches `~/blog`, `ls` and `ls ~/blog` produce the same
   immediate root mount listing without exposing a synthetic `//.` path.
 - Good: `ls posts` and `tree ~/blog` expose canonical document/experiment links;

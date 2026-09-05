@@ -3,7 +3,7 @@ import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
 import { walkPublicDocuments, type PublicDocumentWalk } from '../vfs/public-documents.js';
 
-export const GREP_USAGE = 'grep [-inF] <pattern> [path ...]';
+export const GREP_USAGE = 'grep [-inFwE] <pattern> [path ...]';
 export const GREP_SUMMARY = 'filter stdin or public text';
 
 const maxResources = 256;
@@ -161,7 +161,21 @@ interface SafeRegexMatcher {
   readonly ranges: (line: string) => readonly (readonly [number, number])[];
 }
 
-function compileSafeRegex(pattern: string, insensitive: boolean): SafeRegexMatcher | undefined {
+function isWordCharacter(character: string | undefined): boolean {
+  if (character === undefined) return false;
+  const point = character.codePointAt(0);
+  return point !== undefined && ((point >= 0x30 && point <= 0x39) || (point >= 0x41 && point <= 0x5a) || (point >= 0x61 && point <= 0x7a) || point === 0x5f);
+}
+
+function hasWholeWordBoundary(characters: readonly string[], start: number, end: number): boolean {
+  return end > start && !isWordCharacter(characters[start - 1]) && !isWordCharacter(characters[end]);
+}
+
+function hasWholeWordBoundaryInString(source: string, start: number, end: number): boolean {
+  return end > start && !isWordCharacter(source[start - 1]) && !isWordCharacter(source[end]);
+}
+
+function compileSafeRegex(pattern: string, insensitive: boolean, wholeWord: boolean): SafeRegexMatcher | undefined {
   if (pattern.length === 0 || pattern.length > 256) return undefined;
   const parser: RegexParser = { characters: Object.freeze([...pattern]), index: 0, depth: 0 };
   const ast = parseRegexAlternation(parser);
@@ -256,8 +270,44 @@ function compileSafeRegex(pattern: string, insensitive: boolean): SafeRegexMatch
     }
     return undefined;
   };
+  const matchFromWholeWord = (characters: readonly string[], start: number): number | undefined => {
+    let current = new Set<number>();
+    addClosure(current, fragment.start, start, characters.length, new Set());
+    for (let position = start; position <= characters.length; position += 1) {
+      if (current.has(match) && hasWholeWordBoundary(characters, start, position)) return position;
+      if (position === characters.length) break;
+      const next = new Set<number>();
+      for (const index of current) {
+        const state = states[index]!;
+        if ((state.kind === 'char' || state.kind === 'any' || state.kind === 'class') && charMatches(state, characters[position]!)) addClosure(next, state.to, position + 1, characters.length, new Set());
+      }
+      current = next;
+    }
+    return undefined;
+  };
+  const collectRanges = (line: string): readonly (readonly [number, number])[] => {
+    const characters = [...line];
+    const offsets = [0];
+    for (const character of characters) offsets.push(offsets.at(-1)! + character.length);
+    const result: (readonly [number, number])[] = [];
+    let start = 0;
+    while (start < characters.length && result.length < 64) {
+      const end = wholeWord ? matchFromWholeWord(characters, start) : matchFrom(characters, start);
+      if (end === undefined) { start += 1; continue; }
+      if (end > start && (!wholeWord || hasWholeWordBoundary(characters, start, end))) {
+        result.push(Object.freeze([offsets[start]!, offsets[end]!] as [number, number]));
+        start = end;
+      } else {
+        // Rejected candidates must not hide a later valid candidate. This also
+        // excludes zero-width matches from whole-word reports.
+        start += 1;
+      }
+    }
+    return Object.freeze(result);
+  };
   return {
     test: (line: string): boolean => {
+      if (wholeWord) return collectRanges(line).length > 0;
       const characters = [...line];
       let current = new Set<number>();
       addClosure(current, fragment.start, 0, characters.length, new Set());
@@ -274,39 +324,34 @@ function compileSafeRegex(pattern: string, insensitive: boolean): SafeRegexMatch
       }
       return current.has(match);
     },
-    ranges: (line: string): readonly (readonly [number, number])[] => {
-      const characters = [...line];
-      const offsets = [0];
-      for (const character of characters) offsets.push(offsets.at(-1)! + character.length);
-      const result: (readonly [number, number])[] = [];
-      let start = 0;
-      while (start < characters.length && result.length < 64) {
-        const end = matchFrom(characters, start);
-        if (end === undefined) { start += 1; continue; }
-        if (end > start) { result.push(Object.freeze([offsets[start]!, offsets[end]!] as [number, number])); start = end; }
-        else start += 1;
-      }
-      return Object.freeze(result);
-    }
+    ranges: collectRanges
   };
 }
 
-function literalMatcher(pattern: string, insensitive: boolean): SafeRegexMatcher {
+function literalMatcher(pattern: string, insensitive: boolean, wholeWord: boolean): SafeRegexMatcher {
   const foldedPattern = insensitive ? pattern.toLocaleLowerCase('en-US') : pattern;
-  return {
-    test: (line: string): boolean => (insensitive ? line.toLocaleLowerCase('en-US') : line).includes(foldedPattern),
-    ranges: (line: string): readonly (readonly [number, number])[] => {
-      const source = insensitive ? line.toLocaleLowerCase('en-US') : line;
-      const result: (readonly [number, number])[] = [];
-      let cursor = 0;
-      while (cursor < source.length && result.length < 64) {
-        const start = source.indexOf(foldedPattern, cursor);
-        if (start === -1) break;
-        result.push(Object.freeze([start, start + foldedPattern.length] as [number, number]));
-        cursor = start + Math.max(1, foldedPattern.length);
+  const collectRanges = (line: string): readonly (readonly [number, number])[] => {
+    const source = insensitive ? line.toLocaleLowerCase('en-US') : line;
+    const result: (readonly [number, number])[] = [];
+    let cursor = 0;
+    while (cursor < source.length && result.length < 64) {
+      const start = source.indexOf(foldedPattern, cursor);
+      if (start === -1) break;
+      const end = start + foldedPattern.length;
+      if (!wholeWord || hasWholeWordBoundaryInString(source, start, end)) {
+        result.push(Object.freeze([start, end] as [number, number]));
+        cursor = end;
+      } else {
+        // Move one character at a time after a rejected candidate so a later
+        // boundary-valid occurrence remains discoverable.
+        cursor = start + 1;
       }
-      return Object.freeze(result);
     }
+    return Object.freeze(result);
+  };
+  return {
+    test: (line: string): boolean => wholeWord ? collectRanges(line).length > 0 : (insensitive ? line.toLocaleLowerCase('en-US') : line).includes(foldedPattern),
+    ranges: collectRanges
   };
 }
 
@@ -342,9 +387,12 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
   const insensitive = options['ignore-case'] === true;
   const number = options['line-number'] === true;
   const literal = options['fixed-strings'] === true;
+  const wholeWord = options['word-regexp'] === true;
+  const extended = options['extended-regexp'] === true;
+  if (literal && extended) return failureResult('grep cannot combine --extended-regexp with --fixed-strings.');
   const pattern = operands[0];
   if (pattern === undefined || pattern.length === 0 || pattern.length > 256 || /[\u0000-\u001f\u007f]/u.test(pattern)) return failureResult(`Usage: ${GREP_USAGE}`);
-  const matcher = literal ? literalMatcher(pattern, insensitive) : compileSafeRegex(pattern, insensitive);
+  const matcher = literal ? literalMatcher(pattern, insensitive, wholeWord) : compileSafeRegex(pattern, insensitive, wholeWord);
   if (matcher === undefined) return failureResult('grep pattern is outside the safe regular-language subset.');
   const resources = operands.slice(1);
   if (context.stdin !== undefined && resources.length > 0) return failureResult('grep accepts stdin or named public resources, not both.');
