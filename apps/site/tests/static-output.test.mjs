@@ -272,10 +272,22 @@ test('comment output is post-only and follows the enabled build contract', async
     return;
   }
 
+  const commentsExportPath = process.env.FIREFLY_COMMENTS_EXPORT;
+  assert.ok(commentsExportPath, 'enabled comments require FIREFLY_COMMENTS_EXPORT');
+  const commentsExport = JSON.parse(await readFile(commentsExportPath, 'utf8'));
+  assert.ok(Array.isArray(commentsExport.comments), 'comments export must contain a comments array');
+  const expectedComments = commentsExport.comments.filter(
+    (comment) => comment.postPath === '/posts/ai/llm-workflow-with-trellis/'
+  );
+  const renderedComments = routes.post.match(
+    /class="terminal-comment-card(?: terminal-comment-card--reply)?"/gu
+  ) ?? [];
+
   assert.match(routes.post, /class="terminal-comment-section"/u);
-  assert.match(routes.post, /Reader/u);
-  assert.match(routes.post, /Another reader/u);
-  assert.match(routes.post, /action="https:\/\/comments\.example\.test\/v1\/comments\/submissions"/u);
+  assert.equal(renderedComments.length, expectedComments.length);
+  assert.equal(routes.post.includes('class="terminal-comment-empty"'), expectedComments.length === 0);
+  const submissionAction = new URL('/v1/comments/submissions', SITE_CONFIG.comments.writeOrigin).toString();
+  assert.ok(routes.post.includes(`action="${submissionAction}"`));
   assert.doesNotMatch(routes.post, /emailCiphertext|verificationTokenHash|controlTokenHash|ipHash|userAgentHash|internalId|dedupeKey/iu);
   for (const html of excluded) assert.doesNotMatch(html, commentSurface);
 });

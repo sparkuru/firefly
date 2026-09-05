@@ -205,6 +205,12 @@ Unicode routes correctly.
 | candidate tombstone epoch lower than published epoch | refuse rollback/promotion |
 | no enabled export/configured origin | preserve the empty disabled build |
 
+The publication privacy scanner applies source-path sentinels at a path-token
+boundary. A canonical public route segment such as `app`, `home`, or `tmp`
+must not be rejected merely because its `/posts/<category>/.../` URL contains
+the same character sequence; private fields, email-like values, secrets, and
+unsafe markup remain blocking findings.
+
 ### 5. Good / Base / Bad Cases
 
 - **Good:** a verified and owner-approved record is exported with only the
@@ -581,6 +587,22 @@ services/comments/scripts/reconcile-route-catalog.mjs --release <release-root> -
   absent destination, never overwrites an active path, and switches data only
   after an operator smoke test. Static release rollback and data restore are
   separate decisions.
+- An empty-store reset is an exceptional data-loss operation and requires an
+  explicit owner decision. Before touching the active data root, resolve the
+  runtime and data directories through privileged realpath checks; the
+  canonical data directory must be exactly the runtime directory's `data`
+  child and neither canonical root may be `/`. Match containers by the exact
+  Compose service and working-directory labels, reject any running or
+  mismatched-identity duplicate, and use the data-directory owner as the
+  identity source only when the service is demonstrably absent/stopped. Move
+  the old database and SQLite sidecars into a `0700` owner-only recovery
+  directory, preserve outbox/state hashes, and create the empty store only
+  after that move. Validate health/readiness/metrics, route count, secret
+  access, loopback/no-public-port, identity/mount contracts, empty migrations,
+  and outbox preservation before declaring success. Any failed post-mutation
+  check must remove only exact service containers, restore the old database by
+  hash, and leave the service stopped; a tombstone epoch reset to zero is
+  acceptable only when no static/public release has been promoted.
 - Comments remain disabled in tracked configuration until private health,
   same-origin proxy, allowed-origin, TLS/DNS, SMTP, backup/restore, and public
   submission/verification gates are accepted by the operator.
@@ -600,6 +622,10 @@ services/comments/scripts/reconcile-route-catalog.mjs --release <release-root> -
 | legacy source is absent, non-regular, corrupt, or destination exists | refuse migration and preserve the source |
 | backup destination or restore destination exists | refuse overwrite |
 | backup checksum/integrity/manifest validation fails | remove only the unreferenced candidate and preserve active data |
+| runtime/data realpath is unresolved, canonical data is not the runtime `data` child, or a canonical root is `/` | refuse the reset before touching containers or active data |
+| multiple exact-service containers include a running instance, a mismatched working directory, or different runtime identities | refuse the reset; do not choose a container by ordering |
+| active database cannot pass a read-only recovery probe and no verified backup or explicit owner reset decision exists | preserve the active data and block service reset |
+| an approved empty-store reset fails after data movement | restore the old database by checksum, remove only exact service containers, and leave the comments service stopped |
 | comments service has no private listener | `/v1/comments/*` fails closed; unknown `/v1/*` resources remain bounded 404s and static routes remain static |
 | comments disabled or no export is configured | emit no public comment surface |
 
@@ -609,13 +635,18 @@ services/comments/scripts/reconcile-route-catalog.mjs --release <release-root> -
   read-only mount; host-specific Nginx selects the matching upstream; a
   SQLite backup set is restored to a new path and smoke-tested before switch;
   the static site remains disabled until the operator accepts all gates.
+- **Good reset:** the owner explicitly accepts data loss, the old database is
+  retained in a `0700` recovery directory, the outbox is hash-stable, the
+  empty store passes all private gates, and no static/public release is
+  promoted while the new tombstone epoch starts at zero.
 - **Base:** no secret file, SMTP transport, or comments profile is active; the
   static publication still builds and serves the empty comments state.
 - **Bad:** publish the comments port, mount a secret into the static image,
   share one database between production and development by default, restore
   over the active root, route every host through one global `/v1/comments/`
-  block, or make a stale runtime readable by changing a `0600` secret to a
-  broader mode.
+  block, reset an unreadable database without explicit owner approval, choose
+  the first of several stale containers, or make a stale runtime readable by
+  changing a `0600` secret to a broader mode.
 
 ### 6. Tests Required
 
@@ -643,6 +674,13 @@ services/comments/scripts/reconcile-route-catalog.mjs --release <release-root> -
 - Full M5.1 checks/build, Compose config validation, runtime image probes,
   shell syntax/ShellCheck/shfmt, and publication static-output checks run
   sequentially through their declared boundaries.
+- Reset/rollback probes: realpath/data-child containment, exact Compose label
+  selection, stopped-duplicate handling, numeric identity alignment,
+  owner-only recovery-directory permissions, old-database hash restoration,
+  empty-store migration/epoch assertions, loopback listener classification,
+  and unchanged outbox/state hashes. Assertions must also cover the
+  post-failure service-stopped state and the no-public-release condition for
+  an epoch reset.
 
 ### 7. Wrong vs Correct
 
@@ -677,6 +715,16 @@ secrets.env mode: 0600
 ```text
 production Host/SNI -> production server block -> production comments DB
 development Host/SNI -> development server block -> development comments DB
+```
+
+```sh
+# Wrong: follow a runtime symlink or choose the first stale container.
+rm -f <runtime>/data/core.db
+docker ps --all --filter label=com.docker.compose.service=comments | head -n 1
+
+# Correct: resolve and bound the data child, retain the old database, then
+# validate every exact service instance and roll back by checksum on failure.
+realpath <runtime>/data  # must equal: realpath(<runtime>)/data
 ```
 
 ```sh
