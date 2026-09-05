@@ -255,6 +255,49 @@ test('release validation rejects private or unsafe comment surfaces in authored 
   await assert.rejects(validateRelease(release, [manifest]), /private data|unsafe markup/u);
 });
 
+test('comment privacy scanning preserves canonical route category names', async (context) => {
+  const { root, manifest } = await fixture(context);
+  const release = path.join(root, 'release');
+  await mkdir(path.join(release, 'lab/alpha'), { recursive: true });
+  for (const category of ['app', 'home', 'tmp']) {
+    await mkdir(path.join(release, 'posts', category, 'article'), { recursive: true });
+  }
+  await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
+  await writeFile(path.join(release, '404.html'), '<h1>Missing</h1>');
+  await writeFile(path.join(release, 'lab/index.html'), '<h1>Lab</h1>');
+  await writeFile(path.join(release, 'lab/alpha/index.html'), '<h1>Alpha</h1>');
+  await writeFile(path.join(release, 'lab/alpha/404.html'), '<h1>Missing</h1>');
+  await writeFile(path.join(release, 'lab/alpha/license'), 'fixture');
+  for (const category of ['app', 'home', 'tmp']) {
+    await writeFile(
+      path.join(release, 'posts', category, 'article/index.html'),
+      `<section class="comment-section"><input name="postPath" value="/posts/${category}/article/"></section>`
+    );
+  }
+
+  await assert.doesNotReject(validateRelease(release, [manifest]));
+
+  const privatePaths = [
+    'file:///private/comment.json',
+    '/app/private.json',
+    '/home/owner/private.json',
+    '/tmp/private.json',
+    '/srv/uploads/private.json',
+    '/srv/backups/private.json',
+    '/var/www/private.json',
+    '/usr/uploads/private.json',
+    '/usr/local/uploads/private.json',
+    '.private/comment.json'
+  ];
+  for (const privatePath of privatePaths) {
+    await writeFile(
+      path.join(release, 'posts/app/article/index.html'),
+      `<section class="comment-section"><p class="comment-body">${privatePath}</p></section>`
+    );
+    await assert.rejects(validateRelease(release, [manifest]), /private data|unsafe markup/u);
+  }
+});
+
 test('publication evidence records comment tombstones and refuses an older rollback', async (context) => {
   const { root, manifest } = await fixture(context);
   const discovery = Object.freeze({ manifests: Object.freeze([manifest]), catalog: Object.freeze([]) });

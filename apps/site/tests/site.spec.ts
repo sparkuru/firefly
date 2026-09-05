@@ -28,8 +28,9 @@ async function expectContainedInViewport(
 
 async function expectHeadingLevels(page: Page, levels: number[]) {
   const actual = await page
-    .getByRole('article')
-    .locator('h1, h2, h3, h4, h5, h6')
+    .locator(
+      'article.terminal-document > .terminal-document-header h1, article.terminal-document > [data-terminal-reader-region] h1, article.terminal-document > [data-terminal-reader-region] h2, article.terminal-document > [data-terminal-reader-region] h3, article.terminal-document > [data-terminal-reader-region] h4, article.terminal-document > [data-terminal-reader-region] h5, article.terminal-document > [data-terminal-reader-region] h6'
+    )
     .evaluateAll((headings) =>
       headings.map((heading) => Number(heading.tagName.slice(1)))
     );
@@ -138,7 +139,7 @@ test('post deep link uses the firefly default with a reader fragment', async ({ 
 
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/$/);
   await expectTerminalDocument(page, '~/blog/posts/ai/llm-workflow-with-trellis.md');
-  const article = page.getByRole('article');
+  const article = page.locator('article.terminal-document');
   await expect(
     article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })
   ).toBeVisible();
@@ -189,7 +190,7 @@ test('firefly article remains complete and exposes one canonical route', async (
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
 
   await expectTerminalDocument(page, '~/blog/posts/ai/llm-workflow-with-trellis.md');
-  const article = page.getByRole('article');
+  const article = page.locator('article.terminal-document');
   await expect(article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'usage' })).toBeVisible();
@@ -213,7 +214,9 @@ test('firefly article remains complete and exposes one canonical route', async (
   expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
   await expect(article.locator('.terminal-path')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
-  await expect(page.getByRole('textbox')).toHaveCount(0);
+  await expect(
+    article.locator('[data-terminal-reader-region] input, [data-terminal-reader-region] textarea, [data-terminal-reader-region] [role="textbox"]')
+  ).toHaveCount(0);
   await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 4, 4]);
   await expectNoHorizontalOverflow(page);
 });
@@ -253,7 +256,7 @@ test('page deep link renders readable Markdown', async ({ page }) => {
   await page.goto('/pages/about/');
 
   await expectTerminalDocument(page, '~/blog/pages/about.md');
-  const article = page.getByRole('article');
+  const article = page.locator('article.terminal-document');
   await expect(
     article.getByRole('heading', { level: 1, name: 'About this foundation' })
   ).toBeVisible();

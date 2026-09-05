@@ -149,7 +149,7 @@ test('connecting startup prevents Escape from stopping the home controller load'
 test('pending startup exposes the direct boot log before the shell is ready', async ({ page }) => {
   await page.setViewportSize({ width: 2048, height: 1244 });
   await page.route(/TerminalHome.*\.js$/u, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 4000));
     await route.continue();
   });
   await page.goto('/', { waitUntil: 'commit' });

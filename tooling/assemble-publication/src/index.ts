@@ -78,7 +78,7 @@ const COMMENT_SECTION_PATTERN = /<section\b[^>]*\bclass=["'](?:terminal-)?commen
 const COMMENT_EMAIL_PATTERN = /\b[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+\b/iu;
 const PROHIBITED_COMMENT_TEXT = [
   /(?:emailCiphertext|emailFingerprint|verificationTokenHash|controlTokenHash|ipHash|userAgentHash|internalId|dedupeKey|moderationVersion|privateEmailRetentionAt|abuseRetentionAt|audit_events)\b/iu,
-  /(?:FIREFLY_COMMENTS_EXPORT|FIREFLY_CONTENT_ROOT|file:\/\/|\/app\/|\/home\/|\/tmp\/|\/(?:srv\/uploads|srv\/backups|var\/www|usr\/(?:local\/)?uploads)\/|(?:^|[\\/])\.private(?:[\\/]|$))/imu
+  /(?:FIREFLY_COMMENTS_EXPORT|FIREFLY_CONTENT_ROOT|file:\/\/|(?:^|[^A-Za-z0-9_-])\/(?:app|home|tmp)\/|(?:^|[^A-Za-z0-9_-])\/(?:srv\/(?:uploads|backups)|var\/www|usr\/(?:local\/)?uploads)\/|(?:^|[^A-Za-z0-9_-])\.private(?:[\\/]|$))/imu
 ];
 const UNSAFE_COMMENT_MARKUP = /<(?:script|iframe|object|embed|svg|img)\b|(?:\bon[a-z]+\s*=|javascript:)/iu;
 
