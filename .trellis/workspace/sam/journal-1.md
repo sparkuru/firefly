@@ -1221,3 +1221,24 @@ Implemented Terminal grep -w/--word-regexp with ASCII whole-word boundaries for 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 55: Co-locate Terminal command descriptors
+
+**Date**: 2026-09-05
+**Task**: Co-locate Terminal command descriptors
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Moved built-in Terminal command metadata, parsers, policies, executors, completion callbacks, and Help examples into command-owned descriptors; kept the registry as an explicit allowlist; added generic Help detail rendering and cross-layer tests. Terminal 33/33, site static 17/17, and focused browser 76/76 passed with repository-local content fixture.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8439111` | (see git log) |
+
+### Status
+
+[OK] **Completed**
