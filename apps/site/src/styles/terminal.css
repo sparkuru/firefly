@@ -412,6 +412,62 @@
   margin-block: 0.75rem 0.5rem;
 }
 
+.terminal-help-detail-view {
+  min-width: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--terminal-color-border);
+}
+
+.terminal-help-detail-view h2,
+.terminal-help-detail-view h3 {
+  margin: 0 0 0.7rem;
+  color: var(--terminal-color-command);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.terminal-help-detail-usage {
+  display: block;
+  margin-block: 0 0.45rem;
+  color: var(--terminal-color-text);
+  overflow-wrap: anywhere;
+}
+
+.terminal-help-detail-view p {
+  margin: 0.35rem 0;
+}
+
+.terminal-help-detail-view h3 {
+  margin-top: 1rem;
+}
+
+.terminal-help-examples {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.terminal-help-example {
+  display: grid;
+  grid-template-columns: minmax(18ch, 1fr) minmax(18ch, 1fr);
+  gap: 0.85rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.terminal-help-example-command {
+  min-width: 0;
+  color: var(--terminal-color-text);
+  overflow-wrap: anywhere;
+}
+
+.terminal-help-example-description {
+  min-width: 0;
+  color: var(--terminal-color-muted);
+}
+
 .terminal-help-group {
   min-width: 0;
   padding-top: 0.85rem;
@@ -1239,6 +1295,11 @@
   }
 
   .terminal-help-command {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .terminal-help-example {
     grid-template-columns: 1fr;
     gap: 0.15rem;
   }

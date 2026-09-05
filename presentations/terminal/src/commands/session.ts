@@ -5,10 +5,14 @@ import type {
   ProcessResult,
   ReadonlyShellAlias,
   ShellCommandGroup,
+  ShellHelpExample,
   ShellCommandMetadata
 } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
+import { completeOpen, completePath } from './completion.js';
+import { noArguments, optionalPath, requiredPath, standalonePolicy, textPolicy, structuredTextPolicy } from './descriptors.js';
+import type { CommandSpec } from './contracts.js';
 
 export const OPEN_USAGE = 'open <path>';
 export const VIM_USAGE = 'vim <path>';
@@ -18,7 +22,7 @@ export const CLEAR_USAGE = 'clear';
 export const CLEAR_SUMMARY = 'clear the screen';
 export const PWD_USAGE = 'pwd';
 export const PWD_SUMMARY = 'print the current virtual path';
-export const HELP_USAGE = 'help';
+export const HELP_USAGE = 'help [command]';
 export const HELP_SUMMARY = 'show this command list';
 export const ABOUT_USAGE = 'about';
 export const ABOUT_SUMMARY = 'describe this site';
@@ -51,6 +55,12 @@ function commandLines(command: HelpCommand): string {
   return `  ${command.usage}${aliases} — ${command.summary}`;
 }
 
+function copyExamples(command: Pick<HelpCommand, 'examples'>): readonly ShellHelpExample[] | undefined {
+  return command.examples === undefined
+    ? undefined
+    : Object.freeze(command.examples.map((example) => Object.freeze({ ...example })));
+}
+
 function helpValue(commands: readonly ShellCommandMetadata[]): readonly HelpGroup[] {
   return Object.freeze(helpGroups.flatMap((name) => {
     const groupCommands = commands
@@ -61,7 +71,8 @@ function helpValue(commands: readonly ShellCommandMetadata[]): readonly HelpGrou
         name: command.name,
         aliases: Object.freeze([...command.aliases]),
         summary: command.summary,
-        usage: command.usage
+        usage: command.usage,
+        ...(command.examples === undefined ? {} : { examples: copyExamples(command) })
       }));
     return groupCommands.length === 0
       ? []
@@ -79,9 +90,30 @@ export function formatUtcDate(date: Date): string {
 }
 
 export function executeHelp(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
-  const invalid = invalidOperands(args, HELP_USAGE);
-  if (invalid !== undefined) return invalid;
-  const groups = helpValue(context.commands ?? Object.freeze([]));
+  if (args.operands.length > 1) return failureResult(`Usage: ${HELP_USAGE}`);
+  const commands = context.commands ?? Object.freeze([]);
+  const groups = helpValue(commands);
+  const target = args.operands[0];
+  if (target !== undefined) {
+    const detail = commandForToken(commands, target);
+    if (detail === undefined) return failureResult(`No command named "${target}".`);
+    const aliases = detail.aliases.length === 0 ? [] : [`Aliases: ${detail.aliases.join(', ')}`];
+    const examples = detail.examples === undefined || detail.examples.length === 0
+      ? []
+      : ['Examples:', ...detail.examples.map((example) => `  ${example.command} — ${example.description}`)];
+    return successResult([
+      `Usage: ${detail.usage}`,
+      detail.summary,
+      ...aliases,
+      ...examples
+    ], { value: { kind: 'help', groups, detail: Object.freeze({
+      name: detail.name,
+      aliases: Object.freeze([...detail.aliases]),
+      summary: detail.summary,
+      usage: detail.usage,
+      ...(detail.examples === undefined ? {} : { examples: copyExamples(detail) })
+    }) } });
+  }
   return successResult(groups.flatMap((group) => [group.name, ...group.commands.map(commandLines)]), { value: { kind: 'help', groups } });
 }
 
@@ -211,3 +243,137 @@ export function executeClear(_context: ProcessContext, args: ParsedCommandArgume
     ? successResult([], { controls: [{ kind: 'clear-transcript' }] })
     : failureResult(`Usage: ${CLEAR_USAGE}`);
 }
+
+export const OPEN_COMMAND_SPEC: CommandSpec = {
+  name: 'open',
+  aliases: Object.freeze([]),
+  usage: OPEN_USAGE,
+  summary: OPEN_SUMMARY,
+  group: 'Read & navigate',
+  order: 30,
+  policy: standalonePolicy,
+  parse: requiredPath(OPEN_USAGE),
+  execute: executeOpen,
+  complete: completeOpen
+};
+
+export const VIM_COMMAND_SPEC: CommandSpec = {
+  name: 'vim',
+  aliases: Object.freeze([]),
+  usage: VIM_USAGE,
+  summary: VIM_SUMMARY,
+  group: 'Read & navigate',
+  order: 20,
+  policy: standalonePolicy,
+  parse: requiredPath(VIM_USAGE),
+  execute: executeVim,
+  complete: completePath
+};
+
+export const CLEAR_COMMAND_SPEC: CommandSpec = {
+  name: 'clear',
+  aliases: Object.freeze(['cls']),
+  usage: CLEAR_USAGE,
+  summary: CLEAR_SUMMARY,
+  group: 'Session',
+  order: 40,
+  policy: standalonePolicy,
+  parse: noArguments(CLEAR_USAGE),
+  execute: executeClear
+};
+
+export const PWD_COMMAND_SPEC: CommandSpec = {
+  name: 'pwd',
+  aliases: Object.freeze([]),
+  usage: PWD_USAGE,
+  summary: PWD_SUMMARY,
+  group: 'Read & navigate',
+  order: 50,
+  policy: textPolicy,
+  parse: noArguments(PWD_USAGE),
+  execute: executePwd
+};
+
+export const HELP_COMMAND_SPEC: CommandSpec = {
+  name: 'help',
+  aliases: Object.freeze(['?']),
+  usage: HELP_USAGE,
+  summary: HELP_SUMMARY,
+  group: 'Session',
+  order: 10,
+  policy: structuredTextPolicy,
+  parse: optionalPath(HELP_USAGE),
+  execute: executeHelp
+};
+
+export const ABOUT_COMMAND_SPEC: CommandSpec = {
+  name: 'about',
+  aliases: Object.freeze([]),
+  usage: ABOUT_USAGE,
+  summary: ABOUT_SUMMARY,
+  group: 'Identity & time',
+  order: 10,
+  policy: textPolicy,
+  parse: noArguments(ABOUT_USAGE),
+  execute: executeAbout
+};
+
+export const WHOAMI_COMMAND_SPEC: CommandSpec = {
+  name: 'whoami',
+  aliases: Object.freeze([]),
+  usage: WHOAMI_USAGE,
+  summary: WHOAMI_SUMMARY,
+  group: 'Identity & time',
+  order: 20,
+  policy: textPolicy,
+  parse: noArguments(WHOAMI_USAGE),
+  execute: executeWhoami
+};
+
+export const ID_COMMAND_SPEC: CommandSpec = {
+  name: 'id',
+  aliases: Object.freeze([]),
+  usage: ID_USAGE,
+  summary: ID_SUMMARY,
+  group: 'Identity & time',
+  order: 30,
+  policy: textPolicy,
+  parse: noArguments(ID_USAGE),
+  execute: executeId
+};
+
+export const DATE_COMMAND_SPEC: CommandSpec = {
+  name: 'date',
+  aliases: Object.freeze([]),
+  usage: DATE_USAGE,
+  summary: DATE_SUMMARY,
+  group: 'Identity & time',
+  order: 40,
+  policy: textPolicy,
+  parse: noArguments(DATE_USAGE),
+  execute: executeDate
+};
+
+export const HISTORY_COMMAND_SPEC: CommandSpec = {
+  name: 'history',
+  aliases: Object.freeze([]),
+  usage: HISTORY_USAGE,
+  summary: HISTORY_SUMMARY,
+  group: 'Session',
+  order: 20,
+  policy: textPolicy,
+  parse: noArguments(HISTORY_USAGE),
+  execute: executeHistory
+};
+
+export const ALIAS_COMMAND_SPEC: CommandSpec = {
+  name: 'alias',
+  aliases: Object.freeze([]),
+  usage: ALIAS_USAGE,
+  summary: ALIAS_SUMMARY,
+  group: 'Session',
+  order: 30,
+  policy: textPolicy,
+  parse: optionalPath(ALIAS_USAGE),
+  execute: executeAlias
+};

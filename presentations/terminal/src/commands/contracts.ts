@@ -1,4 +1,4 @@
-import type { ProcessContext, ProcessResult } from '../shell/contracts.js';
+import type { ProcessContext, ProcessResult, ShellHelpExample } from '../shell/contracts.js';
 import type { CommandArgumentParser, ParsedCommandArguments } from './arguments.js';
 
 export type CommandGroup =
@@ -29,6 +29,7 @@ export interface CommandPolicy {
 export interface CompletionContext {
   readonly cwd: string;
   readonly fs: import('../vfs/contracts.js').ReadonlyVirtualFs;
+  readonly invokedName: string;
 }
 
 export interface CommandSpec {
@@ -41,5 +42,6 @@ export interface CommandSpec {
   readonly policy: CommandPolicy;
   readonly parse: CommandArgumentParser;
   readonly execute: (context: ProcessContext, args: ParsedCommandArguments) => ProcessResult;
+  readonly examples?: readonly ShellHelpExample[];
   readonly complete?: (context: CompletionContext, operand: string) => CompletionResult;
 }

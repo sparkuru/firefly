@@ -2,6 +2,9 @@ import type { ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
 import type { TreeLine, TreeNode } from '../vfs/contracts.js';
+import { completeTree } from './completion.js';
+import { optionalPath, structuredTextPolicy } from './descriptors.js';
+import type { CommandSpec } from './contracts.js';
 
 export const TREE_USAGE = 'tree [path]';
 export const TREE_SUMMARY = 'show a public content subtree';
@@ -69,3 +72,16 @@ export function executeTree(context: ProcessContext, args: ParsedCommandArgument
     value: { kind: 'tree', root, lines: Object.freeze(lines), nodes: Object.freeze(nodes) }
   });
 }
+
+export const TREE_COMMAND_SPEC: CommandSpec = {
+  name: 'tree',
+  aliases: Object.freeze([]),
+  usage: TREE_USAGE,
+  summary: TREE_SUMMARY,
+  group: 'Explore',
+  order: 20,
+  policy: structuredTextPolicy,
+  parse: optionalPath(TREE_USAGE),
+  execute: executeTree,
+  complete: completeTree
+};

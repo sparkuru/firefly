@@ -28,6 +28,8 @@ import {
   type TerminalEntry,
   type TerminalTextDocument
 } from '../src/runtime.js';
+import { GREP_COMMAND_SPEC } from '../src/commands/grep.js';
+import { createCommandSpecRegistry } from '../src/commands/registry.js';
 
 const context: DocumentContext = {
   documentId: 'posts/example.md',
@@ -301,6 +303,25 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(help, /find public documents by filename substring/u);
   assert.match(help, /open <path>/u);
   assert.match(help, /list curated friend links/u);
+  const grepHelp = run('help grep');
+  assert.deepEqual(grepHelp.effect?.kind === 'help' ? grepHelp.effect.detail : undefined, {
+    name: 'grep',
+    aliases: [],
+    summary: 'filter stdin or public text',
+    usage: 'grep [-inFwE] <pattern> [path ...]',
+    examples: [
+      { command: 'grep -w cat', description: 'match cat as a whole word' },
+      { command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' }
+    ]
+  });
+  assert.deepEqual(grepHelp.effect?.kind === 'help' ? grepHelp.effect.groups.length : 0, 4);
+  const aliasHelp = run('help ?').effect;
+  assert.deepEqual(aliasHelp?.kind === 'help' ? aliasHelp.detail?.name : undefined, 'help');
+  assert.deepEqual(run('help missing').effect, {
+    kind: 'lines',
+    tone: 'error',
+    lines: ['No command named "missing".']
+  });
   assert.equal(run('ls').effect?.kind, 'entries');
   assert.deepEqual(run('find alpha').effect, {
     kind: 'find',
@@ -492,7 +513,7 @@ test('every command has deterministic output and strict usage errors', () => {
       ]
     }, option);
   }
-  for (const command of ['help extra', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'find', 'vim', 'tree /private', 'open', 'open lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
+  for (const command of ['help extra more', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'find', 'vim', 'tree /private', 'open', 'open lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
     assert.match(JSON.stringify(run(command).effect), /Usage:/u, command);
   }
   assert.match(JSON.stringify(run('wat').effect), /Unknown command: wat/u);
@@ -747,6 +768,13 @@ test('completion consumes only unique contextual document and lab matches', () =
     ownsTab: false
   });
   assert.equal(listCompletion.kind === 'ambiguous' && listCompletion.ownsTab, false);
+  assert.deepEqual(completeCommand('ls ', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), {
+    kind: 'ambiguous',
+    value: 'ls ',
+    candidates: ['--help', '-h', 'lab/', 'pages/', 'posts/'],
+    candidateValues: ['ls --help', 'ls -h', 'ls lab/', 'ls pages/', 'ls posts/'],
+    ownsTab: true
+  });
   assert.deepEqual(completeCommand('ls pa', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'ls pages/', candidates: ['pages/'] });
   assert.deepEqual(completeCommand('ls p', entries, experiments), { kind: 'no-match', candidates: [], ownsTab: true });
   const emptyListCompletion = completeCommand('ls ', entries, experiments);
@@ -883,6 +911,7 @@ test('immutable command registry keeps a unit-only alias consistent', () => {
     aliases: ['hi'],
     summary: 'print a greeting',
     usage: 'greet',
+    examples: [{ command: 'greet', description: 'say hello' }],
     execute: (operands) => operands.length === 0
       ? { kind: 'lines', tone: 'normal', lines: ['hello'] }
       : { kind: 'lines', tone: 'error', lines: ['Usage: greet'] },
@@ -908,6 +937,14 @@ test('immutable command registry keeps a unit-only alias consistent', () => {
   const customHelp = executeCommand({ state: createTerminalState(), input: 'help', entries, registry }).effect;
   assert.equal(customHelp?.kind, 'help');
   assert.equal(customHelp?.kind === 'help' && customHelp.groups.at(-1)?.commands[0]?.summary, 'print a greeting');
+  const customDetail = executeCommand({ state: createTerminalState(), input: 'help hi', entries, registry }).effect;
+  assert.deepEqual(customDetail?.kind === 'help' ? customDetail.detail : undefined, {
+    name: 'greet',
+    aliases: ['hi'],
+    summary: 'print a greeting',
+    usage: 'greet',
+    examples: [{ command: 'greet', description: 'say hello' }]
+  });
   const overriddenHelp = createTerminalCommandRegistry([{
     name: 'help',
     aliases: [],
@@ -925,4 +962,31 @@ test('immutable command registry keeps a unit-only alias consistent', () => {
     { name: 'one', aliases: ['shared'], summary: 'one', usage: 'one', execute: () => ({ kind: 'clear' }) },
     { name: 'shared', aliases: [], summary: 'two', usage: 'shared', execute: () => ({ kind: 'clear' }) }
   ]), /collision/u);
+  assert.throws(() => createTerminalCommandRegistry([{
+    name: 'bad-examples',
+    aliases: [],
+    summary: 'bad examples',
+    usage: 'bad-examples',
+    examples: [Object.assign({ command: 'bad-examples', description: 'ok' }, { extra: 'nope' })],
+    execute: () => ({ kind: 'clear' })
+  }]), /example/u);
+});
+
+test('neutral command registry rejects non-canonical help example arrays', () => {
+  const examples = [{ command: 'custom', description: 'valid' }];
+  Object.defineProperty(examples, '01', { value: { command: 'custom', description: 'ignored' } });
+  assert.throws(() => createCommandSpecRegistry([{
+    ...GREP_COMMAND_SPEC,
+    name: 'custom',
+    usage: 'custom',
+    examples
+  }]), /Command specs/u);
+
+  const nullPrototypeExamples = Object.setPrototypeOf([{ command: 'custom', description: 'valid' }], null);
+  assert.throws(() => createCommandSpecRegistry([{
+    ...GREP_COMMAND_SPEC,
+    name: 'custom',
+    usage: 'custom',
+    examples: nullPrototypeExamples
+  }]), /Command specs/u);
 });

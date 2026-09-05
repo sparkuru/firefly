@@ -502,6 +502,55 @@ function renderFindEffect(effect: Extract<TerminalEffect, { kind: 'find' }>, rec
 function renderHelpEffect(effect: Extract<TerminalEffect, { kind: 'help' }>, record: HTMLElement): void {
   const help = document.createElement('div');
   help.className = 'terminal-help';
+  if (effect.detail !== undefined) {
+    const detailView = document.createElement('section');
+    detailView.className = 'terminal-help-detail-view';
+    const heading = document.createElement('h2');
+    heading.textContent = effect.detail.name;
+    detailView.append(heading);
+
+    const usage = document.createElement('code');
+    usage.className = 'terminal-help-detail-usage';
+    usage.textContent = effect.detail.usage;
+    detailView.append(usage);
+
+    const summary = document.createElement('p');
+    summary.className = 'terminal-help-summary';
+    summary.textContent = effect.detail.summary;
+    detailView.append(summary);
+
+    if (effect.detail.aliases.length > 0) {
+      const aliases = document.createElement('p');
+      aliases.className = 'terminal-help-aliases';
+      aliases.textContent = `alias ${effect.detail.aliases.join(', ')}`;
+      detailView.append(aliases);
+    }
+
+    if (effect.detail.examples !== undefined && effect.detail.examples.length > 0) {
+      const examplesHeading = document.createElement('h3');
+      examplesHeading.textContent = 'Examples';
+      detailView.append(examplesHeading);
+      const examples = document.createElement('ul');
+      examples.className = 'terminal-help-examples';
+      for (const example of effect.detail.examples) {
+        const item = document.createElement('li');
+        item.className = 'terminal-help-example';
+        const command = document.createElement('code');
+        command.className = 'terminal-help-example-command';
+        command.textContent = example.command;
+        const description = document.createElement('span');
+        description.className = 'terminal-help-example-description';
+        description.textContent = example.description;
+        item.append(command, description);
+        examples.append(item);
+      }
+      detailView.append(examples);
+    }
+
+    help.append(detailView);
+    record.append(help);
+    return;
+  }
   for (const group of effect.groups) {
     const section = document.createElement('section');
     section.className = 'terminal-help-group';

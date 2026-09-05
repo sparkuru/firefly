@@ -313,20 +313,29 @@ startTerminalReader(root: HTMLElement): void
   from its virtual `.md` path. The descriptor-safe decoder rejects accessors,
   sparse/decorated arrays, unknown fields, hidden/dot/traversal/percent/
   backslash/non-NFC paths, noncanonical hrefs, and folded path collisions.
-- Neutral migrated `CommandSpec` records in
-  `presentations/terminal/src/commands/registry.ts` own safe names/aliases,
-  metadata, completion, and explicit pipeline/substitution/redirect policy.
-  They execute against `ProcessContext` (`stdin?`, virtual `cwd`, read-only
-  `ReadonlyVirtualFs`, immutable session, clock, and signal) and return
-  `ProcessResult` (`status`, `stdout`, `stderr`, optional state patch/control
-  events, and a neutral value). The runtime registry remains a compatibility
-  projection for `executeCommand`/`completeCommand` and custom legacy handlers.
+- Each built-in command module under `presentations/terminal/src/commands/`
+  exports a complete `CommandSpec` for each command it owns: safe canonical
+  name/aliases, usage and summary, group/order, explicit
+  pipeline/substitution/redirect policy, argv
+  parser, executor, optional completion callback, and optional typed Help
+  examples. `commands/registry.ts` is only the explicit, reviewable allowlist
+  and composition point; it validates the global token/metadata invariants and
+  freezes the imported specs. It must not discover modules dynamically or
+  duplicate command-specific metadata.
+- Command specs execute against `ProcessContext` (`stdin?`, virtual `cwd`,
+  read-only `ReadonlyVirtualFs`, immutable session, clock, and signal) and
+  return `ProcessResult` (`status`, `stdout`, `stderr`, optional state
+  patch/control events, and a neutral value). The runtime registry remains a
+  compatibility projection for `executeCommand`/`completeCommand` and custom
+  legacy handlers; completion delegates to the descriptor callback rather than
+  a runtime command-name switch.
 - Registry records are cloned and frozen; names and aliases are safe command
   tokens and globally unique. Metadata is safe text, `usage` starts with the
   canonical name, `execute` is required, and `complete` is optional but must be
-  callable. The neutral core specs are the source of truth for `ls`, `cat`,
-  `grep`, `cd`, `open`, `vim`, and `clear`; do not add a second built-in switch
-  or raw-index dispatch branch.
+  callable. The neutral command specs are the source of truth for every built-in
+  command, including `ls`, `cat`, `grep`, `find`, `tree`, session commands, and
+  their aliases; do not add a second built-in switch or raw-index dispatch
+  branch.
 - `parseRshell` is the authoritative parser for full execution, including
   quoting, substitutions, pipes, and redirects. `tokenizeCommand` is only a
   compatibility adapter for callers that need one simple stage; it delegates to
@@ -344,6 +353,96 @@ startTerminalReader(root: HTMLElement): void
   redirect/substitution/pipeline policies are rejected before execution.
   Compatibility custom handlers may still use the old context until that public
   surface is retired.
+- Help metadata is projected from the active registry. `help` keeps its compact
+  grouped list, while `help <command>` resolves canonical names and built-in or
+  session aliases and exposes that command's usage, summary, aliases, and
+  descriptor-owned examples. The neutral Help value, runtime effect, bounded
+  stdout projection, and browser renderer must carry this detail as one generic
+  shape; adding a command must not require a command-name DOM branch or a
+  hardcoded Help row.
+- **Scenario: module-owned command descriptors and Help detail**
+
+  **1. Scope / Trigger**
+
+  - Trigger: adding or changing a built-in Terminal command, its completion, or
+    its Help metadata.
+  - Scope: neutral command modules, the explicit registry, Rshell Help data,
+    the Terminal adapter, and the browser Help renderer.
+
+  **2. Signatures**
+
+  ```ts
+  interface CommandSpec {
+    readonly name: string;
+    readonly aliases: readonly string[];
+    readonly usage: string;
+    readonly summary: string;
+    readonly group: CommandGroup;
+    readonly order: number;
+    readonly policy: CommandPolicy;
+    readonly parse: CommandArgumentParser;
+    readonly execute: (context: ProcessContext, args: ParsedCommandArguments) => ProcessResult;
+    readonly complete?: (context: CompletionContext, operand: string) => CompletionResult;
+    readonly examples?: readonly { command: string; description: string }[];
+  }
+
+  createCommandSpecRegistry(specs: readonly CommandSpec[]): CommandSpecRegistry
+  ```
+
+  **3. Contracts**
+
+  - A command module exports its complete descriptor, including parser, executor,
+    policy, completion callback, and optional example records.
+  - `commands/registry.ts` explicitly imports and composes the allowlist; it
+    validates and freezes descriptors but never scans modules or duplicates
+    command metadata.
+  - `help` returns a grouped compact list. `help <command>` returns the same
+    groups plus `detail` for the canonical command resolved from a canonical
+    name, built-in alias, or session alias. Detail contains `name`, `usage`,
+    `summary`, `aliases`, and optional `examples`.
+  - The neutral shell, runtime adapter, bounded stdout/announcement projection,
+    and browser renderer preserve this shape. Completion calls the descriptor's
+    callback directly with a neutral VFS/cwd context.
+
+  **4. Validation & Error Matrix**
+
+  | Condition | Required result |
+  | --- | --- |
+  | unsafe name/alias, metadata, policy, or handler | registry `TypeError` |
+  | malformed, accessor-backed, sparse, or extra-field examples | registry `TypeError` |
+  | duplicate canonical token or alias | registry `TypeError` |
+  | `help` with more than one operand | bounded usage error with `help [command]` |
+  | unknown `help <command>` target | bounded `No command named "<target>".` error |
+  | missing descriptor completion | completion returns `none`; no runtime name switch |
+
+  **5. Good / Base / Bad Cases**
+
+  - Good: `grep.ts` exports `GREP_COMMAND_SPEC` with `-w`/`-E` parser options
+    and examples; `help grep` renders those examples without renderer changes.
+  - Base: a command has no examples or completion; it still appears in compact
+    Help and executes through the same registry path.
+  - Bad: adding a command row in `terminal-home.ts`, or adding a `name === ...`
+    completion branch in `runtime.ts`, creates a second source of truth.
+
+  **6. Tests Required**
+
+  - Neutral unit tests assert compact grouping/order, canonical and alias detail,
+    unknown-target errors, custom descriptors/examples, and immutable validation.
+  - Runtime tests assert descriptor-owned completion parity and Help detail
+    projection through stdout/effects.
+  - Browser tests assert generic Help detail/examples for `grep` and responsive
+    layout; no command-name-specific DOM selector is permitted in the renderer.
+
+  **7. Wrong vs Correct**
+
+  ```ts
+  // Wrong: metadata or completion drifts in a second runtime table.
+  if (name === 'grep') return grepCompletion;
+
+  // Correct: the imported descriptor owns the behavior and Help data.
+  const spec = GREP_COMMAND_SPEC;
+  const result = spec.complete?.(completionContext, operand);
+  ```
 - `ReadonlyVirtualFs.list(path)` returns a direct-child `DirectoryListing`:
   `directories` contains only immediate directory names and `documents`
   contains only documents whose parent is `path`. Recursive consumers must
@@ -960,20 +1059,26 @@ appendTreeNode(pre, node);
 
 ### Design Decision: Definition-Owned Command Execution
 
-**Context**: Help grouping, aliases, execution policy, and built-in behavior had
-to evolve together without a second dispatch table drifting out of sync.
+**Context**: Help grouping, aliases, execution policy, completion, and built-in
+behavior had to evolve together without a second dispatch table drifting out of
+sync.
 
 **Options Considered**:
 1. Keep a built-in name switch plus separate metadata arrays.
 2. Store metadata and the actual handler in one registry definition.
 
-**Decision**: Use option 2. Registry creation validates and freezes the complete
-definition; all built-ins are definitions, and full Rshell parsing remains in one
-parser path. This keeps custom-registry tests representative and makes adding a
-command a single bounded change.
+**Decision**: Use option 2. Each command module owns its complete descriptor;
+registry creation validates and freezes the explicit imported allowlist; all
+built-ins are definitions, and full Rshell parsing remains in one parser path.
+Help enumerates the active definitions and renders optional descriptor examples
+through a generic detail view. This keeps custom-registry tests representative
+and makes adding a command a single bounded module plus one explicit registry
+entry.
 
-**Extensibility**: Add a definition with a safe token, group/order, handler, and
-optional completion/policy flags. Do not add a parallel command list or switch.
+**Extensibility**: Add a command module with a safe token, group/order, parser,
+handler, policy, and optional completion/examples, then add one explicit import
+and list entry in the registry. Do not add a parallel command list, dynamic
+discovery, or name-based completion/DOM switch.
 
 ### Design Decision: Structured Search and Help Effects
 

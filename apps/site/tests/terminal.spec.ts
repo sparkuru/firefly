@@ -441,6 +441,24 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(rootInput).toBeFocused();
 });
 
+test('help detail renders descriptor-owned examples for canonical names and aliases', async ({ page }) => {
+  await page.goto('/');
+  const transcript = page.locator('[data-terminal-transcript]');
+
+  await submit(page, 'help grep');
+  const grepRecord = transcript.locator('.terminal-record').last();
+  const grepDetail = grepRecord.locator('.terminal-help-detail-view');
+  await expect(grepDetail.getByRole('heading', { level: 2, name: 'grep' })).toBeVisible();
+  await expect(grepDetail.locator('.terminal-help-detail-usage')).toHaveText('grep [-inFwE] <pattern> [path ...]');
+  await expect(grepDetail.locator('.terminal-help-example')).toHaveCount(2);
+  await expect(grepDetail).toContainText('grep -w cat');
+  await expect(grepDetail).toContainText('grep -E "cat|dog"');
+
+  await submit(page, 'help ?');
+  const aliasRecord = transcript.locator('.terminal-record').last();
+  await expect(aliasRecord.locator('.terminal-help-detail-view').getByRole('heading', { level: 2, name: 'help' })).toBeVisible();
+});
+
 test('help keeps the long find row readable across responsive layouts', async ({ page }) => {
   await page.goto('/');
   const transcript = page.locator('[data-terminal-transcript]');

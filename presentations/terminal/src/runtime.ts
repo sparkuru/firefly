@@ -4,7 +4,8 @@ import type {
   ReadonlyShellScratchFile,
   ReadonlyShellSession,
   ShellLink,
-  ShellCommandMetadata
+  ShellCommandMetadata,
+  ShellHelpExample
 } from './shell/contracts.js';
 import { textStream } from './shell/streams.js';
 import { expandStageWords } from './shell/expansion.js';
@@ -12,16 +13,12 @@ import { parseRshell } from './shell/parser.js';
 import type { RshellStage } from './shell/parser.js';
 import { resolveSessionCommand, runRshell } from './shell/runner.js';
 import type { ParsedCommandArguments } from './commands/arguments.js';
+import { completeFrom } from './commands/completion.js';
 import { formatFriendLink } from './commands/links.js';
 import { NEUTRAL_COMMAND_REGISTRY, NEUTRAL_COMMAND_SPECS } from './commands/registry.js';
 import { createPublicIndex } from './vfs/public-index.js';
 import type { PublicDocument, ReadonlyVirtualFs } from './vfs/contracts.js';
-import {
-  classifyVirtualOperandPrefix,
-  displayVirtualPath as displayVfsPath,
-  resolveVirtualPath,
-  virtualPathFromDisplay as virtualPathFromVfsDisplay
-} from './vfs/paths.js';
+import { displayVirtualPath as displayVfsPath, resolveVirtualPath, virtualPathFromDisplay as virtualPathFromVfsDisplay } from './vfs/paths.js';
 
 export type TerminalEntryKind = 'post' | 'page';
 
@@ -89,12 +86,15 @@ export interface TerminalHelpCommand {
   readonly aliases: readonly string[];
   readonly summary: string;
   readonly usage: string;
+  readonly examples?: readonly ShellHelpExample[];
 }
 
 export interface TerminalHelpGroup {
   readonly name: TerminalCommandGroup;
   readonly commands: readonly TerminalHelpCommand[];
 }
+
+export type TerminalHelpExample = ShellHelpExample;
 
 export interface TerminalGrepMatch {
   readonly path: string;
@@ -105,7 +105,7 @@ export interface TerminalGrepMatch {
 
 export type TerminalEffect =
   | { readonly kind: 'lines'; readonly tone: TerminalTone; readonly lines: readonly string[] }
-  | { readonly kind: 'help'; readonly groups: readonly TerminalHelpGroup[] }
+  | { readonly kind: 'help'; readonly groups: readonly TerminalHelpGroup[]; readonly detail?: TerminalHelpCommand }
   | { readonly kind: 'links'; readonly links: readonly TerminalFriendLink[] }
   | {
       readonly kind: 'grep';
@@ -184,7 +184,7 @@ export type CommandHandler = (
 
 export type CompletionHandler = (
   operand: string,
-  context: Pick<TerminalCommandContext, 'entries' | 'experiments'> & { readonly cwd: string },
+  context: Pick<TerminalCommandContext, 'entries' | 'experiments' | 'fs'> & { readonly cwd: string },
   invokedName: string
 ) => CompletionResult;
 
@@ -195,6 +195,7 @@ export interface TerminalCommandDefinition {
   readonly order?: number;
   readonly summary: string;
   readonly usage: string;
+  readonly examples?: readonly ShellHelpExample[];
   readonly execute: CommandHandler;
   readonly complete?: CompletionHandler;
   readonly pureText?: boolean;
@@ -390,6 +391,45 @@ function isSafeCommandToken(value: string): boolean {
   return value === '?' || commandToken.test(value);
 }
 
+function cloneHelpExamples(value: unknown): readonly ShellHelpExample[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) throw new TypeError('Terminal command examples must be a plain array.');
+  const arrayDescriptors = ownDataDescriptors(value);
+  const length = readDataField(arrayDescriptors, 'length');
+  if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) throw new TypeError('Terminal command examples have an invalid length.');
+  const allowed = new Set<PropertyKey>(['length']);
+  const result: ShellHelpExample[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const key = String(index);
+    allowed.add(key);
+    if (!arrayDescriptors.has(key)) throw new TypeError('Terminal command examples must be dense.');
+    const example = readDataField(arrayDescriptors, key);
+    if (
+      typeof example !== 'object' ||
+      example === null ||
+      (Object.getPrototypeOf(example) !== Object.prototype && Object.getPrototypeOf(example) !== null)
+    ) {
+      throw new TypeError(`Terminal command example ${index} must be a plain object.`);
+    }
+    const descriptors = ownDataDescriptors(example);
+    const keys = [...descriptors.keys()];
+    if (
+      keys.length !== 2 ||
+      !descriptors.has('command') ||
+      !descriptors.has('description') ||
+      keys.some((key) => key !== 'command' && key !== 'description')
+    ) {
+      throw new TypeError(`Terminal command example ${index} contains unknown or missing fields.`);
+    }
+    result.push(Object.freeze({
+      command: requireSafeText(readDataField(descriptors, 'command'), 'example command'),
+      description: requireSafeText(readDataField(descriptors, 'description'), 'example description')
+    }));
+  }
+  if ([...arrayDescriptors.keys()].some((key) => !allowed.has(key))) throw new TypeError('Terminal command examples contain unexpected properties.');
+  return Object.freeze(result);
+}
+
 function isCanonicalVirtualPath(value: string, kind: TerminalEntryKind): boolean {
   const segments = value.split('/');
   const expectedMount = kind === 'post' ? 'posts' : 'pages';
@@ -557,171 +597,6 @@ function lines(tone: TerminalTone, ...values: string[]): TerminalEffect {
   return Object.freeze({ kind: 'lines', tone, lines: Object.freeze(values) });
 }
 
-function completeFrom(
-  prefix: string,
-  candidates: readonly string[],
-  render: (candidate: string) => string,
-  ownsAmbiguousTab = false
-): CompletionResult {
-  const matches = [...new Set(candidates)].filter((candidate) => candidate.startsWith(prefix)).sort();
-  const exact = matches.find((candidate) => candidate === prefix);
-  if (exact !== undefined) return { kind: 'unique', value: render(exact), candidates: Object.freeze([exact]) };
-  if (matches.length === 1 && matches[0] !== undefined) return { kind: 'unique', value: render(matches[0]), candidates: Object.freeze(matches) };
-  if (matches.length === 0) return { kind: 'none', candidates: Object.freeze([]) };
-  const candidateValues = matches.map(render);
-  const commonValue = candidateValues.reduce((common, value) => {
-    let index = 0;
-    while (index < common.length && index < value.length && common[index] === value[index]) index += 1;
-    return common.slice(0, index);
-  });
-  return matches.length > 1
-    ? {
-      kind: 'ambiguous',
-      value: commonValue,
-      candidates: Object.freeze(matches),
-      candidateValues: Object.freeze(candidateValues),
-      ownsTab: ownsAmbiguousTab
-    }
-    : { kind: 'none', candidates: Object.freeze([]) };
-}
-
-function virtualPathFromCwd(cwd: string): string {
-  return cwd === rshellRoot
-    ? '/'
-    : cwd.startsWith(`${rshellRoot}/`)
-      ? cwd.slice(rshellRoot.length)
-      : '/posts';
-}
-
-function isSafeCompletionPrefix(prefix: string, allowWildcard = false): boolean {
-  return prefix.normalize('NFC') === prefix &&
-    !prefix.includes('%') &&
-    !prefix.includes('\\') &&
-    !prefix.includes('?') &&
-    !prefix.includes('#') &&
-    !prefix.includes('://') &&
-    !/[\u0000-\u001f\u007f]/u.test(prefix) &&
-    (allowWildcard || !prefix.includes('*')) &&
-    !prefix.split('/').some((segment, index, values) =>
-      (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'));
-}
-
-function visibleChildCandidates(prefix: string, paths: readonly string[]): readonly string[] {
-  const slash = prefix.lastIndexOf('/');
-  const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
-  const segmentPrefix = prefix.slice(slash + 1);
-  return paths.flatMap((candidate) => {
-    if (!candidate.startsWith(parent)) return [];
-    const remaining = candidate.slice(parent.length);
-    const nextSlash = remaining.indexOf('/');
-    const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
-    return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
-  });
-}
-
-function relativeCandidate(path: string, cwdPath: string, rootResourceDefault = false): string | undefined {
-  if (path === '/') return undefined;
-  if (cwdPath === '/' && rootResourceDefault && path.startsWith('/posts/')) return path.slice('/posts/'.length);
-  const prefix = cwdPath === '/' ? '/' : `${cwdPath}/`;
-  const pathWithoutTrailingSlash = path.endsWith('/') ? path.slice(0, -1) : path;
-  return path.startsWith(prefix) && pathWithoutTrailingSlash !== cwdPath ? path.slice(prefix.length) : undefined;
-}
-
-function completeVirtualPaths(
-  operand: string,
-  paths: readonly string[],
-  invokedName: string,
-  cwd: string,
-  options: { readonly ownsAmbiguousTab?: boolean; readonly rootResourceDefault?: boolean; readonly extras?: readonly string[] } = {}
-): CompletionResult {
-  const parsed = classifyVirtualOperandPrefix(operand);
-  if (parsed.kind === 'invalid' || !isSafeCompletionPrefix(parsed.prefix)) return { kind: 'none', candidates: Object.freeze([]) };
-  const cwdPath = virtualPathFromCwd(cwd);
-  const candidates = paths.flatMap((path) => {
-    if (parsed.kind === 'absolute') return path === '/' ? [] : [path.slice(1)];
-    if (options.rootResourceDefault && cwdPath === '/' && path.startsWith('/posts/')) {
-      return [path.slice('/posts/'.length), path.slice(1)];
-    }
-    const candidate = relativeCandidate(path, cwdPath, options.rootResourceDefault);
-    return candidate === undefined ? [] : [candidate];
-  });
-  if (parsed.kind === 'relative' && parsed.displayPrefix === '') candidates.push(...(options.extras ?? []));
-  const visible = visibleChildCandidates(parsed.prefix, candidates);
-  const completion = completeFrom(
-    parsed.prefix,
-    visible,
-    (candidate) => `${invokedName} ${parsed.displayPrefix}${candidate}`,
-    options.ownsAmbiguousTab ?? true
-  );
-  if (completion.kind === 'none') {
-    return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
-  }
-  if (completion.kind !== 'ambiguous') return completion;
-  return Object.freeze({
-    ...completion,
-    candidates: Object.freeze(completion.candidates.map((candidate) => `${parsed.displayPrefix}${candidate}`))
-  });
-}
-
-function pathCompletion(operand: string, entries: readonly TerminalEntry[], invokedName: string, cwd: string): CompletionResult {
-  return completeVirtualPaths(
-    operand,
-    entries.map((entry) => `/${entry.virtualPath}`),
-    invokedName,
-    cwd,
-    { rootResourceDefault: true }
-  );
-}
-
-function lsCompletion(
-  operand: string,
-  entries: readonly TerminalEntry[],
-  experiments: readonly TerminalExperiment[],
-  invokedName: string,
-  cwd: string
-): CompletionResult {
-  const directoryPaths = new Set(
-    [...knownDirectories(entries, Object.freeze([])), ...experiments.map(({ id }) => `/lab/${id}`)]
-      .filter((path) => !path.startsWith('/.rshell'))
-  );
-  const paths = [
-    ...[...directoryPaths].map((path) => path === '/' ? path : `${path}/`),
-    ...entries.map(({ virtualPath }) => `/${virtualPath}`)
-  ];
-  return completeVirtualPaths(operand, paths, invokedName, cwd, {
-    ownsAmbiguousTab: operand.length === 0,
-    extras: Object.freeze(['-h', '--help'])
-  });
-}
-
-function directoryCompletion(
-  operand: string,
-  entries: readonly TerminalEntry[],
-  invokedName: string,
-  cwd: string,
-  includeMountAliases = false,
-  includeHelpOptions = false,
-  experiments: readonly TerminalExperiment[] = Object.freeze([])
-): CompletionResult {
-  const directories = [...new Set([
-    ...knownDirectories(entries, Object.freeze([])),
-    ...experiments.map(({ id }) => `/lab/${id}`)
-  ])]
-    .filter((path) => !path.startsWith('/.rshell'))
-    .sort();
-  const extras = [
-    ...(includeMountAliases ? ['posts', 'pages', 'lab'] : []),
-    ...(includeHelpOptions ? ['-h', '--help'] : [])
-  ];
-  return completeVirtualPaths(
-    operand,
-    directories.map((path) => path === '/' ? path : `${path}/`),
-    invokedName,
-    cwd,
-    { extras }
-  );
-}
-
 export function formatDocumentOperand(entry: TerminalEntry): string {
   return entry.kind === 'post' ? entry.relativePath : `~/blog/${entry.virtualPath}`;
 }
@@ -741,6 +616,7 @@ export function createTerminalCommandRegistry(definitions: readonly TerminalComm
       (definition.usage !== definition.name && !definition.usage.startsWith(`${definition.name} `)) ||
       typeof definition.execute !== 'function' ||
       (definition.complete !== undefined && typeof definition.complete !== 'function') ||
+      (definition.examples !== undefined && !Array.isArray(definition.examples)) ||
       (definition.pureText !== undefined && typeof definition.pureText !== 'boolean') ||
       (definition.standalone !== undefined && typeof definition.standalone !== 'boolean') ||
       (definition.redirect !== undefined && definition.redirect !== 'text' && definition.redirect !== 'forbidden') ||
@@ -749,7 +625,12 @@ export function createTerminalCommandRegistry(definitions: readonly TerminalComm
       (definition.order !== undefined && (!Number.isSafeInteger(definition.order) || definition.order < 0))) {
       throw new TypeError('Terminal command definitions must have safe metadata and handlers.');
     }
-    const clone = Object.freeze({ ...definition, aliases: Object.freeze([...definition.aliases]) });
+    const examples = cloneHelpExamples(definition.examples);
+    const clone = Object.freeze({
+      ...definition,
+      aliases: Object.freeze([...definition.aliases]),
+      ...(examples === undefined ? {} : { examples })
+    });
     for (const token of [clone.name, ...clone.aliases]) {
       if (lookup.has(token)) throw new TypeError(`Terminal command token collision: ${token}`);
       lookup.set(token, clone);
@@ -759,10 +640,14 @@ export function createTerminalCommandRegistry(definitions: readonly TerminalComm
   return Object.freeze({ definitions: Object.freeze(frozen), resolve: (name: string) => lookup.get(name) });
 }
 
-function neutralDefinition(
-  spec: typeof NEUTRAL_COMMAND_SPECS[number],
-  complete: CompletionHandler | undefined
-): TerminalCommandDefinition {
+function neutralDefinition(spec: typeof NEUTRAL_COMMAND_SPECS[number]): TerminalCommandDefinition {
+  const complete: CompletionHandler | undefined = spec.complete === undefined
+    ? undefined
+    : (operand, context, invokedName) => spec.complete!({
+      cwd: virtualPathFromVfsDisplay(context.cwd),
+      fs: context.fs,
+      invokedName
+    }, operand);
   return {
     name: spec.name,
     aliases: Object.freeze([...spec.aliases]),
@@ -770,6 +655,9 @@ function neutralDefinition(
     order: spec.order,
     summary: spec.summary,
     usage: spec.usage,
+    ...(spec.examples === undefined ? {} : {
+      examples: Object.freeze(spec.examples.map((example) => Object.freeze({ ...example })))
+    }),
     execute: (operands, context) => {
       const parsed = spec.parse(operands);
       return parsed.ok
@@ -784,25 +672,8 @@ function neutralDefinition(
   };
 }
 
-function neutralCompletion(name: string): CompletionHandler | undefined {
-  if (name === 'ls') return (operand, context, invoked) => lsCompletion(operand, context.entries, context.experiments, invoked, context.cwd);
-  if (name === 'cat' || name === 'vim') return (operand, context, invoked) => pathCompletion(operand, context.entries, invoked, context.cwd);
-  if (name === 'cd') return (operand, context, invoked) => directoryCompletion(operand, context.entries, invoked, context.cwd);
-  if (name === 'open') return (operand, context, invoked) => completeVirtualPaths(
-    operand,
-    context.experiments.map(({ id }) => `/lab/${id}`),
-    invoked,
-    context.cwd
-  );
-  if (name === 'tree') return (operand, context, invoked) => {
-    if (operand === '~/blog') return { kind: 'unique', value: `${invoked} ~/blog`, candidates: Object.freeze(['~/blog']) };
-    return directoryCompletion(operand, context.entries, invoked, context.cwd);
-  };
-  return undefined;
-}
-
 const definitions = [
-  ...NEUTRAL_COMMAND_SPECS.map((spec) => neutralDefinition(spec, neutralCompletion(spec.name)))
+  ...NEUTRAL_COMMAND_SPECS.map((spec) => neutralDefinition(spec))
 ];
 
 export const DEFAULT_TERMINAL_COMMAND_REGISTRY = createTerminalCommandRegistry(definitions);
@@ -822,7 +693,6 @@ export function formatUtcDate(date: Date): string {
   return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 19)} UTC`;
 }
 
-const rshellRoot = '~/blog';
 const maxRshellLines = 240;
 const maxRshellText = 24_000;
 const maxScratchFiles = 16;
@@ -878,20 +748,6 @@ function entryAt(path: string, entries: readonly TerminalEntry[]): TerminalEntry
   return entries.find((entry) => `/${entry.virtualPath}` === path);
 }
 
-function knownDirectories(entries: readonly TerminalEntry[], scratch: readonly TerminalScratchFile[]): ReadonlySet<string> {
-  const directories = new Set<string>(['/', '/posts', '/pages', '/lab', '/.rshell', '/.rshell/tmp']);
-  for (const entry of entries) {
-    const segments = entry.virtualPath.split('/');
-    segments.pop();
-    while (segments.length > 0) {
-      directories.add(`/${segments.join('/')}`);
-      segments.pop();
-    }
-  }
-  if (scratch.length === 0) directories.add('/.rshell/tmp');
-  return directories;
-}
-
 function scratchName(path: string): string | undefined {
   const prefix = '/.rshell/tmp/';
   if (!path.startsWith(prefix)) return undefined;
@@ -908,6 +764,14 @@ function formatHelpCommand(command: TerminalHelpCommand): string {
   return `  ${command.usage}${aliases} — ${command.summary}`;
 }
 
+function formatHelpDetail(detail: TerminalHelpCommand): readonly string[] {
+  const aliases = detail.aliases.length === 0 ? [] : [`Aliases: ${detail.aliases.join(', ')}`];
+  const examples = detail.examples === undefined || detail.examples.length === 0
+    ? []
+    : ['Examples:', ...detail.examples.map((example) => `  ${example.command} — ${example.description}`)];
+  return Object.freeze([`Usage: ${detail.usage}`, detail.summary, ...aliases, ...examples]);
+}
+
 function formatGrepMatch(match: TerminalGrepMatch): string {
   if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}:${match.line}`;
   return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
@@ -920,7 +784,11 @@ function formatFindMatch(entry: TerminalEntry): string {
 
 function stdoutForEffect(effect: TerminalEffect): readonly string[] {
   if (effect.kind === 'lines') return effect.lines;
-  if (effect.kind === 'help') return Object.freeze(effect.groups.flatMap((group) => [group.name, ...group.commands.map(formatHelpCommand)]));
+  if (effect.kind === 'help') {
+    return effect.detail === undefined
+      ? Object.freeze(effect.groups.flatMap((group) => [group.name, ...group.commands.map(formatHelpCommand)]))
+      : formatHelpDetail(effect.detail);
+  }
   if (effect.kind === 'links') return effect.links.length === 0
     ? Object.freeze(['No friend links.'])
     : Object.freeze(effect.links.map(formatFriendLink));
@@ -944,7 +812,9 @@ function announcementFor(effect: TerminalEffect): string {
   if (effect.kind === 'entries') return `${effect.directories.length + effect.entries.length} ${effect.label} listed.`;
   if (effect.kind === 'find') return `${effect.entries.length} find match${effect.entries.length === 1 ? '' : 'es'} for "${effect.keyword}".`;
   if (effect.kind === 'tree') return `${effect.lines.length} tree entries listed.`;
-  if (effect.kind === 'help') return `${effect.groups.reduce((total, group) => total + group.commands.length, 0)} commands listed.`;
+  if (effect.kind === 'help') return effect.detail === undefined
+    ? `${effect.groups.reduce((total, group) => total + group.commands.length, 0)} commands listed.`
+    : `Help for ${effect.detail.name}.`;
   if (effect.kind === 'links') return effect.links.length === 0 ? 'No friend links.' : `${effect.links.length} friend link${effect.links.length === 1 ? '' : 's'} listed.`;
   if (effect.kind === 'grep') return effect.noResults ? `No matches for "${effect.pattern}".` : `${effect.matches.length} grep match${effect.matches.length === 1 ? '' : 'es'} listed.`;
   return effect.lines.at(-1) ?? '';
@@ -1012,7 +882,10 @@ function shellCommandMetadata(
       usage: spec.usage,
       summary: spec.summary,
       group: spec.group ?? 'Other',
-      order: spec.order ?? Number.MAX_SAFE_INTEGER
+      order: spec.order ?? Number.MAX_SAFE_INTEGER,
+      ...(spec.examples === undefined ? {} : {
+        examples: Object.freeze(spec.examples.map((example) => Object.freeze({ ...example })))
+      })
     });
   }));
 }
@@ -1048,8 +921,21 @@ function adaptShellValue(value: NonNullable<ShellProcessResult['value']>, contex
       kind: 'help',
       groups: Object.freeze(value.groups.map((group) => Object.freeze({
         name: group.name,
-        commands: Object.freeze(group.commands.map((command) => Object.freeze({ ...command })))
-      })))
+        commands: Object.freeze(group.commands.map((command) => Object.freeze({
+          ...command,
+          ...(command.examples === undefined ? {} : {
+            examples: Object.freeze(command.examples.map((example) => Object.freeze({ ...example })))
+          })
+        })))
+      }))),
+      ...(value.detail === undefined ? {} : {
+        detail: Object.freeze({
+          ...value.detail,
+          ...(value.detail.examples === undefined ? {} : {
+            examples: Object.freeze(value.detail.examples.map((example) => Object.freeze({ ...example })))
+          })
+        })
+      })
     };
   }
   if (value.kind === 'links') {
@@ -1454,5 +1340,14 @@ export function completeCommand(
   const resolvedName = resolveSessionCommand(invokedName, { aliases });
   const definition = resolvedName === undefined ? undefined : registry.resolve(resolvedName);
   if (definition?.complete === undefined) return { kind: 'none', candidates: Object.freeze([]) };
-  return definition.complete(match[2] ?? '', { entries, experiments, cwd }, invokedName);
+  const fs = createPublicIndex({
+    documents: Object.freeze(entries.map(publicDocumentFromEntry)),
+    experiments: Object.freeze(experiments.map((experiment) => Object.freeze({ ...experiment })))
+  });
+  return definition.complete(match[2] ?? '', {
+    entries,
+    experiments,
+    fs,
+    cwd
+  }, invokedName);
 }

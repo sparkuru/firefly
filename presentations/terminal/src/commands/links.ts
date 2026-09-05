@@ -1,6 +1,8 @@
 import type { ProcessContext, ProcessResult, ShellLink } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
+import { noArguments, textPolicy } from './descriptors.js';
+import type { CommandSpec } from './contracts.js';
 
 export const FRIENDS_USAGE = 'friends';
 export const FRIENDS_SUMMARY = 'list curated friend links';
@@ -26,3 +28,15 @@ export function executeFriends(context: ProcessContext, args: ParsedCommandArgum
     value: { kind: 'links', links }
   });
 }
+
+export const FRIENDS_COMMAND_SPEC: CommandSpec = {
+  name: 'friends',
+  aliases: Object.freeze([]),
+  usage: FRIENDS_USAGE,
+  summary: FRIENDS_SUMMARY,
+  group: 'Explore',
+  order: 40,
+  policy: textPolicy,
+  parse: noArguments(FRIENDS_USAGE),
+  execute: executeFriends
+};
