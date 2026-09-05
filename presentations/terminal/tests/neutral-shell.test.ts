@@ -88,6 +88,59 @@ test('each neutral command owns an argv parser and accepts interspersed options'
   assert.equal(runRshellInput('grep -x nahida', runnerOptions()).status, 1);
 });
 
+test('grep supports whole-word fixed and safe-regex matching with explicit extended mode', () => {
+  const fixed = executeGrep(
+    context({ stdin: textStream(['cat catalog cat! _cat cat_']) }),
+    args(['cat'], { 'fixed-strings': true, 'word-regexp': true })
+  );
+  assert.deepEqual(fixed.value, {
+    kind: 'grep-report',
+    report: {
+      pattern: 'cat',
+      matches: [{ path: '-', line: 'cat catalog cat! _cat cat_', ranges: [[0, 3], [12, 15]] }],
+      noResults: false,
+      truncated: false
+    }
+  });
+
+  const insensitive = executeGrep(
+    context({ stdin: textStream(['CAT catapult CAT.']) }),
+    args(['cat'], { 'ignore-case': true, 'word-regexp': true })
+  );
+  assert.deepEqual(insensitive.stdout.lines, ['CAT catapult CAT.']);
+  assert.deepEqual(insensitive.value?.kind === 'grep-report' ? insensitive.value.report.matches[0]?.ranges : [], [[0, 3], [13, 16]]);
+
+  const regular = executeGrep(
+    context({ stdin: textStream(['catalog dog']) }),
+    args(['cat|dog'], { 'extended-regexp': true, 'word-regexp': true })
+  );
+  assert.deepEqual(regular.value?.kind === 'grep-report' ? regular.value.report.matches[0]?.ranges : [], [[8, 11]]);
+
+  const repeated = executeGrep(
+    context({ stdin: textStream(['catapult cat!']) }),
+    args(['\\w+'], { 'word-regexp': true })
+  );
+  assert.deepEqual(repeated.value?.kind === 'grep-report' ? repeated.value.report.matches[0]?.ranges : [], [[0, 8], [9, 12]]);
+
+  const zeroWidth = executeGrep(
+    context({ stdin: textStream(['cat']) }),
+    args(['^'], { 'word-regexp': true })
+  );
+  assert.deepEqual(zeroWidth.value, {
+    kind: 'grep-report',
+    report: { pattern: '^', matches: [], noResults: true, truncated: false }
+  });
+
+  const conflict = executeGrep(
+    context({ stdin: textStream(['cat']) }),
+    args(['cat'], { 'extended-regexp': true, 'fixed-strings': true })
+  );
+  assert.deepEqual(conflict.stderr.lines, ['grep cannot combine --extended-regexp with --fixed-strings.']);
+  assert.equal(runRshellInput('grep -Ew nahida', runnerOptions()).status, 0);
+  assert.equal(runRshellInput('grep --extended-regexp --word-regexp nahida', runnerOptions()).status, 0);
+  assert.match(runRshellInput('grep -EF nahida', runnerOptions()).stderr.lines[0] ?? '', /cannot combine/u);
+});
+
 test('find searches visible filenames, filters public paths and dates, and explains itself', () => {
   const alpha = executeFind(context(), args(['ALPHA']));
   assert.deepEqual(alpha.stdout.lines, [
@@ -180,6 +233,8 @@ test('root resource mounts resolve for reads, search, and navigation without cha
   for (const operand of ['pages/about.md', './pages/about.md']) {
     const grep = executeGrep(root, args(['About', operand]));
     assert.deepEqual(grep.stdout.lines, ['/pages/about.md:About page'], operand);
+    const wholeWordGrep = executeGrep(root, args(['about', operand], { 'ignore-case': true, 'word-regexp': true }));
+    assert.deepEqual(wholeWordGrep.value?.kind === 'grep-report' ? wholeWordGrep.value.report.matches[0]?.ranges : [], [[0, 5]], operand);
     assert.deepEqual(executeVim(root, args([operand])).controls, [{ kind: 'open-document', path: '/pages/about.md' }], operand);
   }
   const postGrep = executeGrep(root, args(['Alpha', './posts/characters/alpha.md']));

@@ -287,7 +287,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.getByText('list curated friend links')).toBeVisible();
   await expect(transcript.getByText('clear the screen')).toBeVisible();
   await expect(transcript).toContainText('alias l, ll');
-  const grepUsage = transcript.locator('.terminal-help-command code').filter({ hasText: 'grep [-inF] <pattern> [path ...]' });
+  const grepUsage = transcript.locator('.terminal-help-command code').filter({ hasText: 'grep [-inFwE] <pattern> [path ...]' });
   await expect(grepUsage).toHaveCount(1);
   if (await page.evaluate(() => window.innerWidth >= 768)) {
     const usageGeometry = await grepUsage.evaluate((element) => {
@@ -702,6 +702,10 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await expect(pipedGrep.locator('.terminal-grep-line mark').first()).toHaveText('a');
   await submit(page, 'grep -inF about ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-grep-match').last()).toContainText('/pages/about.md:');
+  await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
+  await submit(page, 'grep -iwF about ~/blog/pages/about.md');
+  await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
+  await submit(page, 'grep -Ew About ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
   await submit(page, 'grep about -i ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
