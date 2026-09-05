@@ -85,7 +85,10 @@ function commandMetadata(registry: CommandSpecRegistry, session: ReadonlyShellSe
     usage: spec.usage,
     summary: spec.summary,
     group: spec.group,
-    order: spec.order
+    order: spec.order,
+    ...(spec.examples === undefined ? {} : {
+      examples: Object.freeze(spec.examples.map((example) => Object.freeze({ ...example })))
+    })
   })));
 }
 

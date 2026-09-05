@@ -39,6 +39,12 @@ export interface ShellCommandMetadata {
   readonly summary: string;
   readonly group: ShellCommandGroup;
   readonly order: number;
+  readonly examples?: readonly ShellHelpExample[];
+}
+
+export interface ShellHelpExample {
+  readonly command: string;
+  readonly description: string;
 }
 
 export interface ShellIdentity {
@@ -78,6 +84,7 @@ export interface HelpCommand {
   readonly aliases: readonly string[];
   readonly summary: string;
   readonly usage: string;
+  readonly examples?: readonly ShellHelpExample[];
 }
 
 export interface HelpGroup {
@@ -94,7 +101,7 @@ export type CommandValue =
       readonly documents: readonly import('../vfs/contracts.js').PublicDocument[];
     }
   | { readonly kind: 'grep-report'; readonly report: GrepReport }
-  | { readonly kind: 'help'; readonly groups: readonly HelpGroup[] }
+  | { readonly kind: 'help'; readonly groups: readonly HelpGroup[]; readonly detail?: HelpCommand }
   | { readonly kind: 'links'; readonly links: readonly ShellLink[] }
   | {
       readonly kind: 'tree';

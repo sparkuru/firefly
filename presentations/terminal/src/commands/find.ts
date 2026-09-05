@@ -1,9 +1,11 @@
 import type { ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
-import type { ParsedCommandArguments } from './arguments.js';
+import { createCommandArgumentParser, type ParsedCommandArguments } from './arguments.js';
 import { formatDocument } from './document-format.js';
 import type { VfsNode } from '../vfs/contracts.js';
 import { walkPublicDocuments } from '../vfs/public-documents.js';
+import { textPolicy } from './descriptors.js';
+import type { CommandSpec } from './contracts.js';
 
 export const FIND_USAGE = 'find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>';
 export const FIND_SUMMARY = 'find public documents by filename substring';
@@ -107,3 +109,26 @@ export function executeFind(context: ProcessContext, args: ParsedCommandArgument
       }
     });
 }
+
+const findArguments = createCommandArgumentParser({
+  usage: FIND_USAGE,
+  maxOperands: 1,
+  options: [
+    { name: 'path', aliases: ['--path'], value: 'required' },
+    { name: 'after', aliases: ['--after'], value: 'required' },
+    { name: 'before', aliases: ['--before'], value: 'required' },
+    { name: 'help', aliases: ['-h', '--help'] }
+  ]
+});
+
+export const FIND_COMMAND_SPEC: CommandSpec = {
+  name: 'find',
+  aliases: Object.freeze([]),
+  usage: FIND_USAGE,
+  summary: FIND_SUMMARY,
+  group: 'Explore',
+  order: 25,
+  policy: textPolicy,
+  parse: findArguments,
+  execute: executeFind
+};

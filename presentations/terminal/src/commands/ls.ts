@@ -1,9 +1,12 @@
 import type { ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
-import type { ParsedCommandArguments } from './arguments.js';
+import { createCommandArgumentParser, type ParsedCommandArguments } from './arguments.js';
 import { formatDocument } from './document-format.js';
 import type { DirectoryListing, PublicDocument, VfsNode } from '../vfs/contracts.js';
 import { parentVirtualPath } from '../vfs/paths.js';
+import { completeLs } from './completion.js';
+import { textPolicy } from './descriptors.js';
+import type { CommandSpec } from './contracts.js';
 
 export const LS_USAGE = 'ls [path|pattern]';
 export const LS_SUMMARY = 'list a public or session virtual directory';
@@ -141,3 +144,22 @@ export function executeLs(context: ProcessContext, args: ParsedCommandArguments)
   if (listing === undefined) return unknownDirectory(context, operand, path);
   return successResult(listingLines(listing), { value: { kind: 'directory-listing', listing } });
 }
+
+const lsArguments = createCommandArgumentParser({
+  usage: LS_USAGE,
+  maxOperands: 1,
+  options: [{ name: 'help', aliases: ['-h', '--help'] }]
+});
+
+export const LS_COMMAND_SPEC: CommandSpec = {
+  name: 'ls',
+  aliases: Object.freeze(['l', 'll']),
+  usage: LS_USAGE,
+  summary: LS_SUMMARY,
+  group: 'Explore',
+  order: 10,
+  policy: textPolicy,
+  parse: lsArguments,
+  execute: executeLs,
+  complete: completeLs
+};

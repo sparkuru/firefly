@@ -1,7 +1,9 @@
 import type { GrepMatch, GrepReport, ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
-import type { ParsedCommandArguments } from './arguments.js';
+import { createCommandArgumentParser, type ParsedCommandArguments } from './arguments.js';
 import { walkPublicDocuments, type PublicDocumentWalk } from '../vfs/public-documents.js';
+import { textPolicy } from './descriptors.js';
+import type { CommandSpec } from './contracts.js';
 
 export const GREP_USAGE = 'grep [-inFwE] <pattern> [path ...]';
 export const GREP_SUMMARY = 'filter stdin or public text';
@@ -448,3 +450,32 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
   });
   return successResult(matches.map(formatMatch), { value: { kind: 'grep-report', report } });
 }
+
+const grepArguments = createCommandArgumentParser({
+  usage: GREP_USAGE,
+  minOperands: 1,
+  maxOperands: 257,
+  options: [
+    { name: 'ignore-case', aliases: ['-i', '--ignore-case'] },
+    { name: 'line-number', aliases: ['-n', '--line-number'] },
+    { name: 'fixed-strings', aliases: ['-F', '--fixed-strings'] },
+    { name: 'word-regexp', aliases: ['-w', '--word-regexp'] },
+    { name: 'extended-regexp', aliases: ['-E', '--extended-regexp'] }
+  ]
+});
+
+export const GREP_COMMAND_SPEC: CommandSpec = {
+  name: 'grep',
+  aliases: Object.freeze([]),
+  usage: GREP_USAGE,
+  summary: GREP_SUMMARY,
+  group: 'Explore',
+  order: 30,
+  policy: textPolicy,
+  parse: grepArguments,
+  execute: executeGrep,
+  examples: Object.freeze([
+    Object.freeze({ command: 'grep -w cat', description: 'match cat as a whole word' }),
+    Object.freeze({ command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' })
+  ])
+};

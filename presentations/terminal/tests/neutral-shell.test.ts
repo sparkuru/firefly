@@ -7,7 +7,8 @@ import { executeGrep } from '../src/commands/grep.js';
 import { executeLs } from '../src/commands/ls.js';
 import { executeOpen, executeVim } from '../src/commands/session.js';
 import { commandArguments } from '../src/commands/arguments.js';
-import { NEUTRAL_COMMAND_REGISTRY } from '../src/commands/registry.js';
+import { GREP_COMMAND_SPEC } from '../src/commands/grep.js';
+import { createCommandSpecRegistry, NEUTRAL_COMMAND_REGISTRY } from '../src/commands/registry.js';
 import type { ProcessContext } from '../src/shell/contracts.js';
 import { runRshellInput } from '../src/shell/runner.js';
 import { textStream } from '../src/shell/streams.js';
@@ -374,7 +375,7 @@ test('neutral session commands consume injected identity, command metadata, and 
   assert.equal(help.status, 0);
   assert.equal(help.value?.kind, 'help');
   assert.equal(help.stdout.lines[0], 'Explore');
-  assert.ok(help.stdout.lines.some((line) => line.includes('help (?)')));
+  assert.ok(help.stdout.lines.some((line) => line.includes('help [command] (?)')));
 
   const tree = runRshellInput('tree ~/blog', runnerOptions());
   assert.equal(tree.status, 0);
@@ -399,4 +400,39 @@ test('neutral session commands consume injected identity, command metadata, and 
   assert.deepEqual(alias.stdout.lines, ['la=ls']);
   assert.deepEqual(alias.statePatch?.kind === 'session' ? alias.statePatch.session.aliases : undefined, [{ name: 'la', target: 'ls' }]);
   assert.equal(runRshellInput('la', runnerOptions({ session: { history: [], scratch: [], aliases: [{ name: 'la', target: 'ls' }] } })).status, 0);
+});
+
+test('neutral Help enumerates descriptor-owned examples from custom registries', () => {
+  const example = { command: 'hello', description: 'say hello' };
+  Object.defineProperties(example, {
+    command: { value: 'hello', enumerable: false },
+    description: { value: 'say hello', enumerable: false }
+  });
+  const registry = createCommandSpecRegistry([
+    ...NEUTRAL_COMMAND_REGISTRY.definitions,
+    {
+      ...GREP_COMMAND_SPEC,
+      name: 'hello',
+      aliases: Object.freeze(['hi']),
+      usage: 'hello',
+      summary: 'print a greeting',
+      examples: [example]
+    }
+  ]);
+  const result = runRshellInput('help hi', runnerOptions({ registry }));
+  assert.equal(result.status, 0);
+  assert.deepEqual(result.value?.kind === 'help' ? result.value.detail : undefined, {
+    name: 'hello',
+    aliases: ['hi'],
+    summary: 'print a greeting',
+    usage: 'hello',
+    examples: [{ command: 'hello', description: 'say hello' }]
+  });
+  assert.deepEqual(result.stdout.lines, [
+    'Usage: hello',
+    'print a greeting',
+    'Aliases: hi',
+    'Examples:',
+    '  hello — say hello'
+  ]);
 });
