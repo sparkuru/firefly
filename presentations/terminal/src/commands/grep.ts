@@ -146,6 +146,18 @@ function parseRegexAlternation(parser: RegexParser): RegexAtom | undefined {
   return values.length === 1 ? values[0] : { type: 'alt', values: Object.freeze(values) };
 }
 
+function literalRegexValue(node: RegexAtom): string | undefined {
+  if (node.type === 'literal') return node.value;
+  if (node.type !== 'concat') return undefined;
+  let value = '';
+  for (const child of node.values) {
+    const literal = literalRegexValue(child);
+    if (literal === undefined) return undefined;
+    value += literal;
+  }
+  return value.length === 0 ? undefined : value;
+}
+
 type RegexState =
   | { readonly kind: 'char'; readonly value: string; to: number }
   | { readonly kind: 'any'; to: number }
@@ -182,6 +194,8 @@ function compileSafeRegex(pattern: string, insensitive: boolean, wholeWord: bool
   const parser: RegexParser = { characters: Object.freeze([...pattern]), index: 0, depth: 0 };
   const ast = parseRegexAlternation(parser);
   if (ast === undefined || parser.index !== parser.characters.length) return undefined;
+  const literal = literalRegexValue(ast);
+  if (literal !== undefined) return literalMatcher(literal, insensitive, wholeWord);
   const states: RegexState[] = [];
   const add = (state: RegexState): number => { states.push(state); return states.length - 1; };
   const out = (index: number, key: 'to' | 'alternate'): readonly [number, 'to' | 'alternate'] => Object.freeze([index, key]);
@@ -287,6 +301,24 @@ function compileSafeRegex(pattern: string, insensitive: boolean, wholeWord: bool
     }
     return undefined;
   };
+  const hasWholeWordMatch = (characters: readonly string[]): boolean => {
+    let current = new Set<number>();
+    for (let position = 0; position < characters.length; position += 1) {
+      if (!isWordCharacter(characters[position - 1])) {
+        addClosure(current, fragment.start, position, characters.length, new Set());
+      }
+      const next = new Set<number>();
+      for (const index of current) {
+        const state = states[index]!;
+        if ((state.kind === 'char' || state.kind === 'any' || state.kind === 'class') && charMatches(state, characters[position]!)) {
+          addClosure(next, state.to, position + 1, characters.length, new Set());
+        }
+      }
+      current = next;
+      if (current.has(match) && !isWordCharacter(characters[position + 1])) return true;
+    }
+    return false;
+  };
   const collectRanges = (line: string): readonly (readonly [number, number])[] => {
     const characters = [...line];
     const offsets = [0];
@@ -309,7 +341,7 @@ function compileSafeRegex(pattern: string, insensitive: boolean, wholeWord: bool
   };
   return {
     test: (line: string): boolean => {
-      if (wholeWord) return collectRanges(line).length > 0;
+      if (wholeWord) return hasWholeWordMatch([...line]);
       const characters = [...line];
       let current = new Set<number>();
       addClosure(current, fragment.start, 0, characters.length, new Set());

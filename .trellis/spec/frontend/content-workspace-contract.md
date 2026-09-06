@@ -757,6 +757,94 @@ return successResult(walked.paths.map(render));
   safe no-result effect instead of conflating “no matches” with an invalid
   resource. Resource, scanned-line, match-count, and output-size limits remain
   enforced before rendering.
+- **Terminal grep matcher performance and equivalence**
+
+  **1. Scope / Trigger**
+
+  - Trigger: changing safe grep matching, whole-word boundaries, highlight
+    ranges, or the per-line performance of grep -w or grep -Ew.
+  - Scope: the private safe parser/NFA and bounded literal matcher inside
+    presentations/terminal/src/commands/grep.ts; command options, VFS
+    walking, output limits, and browser effects remain outside this optimization.
+
+  **2. Signatures**
+
+  ~~~ts
+  interface SafeRegexMatcher {
+    readonly test: (line: string) => boolean;
+    readonly ranges: (line: string) => readonly (readonly [number, number])[];
+  }
+
+  compileSafeRegex(
+    pattern: string,
+    insensitive: boolean,
+    wholeWord: boolean
+  ): SafeRegexMatcher | undefined;
+
+  literalMatcher(
+    pattern: string,
+    insensitive: boolean,
+    wholeWord: boolean
+  ): SafeRegexMatcher;
+  ~~~
+
+  **3. Contracts**
+
+  - Parse the existing safe language first. A parsed AST consisting only of
+    literal atoms in concatenation, including decoded escaped literals, may
+    delegate to literalMatcher; raw source text must not be used as the
+    decoded value.
+  - A general safe NFA with wholeWord enabled must run one left-to-right
+    state-set scan. Add a new start closure only at an absent/non-word left
+    boundary, accept only at an absent/non-word right boundary, and never
+    accept before consuming one character.
+  - test(line) is the hit precheck. ranges(line) may use bounded detailed
+    collection after a hit, but must preserve every accepted range, cap output
+    at 64 ranges, and must not be called as an all-line precheck.
+  - ASCII word classification, case folding, anchors, alternation, repetition,
+    classes, parser limits, NFA state limits, and all command/resource/output
+    limits remain unchanged. Native JavaScript regular expressions are not a
+    user-pattern execution engine.
+
+  **4. Validation & Error Matrix**
+
+  | Condition | Required result |
+  | --- | --- |
+  | literal-only AST, including an escaped literal | use the bounded literal matcher with unchanged source-pattern reporting |
+  | operator/class/anchor/repetition AST | use the safe NFA compiler and existing state bound |
+  | whole-word candidate with a word character on either side | reject it and continue searching later candidates |
+  | zero-width whole-word candidate | do not report a line or range |
+  | unsafe syntax, empty/overlong pattern, or excessive NFA states | preserve the existing bounded error |
+  | matching line after the precheck | collect bounded ranges and preserve structured highlighting |
+
+  **5. Good / Base / Bad Cases**
+
+  - Good: grep -Ew '\+' matches a standalone plus sign through the decoded
+    literal fast path.
+  - Base: grep -w x+z over a long run of x characters returns no result after
+    one scan, while grep -w x+ still discovers a later boundary-valid candidate.
+  - Bad: call collectRanges(line) from test(line) for every line, or execute a
+    user pattern with the host RegExp engine.
+
+  **6. Tests Required**
+
+  - Unit tests assert escaped literal matching, invalid-then-valid boundaries,
+    long absent whole-word input, zero-width anchors/repetition, -E/-Ew
+    compatibility, and exact structured ranges.
+  - Terminal type/test, site check/build, focused browser, task validation, and
+    whitespace checks run through the repository wrapper.
+  - A repeatable benchmark uses the same configured public corpus and records
+    before/after samples as evidence; timing is not a test threshold.
+
+  **7. Wrong vs Correct**
+
+  ~~~ts
+  // Wrong: every non-matching line pays for a full search from each position.
+  if (wholeWord) return collectRanges(line).length > 0;
+
+  // Correct: candidates share one advancing NFA state set.
+  if (wholeWord) return hasWholeWordMatch([...line]);
+  ~~~
 - Non-document command output settles the newest record and fresh prompt as one
   centered reading band when the group fits the viewport. Oversized output keeps
   the fresh prompt focused and visible at the viewport's lower edge while earlier
