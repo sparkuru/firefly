@@ -117,6 +117,27 @@ test('grep supports whole-word fixed and safe-regex matching with explicit exten
   );
   assert.deepEqual(regular.value?.kind === 'grep-report' ? regular.value.report.matches[0]?.ranges : [], [[8, 11]]);
 
+  const boundaryInvalidThenValid = executeGrep(
+    context({ stdin: textStream(['xxa x!']) }),
+    args(['x+'], { 'word-regexp': true })
+  );
+  assert.deepEqual(boundaryInvalidThenValid.value?.kind === 'grep-report' ? boundaryInvalidThenValid.value.report.matches[0]?.ranges : [], [[4, 5]]);
+
+  const longAbsent = executeGrep(
+    context({ stdin: textStream(['x'.repeat(4_096)]) }),
+    args(['x+z'], { 'word-regexp': true })
+  );
+  assert.deepEqual(longAbsent.value, {
+    kind: 'grep-report',
+    report: { pattern: 'x+z', matches: [], noResults: true, truncated: false }
+  });
+
+  const escapedLiteral = executeGrep(
+    context({ stdin: textStream(['left + right']) }),
+    args(['\\+'], { 'extended-regexp': true, 'word-regexp': true })
+  );
+  assert.deepEqual(escapedLiteral.value?.kind === 'grep-report' ? escapedLiteral.value.report.matches[0]?.ranges : [], [[5, 6]]);
+
   const repeated = executeGrep(
     context({ stdin: textStream(['catapult cat!']) }),
     args(['\\w+'], { 'word-regexp': true })
@@ -130,6 +151,15 @@ test('grep supports whole-word fixed and safe-regex matching with explicit exten
   assert.deepEqual(zeroWidth.value, {
     kind: 'grep-report',
     report: { pattern: '^', matches: [], noResults: true, truncated: false }
+  });
+
+  const zeroWidthRepeat = executeGrep(
+    context({ stdin: textStream(['b', 'a']) }),
+    args(['a*'], { 'word-regexp': true })
+  );
+  assert.deepEqual(zeroWidthRepeat.value, {
+    kind: 'grep-report',
+    report: { pattern: 'a*', matches: [{ path: '-', line: 'a', ranges: [[0, 1]] }], noResults: false, truncated: false }
   });
 
   const conflict = executeGrep(
