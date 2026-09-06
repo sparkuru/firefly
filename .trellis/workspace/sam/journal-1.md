@@ -1242,3 +1242,24 @@ Moved built-in Terminal command metadata, parsers, policies, executors, completi
 ### Status
 
 [OK] **Completed**
+
+
+## Session 56: Optimize grep matching
+
+**Date**: 2026-09-07
+**Task**: Optimize grep matching
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Optimized Terminal grep whole-word matching with a one-pass safe-NFA precheck and decoded literal fast path; added focused boundary, zero-width, and escaped-literal tests, benchmark evidence, and a durable frontend matcher contract. Terminal check/test 33/33, site check, static build 17/17, focused Terminal browser 76/76, task validation, and diff check passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `76e625e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
