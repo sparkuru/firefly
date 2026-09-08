@@ -60,6 +60,7 @@ interface CompletionPanel {
   readonly inputValue: string;
   readonly candidates: readonly string[];
   readonly candidateValues: readonly string[];
+  readonly candidateLabels?: readonly string[];
   readonly activeIndex: number | null;
 }
 
@@ -890,7 +891,8 @@ function renderCompletionPanel(nodes: TerminalNodes, panel: CompletionPanel): vo
     const marker = document.createElement('span');
     marker.className = 'terminal-completion-marker';
     marker.setAttribute('aria-hidden', 'true');
-    option.append(marker, document.createTextNode(candidate));
+    const label = panel.candidateLabels?.[index] ?? candidate;
+    option.append(marker, document.createTextNode(label));
     list.append(option);
   });
   nodes.completion.append(list);
@@ -1073,6 +1075,7 @@ export function startTerminalHome(
             inputValue: nodes.input.value,
             candidates: completion.candidates,
             candidateValues: completion.candidateValues,
+            ...(completion.candidateLabels === undefined ? {} : { candidateLabels: completion.candidateLabels }),
             activeIndex: null
           };
           renderCompletionPanel(nodes, completionPanel);

@@ -949,6 +949,17 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   await expect(input).toHaveValue('cat ./ai/llm-workflow-with-trellis.md');
   await expect(input).toBeFocused();
 
+  const learningEntry = page.locator('[data-terminal-entry][data-terminal-entry-kind="post"][data-terminal-entry-title^="Learning"]').first();
+  const learningFilename = await learningEntry.getAttribute('data-terminal-entry-filename');
+  expect(learningFilename).toBeTruthy();
+  await input.fill('cd ai');
+  await input.press('Enter');
+  await input.fill('cat LEARN');
+  await input.press('Tab');
+  await expect(input).toHaveValue(`cat ${learningFilename}`);
+  await input.fill('cd ..');
+  await input.press('Enter');
+
   for (const unsafe of ['cat ../ai/llm-w', 'cat ./nested/../ai/llm-w', 'cat /ai/llm-w', 'cat /posts/does-not-exist', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat ~', 'cat ~/', 'cat cafe\u0301.md', 'cat control\u0001path']) {
     await input.fill(unsafe);
     await input.press('Tab');

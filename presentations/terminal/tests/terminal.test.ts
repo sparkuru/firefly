@@ -28,8 +28,11 @@ import {
   type TerminalEntry,
   type TerminalTextDocument
 } from '../src/runtime.js';
+import { completePath } from '../src/commands/completion.js';
+import { documentDisplayName } from '../src/commands/document-format.js';
 import { GREP_COMMAND_SPEC } from '../src/commands/grep.js';
 import { createCommandSpecRegistry } from '../src/commands/registry.js';
+import { createPublicIndex } from '../src/vfs/public-index.js';
 
 const context: DocumentContext = {
   documentId: 'posts/example.md',
@@ -809,6 +812,63 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('cat posts/charac', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat posts/characters/', candidates: ['posts/characters/'] });
   assert.deepEqual(completeCommand('vim pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'vim pages/about.md', candidates: ['pages/about.md'] });
   assert.deepEqual(completeCommand('vim ~/blog/pages/abo', entries, experiments), { kind: 'unique', value: 'vim ~/blog/pages/about.md', candidates: ['pages/about.md'] });
+  const metadataEntries = decodeTerminalEntries([
+    ...rawEntries,
+    { kind: 'post', virtualPath: 'posts/infra/07-docker-image-to-vm.md', relativePath: 'infra/07-docker-image-to-vm.md', filename: '07-docker-image-to-vm.md', title: 'Docker Handbook', href: '/posts/infra/07-docker-image-to-vm/', date: '2026-06-02' }
+  ]);
+  assert.deepEqual(completeCommand('cat doc', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/infra'), {
+    kind: 'unique',
+    value: 'cat 07-docker-image-to-vm.md',
+    candidates: ['07-docker-image-to-vm.md']
+  });
+  assert.deepEqual(completeCommand('vim DOC', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/infra'), {
+    kind: 'unique',
+    value: 'vim 07-docker-image-to-vm.md',
+    candidates: ['07-docker-image-to-vm.md']
+  });
+  assert.deepEqual(completeCommand('cat infra/doc', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), {
+    kind: 'unique',
+    value: 'cat infra/07-docker-image-to-vm.md',
+    candidates: ['infra/07-docker-image-to-vm.md']
+  });
+  assert.deepEqual(completeCommand('ls 07', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/infra'), {
+    kind: 'unique',
+    value: 'ls 07-docker-image-to-vm.md',
+    candidates: ['07-docker-image-to-vm.md']
+  });
+  const duplicateTitleEntries = decodeTerminalEntries([
+    { kind: 'post', virtualPath: 'posts/infra/one.md', relativePath: 'infra/one.md', filename: 'one.md', title: 'Shared Note', href: '/posts/infra/one/', date: '2026-06-03' },
+    { kind: 'post', virtualPath: 'posts/infra/two.md', relativePath: 'infra/two.md', filename: 'two.md', title: 'Shared Note', href: '/posts/infra/two/', date: '2026-06-04' }
+  ]);
+  const duplicateTitleCompletion = completeCommand('cat SHA', duplicateTitleEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/infra');
+  assert.deepEqual(duplicateTitleCompletion, {
+    kind: 'ambiguous',
+    value: 'cat ',
+    candidates: ['one.md', 'two.md'],
+    candidateValues: ['cat one.md', 'cat two.md'],
+    candidateLabels: ['Shared Note — one.md', 'Shared Note — two.md'],
+    ownsTab: true
+  });
+  assert.equal(duplicateTitleCompletion.kind === 'ambiguous' && duplicateTitleCompletion.candidateValues[1], 'cat two.md');
+  const fallbackDocument = {
+    kind: 'post' as const,
+    path: '/posts/infra/index-007.md',
+    relativePath: 'infra/index-007.md',
+    filename: 'index-007.md',
+    title: '',
+    href: '/posts/infra/index-007/',
+    date: '2026-06-05'
+  };
+  assert.equal(documentDisplayName(fallbackDocument), 'index-007');
+  assert.deepEqual(completePath({
+    cwd: '/posts/infra',
+    invokedName: 'cat',
+    fs: createPublicIndex({ documents: [fallbackDocument], experiments: [] })
+  }, 'index'), {
+    kind: 'unique',
+    value: 'cat index-007.md',
+    candidates: ['index-007.md']
+  });
   const pathEntries = decodeTerminalEntries([
     ...rawEntries,
     { kind: 'post', virtualPath: 'posts/beta.md', relativePath: 'beta.md', filename: 'beta.md', title: 'Beta', href: '/posts/beta/', date: '2026-06-01' }

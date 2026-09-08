@@ -1311,6 +1311,102 @@ navigation must add a closed typed payload, retain a deterministic plain
 projection for pipelines, and update the runtime adapter, DOM renderer, safe
 native-link boundary, unit tests, and browser tests together.
 
+## Scenario: Metadata-aware Terminal Document Completion
+
+### 1. Scope / Trigger
+
+Use this contract whenever changing `cat`, `vim`, or `ls` completion for public
+Markdown documents, document display titles, or the browser completion panel.
+The Terminal may expose a metadata title as the user-facing label, but command
+resolution and execution must continue to use the canonical virtual path.
+
+### 2. Signatures
+
+```ts
+type CompletionResult =
+  | { readonly kind: 'unique'; readonly value: string; readonly candidates: readonly string[] }
+  | {
+    readonly kind: 'ambiguous';
+    readonly value: string;
+    readonly candidates: readonly string[];
+    readonly candidateValues: readonly string[];
+    readonly candidateLabels?: readonly string[];
+    readonly ownsTab: boolean;
+  }
+  | { readonly kind: 'no-match'; readonly candidates: readonly []; readonly ownsTab: true }
+  | { readonly kind: 'none'; readonly candidates: readonly [] };
+
+completeCommand(
+  input: string,
+  entries: readonly TerminalEntry[],
+  experiments?: readonly TerminalExperiment[],
+  registry?: TerminalCommandRegistry,
+  cwd?: string
+): CompletionResult
+```
+
+### 3. Contracts
+
+- `cat`, `vim`, and `ls` document completion search both the canonical physical
+  operand and the document display name returned by `documentDisplayName()`.
+- Display-name matching is case-insensitive. Physical path matching remains
+  case-sensitive and preserves the existing relative, `./`, and `~/blog/`
+  operand forms.
+- `candidateValues` and unique `value` are complete command strings containing
+  only the safe physical operand. They are the only values the controller may
+  insert when a candidate is selected.
+- `candidateLabels`, when present, is aligned with `candidates` and is only a
+  presentation label; duplicate titles include enough physical-path context,
+  for example `Shared Note — one.md`.
+- Empty or absent metadata title data uses the filename stem as the display-name
+  fallback. Directory and experiment completion never uses document titles.
+- The browser renders `candidateLabels` when present but keeps
+  `candidateValues` for Enter/Space selection.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| unique title prefix | return a unique result whose inserted value is the physical operand |
+| case variation in title prefix | match the same document as the canonical title |
+| duplicate title prefix | return ambiguous physical candidates plus aligned human-readable labels |
+| physical filename/path prefix | preserve the existing completion result and insertion form |
+| empty title | use the filename stem for display-name matching |
+| directory or experiment prefix | use path/id matching only; do not add title aliases |
+| unsafe, non-NFC, unknown-root, or no-match input | preserve the existing `none`/`no-match` distinction and never expose a host path |
+
+### 5. Good / Base / Bad Cases
+
+- Good: `cat do` in `~/blog/posts/infra` matches a document titled `Docker
+  Handbook` and inserts `cat 07-docker-handbook.md`.
+- Base: `vim 07-do` still completes from the physical filename exactly as it
+  did before metadata aliases were added.
+- Bad: render `Docker Handbook` as the command candidate and insert that title,
+  or use a title alias as a VFS path during execution.
+
+### 6. Tests Required
+
+- Terminal unit tests assert unique title matching, case-insensitive matching,
+  `ls` parity, nested and root-relative forms, physical-path completion,
+  duplicate-title labels, filename-stem fallback, and the exact physical
+  `candidateValues` used for selection.
+- Browser completion tests assert that the visible option uses the title/path
+  label while selecting an option commits the corresponding physical command
+  value.
+- Type-check and site/Terminal checks must cover both completion result type
+  copies (`commands/contracts.ts` and the runtime adapter) and the DOM panel.
+
+### 7. Wrong vs Correct
+
+```ts
+// Wrong: the visible title becomes the shell operand.
+const value = `cat ${documentDisplayName(document)}`;
+
+// Correct: title is only a matching/display alias; execution receives the path.
+const value = `cat ${physicalOperand}`;
+const label = `${documentDisplayName(document)} — ${physicalOperand}`;
+```
+
 ## Reference Files
 
 - `sam`

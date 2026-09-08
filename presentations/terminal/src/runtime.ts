@@ -150,6 +150,8 @@ export type CompletionResult =
     readonly value: string;
     readonly candidates: readonly string[];
     readonly candidateValues: readonly string[];
+    /** Optional labels for candidates whose display title matched the input. */
+    readonly candidateLabels?: readonly string[];
     readonly ownsTab: boolean;
   }
   | { readonly kind: 'no-match'; readonly candidates: readonly []; readonly ownsTab: true }

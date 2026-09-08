@@ -1,5 +1,7 @@
 import type { CompletionContext, CompletionResult } from './contracts.js';
+import { documentDisplayName } from './document-format.js';
 import { classifyVirtualOperandPrefix } from '../vfs/paths.js';
+import type { PublicDocument } from '../vfs/contracts.js';
 
 export function completeFrom(
   prefix: string,
@@ -40,7 +42,11 @@ function isSafeCompletionPrefix(prefix: string, allowWildcard = false): boolean 
       (segment === '' && index < values.length - 1) || segment === '..' || segment === '.' || segment.startsWith('.'));
 }
 
-function visibleChildCandidates(prefix: string, paths: readonly string[]): readonly string[] {
+function foldCompletionText(value: string): string {
+  return value.normalize('NFC').toLocaleLowerCase('en-US');
+}
+
+function visibleChildCandidates(prefix: string, paths: readonly string[], caseInsensitive = false): readonly string[] {
   const slash = prefix.lastIndexOf('/');
   const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
   const segmentPrefix = prefix.slice(slash + 1);
@@ -49,8 +55,21 @@ function visibleChildCandidates(prefix: string, paths: readonly string[]): reado
     const remaining = candidate.slice(parent.length);
     const nextSlash = remaining.indexOf('/');
     const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
-    return next.startsWith(segmentPrefix) ? [`${parent}${next}`] : [];
+    const matches = caseInsensitive
+      ? foldCompletionText(next).startsWith(foldCompletionText(segmentPrefix))
+      : next.startsWith(segmentPrefix);
+    return matches ? [`${parent}${next}`] : [];
   });
+}
+
+function immediateChildCandidate(prefix: string, path: string): string | undefined {
+  const slash = prefix.lastIndexOf('/');
+  const parent = slash === -1 ? '' : prefix.slice(0, slash + 1);
+  if (!path.startsWith(parent)) return undefined;
+  const remaining = path.slice(parent.length);
+  const nextSlash = remaining.indexOf('/');
+  const next = nextSlash === -1 ? remaining : `${remaining.slice(0, nextSlash)}/`;
+  return `${parent}${next}`;
 }
 
 function relativeCandidate(path: string, cwdPath: string, rootResourceDefault = false): string | undefined {
@@ -61,30 +80,152 @@ function relativeCandidate(path: string, cwdPath: string, rootResourceDefault = 
   return path.startsWith(prefix) && pathWithoutTrailingSlash !== cwdPath ? path.slice(prefix.length) : undefined;
 }
 
+type CompletionPath = string | PublicDocument;
+
+interface ExpandedCompletionPath {
+  readonly path: string;
+  readonly document?: PublicDocument;
+}
+
+interface MappedCompletionCandidate {
+  readonly match: string;
+  readonly candidate: string;
+  readonly value: string;
+  readonly label?: string;
+  readonly titleMatch: boolean;
+}
+
+function expandedPathCandidates(
+  path: CompletionPath,
+  parsed: Exclude<ReturnType<typeof classifyVirtualOperandPrefix>, { kind: 'invalid' }>,
+  cwdPath: string,
+  rootResourceDefault: boolean
+): readonly ExpandedCompletionPath[] {
+  const sourcePath = typeof path === 'string' ? path : path.path;
+  const document = typeof path === 'string' ? undefined : path;
+  if (parsed.kind === 'absolute') return sourcePath === '/'
+    ? Object.freeze([])
+    : Object.freeze([{ path: sourcePath.slice(1), ...(document === undefined ? {} : { document }) }]);
+  if (rootResourceDefault && cwdPath === '/' && sourcePath.startsWith('/posts/')) {
+    return Object.freeze([
+      { path: sourcePath.slice('/posts/'.length), ...(document === undefined ? {} : { document }) },
+      { path: sourcePath.slice(1), ...(document === undefined ? {} : { document }) }
+    ]);
+  }
+  const candidate = relativeCandidate(sourcePath, cwdPath, rootResourceDefault);
+  return candidate === undefined
+    ? Object.freeze([])
+    : Object.freeze([{ path: candidate, ...(document === undefined ? {} : { document }) }]);
+}
+
+function completeMapped(
+  prefix: string,
+  candidates: readonly MappedCompletionCandidate[],
+  ownsAmbiguousTab: boolean,
+  fallbackLabel: (candidate: MappedCompletionCandidate) => string
+): CompletionResult {
+  const byValue = new Map<string, MappedCompletionCandidate>();
+  for (const candidate of candidates) {
+    const matches = candidate.titleMatch
+      ? foldCompletionText(candidate.match).startsWith(foldCompletionText(prefix))
+      : candidate.match.startsWith(prefix);
+    if (!matches) continue;
+    const previous = byValue.get(candidate.value);
+    if (previous === undefined || (previous.label === undefined && candidate.label !== undefined)) {
+      byValue.set(candidate.value, candidate);
+    }
+  }
+
+  const matches = [...byValue.values()].sort((left, right) =>
+    left.candidate < right.candidate ? -1 : left.candidate > right.candidate ? 1 : left.value < right.value ? -1 : 1
+  );
+  if (matches.length === 0) return { kind: 'none', candidates: Object.freeze([]) };
+  const exact = matches.filter((candidate) => candidate.titleMatch
+    ? foldCompletionText(candidate.match) === foldCompletionText(prefix)
+    : candidate.match === prefix);
+  if (exact.length === 1) {
+    return {
+      kind: 'unique',
+      value: exact[0]!.value,
+      candidates: Object.freeze([exact[0]!.candidate])
+    };
+  }
+  if (matches.length === 1) {
+    return {
+      kind: 'unique',
+      value: matches[0]!.value,
+      candidates: Object.freeze([matches[0]!.candidate])
+    };
+  }
+
+  const candidateValues = matches.map(({ value }) => value);
+  const commonValue = candidateValues.reduce((common, value) => {
+    let index = 0;
+    while (index < common.length && index < value.length && common[index] === value[index]) index += 1;
+    return common.slice(0, index);
+  });
+  const hasLabels = matches.some(({ label }) => label !== undefined);
+  return {
+    kind: 'ambiguous',
+    value: commonValue,
+    candidates: Object.freeze(matches.map(({ candidate }) => candidate)),
+    candidateValues: Object.freeze(candidateValues),
+    ...(hasLabels ? { candidateLabels: Object.freeze(matches.map((candidate) => candidate.label ?? fallbackLabel(candidate))) } : {}),
+    ownsTab: ownsAmbiguousTab
+  };
+}
+
 function completeVirtualPaths(
   operand: string,
-  paths: readonly string[],
+  paths: readonly CompletionPath[],
   invokedName: string,
   cwdPath: string,
   options: { readonly ownsAmbiguousTab?: boolean; readonly rootResourceDefault?: boolean; readonly extras?: readonly string[] } = {}
 ): CompletionResult {
   const parsed = classifyVirtualOperandPrefix(operand);
   if (parsed.kind === 'invalid' || !isSafeCompletionPrefix(parsed.prefix)) return { kind: 'none', candidates: Object.freeze([]) };
-  const candidates = paths.flatMap((path) => {
-    if (parsed.kind === 'absolute') return path === '/' ? [] : [path.slice(1)];
-    if (options.rootResourceDefault && cwdPath === '/' && path.startsWith('/posts/')) {
-      return [path.slice('/posts/'.length), path.slice(1)];
+  const mappedCandidates: MappedCompletionCandidate[] = [];
+  for (const path of paths) {
+    for (const expanded of expandedPathCandidates(path, parsed, cwdPath, options.rootResourceDefault ?? false)) {
+      const physicalCandidate = immediateChildCandidate(parsed.prefix, expanded.path);
+      if (physicalCandidate === undefined) continue;
+      const physicalMatches = visibleChildCandidates(parsed.prefix, [expanded.path])[0] === physicalCandidate;
+      const value = `${invokedName} ${parsed.displayPrefix}${physicalCandidate}`;
+      if (physicalMatches) mappedCandidates.push({ match: physicalCandidate, candidate: physicalCandidate, value, titleMatch: false });
+
+      if (expanded.document === undefined || parsed.prefix.length === 0 || physicalCandidate.endsWith('/')) continue;
+      const displayName = documentDisplayName(expanded.document);
+      if (displayName.length === 0 || displayName.includes('/')) continue;
+      const parent = physicalCandidate.slice(0, physicalCandidate.lastIndexOf('/') + 1);
+      const titleCandidate = `${parent}${displayName}`;
+      const titleVisible = visibleChildCandidates(parsed.prefix, [titleCandidate], true)[0];
+      if (titleVisible !== titleCandidate || titleCandidate === physicalCandidate) continue;
+      mappedCandidates.push({
+        match: titleCandidate,
+        candidate: physicalCandidate,
+        value,
+        label: `${displayName} — ${parsed.displayPrefix}${physicalCandidate}`,
+        titleMatch: true
+      });
     }
-    const candidate = relativeCandidate(path, cwdPath, options.rootResourceDefault);
-    return candidate === undefined ? [] : [candidate];
-  });
-  if (parsed.kind === 'relative' && parsed.displayPrefix === '') candidates.push(...(options.extras ?? []));
-  const visible = visibleChildCandidates(parsed.prefix, candidates);
-  const completion = completeFrom(
+  }
+  if (parsed.kind === 'relative' && parsed.displayPrefix === '') {
+    for (const extra of options.extras ?? []) {
+      const visible = visibleChildCandidates(parsed.prefix, [extra])[0];
+      if (visible === undefined) continue;
+      mappedCandidates.push({
+        match: visible,
+        candidate: visible,
+        value: `${invokedName} ${visible}`,
+        titleMatch: false
+      });
+    }
+  }
+  const completion = completeMapped(
     parsed.prefix,
-    visible,
-    (candidate) => `${invokedName} ${parsed.displayPrefix}${candidate}`,
-    options.ownsAmbiguousTab ?? true
+    mappedCandidates,
+    options.ownsAmbiguousTab ?? true,
+    (candidate) => `${parsed.displayPrefix}${candidate.candidate}`
   );
   if (completion.kind === 'none') return Object.freeze({ kind: 'no-match', candidates: Object.freeze([]) as readonly [], ownsTab: true });
   if (completion.kind !== 'ambiguous') return completion;
@@ -96,13 +237,13 @@ function completeVirtualPaths(
 
 interface CompletionPaths {
   readonly directories: readonly string[];
-  readonly documents: readonly string[];
+  readonly documents: readonly PublicDocument[];
   readonly experiments: readonly string[];
 }
 
 function completionPaths(context: CompletionContext): CompletionPaths {
   const directories = new Set<string>(['/', '/posts', '/pages', '/lab', '/.rshell', '/.rshell/tmp']);
-  const documents = new Set<string>();
+  const documents = new Map<string, PublicDocument>();
   const experiments = new Set<string>();
   const queue = ['/', '/posts', '/pages', '/lab', '/.rshell/tmp'];
   const visited = new Set<string>();
@@ -117,7 +258,7 @@ function completionPaths(context: CompletionContext): CompletionPaths {
       directories.add(child);
       queue.push(child);
     }
-    for (const document of listing.documents) documents.add(document.path);
+    for (const document of listing.documents) documents.set(document.path, document);
     if (path === '/lab') for (const experiment of listing.experiments) {
       experiments.add(`/lab/${experiment.id}`);
       directories.add(`/lab/${experiment.id}`);
@@ -125,7 +266,7 @@ function completionPaths(context: CompletionContext): CompletionPaths {
   }
   return {
     directories: Object.freeze([...directories]),
-    documents: Object.freeze([...documents]),
+    documents: Object.freeze([...documents.values()]),
     experiments: Object.freeze([...experiments])
   };
 }
