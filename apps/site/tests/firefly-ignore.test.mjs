@@ -167,10 +167,10 @@ test('materializer filters both collections before reservation and never copies 
     posts: ['collision.md', 'notes/keep.md', 'public.md'],
     pages: ['about.md', 'internal/keep.md']
   });
-  assert.equal(await readFile(path.join(target, 'posts/collision.md'), 'utf8'), '## included collision name\n');
-  assert.equal(await readFile(path.join(target, 'posts/notes/keep.md'), 'utf8'), '## keep\n');
-  assert.equal(await readFile(path.join(target, 'pages/about.md'), 'utf8'), '## about\n');
-  assert.equal(await readFile(path.join(target, 'pages/internal/keep.md'), 'utf8'), '## page keep\n');
+  assert.match(await readFile(path.join(target, 'posts/collision.md'), 'utf8'), /^---\ntitle: "collision"[\s\S]*\nlayout: "post"\n---\n\n## included collision name\n$/u);
+  assert.match(await readFile(path.join(target, 'posts/notes/keep.md'), 'utf8'), /^---\ntitle: "keep"[\s\S]*\nlayout: "post"\n---\n\n## keep\n$/u);
+  assert.match(await readFile(path.join(target, 'pages/about.md'), 'utf8'), /^---\ntitle: "about"[\s\S]*\nlayout: "page"\nslug: "about"\n---\n\n## about\n$/u);
+  assert.match(await readFile(path.join(target, 'pages/internal/keep.md'), 'utf8'), /^---\ntitle: "keep"[\s\S]*\nlayout: "page"\nslug: "keep"\n---\n\n## page keep\n$/u);
   await assert.rejects(readFile(path.join(target, 'posts/private/hidden.md')), /ENOENT/u);
   await assert.rejects(readFile(path.join(target, 'pages/internal/omit.md')), /ENOENT/u);
   await assert.rejects(readFile(path.join(target, 'posts/notes/.fireflyignore')), /ENOENT/u);

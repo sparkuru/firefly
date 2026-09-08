@@ -779,7 +779,7 @@ function formatGrepMatch(match: TerminalGrepMatch): string {
 
 function formatFindMatch(entry: TerminalEntry): string {
   const displayPath = entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
-  return `${displayPath} — ${entry.date} — ${entry.title}`;
+  return `${entry.title} — ${entry.date} — ${displayPath}`;
 }
 
 function stdoutForEffect(effect: TerminalEffect): readonly string[] {
@@ -796,7 +796,7 @@ function stdoutForEffect(effect: TerminalEffect): readonly string[] {
   if (effect.kind === 'find') return Object.freeze(effect.entries.map(formatFindMatch));
   if (effect.kind === 'entries') return Object.freeze([
     ...effect.directories,
-    ...effect.entries.map((entry) => `${formatDocumentOperand(entry)} — ${entry.date} — ${entry.title}`)
+    ...effect.entries.map((entry) => `${entry.title} — ${entry.date} — ${formatDocumentOperand(entry)}`)
   ]);
   if (effect.kind === 'experiments') return Object.freeze(effect.experiments.map((experiment) => `${experiment.id}/ — ${experiment.title}`));
   if (effect.kind === 'tree') return Object.freeze([effect.root, ...effect.lines]);

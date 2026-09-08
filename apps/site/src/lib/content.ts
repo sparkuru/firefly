@@ -5,6 +5,7 @@ import {
 } from './content-access.mjs';
 import { projectCanonicalRoute } from './canonical-route.mjs';
 import { resolveContentMarkers } from './content-markers.mjs';
+import { displayNameForDocument } from './content-metadata.mjs';
 
 export type PublicPost = CollectionEntry<'posts'>;
 export type PublicPage = CollectionEntry<'pages'>;
@@ -27,6 +28,7 @@ export interface CanonicalDocument {
   readonly relativePath: string;
   readonly virtualPath: string;
   readonly filename: `${string}.md`;
+  readonly displayName: string;
   readonly href: string;
   readonly directoryHrefs: readonly string[];
   readonly breadcrumbs: readonly CanonicalBreadcrumb[];
@@ -109,6 +111,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     relativePath,
     virtualPath,
     filename: filename as `${string}.md`,
+    displayName: displayNameForDocument({ title: entry.data.title, filename }),
     href: projectCanonicalRoute({ collection, relativePath, slug: routeSlug }),
     directoryHrefs: Object.freeze(directoryHrefs),
     breadcrumbs,
@@ -133,7 +136,7 @@ function freezeDirectory(directory: MutableDirectory): ContentDirectory {
     .sort((left, right) => compareCodePoint(left.name, right.name))
     .map(freezeDirectory);
   const files = [...directory.files]
-    .sort((left, right) => compareCodePoint(left.name, right.name))
+    .sort((left, right) => compareCodePoint(left.document.virtualPath, right.document.virtualPath))
     .map((file) => Object.freeze(file));
   return Object.freeze({
     kind: 'directory',
@@ -168,7 +171,7 @@ function buildTree(documents: readonly CanonicalDocument[]) {
       }
       parent = child;
     }
-    parent.files.push({ kind: 'file', name: filename, virtualPath: document.virtualPath, href: document.href, document });
+    parent.files.push({ kind: 'file', name: document.displayName, virtualPath: document.virtualPath, href: document.href, document });
   }
   return freezeDirectory(root);
 }

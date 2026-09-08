@@ -28,13 +28,8 @@ const parentHref = directory.virtualPath.includes('/')
       <ul class="terminal-directory-list">
         {directory.children.map((child) => (
           <li data-kind={child.kind}>
-            <a href={child.href}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
-            {child.kind === 'file' && (
-              <>
-                <span> — {child.document.entry.data.title}</span>
-                <ContentMarkers markers={child.document.markers} />
-              </>
-            )}
+            <a href={child.href} aria-label={child.kind === 'file' ? child.document.filename : undefined}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
+            {child.kind === 'file' && <ContentMarkers markers={child.document.markers} />}
           </li>
         ))}
       </ul>

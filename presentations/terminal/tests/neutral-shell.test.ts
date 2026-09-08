@@ -5,6 +5,7 @@ import { executeCd } from '../src/commands/cd.js';
 import { executeFind } from '../src/commands/find.js';
 import { executeGrep } from '../src/commands/grep.js';
 import { executeLs } from '../src/commands/ls.js';
+import { executeTree } from '../src/commands/tree.js';
 import { executeOpen, executeVim } from '../src/commands/session.js';
 import { commandArguments } from '../src/commands/arguments.js';
 import { GREP_COMMAND_SPEC } from '../src/commands/grep.js';
@@ -60,6 +61,28 @@ function runnerOptions(overrides: Partial<Parameters<typeof runRshellInput>[1]> 
 }
 
 const args = commandArguments;
+
+test('metadata titles are visible while index filenames remain ordering and path identity', () => {
+  const indexFs = createPublicIndex({
+    documents: [{
+      kind: 'post',
+      path: '/posts/notes/index-001.md',
+      relativePath: 'notes/index-001.md',
+      filename: 'index-001.md',
+      title: 'Readable note',
+      href: '/posts/notes/index-001/',
+      date: '2026-05-28'
+    }],
+    experiments: [],
+    textDocuments: [{ path: '/posts/notes/index-001.md', lines: ['Readable note'] }]
+  });
+  const commandContext = context({ cwd: '/posts/notes', fs: indexFs });
+  const tree = executeTree(commandContext, args([]));
+  assert.deepEqual(tree.stdout.lines, ['~/blog/posts/notes', '└── Readable note']);
+  assert.equal(tree.value?.kind === 'tree' ? tree.value.nodes[0]?.node.path : undefined, '/posts/notes/index-001.md');
+  const listing = executeLs(commandContext, args([]));
+  assert.deepEqual(listing.stdout.lines, ['Readable note — 2026-05-28 — notes/index-001.md']);
+});
 
 test('public index exposes a bounded virtual namespace, not host paths', () => {
   assert.deepEqual(fs.resolve('characters', '/posts', 'directory'), { ok: true, path: '/posts/characters' });
@@ -175,7 +198,7 @@ test('grep supports whole-word fixed and safe-regex matching with explicit exten
 test('find searches visible filenames, filters public paths and dates, and explains itself', () => {
   const alpha = executeFind(context(), args(['ALPHA']));
   assert.deepEqual(alpha.stdout.lines, [
-    'characters/alpha.md — 2026-05-28 — Alpha'
+    'Alpha — 2026-05-28 — characters/alpha.md'
   ]);
   assert.deepEqual(alpha.value, {
     kind: 'document-search',
@@ -191,22 +214,22 @@ test('find searches visible filenames, filters public paths and dates, and expla
     }]
   });
   assert.deepEqual(executeFind(context(), args(['about'])).stdout.lines, [
-    '/pages/about.md — 2026-02-01 — About'
+    'About — 2026-02-01 — /pages/about.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: 'pages' })).stdout.lines, [
-    '/pages/about.md — 2026-02-01 — About'
+    'About — 2026-02-01 — /pages/about.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['alpha'], { path: '~/blog/posts' })).stdout.lines, [
-    'characters/alpha.md — 2026-05-28 — Alpha'
+    'Alpha — 2026-05-28 — characters/alpha.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: '~/blog' })).stdout.lines, [
-    '/pages/about.md — 2026-02-01 — About'
+    'About — 2026-02-01 — /pages/about.md'
   ]);
   assert.deepEqual(executeFind(context(), args(['durable'])).stdout.lines, [
     'No matches for "durable".'
   ]);
   assert.deepEqual(executeFind(context(), args(['alpha'], { after: '2026-05-28', before: '2026-05-28' })).stdout.lines, [
-    'characters/alpha.md — 2026-05-28 — Alpha'
+    'Alpha — 2026-05-28 — characters/alpha.md'
   ]);
   assert.deepEqual(executeFind(context(), args(['alpha'], { before: '2026-02-01' })).stdout.lines, [
     'No matches for "alpha".'
@@ -328,7 +351,7 @@ test('neutral runner wires stdout only and keeps final values and controls separ
 
   const findPiped = runRshellInput('find alpha | cat', runnerOptions());
   assert.equal(findPiped.status, 0);
-  assert.deepEqual(findPiped.stdout.lines, ['characters/alpha.md — 2026-05-28 — Alpha']);
+  assert.deepEqual(findPiped.stdout.lines, ['Alpha — 2026-05-28 — characters/alpha.md']);
 
   const opened = runRshellInput('open ~/blog/lab/nerv', runnerOptions());
   assert.deepEqual(opened.controls, [{ kind: 'open-experiment', id: 'nerv' }]);
@@ -381,7 +404,7 @@ test('neutral runner applies state patches and bounded scratch redirects', () =>
   assert.deepEqual(findRedirect.statePatch?.kind === 'session' ? findRedirect.statePatch.session.scratch : undefined, [
     {
       name: 'find',
-      lines: ['characters/alpha.md — 2026-05-28 — Alpha']
+      lines: ['Alpha — 2026-05-28 — characters/alpha.md']
     }
   ]);
 
@@ -414,10 +437,10 @@ test('neutral session commands consume injected identity, command metadata, and 
     '├── lab/',
     '│   └── nerv/',
     '├── pages/',
-    '│   └── about.md',
+    '│   └── About',
     '└── posts/',
     '    └── characters/',
-    '        └── alpha.md'
+    '        └── Alpha'
   ]);
 
   assert.deepEqual(runRshellInput('pwd', runnerOptions()).stdout.lines, ['~/blog/posts']);

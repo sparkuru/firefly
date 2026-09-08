@@ -17,7 +17,7 @@ const entries = decodeTerminalEntries(canonicalDocuments.map((canonical) => ({
   virtualPath: canonical.virtualPath,
   relativePath: canonical.relativePath,
   filename: canonical.filename,
-  title: canonical.entry.data.title,
+  title: canonical.displayName,
   href: canonical.href,
   date: canonical.entry.data.date.toISOString().slice(0, 10)
 })));

@@ -5,6 +5,7 @@ import type { TreeLine, TreeNode } from '../vfs/contracts.js';
 import { completeTree } from './completion.js';
 import { optionalPath, structuredTextPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
+import { documentDisplayName } from './document-format.js';
 
 export const TREE_USAGE = 'tree [path]';
 export const TREE_SUMMARY = 'show a public content subtree';
@@ -36,12 +37,13 @@ function children(context: ProcessContext, path: string): readonly TreeNode[] {
   }));
   const documents = listing.documents
     .filter((document) => document.path.startsWith(prefix) && !document.path.slice(prefix.length).includes('/'))
-    .map((document): TreeNode => ({ kind: 'document', name: document.filename, path: document.path, document }));
+    .map((document): TreeNode => ({ kind: 'document', name: documentDisplayName(document), path: document.path, document }));
   const files: TreeNode[] = listing.files.map((name) => ({ kind: 'file', name, path: `${prefix}${name}` }));
   return Object.freeze([...directories, ...experiments, ...documents, ...files].sort((left, right) => {
     const leftDirectory = isDirectoryNode(left) || left.kind === 'experiment';
     const rightDirectory = isDirectoryNode(right) || right.kind === 'experiment';
     if (leftDirectory !== rightDirectory) return leftDirectory ? -1 : 1;
+    if (left.kind === 'document' && right.kind === 'document') return left.path.localeCompare(right.path);
     return left.name.localeCompare(right.name);
   }));
 }

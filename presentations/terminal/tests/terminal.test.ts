@@ -416,7 +416,7 @@ test('every command has deterministic output and strict usage errors', () => {
   const postsTree = run('tree').effect;
   assert.equal(postsTree?.kind, 'tree');
   if (postsTree?.kind !== 'tree') return;
-  assert.deepEqual(postsTree.lines, ['└── characters/', '    └── alpha.md']);
+  assert.deepEqual(postsTree.lines, ['└── characters/', '    └── Alpha']);
   assert.deepEqual(postsTree.nodes.map(({ prefix, node }) => ({
     prefix,
     kind: node.kind,
@@ -424,7 +424,7 @@ test('every command has deterministic output and strict usage errors', () => {
     path: node.path
   })), [
     { prefix: '└── ', kind: 'directory', name: 'characters/', path: '/posts/characters' },
-    { prefix: '    └── ', kind: 'document', name: 'alpha.md', path: '/posts/characters/alpha.md' }
+    { prefix: '    └── ', kind: 'document', name: 'Alpha', path: '/posts/characters/alpha.md' }
   ]);
   assert.equal(postsTree.nodes[1]?.node.kind === 'document' ? postsTree.nodes[1].node.document.href : null, '/posts/characters/alpha/');
   const fullTree = run('tree ~/blog').effect;
@@ -435,10 +435,10 @@ test('every command has deterministic output and strict usage errors', () => {
     '│   ├── nerv/',
     '│   └── quiet-lab/',
     '├── pages/',
-    '│   └── about.md',
+    '│   └── About',
     '└── posts/',
     '    └── characters/',
-    '        └── alpha.md'
+    '        └── Alpha'
   ]);
   assert.deepEqual(fullTree.nodes.map(({ prefix, node }) => ({
     prefix,
@@ -450,10 +450,10 @@ test('every command has deterministic output and strict usage errors', () => {
     { prefix: '│   ├── ', kind: 'experiment', name: 'nerv/', path: '/lab/nerv' },
     { prefix: '│   └── ', kind: 'experiment', name: 'quiet-lab/', path: '/lab/quiet-lab' },
     { prefix: '├── ', kind: 'directory', name: 'pages/', path: '/pages' },
-    { prefix: '│   └── ', kind: 'document', name: 'about.md', path: '/pages/about.md' },
+    { prefix: '│   └── ', kind: 'document', name: 'About', path: '/pages/about.md' },
     { prefix: '└── ', kind: 'directory', name: 'posts/', path: '/posts' },
     { prefix: '    └── ', kind: 'directory', name: 'characters/', path: '/posts/characters' },
-    { prefix: '        └── ', kind: 'document', name: 'alpha.md', path: '/posts/characters/alpha.md' }
+    { prefix: '        └── ', kind: 'document', name: 'Alpha', path: '/posts/characters/alpha.md' }
   ]);
   for (const operand of ['../alpha.md', './nested/../alpha.md', '/alpha.md', 'https://example.com/alpha.md', '/etc/passwd', '~', '~/', 'characters\\alpha.md']) {
     assert.match(JSON.stringify(run(`cat ${operand}`).effect), /No readable rshell resource/u, operand);

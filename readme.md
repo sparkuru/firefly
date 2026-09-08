@@ -214,6 +214,32 @@ field is optional provenance only: when present it must be a safe relative
 Markdown reference with an optional fragment, and it never controls routing or
 public output. Omit it for new content.
 
+The site also provides a single-file metadata organizer for authoring Markdown
+outside the build container:
+
+~~~sh
+node apps/site/scripts/blog-meta.mjs /path/to/article.md --blog-root /path/to/blog --preview
+npm --prefix apps/site run blog:meta -- /path/to/article.md --blog-root /path/to/blog
+npm --prefix apps/site run blog:meta -- /path/to/article.md --write-back
+~~~
+
+Save-as is the default. It writes below the selected blog root, inferring
+`posts` and a safe slug unless `--collection`, `--category`, `--output`, or
+metadata overrides are supplied. Existing targets are never replaced unless
+`--overwrite` is explicit. `--write-back` is the separate opt-in mode for
+replacing the source file. The blog root comes from `--blog-root`,
+`FIREFLY_CONTENT_ROOT`, or the tracked `content/` fixture. This command is an
+authoring operation and must run on the host; the read-only `./sam` content
+mount remains the build/test boundary.
+
+During materialization, a non-empty Markdown file with absent or empty front
+matter receives temporary compatibility metadata in the generated stage: its
+filename stem is used as title/description, its source mtime supplies the UTC
+date, and it is treated as a public draft-free post/page. The authored source
+is not changed by this fallback. A non-empty metadata title is the directory
+and Terminal display label; otherwise the physical filename stem is shown,
+including any `index-` prefix.
+
 <p align = "center" style="font-size: 26px;" > <strong> Firefly metadata markers </strong> </p>
 
 Project-specific presentation markers live under the optional `firefly`

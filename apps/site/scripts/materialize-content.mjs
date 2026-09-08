@@ -18,6 +18,7 @@ import {
   decideFireflyIgnore,
   loadFireflyIgnorePolicy
 } from './firefly-ignore.mjs';
+import { addRuntimeFrontmatter } from '../src/lib/content-metadata.mjs';
 
 const siteRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaultContentRoot = path.resolve(siteRoot, '../../content');
@@ -220,6 +221,8 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
     files.push(Object.freeze({
       device: nodeStat.dev,
       inode: nodeStat.ino,
+      collection,
+      mtimeMs: nodeStat.mtimeMs,
       sourcePath: resolvedPath,
       virtualPath
     }));
@@ -282,10 +285,15 @@ async function copyFiles(files, targetRoot) {
       if (!currentStat.isFile() || currentStat.dev !== file.device || currentStat.ino !== file.inode) {
         throw new Error(`Content source changed during materialization: ${safeDiagnosticPath(file.virtualPath.split('/'), file.collection ?? 'posts')}`);
       }
-        const sourceBytes = await sourceHandle.readFile();
-        const sourceText = sourceBytes.toString('utf8');
-        const normalizedText = normalizeLegacyBodyHeadings(sourceText);
-        await writeFile(destination, normalizedText === sourceText ? sourceBytes : normalizedText);
+      const sourceBytes = await sourceHandle.readFile();
+      const sourceText = sourceBytes.toString('utf8');
+      const withFrontmatter = addRuntimeFrontmatter(sourceText, {
+        collection: file.collection ?? 'posts',
+        filename: path.basename(file.virtualPath),
+        mtimeMs: file.mtimeMs
+      });
+      const normalizedText = normalizeLegacyBodyHeadings(withFrontmatter);
+      await writeFile(destination, normalizedText === sourceText ? sourceBytes : normalizedText);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('Content source changed during materialization:')) {
         throw error;

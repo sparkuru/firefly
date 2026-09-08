@@ -448,7 +448,7 @@ function findDisplayPath(entry: TerminalEntry): string {
 function appendDocumentRow(
   listing: HTMLElement,
   entry: TerminalEntry,
-  label: string,
+  label = entry.title,
   accessibleName = formatDocumentOperand(entry)
 ): void {
   const row = document.createElement('li');
@@ -463,7 +463,7 @@ function appendDocumentRow(
   date.textContent = entry.date;
   const title = document.createElement('span');
   title.className = 'terminal-entry-title';
-  title.textContent = entry.title;
+  title.textContent = accessibleName;
   row.append(link, date, title);
   listing.append(row);
 }
@@ -485,7 +485,7 @@ function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>
     row.append(label);
     listing.append(row);
   }
-  for (const entry of effect.entries) appendDocumentRow(listing, entry, entry.filename);
+  for (const entry of effect.entries) appendDocumentRow(listing, entry);
   record.append(listing);
 }
 
@@ -494,7 +494,7 @@ function renderFindEffect(effect: Extract<TerminalEffect, { kind: 'find' }>, rec
   listing.className = 'terminal-entry-list terminal-find-results';
   for (const entry of effect.entries) {
     const displayPath = findDisplayPath(entry);
-    appendDocumentRow(listing, entry, displayPath, displayPath);
+    appendDocumentRow(listing, entry, entry.title, displayPath);
   }
   record.append(listing);
 }
@@ -641,6 +641,7 @@ function appendTreeNode(parent: HTMLElement, node: TerminalTreeNode): void {
     const link = document.createElement('a');
     link.href = node.document.href;
     link.textContent = node.name;
+    link.setAttribute('aria-label', node.document.kind === 'post' ? node.document.relativePath : node.document.path);
     parent.append(link);
     return;
   }

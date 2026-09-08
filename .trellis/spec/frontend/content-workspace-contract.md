@@ -89,6 +89,7 @@ interface CanonicalDocument {
   readonly relativePath: string;
   readonly virtualPath: string;
   readonly filename: `${string}.md`;
+  readonly displayName: string;
   readonly href: string;
   readonly directoryHrefs: readonly string[];
   readonly breadcrumbs: readonly CanonicalBreadcrumb[];
@@ -228,6 +229,14 @@ startTerminalReader(root: HTMLElement): void
   to `## `; the document title owns the rendered h1. New authored documents
   should write body headings from level two and do not rely on this migration
   rule.
+- A non-empty Markdown source with absent front matter or an empty first
+  front-matter block receives compatibility metadata only in the generated
+  stage. The fallback uses the physical filename stem for `title` and
+  `description`, the source mtime's UTC calendar date for `date`, `draft: false`,
+  `post`/`page` layout by collection, and a normalized filename slug for pages.
+  Authored sources are never rewritten by this build fallback. Zero-byte
+  Markdown placeholders remain ignored, while malformed or partially authored
+  front matter remains an error for the normal schema pipeline.
 - An optional `.fireflyignore` at the blog root and in safe nested directories
   is the only source-path publication filter. Root patterns receive logical
   `posts/...` or `pages/...` paths; a nested policy receives paths relative to
@@ -248,6 +257,12 @@ startTerminalReader(root: HTMLElement): void
 - Every Astro command that reads content runs `prepare:content` first. The posts
   and pages collections load only `.generated-content/{posts,pages}/**/*.md`;
   authored workspace paths are not Astro loader bases.
+- `node apps/site/scripts/blog-meta.mjs <path-to-markdown>` is the host-side
+  authoring boundary for normalizing front matter. It defaults to a contained
+  save-as below the selected blog root; `--write-back` is explicit, and
+  `--preview` performs no write. It may use `--blog-root` or the configured
+  content-root convention, but it is not run through the read-only `./sam`
+  build mount for source editing.
 
 #### Metadata, projection, and canonical routes
 
@@ -277,6 +292,14 @@ startTerminalReader(root: HTMLElement): void
   segment and may differ from the physical filename stem; without it, the stem
   remains the route segment. Pages use their physical staged path for the tree
   and their required front-matter `slug` for the canonical route.
+- The canonical document projection exposes one metadata-first `displayName`:
+  a non-empty trimmed front-matter `title`, otherwise the physical filename
+  stem without `.md`. It does not strip an `index-` prefix. Directory indexes
+  and Terminal tree/list/find output use this display name, while `filename`,
+  virtual paths, routes, operands, and accessible path labels retain physical
+  identity. Directory ordering remains based on the physical virtual path, so
+  an `index-*` filename can remain an ordering key without becoming the visible
+  title.
 - The legacy optional `source` field is accepted only as a safe relative Markdown
   reference with an optional safe fragment. It is provenance metadata only and
   never contributes to a route, public link, or rendered body. New content omits
@@ -306,6 +329,87 @@ startTerminalReader(root: HTMLElement): void
   gap elements rather than leading/trailing text spaces. Literal `cd`, `/ /posts`,
   glued `/posts`, and a self-link on the current document are invalid.
 
+## Scenario: Single-document blog metadata organizer
+
+### 1. Scope / Trigger
+
+- Trigger: authoring or updating one Markdown document's front matter outside
+  the read-only build/test container.
+- Scope: `apps/site/scripts/blog-meta.mjs`; it does not bulk-rewrite the
+  configured blog or change `tooling/format-content.sh`.
+
+### 2. Signatures
+
+- CLI: `blog-meta <source.md> [--blog-root ROOT] [--collection posts|pages]
+  [--category PATH] [--output PATH] [--write-back] [--preview]`.
+- Programmatic test boundary: `main(argv, io?) -> Promise<number>` and
+  `organizeDocument({ sourcePath, root, collection, options, now? })`.
+
+### 3. Contracts
+
+- Root resolution is `--blog-root`, then `FIREFLY_CONTENT_ROOT`, then the
+  repository `content/` fixture; it must contain regular `posts/` and
+  `pages/` directories.
+- Save-as is the default and must resolve below the root. External sources
+  map to `<root>/<collection>/<category?>/<safe-slug>.md`; in-root sources
+  retain their relative filename unless `--output` or `--category` changes it.
+- `--write-back` is the only mode that replaces the source; it is mutually
+  exclusive with `--output`. `--preview` emits normalized Markdown and never
+  writes. Existing save-as targets require `--overwrite`.
+- Output is one YAML 1.2 front-matter mapping between `---` delimiters,
+  validated by the selected Firefly post/page schema. The body bytes after the
+  original closing delimiter are preserved exactly; absent front matter is
+  treated as an empty mapping.
+- The output uses ordinary Markdown/YAML syntax. Firefly-specific values stay
+  under the validated `firefly` mapping and do not alter body semantics.
+
+### 4. Validation & Error Matrix
+
+- Missing/non-UTF-8/non-Markdown/non-regular/symlink source -> error, no write.
+- Missing closing delimiter, invalid YAML, duplicate keys, unknown schema keys,
+  or invalid dates/routes/access metadata -> error, no write.
+- Absolute or relative save-as destination outside root, unsafe path segment,
+  symlink parent/target, or non-regular target -> error, no write.
+- Existing target without `--overwrite`, or save-as resolving to the source ->
+  error; use `--write-back` or a different `--output`.
+- Source replacement detected during write-back -> error; original remains the
+  expected source and the temporary file is removed.
+
+### 5. Good/Base/Bad Cases
+
+- Good: external `draft.md` with an H1 saves as a draft under `posts/` with a
+  schema-valid title/date/layout and byte-preserved body.
+- Base: an existing valid front matter mapping is normalized while authored
+  metadata and body remain semantically intact.
+- Bad: `--output ../outside.md`, a symlink source, or an unsupported metadata
+  key is rejected before the destination is created.
+
+### 6. Tests Required
+
+- Assert inferred title/description/date/draft/layout and exact body bytes for
+  a no-front-matter save-as.
+- Assert page slug/category routing, metadata overrides, existing metadata,
+  preview/no-write, collision/overwrite, explicit write-back, malformed YAML,
+  symlink rejection, and root containment.
+- Run `npm --prefix apps/site run test:blog-meta`, relevant materializer and
+  metadata tests, and `git diff --check`; run full `./sam` checks when Docker
+  access is available.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```sh
+node apps/site/scripts/blog-meta.mjs draft.md --output ../published.md
+```
+
+#### Correct
+
+```sh
+node apps/site/scripts/blog-meta.mjs draft.md \
+  --blog-root /path/to/blog --collection posts --output posts/draft.md
+```
+
 #### Terminal registry and virtual filesystem
 
 - A `TerminalEntry` contains exactly `kind`, `virtualPath`, `relativePath`,
@@ -313,6 +417,9 @@ startTerminalReader(root: HTMLElement): void
   from its virtual `.md` path. The descriptor-safe decoder rejects accessors,
   sparse/decorated arrays, unknown fields, hidden/dot/traversal/percent/
   backslash/non-NFC paths, noncanonical hrefs, and folded path collisions.
+- `TerminalEntry.title` is the canonical `displayName`, not a second route or
+  filename projection. Commands may show it first, but physical path fields
+  remain the only operands and route identities.
 - Each built-in command module under `presentations/terminal/src/commands/`
   exports a complete `CommandSpec` for each command it owns: safe canonical
   name/aliases, usage and summary, group/order, explicit

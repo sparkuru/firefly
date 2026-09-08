@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -32,9 +32,73 @@ test('materializer dereferences nested file and directory links into ordinary Ma
 
   const inventory = await materializeMarkdownWorkspace({ sourceRoot: source, targetRoot: target });
   assert.deepEqual(inventory, ['linked-file.md', 'linked-tree/child.md', 'native/local.md']);
-  assert.equal(await readFile(path.join(target, 'linked-file.md'), 'utf8'), '## file link\n');
+  const linkedFile = await readFile(path.join(target, 'linked-file.md'), 'utf8');
+  assert.match(linkedFile, /^---\ntitle: "linked-file"\ndescription: "linked-file"\ndate: "\d{4}-\d{2}-\d{2}"\ndraft: false\nlayout: "post"\n---\n\n## file link\n$/u);
   assert.equal((await lstat(path.join(target, 'linked-file.md'))).isSymbolicLink(), false);
   assert.equal((await lstat(path.join(target, 'linked-tree'))).isSymbolicLink(), false);
+});
+
+test('materializer supplies stage-only metadata for missing and empty front matter', async (t) => {
+  const { source, target } = await workspace(t);
+  const post = path.join(source, 'index-no-meta.md');
+  const empty = path.join(source, 'empty.md');
+  await writeFile(post, '# no meta\n');
+  await writeFile(empty, '---\n---\n# empty meta\n');
+  const fixedTime = new Date('2024-01-02T23:45:00.000Z');
+  await utimes(post, fixedTime, fixedTime);
+  await utimes(empty, fixedTime, fixedTime);
+
+  await materializeMarkdownWorkspace({ sourceRoot: source, targetRoot: target });
+
+  assert.equal(await readFile(path.join(target, 'index-no-meta.md'), 'utf8'), [
+    '---',
+    'title: "index-no-meta"',
+    'description: "index-no-meta"',
+    'date: "2024-01-02"',
+    'draft: false',
+    'layout: "post"',
+    '---',
+    '',
+    '## no meta',
+    ''
+  ].join('\n'));
+  assert.equal(await readFile(path.join(target, 'empty.md'), 'utf8'), [
+    '---',
+    'title: "empty"',
+    'description: "empty"',
+    'date: "2024-01-02"',
+    'draft: false',
+    'layout: "post"',
+    '---',
+    '',
+    '## empty meta',
+    ''
+  ].join('\n'));
+});
+
+test('page fallback supplies a safe slug and does not repair partial front matter', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-page-content-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const source = path.join(root, 'content');
+  const pages = path.join(source, 'pages');
+  const target = path.join(root, 'stage');
+  await mkdir(path.join(source, 'posts'), { recursive: true });
+  await mkdir(pages, { recursive: true });
+  const page = path.join(pages, 'index-page note.md');
+  const partial = path.join(pages, 'partial.md');
+  await writeFile(page, '# page body\n');
+  await writeFile(partial, '---\ntitle: Partial\n---\n# partial body\n');
+  const fixedTime = new Date('2024-02-03T00:00:00.000Z');
+  await utimes(page, fixedTime, fixedTime);
+
+  await materializeContentWorkspace({ sourceRoot: source, targetRoot: target });
+
+  const pageOutput = await readFile(path.join(target, 'pages/index-page note.md'), 'utf8');
+  assert.match(pageOutput, /^layout: "page"\nslug: "index-page-note"\n---/mu);
+  assert.match(pageOutput, /^## page body$/mu);
+  const partialOutput = await readFile(path.join(target, 'pages/partial.md'), 'utf8');
+  assert.match(partialOutput, /^---\ntitle: Partial\n---\n## partial body\n$/u);
+  assert.doesNotMatch(partialOutput, /description:/u);
 });
 
 test('scanner rejects broken, cyclic, unsafe, case-colliding, and route-colliding sources', async (t) => {
@@ -124,9 +188,9 @@ test('blog materializer scans posts and pages into one ordinary-file stage', asy
 
   const inventory = await materializeContentWorkspace({ sourceRoot: source, targetRoot: target });
   assert.deepEqual(inventory, { pages: ['about.md'], posts: ['acg/legacy title.md', 'ai/workflow.md'] });
-  assert.equal(await readFile(path.join(target, 'posts/ai/workflow.md'), 'utf8'), '## workflow\n\n```text\n# keep this code\n```\n');
-  assert.equal(await readFile(path.join(target, 'posts/acg/legacy title.md'), 'utf8'), '## legacy\n');
-  assert.equal(await readFile(path.join(target, 'pages/about.md'), 'utf8'), '## about\n');
+  assert.match(await readFile(path.join(target, 'posts/ai/workflow.md'), 'utf8'), /^---\ntitle: "workflow"[\s\S]*\n## workflow\n\n```text\n# keep this code\n```\n$/u);
+  assert.match(await readFile(path.join(target, 'posts/acg/legacy title.md'), 'utf8'), /^---\ntitle: "legacy title"[\s\S]*\n## legacy\n$/u);
+  assert.match(await readFile(path.join(target, 'pages/about.md'), 'utf8'), /^---\ntitle: "about"[\s\S]*layout: "page"\nslug: "about"\n---\n\n## about\n$/u);
   assert.equal((await lstat(path.join(target, 'posts/ai/workflow.md'))).isSymbolicLink(), false);
   assert.equal((await lstat(path.join(target, 'pages/about.md'))).isSymbolicLink(), false);
   await assert.rejects(readFile(path.join(target, 'posts/placeholder.md'), 'utf8'), /ENOENT/u);

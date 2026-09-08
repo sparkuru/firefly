@@ -649,7 +649,7 @@ test('find results expose canonical keyboard-accessible document links while pip
   await submit(page, 'find llm-workflow | cat');
   const pipedRecord = transcript.locator('.terminal-record').last();
   await expect(pipedRecord.getByRole('link')).toHaveCount(0);
-  await expect(pipedRecord).toContainText('ai/llm-workflow-with-trellis.md — 2026-05-28 — llm-workflow-with-trellis');
+  await expect(pipedRecord).toContainText('llm-workflow-with-trellis — 2026-05-28 — ai/llm-workflow-with-trellis.md');
 });
 
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {
