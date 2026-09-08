@@ -1263,3 +1263,24 @@ Optimized Terminal grep whole-word matching with a one-pass safe-NFA precheck an
 ### Status
 
 [OK] **Completed**
+
+
+## Session 57: Implement metadata-first blog labels and Markdown organizer
+
+**Date**: 2026-09-08
+**Task**: Implement metadata-first blog labels and Markdown organizer
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented stage-only front matter fallback, metadata-first directory and Terminal labels, and a safe host-side blog-meta organizer with save-as, preview, explicit write-back, schema validation, YAML output, containment checks, and body preservation. Updated tests/spec/README; official ./sam content tests 76/76, Astro check, full site build/static tests 17/17, and Terminal check passed. External blog source remained read-only.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `204b7ef` | (see git log) |
+
+### Status
+
+[OK] **Completed**
