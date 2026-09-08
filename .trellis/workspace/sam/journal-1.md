@@ -1284,3 +1284,43 @@ Implemented stage-only front matter fallback, metadata-first directory and Termi
 ### Status
 
 [OK] **Completed**
+
+
+## Session 58: Fix metadata-aware Terminal completion
+
+**Date**: 2026-09-08
+**Task**: Fix metadata-aware Terminal completion
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Terminal 文档补全现在同时识别 metadata display title 和物理路径；标题只用于匹配/展示，实际插入值始终是物理 virtual path。补充浏览器候选标签契约、单测和 Playwright 回归断言，并同步 frontend spec。
+
+### Main Changes
+
+- 为 cat/vim/ls 增加大小写不敏感的文档标题匹配，保留目录/实验路径专用补全
+- 新增 candidateLabels 展示层字段，candidateValues 继续承载可执行物理命令值
+- 覆盖重复标题、文件名 stem 回退、嵌套/根路径和浏览器选择行为
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `14d964b` | (see git log) |
+
+### Testing
+
+- [OK] npm --prefix presentations/terminal run check
+- [OK] npm --prefix presentations/terminal test（3 suites passed）
+- [OK] sam npm --prefix apps/site run test:content（76/76）
+- [OK] sam npm --prefix apps/site run check（0 errors/warnings/hints）
+- [OK] sam npm --prefix apps/site run build（122 pages，17 static tests passed）
+- [OK] git diff --check
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Playwright 当前因 node:22-alpine 缺少 glibc 动态加载器无法启动 Chromium；代码与测试文件已就绪，可在带 glibc 的浏览器运行时重跑。
