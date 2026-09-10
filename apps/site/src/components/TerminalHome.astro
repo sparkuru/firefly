@@ -58,6 +58,8 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
   (TERMINAL_HOME_STARTUP_LOG_LINES.length - 1) * TERMINAL_HOME_STARTUP_LINE_DELAY_MS +
   TERMINAL_HOME_STARTUP_LINE_DURATION_MS +
   TERMINAL_HOME_STARTUP_PROMPT_GAP_MS;
+const TERMINAL_HOME_STARTUP_DURATION_MS =
+  TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS + TERMINAL_HOME_STARTUP_LINE_DURATION_MS;
 ---
 
 <section
@@ -68,6 +70,7 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
   data-terminal-identity-cwd={identity.workingDirectory}
   data-terminal-identity-about={encodedAbout}
   data-terminal-identity-prompt-marker={identity.promptMarker}
+  data-terminal-boot-duration={TERMINAL_HOME_STARTUP_DURATION_MS}
 >
   <script is:inline data-terminal-startup-marker>
     (() => {
@@ -110,7 +113,10 @@ const TERMINAL_HOME_STARTUP_PROMPT_DELAY_MS =
         attributeFilter: ['data-terminal-startup-state']
       });
       const markUnstartedAsFailed = () => {
-        if (root.dataset.terminalStartupState === 'connecting') {
+        if (
+          root.dataset.terminalStartupState === 'connecting' &&
+          !root.hasAttribute('data-terminal-controller-initialized')
+        ) {
           root.dataset.terminalStartupState = 'failed';
         }
       };

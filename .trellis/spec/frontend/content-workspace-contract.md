@@ -1499,6 +1499,96 @@ const value = `cat ${physicalOperand}`;
 const label = `${documentDisplayName(document)} — ${physicalOperand}`;
 ```
 
+## Scenario: Deterministic Terminal home boot lifecycle
+
+### 1. Scope / Trigger
+
+Use this contract when changing the static Terminal home boot surface, its
+inline startup marker, the home controller's first-load transition, or the
+startup Playwright/static-output tests. It exists because a fast cached module
+can otherwise relocate the server-rendered boot DOM before a visitor observes
+its CSS animation.
+
+### 2. Signatures
+
+```ts
+startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
+
+// Static DOM contract on [data-terminal-home].
+data-terminal-startup-state: 'connecting' | 'ready' | 'failed'
+data-terminal-controller-initialized?: 'true'
+data-terminal-boot-duration: non-negative milliseconds
+```
+
+### 3. Contracts
+
+- The server-rendered home emits all 12 boot lines and the prompt before the
+  controller module runs. The line delays are 0..1100 ms in 100 ms steps, the
+  line duration is 180 ms, and the prompt runs at 1400..1580 ms.
+- `data-terminal-boot-duration` is derived from those same component timing
+  constants; the controller must not duplicate the 1580 ms literal as its
+  source of truth.
+- The inline marker sets `connecting` and prevents Escape while connecting. Its
+  DOMContentLoaded failure check only fails when the controller has not set
+  `data-terminal-controller-initialized="true"`; an initialized controller may
+  still be waiting for the visual gate.
+- In normal motion, `startTerminalHome()` binds the runtime and keeps the boot
+  surface visible, the session hidden, and shell submission/typing inert until
+  the prompt's `terminal-boot-prompt-reveal` `animationend` or a bounded timer.
+  It then moves the existing boot surface into exactly one transcript boot
+  record and sets `ready` without replaying line animations.
+- Reduced motion and a prompt whose computed visibility is already complete are
+  immediate gate paths. Failure uses the existing recovery surface and never
+  leaves the root indefinitely in `connecting`.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| normal motion, controller faster than 1580 ms | retain the static boot surface until the named prompt animation completes |
+| module arrives while the animation is running | attach the gate, then complete on the existing prompt event |
+| module arrives after the prompt animation | detect completed computed style and transition once without replay |
+| prompt animation event is unavailable | bounded duration fallback completes the transition |
+| reduced motion requested | reveal/open the shell immediately after valid controller initialization |
+| missing/invalid boot-duration attribute | fail through Terminal recovery; do not guess a timing contract |
+| controller fails before initialization marker | retain the native recovery links and set `failed` |
+| key/submit/click before `ready` | do not mutate shell state; ordinary page keys remain unprevented |
+
+### 5. Good / Base / Bad Cases
+
+- Good: cached HTML and a cached module both expose `connecting`; the 12 static
+  lines animate once, the prompt ends while the session is hidden, then one
+  boot record and one interactive command row appear.
+- Base: a delayed module finds the already-finished prompt, preserves the
+  completed boot surface, and opens the shell once without a second animation.
+- Bad: call `preserveBootLog()` immediately during module evaluation, let a
+  hidden input submit while the boot surface is visible, or mark `failed` at
+  DOMContentLoaded merely because the controller is still in its visual gate.
+
+### 6. Tests Required
+
+- Static output asserts the 12-line count, 100 ms delay contract, 1580 ms
+  duration attribute, inline marker ordering, and controller-initialized guard.
+- Desktop and mobile Chromium tests observe all 12 line animation starts and
+  the single prompt animation end while the root is still `connecting`; then
+  assert one boot record, one command row, `ready`, and no replay.
+- Browser regression tests delay the module, exercise reduced motion, test
+  Escape before/after readiness, refresh, recovery, focus, overflow, and prove
+  hidden shell input is blocked while an ordinary body key is not prevented.
+- Run site `check`, static `build`, content/X Core tests, focused Playwright,
+  `task.py validate`, and `git diff --check` through the repository wrapper.
+
+### 7. Wrong vs Correct
+
+```ts
+// Wrong: a fast module load makes the visitor miss the only animated surface.
+preserveBootLog(nodes);
+setStartupState(nodes.root, 'ready');
+
+// Correct: retain the server-rendered surface until its named visual gate ends.
+cancelBootGate = createTerminalBootGate(nodes, completeStartup).cancel;
+```
+
 ## Reference Files
 
 - `sam`

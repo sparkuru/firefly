@@ -431,6 +431,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.ok(startupMarkerIndex < recoveryIndex);
   assert.match(routes.home, /data-terminal-startup/u);
   assert.match(routes.home, /data-terminal-boot-log/u);
+  assert.match(routes.home, /data-terminal-boot-duration="1580"/u);
   assert.equal((routes.home.match(/class="terminal-boot-line"/gu) ?? []).length, 12);
   assert.doesNotMatch(routes.home, /data-terminal-boot-separator|terminal-boot-separator/u);
   assert.doesNotMatch(routes.home, /data-terminal-boot-status|connecting\.\.\./u);
@@ -602,10 +603,12 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /<section\b[^>]*data-terminal-fallback[^>]*>/u);
   const marker = /<script\b[^>]*data-terminal-startup-marker[^>]*>[\s\S]*?<\/script>/u.exec(home)?.[0] ?? '';
   assert.match(marker, /terminalStartupState\s*=\s*['"]connecting['"]/u);
+  assert.match(marker, /data-terminal-controller-initialized/u);
   assert.doesNotMatch(marker, /type=["']module["']/u);
   assert.ok(home.indexOf('data-terminal-startup-marker') < home.indexOf('data-terminal-fallback'));
   assert.match(home, /<section\b[^>]*data-terminal-startup[^>]*>/u);
   assert.match(home, /data-terminal-boot-log/u);
+  assert.match(home, /data-terminal-boot-duration="1580"/u);
   assert.equal((home.match(/class="terminal-boot-line"/gu) ?? []).length, 12);
   assert.doesNotMatch(home, /data-terminal-boot-separator|terminal-boot-separator/u);
   assert.doesNotMatch(home, /data-terminal-boot-status|connecting\.\.\./u);

@@ -109,6 +109,179 @@ test('successful startup preserves the boot log before the shell prompt', async 
   await expectNoHorizontalOverflow(page);
 });
 
+test('fast startup gates the shell behind one observable boot timeline', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    const tracker = window as Window & {
+      __terminalBootTimeline?: {
+        lineStarts: string[];
+        promptEnds: Array<{
+          state: string | undefined;
+          startupCount: number;
+          sessionHidden: boolean;
+        }>;
+      };
+    };
+    tracker.__terminalBootTimeline = { lineStarts: [], promptEnds: [] };
+    document.addEventListener('animationstart', (event) => {
+      const animation = event as AnimationEvent;
+      const target = event.target;
+      if (
+        animation.animationName !== 'terminal-boot-line-reveal' ||
+        !(target instanceof HTMLElement)
+      ) return;
+      tracker.__terminalBootTimeline?.lineStarts.push(target.textContent?.trim() ?? '');
+    }, true);
+    document.addEventListener('animationend', (event) => {
+      const animation = event as AnimationEvent;
+      const target = event.target;
+      if (
+        animation.animationName !== 'terminal-boot-prompt-reveal' ||
+        !(target instanceof HTMLElement)
+      ) return;
+      const root = target.closest<HTMLElement>('[data-terminal-home]');
+      const session = root?.querySelector<HTMLElement>('[data-terminal-session]');
+      tracker.__terminalBootTimeline?.promptEnds.push({
+        state: root?.dataset.terminalStartupState,
+        startupCount: root?.querySelectorAll('[data-terminal-startup]').length ?? 0,
+        sessionHidden: session?.hidden === true
+      });
+    }, true);
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+  const root = page.locator('[data-terminal-home]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  await expect(root).toHaveAttribute('data-terminal-controller-initialized', 'true');
+  await expect(root).toHaveAttribute('data-terminal-boot-duration', '1580');
+  await expect(page.locator('[data-terminal-startup]')).toBeVisible();
+  await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await expect(page.locator('#terminal-command')).toBeHidden();
+
+  expect(await page.locator('[data-terminal-boot-log] .terminal-boot-line').evaluateAll((lines) => lines.map((line) => ({
+    animationDuration: getComputedStyle(line).animationDuration,
+    animationName: getComputedStyle(line).animationName,
+    delay: line instanceof HTMLElement ? line.style.getPropertyValue('--terminal-boot-delay') : ''
+  })))).toEqual(Array.from({ length: 12 }, (_, index) => ({
+    animationDuration: '0.18s',
+    animationName: 'terminal-boot-line-reveal',
+    delay: `${index * 100}ms`
+  })));
+  expect(await page.locator('[data-terminal-boot-prompt]').evaluate((prompt) => {
+    const style = getComputedStyle(prompt);
+    return {
+      animationDuration: style.animationDuration,
+      animationName: style.animationName,
+      promptDelay: prompt instanceof HTMLElement
+        ? prompt.style.getPropertyValue('--terminal-boot-prompt-delay')
+        : '',
+      visibility: style.visibility
+    };
+  })).toEqual({
+    animationDuration: '0.18s',
+    animationName: 'terminal-boot-prompt-reveal',
+    promptDelay: '1400ms',
+    visibility: 'hidden'
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const tracker = window as Window & { __terminalBootTimeline?: { promptEnds: unknown[] } };
+    return tracker.__terminalBootTimeline?.promptEnds.length ?? 0;
+  })).toBe(1);
+  const timeline = await page.evaluate(() => {
+    const tracker = window as Window & {
+      __terminalBootTimeline?: {
+        lineStarts: string[];
+        promptEnds: Array<{
+          state: string | undefined;
+          startupCount: number;
+          sessionHidden: boolean;
+        }>;
+      };
+    };
+    return tracker.__terminalBootTimeline ?? { lineStarts: [], promptEnds: [] };
+  });
+  expect(timeline.lineStarts).toHaveLength(12);
+  expect(timeline.lineStarts).toEqual(await page.locator('[data-terminal-boot-log] .terminal-boot-line').evaluateAll((lines) =>
+    lines.map((line) => line.textContent?.trim() ?? '')
+  ));
+  expect(timeline.promptEnds).toEqual([{
+    state: 'connecting',
+    startupCount: 1,
+    sessionHidden: true
+  }]);
+
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+  await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
+  await expect(page.locator('.terminal-command-row')).toHaveCount(1);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => {
+    const tracker = window as Window & { __terminalBootTimeline?: { lineStarts: string[] } };
+    return tracker.__terminalBootTimeline?.lineStarts.length ?? 0;
+  })).toBe(12);
+  await expect(page.locator('[data-terminal-transcript] .terminal-boot-record .terminal-boot-line').first())
+    .toHaveCSS('animation-name', 'none');
+  await expectNoHorizontalOverflow(page);
+});
+
+test('boot gate blocks hidden shell input without intercepting ordinary page keys', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+  const root = page.locator('[data-terminal-home]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  await expect(root).toHaveAttribute('data-terminal-controller-initialized', 'true');
+  const blocked = await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#terminal-command');
+    const form = document.querySelector<HTMLFormElement>('[data-terminal-form]');
+    if (input === null || form === null) throw new Error('Missing hidden Terminal shell controls.');
+    input.value = '';
+    const inputKey = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'x' });
+    input.dispatchEvent(inputKey);
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+    form.dispatchEvent(submitEvent);
+    const ordinaryKey = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'x' });
+    document.body.dispatchEvent(ordinaryKey);
+    return {
+      inputKeyPrevented: inputKey.defaultPrevented,
+      inputValue: input.value,
+      ordinaryKeyPrevented: ordinaryKey.defaultPrevented,
+      sessionHidden: document.querySelector<HTMLElement>('[data-terminal-session]')?.hidden === true,
+      submitPrevented: submitEvent.defaultPrevented,
+      transcriptRecords: document.querySelectorAll('[data-terminal-transcript] .terminal-record').length
+    };
+  });
+  expect(blocked).toEqual({
+    inputKeyPrevented: true,
+    inputValue: '',
+    ordinaryKeyPrevented: false,
+    sessionHidden: true,
+    submitPrevented: true,
+    transcriptRecords: 0
+  });
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+});
+
+test('invalid boot duration restores native recovery instead of guessing a timeline', async ({ page }) => {
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      const root = document.querySelector<HTMLElement>('[data-terminal-home]');
+      if (root === null) return;
+      root.dataset.terminalBootDuration = '';
+      observer.disconnect();
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/');
+
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
+  await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
+});
+
 test('connecting startup prevents Escape from stopping the home controller load', async ({ page }) => {
   await page.addInitScript(() => {
     const tracker = window as Window & { __terminalEscapeDefaultPrevented?: boolean[] };

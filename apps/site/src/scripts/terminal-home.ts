@@ -66,6 +66,14 @@ interface CompletionPanel {
 
 type TerminalTreeNode = Extract<TerminalEffect, { kind: 'tree' }>['nodes'][number]['node'];
 
+const terminalBootPromptAnimationName = 'terminal-boot-prompt-reveal';
+const terminalBootFallbackGraceMs = 250;
+const terminalBootFallbackMaximumMs = 2000;
+
+interface TerminalBootGate {
+  readonly cancel: () => void;
+}
+
 const protectedTypingTargetSelector = [
   'a',
   'button',
@@ -196,6 +204,76 @@ function preserveBootLog(nodes: TerminalNodes): void {
   record.append(nodes.bootLog);
   nodes.transcript.append(record);
   nodes.startup.remove();
+}
+
+function readBootFallbackDelay(root: HTMLElement): number {
+  const rawDuration = root.dataset.terminalBootDuration;
+  if (rawDuration === undefined || !/^(?:0|[1-9]\d*)$/u.test(rawDuration)) {
+    throw new TypeError('Terminal boot duration is missing or invalid.');
+  }
+  const duration = Number(rawDuration);
+  if (!Number.isSafeInteger(duration)) {
+    throw new TypeError('Terminal boot duration is missing or invalid.');
+  }
+  return Math.min(duration + terminalBootFallbackGraceMs, terminalBootFallbackMaximumMs);
+}
+
+function isBootPromptRevealed(prompt: HTMLElement): boolean {
+  const style = window.getComputedStyle(prompt);
+  return style.visibility === 'visible' && Number.parseFloat(style.opacity) >= 1;
+}
+
+function createTerminalBootGate(
+  nodes: TerminalNodes,
+  onComplete: () => void
+): TerminalBootGate {
+  let settled = false;
+  let fallbackTimer: number | undefined;
+
+  const cleanup = (): void => {
+    nodes.bootPrompt.removeEventListener('animationend', handleAnimationEnd);
+    if (fallbackTimer !== undefined) {
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = undefined;
+    }
+  };
+  const settle = (): void => {
+    if (settled) return;
+    settled = true;
+    cleanup();
+    onComplete();
+  };
+  const handleAnimationEnd = (event: AnimationEvent): void => {
+    if (
+      event.target === nodes.bootPrompt &&
+      event.animationName === terminalBootPromptAnimationName
+    ) {
+      settle();
+    }
+  };
+  const cancel = (): void => {
+    if (settled) return;
+    settled = true;
+    cleanup();
+  };
+
+  try {
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      isBootPromptRevealed(nodes.bootPrompt)
+    ) {
+      settle();
+      return { cancel };
+    }
+
+    const fallbackDelay = readBootFallbackDelay(nodes.root);
+    nodes.bootPrompt.addEventListener('animationend', handleAnimationEnd);
+    fallbackTimer = window.setTimeout(settle, fallbackDelay);
+    return { cancel };
+  } catch (error) {
+    cancel();
+    throw error;
+  }
 }
 
 function readEntries(root: HTMLElement): readonly TerminalEntry[] {
@@ -936,6 +1014,8 @@ export function startTerminalHome(
   let completionPanel: CompletionPanel | null = null;
   let composing = false;
   let failed = false;
+  let interactiveReady = false;
+  let cancelBootGate = (): void => {};
   let outputInstance = 0;
   const execute = seams.execute ?? executeCommand;
   const render = seams.render ?? renderEffect;
@@ -950,6 +1030,8 @@ export function startTerminalHome(
       return;
     }
     failed = true;
+    interactiveReady = false;
+    cancelBootGate();
     showFatalFailure(nodes);
   };
 
@@ -965,6 +1047,7 @@ export function startTerminalHome(
   };
 
   const submit = (): void => {
+    if (!interactiveReady || failed) return;
     try {
       const command = nodes.input.value;
       const submittedPrompt = formatTerminalPrompt(identity, state);
@@ -1014,6 +1097,7 @@ export function startTerminalHome(
     }
   });
   nodes.transcript.addEventListener('click', (event) => {
+    if (!interactiveReady) return;
     if (!isUnmodifiedPrimaryClick(event)) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -1032,6 +1116,10 @@ export function startTerminalHome(
     composing = false;
   });
   nodes.input.addEventListener('keydown', (event) => {
+    if (!interactiveReady) {
+      event.preventDefault();
+      return;
+    }
     if (event.key === 'Tab') {
       if (
         composing ||
@@ -1218,11 +1306,13 @@ export function startTerminalHome(
     }
   });
   nodes.input.addEventListener('input', () => {
-    dismissCompletion();
+    if (interactiveReady) {
+      dismissCompletion();
+    }
   });
 
   document.addEventListener('keydown', (event) => {
-    if (failed || composing || !isEligibleTypingTarget(event)) {
+    if (failed || !interactiveReady || composing || !isEligibleTypingTarget(event)) {
       return;
     }
     event.preventDefault();
@@ -1231,15 +1321,26 @@ export function startTerminalHome(
     settleViewport(nodes.input, 'center');
   });
 
+  nodes.root.dataset.terminalControllerInitialized = 'true';
+
+  const completeStartup = (): void => {
+    if (failed || interactiveReady) return;
+    try {
+      preserveBootLog(nodes);
+      nodes.fallback.hidden = true;
+      nodes.session.hidden = false;
+      markSessionInitial(nodes);
+      updatePrompt();
+      interactiveReady = true;
+      setStartupState(nodes.root, 'ready');
+    } catch {
+      fail();
+    }
+  };
+
   try {
-    preserveBootLog(nodes);
-    nodes.fallback.hidden = true;
-    nodes.session.hidden = false;
-    markSessionInitial(nodes);
-    updatePrompt();
+    cancelBootGate = createTerminalBootGate(nodes, completeStartup).cancel;
   } catch {
     fail();
-    return;
   }
-  setStartupState(nodes.root, 'ready');
 }
