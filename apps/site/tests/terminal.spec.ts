@@ -450,9 +450,10 @@ test('help detail renders descriptor-owned examples for canonical names and alia
   const grepDetail = grepRecord.locator('.terminal-help-detail-view');
   await expect(grepDetail.getByRole('heading', { level: 2, name: 'grep' })).toBeVisible();
   await expect(grepDetail.locator('.terminal-help-detail-usage')).toHaveText('grep [-inFwE] <pattern> [path ...]');
-  await expect(grepDetail.locator('.terminal-help-example')).toHaveCount(2);
+  await expect(grepDetail.locator('.terminal-help-example')).toHaveCount(3);
   await expect(grepDetail).toContainText('grep -w cat');
   await expect(grepDetail).toContainText('grep -E "cat|dog"');
+  await expect(grepDetail).toContainText('grep a ~/blog/posts');
 
   await submit(page, 'help ?');
   const aliasRecord = transcript.locator('.terminal-record').last();
@@ -466,7 +467,7 @@ test('help keeps the long find row readable across responsive layouts', async ({
 
   const findRow = transcript.locator('.terminal-help-command').filter({ hasText: 'find [--path <directory>]' });
   await expect(findRow).toHaveCount(1);
-  await expect(findRow.locator('code')).toHaveText('find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>');
+  await expect(findRow.locator('code')).toHaveText('find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] [path] <keyword>');
   await expect(findRow.locator('.terminal-help-summary')).toHaveText('find public documents by filename substring');
 
   const geometry = await findRow.evaluate((row) => {
@@ -625,7 +626,7 @@ test('find results expose canonical keyboard-accessible document links while pip
   await page.goto('/');
   const transcript = page.locator('[data-terminal-transcript]');
 
-  await submit(page, 'find llm-workflow');
+  await submit(page, 'find ~/blog/posts llm-workflow');
   const postRecord = transcript.locator('.terminal-record').last();
   const postLink = postRecord.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' });
   await expect(postLink).toHaveAttribute('href', '/posts/ai/llm-workflow-with-trellis/');
@@ -638,7 +639,7 @@ test('find results expose canonical keyboard-accessible document links while pip
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/$/u);
 
   await page.goto('/');
-  await submit(page, 'find about');
+  await submit(page, 'find ~/blog/pages about');
   const pageRecord = transcript.locator('.terminal-record').last();
   const pageLink = pageRecord.getByRole('link', { name: '/pages/about.md' });
   await expect(pageLink).toHaveAttribute('href', '/pages/about/');

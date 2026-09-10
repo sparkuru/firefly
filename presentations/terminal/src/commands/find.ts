@@ -3,25 +3,23 @@ import { failureResult, successResult } from '../shell/streams.js';
 import { createCommandArgumentParser, type ParsedCommandArguments } from './arguments.js';
 import { formatDocument } from './document-format.js';
 import type { VfsNode } from '../vfs/contracts.js';
-import { walkPublicDocuments } from '../vfs/public-documents.js';
+import { publicDocumentSearchRoots, walkPublicDocuments } from '../vfs/public-documents.js';
 import { textPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
 
-export const FIND_USAGE = 'find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>';
+export const FIND_USAGE = 'find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] [path] <keyword>';
 export const FIND_SUMMARY = 'find public documents by filename substring';
 
 const maxKeywordLength = 256;
+const FIND_EXAMPLES = Object.freeze([
+  Object.freeze({ command: 'find ~/blog/posts xxxx', description: 'search filenames below a public directory' }),
+  Object.freeze({ command: 'find --path ~/blog/posts xxxx', description: 'search filenames below a public directory' })
+]);
 
 function isCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
-}
-
-function isPublicDirectory(path: string): boolean {
-  return path === '/' ||
-    path === '/posts' || path.startsWith('/posts/') ||
-    path === '/pages' || path.startsWith('/pages/');
 }
 
 function optionText(
@@ -40,6 +38,25 @@ function noResults(keyword: string): ProcessResult {
   return successResult([`No matches for "${keyword}".`]);
 }
 
+function exampleLines(): readonly string[] {
+  return Object.freeze(['Examples:', ...FIND_EXAMPLES.map(({ command, description }) => `  ${command} — ${description}`)]);
+}
+
+function resolvePublicSearchRoots(
+  context: ProcessContext,
+  pathOperand: string | undefined
+): readonly string[] | undefined {
+  if (pathOperand === undefined) {
+    if (context.fs.stat(context.cwd)?.kind !== 'directory') return undefined;
+    return publicDocumentSearchRoots(context.cwd);
+  }
+  const resolution = context.fs.resolve(pathOperand, context.cwd, 'directory');
+  if (!resolution.ok || publicDocumentSearchRoots(resolution.path) === undefined || context.fs.stat(resolution.path)?.kind !== 'directory') {
+    return undefined;
+  }
+  return publicDocumentSearchRoots(resolution.path);
+}
+
 export function executeFind(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
   const { options, operands } = args;
   if (options.help === true) {
@@ -52,13 +69,17 @@ export function executeFind(context: ProcessContext, args: ParsedCommandArgument
       'Options:',
       '  --path <directory>   search recursively below one public virtual directory.',
       '  --after YYYY-MM-DD   include documents published on or after this date.',
-      '  --before YYYY-MM-DD  include documents published on or before this date.'
+      '  --before YYYY-MM-DD  include documents published on or before this date.',
+      ...exampleLines()
     ]);
   }
 
-  if (operands.length !== 1 || !validKeyword(operands[0] ?? '')) return failureResult(`Usage: ${FIND_USAGE}`);
-  const keyword = operands[0]!;
+  if (operands.length < 1 || operands.length > 2) return failureResult(`Usage: ${FIND_USAGE}`);
   const pathOperand = optionText(options, 'path');
+  const positionalPath = operands.length === 2 ? operands[0] : undefined;
+  if (pathOperand !== undefined && positionalPath !== undefined) return failureResult(`Usage: ${FIND_USAGE}`);
+  const keyword = (operands.length === 2 ? operands[1] : operands[0])!;
+  if (!validKeyword(keyword)) return failureResult(`Usage: ${FIND_USAGE}`);
   const after = optionText(options, 'after');
   const before = optionText(options, 'before');
   if ((pathOperand !== undefined && pathOperand.length === 0) ||
@@ -70,18 +91,8 @@ export function executeFind(context: ProcessContext, args: ParsedCommandArgument
     return failureResult('find --after cannot be later than --before.');
   }
 
-  let roots: readonly string[];
-  if (pathOperand === undefined) {
-    roots = Object.freeze(['/posts', '/pages']);
-  } else {
-    const resolution = context.fs.resolve(pathOperand, context.cwd, 'directory');
-    if (!resolution.ok || !isPublicDirectory(resolution.path) || context.fs.stat(resolution.path)?.kind !== 'directory') {
-      return failureResult('find --path accepts only known public virtual directories.');
-    }
-    roots = resolution.path === '/'
-      ? Object.freeze(['/posts', '/pages'])
-      : Object.freeze([resolution.path]);
-  }
+  const roots = resolvePublicSearchRoots(context, pathOperand ?? positionalPath);
+  if (roots === undefined) return failureResult('find --path accepts only known public virtual directories.');
 
   const walked = roots.map((root) => walkPublicDocuments(context.fs, root));
   if (walked.some(({ complete }) => !complete)) return failureResult('find search scope exceeds the session work limit.');
@@ -112,7 +123,7 @@ export function executeFind(context: ProcessContext, args: ParsedCommandArgument
 
 const findArguments = createCommandArgumentParser({
   usage: FIND_USAGE,
-  maxOperands: 1,
+  maxOperands: 2,
   options: [
     { name: 'path', aliases: ['--path'], value: 'required' },
     { name: 'after', aliases: ['--after'], value: 'required' },
@@ -130,5 +141,6 @@ export const FIND_COMMAND_SPEC: CommandSpec = {
   order: 25,
   policy: textPolicy,
   parse: findArguments,
-  execute: executeFind
+  execute: executeFind,
+  examples: FIND_EXAMPLES
 };

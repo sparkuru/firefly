@@ -1,7 +1,7 @@
 import type { GrepMatch, GrepReport, ProcessContext, ProcessResult } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import { createCommandArgumentParser, type ParsedCommandArguments } from './arguments.js';
-import { walkPublicDocuments, type PublicDocumentWalk } from '../vfs/public-documents.js';
+import { publicDocumentSearchRoots, walkPublicDocuments, type PublicDocumentWalk } from '../vfs/public-documents.js';
 import { textPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
 
@@ -12,6 +12,11 @@ const maxResources = 256;
 const maxLines = 50_000;
 const maxMatches = 240;
 const maxText = 24_000;
+const GREP_EXAMPLES = Object.freeze([
+  Object.freeze({ command: 'grep -w cat', description: 'match cat as a whole word' }),
+  Object.freeze({ command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' }),
+  Object.freeze({ command: 'grep a ~/blog/posts', description: 'search an explicit public directory' })
+]);
 
 type RegexAtom =
   | { readonly type: 'literal'; readonly value: string }
@@ -394,30 +399,62 @@ function formatMatch(match: GrepMatch): string {
   return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
 }
 
-function allDocumentPaths(context: ProcessContext): PublicDocumentWalk {
-  const walks = ['/posts', '/pages'].map((path) => walkPublicDocuments(context.fs, path));
+function exampleLines(): readonly string[] {
+  return Object.freeze(['Examples:', ...GREP_EXAMPLES.map(({ command, description }) => `  ${command} — ${description}`)]);
+}
+
+function walkSearchScope(context: ProcessContext, path: string): PublicDocumentWalk | undefined {
+  const roots = publicDocumentSearchRoots(path);
+  if (roots === undefined) return undefined;
+  const walks = roots.map((root) => walkPublicDocuments(context.fs, root));
   return Object.freeze({
     paths: Object.freeze([...new Set(walks.flatMap(({ paths }) => paths))].sort()),
     complete: walks.every(({ complete }) => complete)
   });
 }
 
+function allDocumentPaths(context: ProcessContext): PublicDocumentWalk | undefined {
+  return walkSearchScope(context, context.cwd);
+}
+
 function resourcePaths(context: ProcessContext, path: string): PublicDocumentWalk | undefined {
   const node = context.fs.stat(path);
-  if (node?.kind === 'document' || node?.kind === 'scratch') {
+  if (node?.kind === 'document') {
+    if (publicDocumentSearchRoots(path) === undefined) return undefined;
+    return Object.freeze({ paths: Object.freeze([path]), complete: true });
+  }
+  if (node?.kind === 'scratch') {
     return Object.freeze({ paths: Object.freeze([path]), complete: true });
   }
   if (node?.kind !== 'directory') return undefined;
   const scratchPaths = path === '/.rshell/tmp' ? context.fs.glob('/.rshell/tmp/*') : [];
-  const walk = walkPublicDocuments(context.fs, path);
+  const walk = path === '/.rshell/tmp' ? undefined : walkSearchScope(context, path);
+  if (path !== '/.rshell/tmp' && walk === undefined) return undefined;
   return Object.freeze({
-    paths: Object.freeze([...walk.paths, ...scratchPaths].sort()),
-    complete: walk.complete
+    paths: Object.freeze([...(walk?.paths ?? []), ...scratchPaths].sort()),
+    complete: walk?.complete ?? true
   });
 }
 
 export function executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
   const { options, operands } = args;
+  if (options.help === true) {
+    if (operands.length > 0 || Object.keys(options).some((name) => name !== 'help')) {
+      return failureResult(`Usage: ${GREP_USAGE}`);
+    }
+    return successResult([
+      `Usage: ${GREP_USAGE}`,
+      GREP_SUMMARY,
+      'Options:',
+      '  -h, --help              show this help.',
+      '  -i, --ignore-case       ignore case when matching.',
+      '  -n, --line-number       prefix matching lines with their line number.',
+      '  -F, --fixed-strings     match the pattern literally.',
+      '  -w, --word-regexp       require whole-word matches.',
+      '  -E, --extended-regexp   use the safe extended regular-expression subset.',
+      ...exampleLines()
+    ]);
+  }
   const insensitive = options['ignore-case'] === true;
   const number = options['line-number'] === true;
   const literal = options['fixed-strings'] === true;
@@ -435,6 +472,7 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
   if (context.stdin !== undefined) sourcePaths.push('-');
   else if (resources.length === 0) {
     const documents = allDocumentPaths(context);
+    if (documents === undefined) return failureResult('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
     if (!documents.complete) return failureResult('grep resource scope exceeds the session work limit.');
     sourcePaths.push(...documents.paths);
   }
@@ -485,9 +523,10 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
 
 const grepArguments = createCommandArgumentParser({
   usage: GREP_USAGE,
-  minOperands: 1,
+  minOperands: 0,
   maxOperands: 257,
   options: [
+    { name: 'help', aliases: ['-h', '--help'] },
     { name: 'ignore-case', aliases: ['-i', '--ignore-case'] },
     { name: 'line-number', aliases: ['-n', '--line-number'] },
     { name: 'fixed-strings', aliases: ['-F', '--fixed-strings'] },
@@ -506,8 +545,5 @@ export const GREP_COMMAND_SPEC: CommandSpec = {
   policy: textPolicy,
   parse: grepArguments,
   execute: executeGrep,
-  examples: Object.freeze([
-    Object.freeze({ command: 'grep -w cat', description: 'match cat as a whole word' }),
-    Object.freeze({ command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' })
-  ])
+  examples: GREP_EXAMPLES
 };

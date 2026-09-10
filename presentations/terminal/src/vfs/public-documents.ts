@@ -7,6 +7,14 @@ export interface PublicDocumentWalk {
   readonly complete: boolean;
 }
 
+export function publicDocumentSearchRoots(path: string): readonly string[] | undefined {
+  if (path === '/') return Object.freeze(['/posts', '/pages']);
+  if (path === '/posts' || path.startsWith('/posts/') || path === '/pages' || path.startsWith('/pages/')) {
+    return Object.freeze([path]);
+  }
+  return undefined;
+}
+
 function childDirectoryPath(parent: string, name: string): string {
   const child = name.endsWith('/') ? name.slice(0, -1) : name;
   return parent === '/' ? `/${child}` : `${parent}/${child}`;

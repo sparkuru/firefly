@@ -27,6 +27,24 @@ const fs = createPublicIndex({
   ]
 });
 
+const scopedFs = createPublicIndex({
+  documents: [
+    { kind: 'post', path: '/posts/infra/operations.md', relativePath: 'infra/operations.md', filename: 'operations.md', title: 'Operations', href: '/posts/infra/operations/', date: '2026-05-28' },
+    { kind: 'post', path: '/posts/infra/nested/deep-operations.md', relativePath: 'infra/nested/deep-operations.md', filename: 'deep-operations.md', title: 'Deep Operations', href: '/posts/infra/nested/deep-operations/', date: '2026-05-29' },
+    { kind: 'post', path: '/posts/other/operations.md', relativePath: 'other/operations.md', filename: 'operations.md', title: 'Other Operations', href: '/posts/other/operations/', date: '2026-05-30' },
+    { kind: 'page', path: '/pages/operations.md', relativePath: 'operations.md', filename: 'operations.md', title: 'Page Operations', href: '/pages/operations/', date: '2026-05-31' },
+    { kind: 'post', path: '/lab/leaked.md', relativePath: 'leaked.md', filename: 'leaked.md', title: 'Leaked', href: '/posts/leaked/', date: '2026-06-01' }
+  ],
+  experiments: [],
+  textDocuments: [
+    { path: '/posts/infra/operations.md', lines: ['infra marker'] },
+    { path: '/posts/infra/nested/deep-operations.md', lines: ['nested marker'] },
+    { path: '/posts/other/operations.md', lines: ['other marker'] },
+    { path: '/pages/operations.md', lines: ['page marker'] },
+    { path: '/lab/leaked.md', lines: ['lab marker'] }
+  ]
+});
+
 function context(overrides: Partial<ProcessContext> = {}): ProcessContext {
   return {
     cwd: '/posts',
@@ -195,6 +213,47 @@ test('grep supports whole-word fixed and safe-regex matching with explicit exten
   assert.match(runRshellInput('grep -EF nahida', runnerOptions()).stderr.lines[0] ?? '', /cannot combine/u);
 });
 
+test('grep defaults to the current recursive public cwd and keeps positional scopes explicit', () => {
+  const nested = executeGrep(context({ fs: scopedFs, cwd: '/posts/infra' }), args(['marker']));
+  assert.deepEqual(nested.value?.kind === 'grep-report' ? nested.value.report.matches.map(({ path }) => path) : [], [
+    '/posts/infra/nested/deep-operations.md',
+    '/posts/infra/operations.md'
+  ]);
+
+  const posts = executeGrep(context({ fs: scopedFs, cwd: '/pages' }), args(['marker', '~/blog/posts']));
+  assert.deepEqual(posts.value?.kind === 'grep-report' ? posts.value.report.matches.map(({ path }) => path) : [], [
+    '/posts/infra/nested/deep-operations.md',
+    '/posts/infra/operations.md',
+    '/posts/other/operations.md'
+  ]);
+
+  const root = executeGrep(context({ fs: scopedFs, cwd: '/posts/infra' }), args(['marker', '~/blog']));
+  assert.deepEqual(root.value?.kind === 'grep-report' ? root.value.report.matches.map(({ path }) => path) : [], [
+    '/pages/operations.md',
+    '/posts/infra/nested/deep-operations.md',
+    '/posts/infra/operations.md',
+    '/posts/other/operations.md'
+  ]);
+
+  const publicRoot = executeGrep(context({ fs: scopedFs, cwd: '/' }), args(['marker']));
+  assert.deepEqual(publicRoot.value?.kind === 'grep-report' ? publicRoot.value.report.matches.map(({ path }) => path) : [], [
+    '/pages/operations.md',
+    '/posts/infra/nested/deep-operations.md',
+    '/posts/infra/operations.md',
+    '/posts/other/operations.md'
+  ]);
+  assert.match(executeGrep(context({ fs: scopedFs, cwd: '/lab' }), args(['marker'])).stderr.lines[0] ?? '', /listed public documents/u);
+  assert.deepEqual(executeFind(context({ fs: scopedFs, cwd: '/' }), args(['leaked'])).stdout.lines, ['No matches for "leaked".']);
+  assert.match(executeFind(context({ fs: scopedFs, cwd: '/lab' }), args(['marker'])).stderr.lines[0] ?? '', /known public virtual directories/u);
+  assert.match(executeGrep(context({ fs: scopedFs, cwd: '/' }), args(['marker', '~/blog/lab/leaked.md'])).stderr.lines[0] ?? '', /listed public documents/u);
+
+  for (const option of ['-h', '--help']) {
+    const result = runRshellInput(`grep ${option}`, runnerOptions());
+    assert.equal(result.status, 0, option);
+    assert.match(result.stdout.lines.join('\n'), /grep a ~\/blog\/posts/u, option);
+  }
+});
+
 test('find searches visible filenames, filters public paths and dates, and explains itself', () => {
   const alpha = executeFind(context(), args(['ALPHA']));
   assert.deepEqual(alpha.stdout.lines, [
@@ -214,6 +273,9 @@ test('find searches visible filenames, filters public paths and dates, and expla
     }]
   });
   assert.deepEqual(executeFind(context(), args(['about'])).stdout.lines, [
+    'No matches for "about".'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'])).stdout.lines, [
     'About — 2026-02-01 — /pages/about.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: 'pages' })).stdout.lines, [
@@ -223,6 +285,12 @@ test('find searches visible filenames, filters public paths and dates, and expla
     'Alpha — 2026-05-28 — characters/alpha.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: '~/blog' })).stdout.lines, [
+    'About — 2026-02-01 — /pages/about.md'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/posts/infra' }), args(['~/blog/posts', 'alpha'])).stdout.lines, [
+    'Alpha — 2026-05-28 — characters/alpha.md'
+  ]);
+  assert.deepEqual(executeFind(context({ cwd: '/posts/infra' }), args(['~/blog', 'about'])).stdout.lines, [
     'About — 2026-02-01 — /pages/about.md'
   ]);
   assert.deepEqual(executeFind(context(), args(['durable'])).stdout.lines, [
@@ -238,13 +306,18 @@ test('find searches visible filenames, filters public paths and dates, and expla
     'No matches for "alpha".'
   ]);
   assert.deepEqual(executeFind(context(), args([], { help: true })).stdout.lines, [
-    'Usage: find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>',
+    'Usage: find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] [path] <keyword>',
     'find public documents by filename substring',
     'Options:',
     '  --path <directory>   search recursively below one public virtual directory.',
     '  --after YYYY-MM-DD   include documents published on or after this date.',
-    '  --before YYYY-MM-DD  include documents published on or before this date.'
+    '  --before YYYY-MM-DD  include documents published on or before this date.',
+    'Examples:',
+    '  find ~/blog/posts xxxx — search filenames below a public directory',
+    '  find --path ~/blog/posts xxxx — search filenames below a public directory'
   ]);
+
+  assert.match(executeFind(context(), args(['~/blog/posts', 'alpha'], { path: '~/blog/pages' })).stderr.lines[0] ?? '', /Usage:/u);
 
   for (const [operand, message] of [
     ['lab', 'find --path accepts only known public virtual directories.'],
@@ -254,9 +327,26 @@ test('find searches visible filenames, filters public paths and dates, and expla
   ] as const) {
     assert.deepEqual(executeFind(context(), args(['about'], { path: operand })).stderr.lines, [message], operand);
   }
+  for (const operand of ['~/blog/lab', '../../pages']) {
+    assert.deepEqual(executeFind(context(), args([operand, 'about'])).stderr.lines, ['find --path accepts only known public virtual directories.'], operand);
+  }
   assert.match(executeFind(context(), args(['alpha'], { after: '2026-02-30' })).stderr.lines[0] ?? '', /Usage:/u);
   assert.match(executeFind(context(), args(['alpha'], { after: '2026-06-01', before: '2026-05-28' })).stderr.lines[0] ?? '', /cannot be later/u);
   assert.match(executeFind(context(), args([])).stderr.lines[0] ?? '', /Usage:/u);
+});
+
+test('find and grep neutral runners preserve cwd defaults and explicit path scopes', () => {
+  const nestedOptions = runnerOptions({ cwd: '/posts/characters' });
+  assert.equal(runRshellInput('find ~/blog/posts alpha', nestedOptions).status, 0);
+  assert.deepEqual(runRshellInput('find ~/blog/posts alpha', nestedOptions).stdout.lines, [
+    'Alpha — 2026-05-28 — characters/alpha.md'
+  ]);
+  assert.deepEqual(runRshellInput('find --path ~/blog/posts alpha', nestedOptions).stdout.lines, [
+    'Alpha — 2026-05-28 — characters/alpha.md'
+  ]);
+  assert.match(runRshellInput('find --path ~/blog/pages ~/blog/posts alpha', nestedOptions).stderr.lines[0] ?? '', /Usage:/u);
+  assert.match(runRshellInput('grep -h', nestedOptions).stdout.lines.join('\n'), /grep a ~\/blog\/posts/u);
+  assert.match(runRshellInput('grep --help', nestedOptions).stdout.lines.join('\n'), /grep a ~\/blog\/posts/u);
 });
 
 test('relative commands resolve the virtual root without a double slash', () => {

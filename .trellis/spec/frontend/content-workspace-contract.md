@@ -569,7 +569,7 @@ discovery; `grep` remains the line-oriented body-text search command.
 
 ```ts
 const FIND_USAGE =
-  'find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>';
+  'find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] [path] <keyword>';
 const FIND_SUMMARY = 'find public documents by filename substring';
 
 executeFind(context: ProcessContext, args: ParsedCommandArguments): ProcessResult;
@@ -580,6 +580,8 @@ interface PublicDocumentWalk {
 }
 
 walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWalk;
+
+publicDocumentSearchRoots(path: VirtualPath): readonly VirtualPath[] | undefined;
 ```
 
 #### 3. Contracts
@@ -587,10 +589,15 @@ walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWal
 - The positional keyword is a case-insensitive NFC-normalized substring of
   `PublicDocument.filename`; it does not search title, body, tags, or other
   front matter.
-- Without `--path`, search starts at `/posts` and `/pages`, regardless of the
-  current working directory. `--path` resolves one safe public directory using
-  the current virtual cwd and recursively searches below it. A root path maps
-  to `/posts` and `/pages`; it never traverses `/lab` or `/.rshell`.
+- Without an explicit path scope, search starts at the current virtual cwd and
+  recursively searches only that subtree. `--path` resolves one safe public
+  directory using the current virtual cwd and recursively searches below it.
+  The GNU-style positional form `find [path] <keyword>` uses the same resolver
+  and scope rules. A root path maps to `/posts` and `/pages`; neither default
+  nor explicit public-document search traverses `/lab` or `/.rshell`.
+- `--path <directory>` and the positional path form are mutually exclusive.
+  Supplying both path scopes is a usage error. With either form, `~/blog/posts`
+  selects the posts subtree and `~/blog` selects both public document mounts.
 - Results are sorted by canonical virtual path and use the existing plain-text
   row format `<display path> — <date> — <title>`. The text remains available to
   pipelines and scratch redirects.
@@ -612,7 +619,9 @@ walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWal
   that value. Navigation controls remain non-redirectable.
 - `--after` and `--before` are inclusive canonical calendar-date filters.
   `find -h` and `find --help` return the complete usage/options block without a
-  keyword; the grouped `help` command derives its row from the registry.
+  keyword, including `find --path ~/blog/posts <keyword>` and the positional
+  `find ~/blog/posts <keyword>` examples; the grouped `help` command derives
+  its row from the registry.
 - Recursive collection is bounded by a visited-directory work limit. A walker
   returns `complete: false` when the limit is exceeded, and every caller must
   fail closed instead of consuming partial paths. The same rule applies when
@@ -624,15 +633,17 @@ walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWal
 | --- | --- |
 | Missing keyword, extra operand, unknown option, empty/control-character keyword | Return the usage error without scanning. |
 | Invalid or missing option value | Return the usage error. |
-| Unknown, non-public, document, experiment, scratch, or unsafe `--path` | Reject with a bounded public-directory error. |
+| Unknown, non-public, document, experiment, scratch, or unsafe `--path` or positional path | Reject with a bounded public-directory error. |
+| Both `--path` and a positional path are supplied | Return the usage error without scanning. |
 | Invalid date or `after > before` | Reject before walking the VFS. |
 | Walker work limit exceeded | Return a non-zero bounded scope-limit error; never return partial search results. |
 | No matching filename | Return a successful no-match message and no document rows. |
 
 #### 5. Good / Base / Bad Cases
 
-- Good: `find alpha`, `find --path ~/blog/posts alpha`, and inclusive date
-  filters return deterministic rows for public documents only.
+- Good: `find alpha` from a nested cwd, `find --path ~/blog/posts alpha`,
+  `find ~/blog/posts alpha`, and inclusive date filters return deterministic
+  rows for public documents only.
 - Base: a keyword with no matches returns `No matches for "<keyword>".`.
 - Bad: `find --path ~/blog/lab alpha`, `find --after 2026-02-30 alpha`, or a
   search over an incomplete walk must not expose experiment/scratch data or
@@ -640,9 +651,10 @@ walkPublicDocuments(fs: ReadonlyVirtualFs, root: VirtualPath): PublicDocumentWal
 
 #### 6. Tests Required
 
-- Unit: filename-only matching, case folding, root/cwd-relative/absolute
-  public paths, recursive nested documents, inclusive date bounds, invalid
-  paths/dates/operands, no-match output, and command-specific help.
+- Unit: filename-only matching, case folding, nested cwd isolation,
+  root/cwd-relative/absolute public paths, recursive nested documents,
+  inclusive date bounds, invalid paths/dates/operands, mutually exclusive path
+  forms, no-match output, and command-specific help.
 - Integration: registry/grouped-help metadata, terminal adapter output,
   completion candidates, `find | cat`, and the existing `grep` behavior after
   sharing the bounded document walker.
@@ -658,6 +670,81 @@ return successResult(walked.paths.map(render));
 const walked = walkPublicDocuments(fs, '/posts');
 if (!walked.complete) return failureResult('Search scope exceeds the work limit.');
 return successResult(walked.paths.map(render));
+```
+
+### Terminal `grep` Scope Contract
+
+#### 1. Scope / Trigger
+
+Use this contract when changing where Terminal `grep` reads public document
+text, how positional resource operands are resolved, or how its command help
+describes those scopes. Matching, highlighting, limits, and stdin projection
+remain the existing grep contracts.
+
+#### 2. Signature
+
+```ts
+const GREP_USAGE = 'grep [-inFwE] <pattern> [path ...]';
+const GREP_SUMMARY = 'filter stdin or public text';
+
+executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResult;
+```
+
+#### 3. Contracts
+
+- When stdin is absent and no positional resource follows the pattern, grep
+  recursively walks only `context.cwd`. A cwd of `/` maps to `/posts` and
+  `/pages`; a nested cwd maps to that public subtree only.
+- A positional directory/resource operand is resolved relative to the current
+  virtual cwd, or absolutely through `~/blog`; `grep <pattern> ~/blog/posts`
+  selects the posts subtree and `grep <pattern> ~/blog` selects both public
+  mounts. Multiple explicit resources remain supported and deduplicated.
+- Explicit resources may be public documents/directories or
+  `~/blog/.rshell/tmp` scratch files. Non-public documents, experiments, and
+  other host-like paths are rejected. Stdin and positional resources remain
+  mutually exclusive.
+- `grep -h` and `grep --help` return the complete usage/options block and a
+  concrete `grep a ~/blog/posts` example; `help grep` derives its metadata from
+  the command descriptor.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| No stdin/resources with a public nested cwd | Walk only that cwd's recursive subtree. |
+| No stdin/resources with `/`, `/lab`, or `/.rshell` cwd | Map `/` to public mounts; reject non-public default scopes without walking them. |
+| Valid positional public path | Resolve from cwd or `~/blog` and walk only the selected public scope. |
+| Scratch file/directory operand | Read only the listed scratch file(s) under `~/blog/.rshell/tmp`. |
+| Non-public/unknown/unsafe resource or document-shaped path | Return the bounded public-resource error without host access. |
+| Stdin combined with any resource operand | Return the existing stdin/resource exclusivity error. |
+| `-h`/`--help` with a pattern or other option | Return usage; with no other operand/option, return command help. |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: `grep marker` from `~/blog/posts/infra` sees only that subtree, while
+  `grep marker ~/blog/posts` intentionally includes sibling post directories.
+- Base: `grep marker ~/blog` searches both public mounts and preserves the
+  canonical `/posts/...` and `/pages/...` source paths.
+- Bad: default grep from `/` recursively walking the whole VFS, or an explicit
+  `grep marker ~/blog/lab/leaked.md`, exposes experiment/host data.
+
+#### 6. Tests Required
+
+- Unit: nested cwd isolation, root/public-mount mapping, positional directory
+  and file operands, multiple resources, non-public rejection, scratch files,
+  stdin exclusivity, and `-h`/`--help` output.
+- Integration: terminal adapter cwd propagation, descriptor Help examples,
+  `grep` in existing pipelines, and browser Help detail rendering.
+
+#### 7. Wrong vs Correct
+
+```ts
+// Wrong: every no-operand grep reads fixed global roots.
+const paths = ['/posts', '/pages'].flatMap((root) => walkPublicDocuments(fs, root).paths);
+
+// Correct: derive bounded public roots from the process cwd.
+const roots = publicDocumentSearchRoots(context.cwd);
+if (roots === undefined) return failureResult('grep can search only listed public documents or ~/blog/.rshell/tmp scratch files.');
 ```
 
 - `shell/runner.ts` is the neutral owner of stage expansion, pipe wiring,
@@ -862,7 +949,12 @@ return successResult(walked.paths.map(render));
   `~/blog/.rshell/tmp` user operands preserve source line boundaries, report
   `/posts/...`, `/pages/...`, `/.rshell/tmp/...`, or `-` for stdin, and return a
   safe no-result effect instead of conflating “no matches” with an invalid
-  resource. Resource, scanned-line, match-count, and output-size limits remain
+  resource. Without stdin or positional resource operands, grep recursively searches
+  only the current virtual cwd. Positional `grep <pattern> [path ...]`
+  operands explicitly select one or more public document/resource scopes,
+  including `grep <pattern> ~/blog/posts`; no `grep --path` option exists.
+  `grep -h` and `grep --help` return command help with that positional path
+  example. Resource, scanned-line, match-count, and output-size limits remain
   enforced before rendering.
 - **Terminal grep matcher performance and equivalence**
 

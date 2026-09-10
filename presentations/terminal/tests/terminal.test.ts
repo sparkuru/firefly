@@ -48,6 +48,12 @@ const rawEntries = [
   { kind: 'page', virtualPath: 'pages/about.md', relativePath: 'about.md', filename: 'about.md', title: 'About', href: '/pages/about/', date: '2026-02-01' }
 ] as const;
 const entries = decodeTerminalEntries(rawEntries);
+const scopedEntries = decodeTerminalEntries([
+  { kind: 'post', virtualPath: 'posts/infra/operations.md', relativePath: 'infra/operations.md', filename: 'operations.md', title: 'Operations', href: '/posts/infra/operations/', date: '2026-05-28' },
+  { kind: 'post', virtualPath: 'posts/infra/nested/deep-operations.md', relativePath: 'infra/nested/deep-operations.md', filename: 'deep-operations.md', title: 'Deep Operations', href: '/posts/infra/nested/deep-operations/', date: '2026-05-29' },
+  { kind: 'post', virtualPath: 'posts/other/operations.md', relativePath: 'other/operations.md', filename: 'operations.md', title: 'Other Operations', href: '/posts/other/operations/', date: '2026-05-30' },
+  { kind: 'page', virtualPath: 'pages/operations.md', relativePath: 'operations.md', filename: 'operations.md', title: 'Page Operations', href: '/pages/operations/', date: '2026-05-31' }
+]);
 const experiments = decodeTerminalExperiments([
   { id: 'nerv', title: 'NERV', href: '/lab/nerv/' },
   { id: 'quiet-lab', title: 'Quiet Lab', href: '/lab/quiet-lab/' }
@@ -112,6 +118,12 @@ function run(command: string, state = createTerminalState()) {
 const documents: readonly TerminalTextDocument[] = Object.freeze([
   Object.freeze({ virtualPath: 'posts/characters/alpha.md', lines: Object.freeze(['Alpha record', 'nahida keeps the archive']) }),
   Object.freeze({ virtualPath: 'pages/about.md', lines: Object.freeze(['About this garden', 'durable writing']) })
+]);
+const scopedDocuments: readonly TerminalTextDocument[] = Object.freeze([
+  Object.freeze({ virtualPath: 'posts/infra/operations.md', lines: Object.freeze(['infra marker']) }),
+  Object.freeze({ virtualPath: 'posts/infra/nested/deep-operations.md', lines: Object.freeze(['nested marker']) }),
+  Object.freeze({ virtualPath: 'posts/other/operations.md', lines: Object.freeze(['other marker']) }),
+  Object.freeze({ virtualPath: 'pages/operations.md', lines: Object.freeze(['page marker']) })
 ]);
 
 function runShell(command: string, state = createTerminalState()) {
@@ -302,7 +314,7 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(help, /cls/u);
   assert.doesNotMatch(help, /dynamic transcript/u);
   assert.match(help, /ls \[path\|pattern\]/u);
-  assert.match(help, /find \[--path <directory>\] \[--after YYYY-MM-DD\] \[--before YYYY-MM-DD\] <keyword>/u);
+  assert.match(help, /find \[--path <directory>\] \[--after YYYY-MM-DD\] \[--before YYYY-MM-DD\] \[path\] <keyword>/u);
   assert.match(help, /find public documents by filename substring/u);
   assert.match(help, /open <path>/u);
   assert.match(help, /list curated friend links/u);
@@ -314,7 +326,8 @@ test('every command has deterministic output and strict usage errors', () => {
     usage: 'grep [-inFwE] <pattern> [path ...]',
     examples: [
       { command: 'grep -w cat', description: 'match cat as a whole word' },
-      { command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' }
+      { command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' },
+      { command: 'grep a ~/blog/posts', description: 'search an explicit public directory' }
     ]
   });
   assert.deepEqual(grepHelp.effect?.kind === 'help' ? grepHelp.effect.groups.length : 0, 4);
@@ -335,14 +348,39 @@ test('every command has deterministic output and strict usage errors', () => {
     kind: 'lines',
     tone: 'normal',
     lines: [
-      'Usage: find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] <keyword>',
+      'Usage: find [--path <directory>] [--after YYYY-MM-DD] [--before YYYY-MM-DD] [path] <keyword>',
       'find public documents by filename substring',
       'Options:',
       '  --path <directory>   search recursively below one public virtual directory.',
       '  --after YYYY-MM-DD   include documents published on or after this date.',
-      '  --before YYYY-MM-DD  include documents published on or before this date.'
+      '  --before YYYY-MM-DD  include documents published on or before this date.',
+      'Examples:',
+      '  find ~/blog/posts xxxx — search filenames below a public directory',
+      '  find --path ~/blog/posts xxxx — search filenames below a public directory'
     ]
   });
+  for (const option of ['-h', '--help']) {
+    const grepHelp = run(`grep ${option}`).effect;
+    assert.deepEqual(grepHelp, {
+      kind: 'lines',
+      tone: 'normal',
+      lines: [
+        'Usage: grep [-inFwE] <pattern> [path ...]',
+        'filter stdin or public text',
+        'Options:',
+        '  -h, --help              show this help.',
+        '  -i, --ignore-case       ignore case when matching.',
+        '  -n, --line-number       prefix matching lines with their line number.',
+        '  -F, --fixed-strings     match the pattern literally.',
+        '  -w, --word-regexp       require whole-word matches.',
+        '  -E, --extended-regexp   use the safe extended regular-expression subset.',
+        'Examples:',
+        '  grep -w cat — match cat as a whole word',
+        '  grep -E "cat|dog" — match either cat or dog with a safe extended pattern',
+        '  grep a ~/blog/posts — search an explicit public directory'
+      ]
+    }, option);
+  }
   const posts = run('ls ~/blog/posts').effect;
   const pages = run('ls ~/blog/pages').effect;
   assert.deepEqual(posts?.kind === 'entries' ? posts.entries : [], []);
@@ -579,6 +617,44 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.equal(run('open ~/blog/lab/nerv', labState).effect?.kind, 'navigation');
   assert.match(JSON.stringify(run('open lab/nerv', labState).effect), /No listed experiment/u);
   assert.match(JSON.stringify(run('open \/lab\/nerv', labState).effect), /No listed experiment/u);
+});
+
+test('terminal adapter keeps search defaults scoped and exposes explicit broader scopes', () => {
+  const identity = { ...DEFAULT_TERMINAL_IDENTITY, workingDirectory: '~/blog/posts/infra' };
+  const state = createTerminalState(identity);
+  const runScoped = (input: string) => executeCommand({
+    state,
+    input,
+    entries: scopedEntries,
+    documents: scopedDocuments,
+    identity
+  });
+
+  const nestedFind = runScoped('find operations');
+  assert.deepEqual(nestedFind.effect?.kind === 'find' ? nestedFind.effect.entries.map(({ virtualPath }) => virtualPath) : [], [
+    'posts/infra/nested/deep-operations.md',
+    'posts/infra/operations.md'
+  ]);
+  const postsFind = runScoped('find ~/blog/posts operations');
+  assert.deepEqual(postsFind.effect?.kind === 'find' ? postsFind.effect.entries.map(({ virtualPath }) => virtualPath) : [], [
+    'posts/infra/nested/deep-operations.md',
+    'posts/infra/operations.md',
+    'posts/other/operations.md'
+  ]);
+  const defaultGrep = runScoped('grep marker');
+  assert.deepEqual(defaultGrep.effect?.kind === 'grep' ? defaultGrep.effect.matches.map(({ path }) => path) : [], [
+    '/posts/infra/nested/deep-operations.md',
+    '/posts/infra/operations.md'
+  ]);
+  const explicitGrep = runScoped('grep marker ~/blog/posts');
+  assert.deepEqual(explicitGrep.effect?.kind === 'grep' ? explicitGrep.effect.matches.map(({ path }) => path) : [], [
+    '/posts/infra/nested/deep-operations.md',
+    '/posts/infra/operations.md',
+    '/posts/other/operations.md'
+  ]);
+  assert.match(JSON.stringify(runScoped('find --path ~/blog/posts ~/blog/posts operations').effect), /Usage:/u);
+  assert.match(JSON.stringify(runScoped('find -h').effect), /find --path ~\/blog\/posts xxxx/u);
+  assert.match(JSON.stringify(runScoped('grep -h').effect), /grep a ~\/blog\/posts/u);
 });
 
 test('history keeps 50 submissions and Arrow navigation preserves the draft', () => {
