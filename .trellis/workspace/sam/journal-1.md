@@ -1372,3 +1372,24 @@ Implemented the majo static replica, moved owner-supplied image/audio inputs to 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 61: Deterministic Terminal boot animation
+
+**Date**: 2026-09-10
+**Task**: Deterministic Terminal boot animation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added a client-side boot gate that keeps the server-rendered 12-line home animation visible until its prompt timeline completes, preserves reduced-motion and recovery behavior, added desktop/mobile regression coverage, updated the frontend code-spec, and verified check, build, content, X Core, and focused E2E. Left the separate Dockerfile/Majo change uncommitted.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ac3614c` | (see git log) |
+
+### Status
+
+[OK] **Completed**
