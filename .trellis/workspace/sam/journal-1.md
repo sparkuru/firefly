@@ -1351,3 +1351,24 @@ Changed find and grep to search the current virtual directory by default, added 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 60: majo lab replica and media relocation
+
+**Date**: 2026-09-10
+**Task**: majo lab replica and media relocation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented the majo static replica, moved owner-supplied image/audio inputs to ignored experiments/majo/public/media, updated Astro publication paths to /lab/majo/media, and verified package, publication, and runtime probes. Preserved the parallel first-visit boot-animation work.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `98cdc99` | (see git log) |
+
+### Status
+
+[OK] **Completed**
