@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 58
-- **Last Active**: 2026-09-08
+- **Total Sessions**: 59
+- **Last Active**: 2026-09-10
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1326 | Active |
+| `journal-1.md` | ~1353 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 59 | 2026-09-10 | Scope terminal searches to cwd | `bbede29` | `anti-entropy-loss-syndrome` |
 | 58 | 2026-09-08 | Fix metadata-aware Terminal completion | `14d964b` | `anti-entropy-loss-syndrome` |
 | 57 | 2026-09-08 | Implement metadata-first blog labels and Markdown organizer | `204b7ef` | `anti-entropy-loss-syndrome` |
 | 56 | 2026-09-07 | Optimize grep matching | `76e625e` | `anti-entropy-loss-syndrome` |
