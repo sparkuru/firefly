@@ -436,6 +436,8 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.doesNotMatch(routes.home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.match(routes.home, /data-terminal-experiment-id="nerv"/u);
   assert.match(routes.home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
+  assert.match(routes.home, /data-terminal-experiment-id="majo"/u);
+  assert.match(routes.home, /data-terminal-experiment-href="\/lab\/majo\/"/u);
   assert.match(routes.home, /data-terminal-theme="firefly"/u);
   assert.match(routes.home, /--terminal-color-canvas/u);
   assert.match(routes.home, /font-family:\s*'JetBrains Mono'/u);
@@ -470,6 +472,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
   }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
+  assert.match(routes.lab, /href="\/lab\/majo\/"/u);
   assert.match(routes.lab, /href="\/lab\/nerv\/"/u);
   assert.doesNotMatch(routes.lab, /<script\b|logo-container|warning-stripe/iu);
 
@@ -580,6 +583,9 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /data-terminal-experiment-id="nerv"/u);
   assert.match(home, /data-terminal-experiment-title="NERV"/u);
   assert.match(home, /data-terminal-experiment-href="\/lab\/nerv\/"/u);
+  assert.match(home, /data-terminal-experiment-id="majo"/u);
+  assert.match(home, /data-terminal-experiment-title="majo"/u);
+  assert.match(home, /data-terminal-experiment-href="\/lab\/majo\/"/u);
   assert.doesNotMatch(home, /data-terminal-experiment-(?:build|command|output|license|manifest|tags|kind)/u);
   const entryPaths = [...home.matchAll(/data-terminal-entry-virtual-path="([^"]+)"/gu)].map((match) => match[1]);
   const templatePaths = [...home.matchAll(/data-terminal-template-path="([^"]+)"/gu)].map((match) => match[1]);

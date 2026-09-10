@@ -1,0 +1,188 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const assetBase = '/lab/majo/media';
+const imageAssets = [
+  `${assetBase}/images/slide-01.jpg`,
+  `${assetBase}/images/slide-02.jpg`,
+  `${assetBase}/images/slide-03.jpg`,
+  `${assetBase}/images/preload-04.jpg`,
+  `${assetBase}/images/preload-05.png`
+];
+---
+
+<Layout title="魔女之旅">
+  <main
+    class="majo-page"
+    data-majo-page
+    data-majo-ready="false"
+    data-majo-enhanced="false"
+    data-majo-active-slide="0"
+    data-majo-player-state="paused"
+    data-majo-preload-errors="0"
+    tabindex="-1"
+  >
+    <div class="majo-preload-links" aria-hidden="true">
+      {imageAssets.map((src) => <link rel="preload" as="image" href={src} />)}
+    </div>
+
+    <div class="majo-slides" data-majo-slides aria-label="majo 三幕画廊">
+      <section
+        class="majo-slide majo-slide--first is-active"
+        data-majo-slide
+        data-slide-index="0"
+        aria-labelledby="majo-slide-title-0"
+        aria-hidden="false"
+      >
+        <img
+          class="majo-background"
+          data-majo-background
+          src={imageAssets[0]}
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+          decoding="async"
+        />
+        <div class="majo-slide__veil" aria-hidden="true"></div>
+        <div class="majo-slide__copy">
+          <p class="majo-kicker">MAJO / 01</p>
+          <h1 id="majo-slide-title-0" class="majo-visually-hidden">majo</h1>
+          <div class="majo-quotes" aria-label="第一幕文字">
+            <p data-majo-quote data-majo-quote-index="0">“ 请别在意。</p>
+            <p data-majo-quote data-majo-quote-index="1">我是旅人，得继续旅行才行… ”</p>
+          </div>
+        </div>
+        <p class="majo-scene-note">Scene 01 · first light</p>
+      </section>
+
+      <section
+        class="majo-slide"
+        data-majo-slide
+        data-slide-index="1"
+        aria-labelledby="majo-slide-title-1"
+        aria-hidden="true"
+      >
+        <img
+          class="majo-background"
+          data-majo-background
+          src={imageAssets[1]}
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+          decoding="async"
+        />
+        <div class="majo-slide__veil" aria-hidden="true"></div>
+        <div class="majo-slide__copy">
+          <p class="majo-kicker">MAJO / 02</p>
+          <h2 id="majo-slide-title-1">身为魔女的她的至今为止与从今以后。</h2>
+          <p class="majo-description majo-description--long">
+            <span>和莫名其妙、滑稽可笑的人们相遇，</span>
+            <span>接触某人美丽的日常生活，</span>
+            <span>日复一日，编织出相逢与离别的故事。</span>
+          </p>
+        </div>
+        <p class="majo-scene-note">Scene 02 · after rain</p>
+      </section>
+
+      <section
+        class="majo-slide"
+        data-majo-slide
+        data-slide-index="2"
+        aria-labelledby="majo-slide-title-2"
+        aria-hidden="true"
+      >
+        <img
+          class="majo-background"
+          data-majo-background
+          src={imageAssets[2]}
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+          decoding="async"
+        />
+        <div class="majo-slide__veil" aria-hidden="true"></div>
+        <div class="majo-slide__copy">
+          <p class="majo-kicker">MAJO / 03</p>
+          <h2 id="majo-slide-title-2">凡事只要以负面的角度思考，不论什么都会变得悲观</h2>
+          <p class="majo-description majo-description--long">
+            <span>然而若是一味地以自己喜欢的方式解释</span>
+            <span>也可能会看不清四周，在不知不觉间断送生命</span>
+            <span>「……」</span>
+            <span>结果，凡事还是适可而止最好</span>
+            <span>偏向极端的心情有可能会使自己迎向崩毁</span>
+            <span>所以，暂且放下是非对错</span>
+            <span>我的旅途依然平淡地持续着</span>
+            <span>一如既往。</span>
+          </p>
+        </div>
+        <p class="majo-scene-note">Scene 03 · quiet return</p>
+      </section>
+    </div>
+
+    <div class="majo-loading" data-majo-loading hidden aria-hidden="true">
+      <span class="majo-loading__mark" aria-hidden="true"></span>
+      <p>正在准备旅途</p>
+      <span class="majo-loading__status" data-majo-loading-status>0 / 5</span>
+    </div>
+
+    <footer class="majo-footer" data-majo-footer>
+      <div class="majo-footer__track">
+        <label class="majo-visually-hidden" for="majo-progress">播放进度</label>
+        <input
+          id="majo-progress"
+          class="majo-progress"
+          data-majo-progress
+          type="range"
+          min="0"
+          max="100"
+          value="0"
+          step="0.1"
+          aria-valuetext="0%"
+        />
+      </div>
+      <div class="majo-footer__row">
+        <div class="majo-player">
+          <button
+            class="majo-play"
+            data-majo-play
+            type="button"
+            aria-label="播放当前曲目"
+            aria-pressed="false"
+          >
+            <span data-majo-play-icon aria-hidden="true">▶</span>
+          </button>
+          <div class="majo-track-meta" aria-live="polite">
+            <span class="majo-track-title" data-majo-track-title>Reminiscence (Genshin Impact Main Theme Var.)</span>
+            <span class="majo-track-subtitle" data-majo-track-subtitle>远方的回声</span>
+          </div>
+        </div>
+        <div class="majo-scene-meta">
+          <span data-majo-scene>first light</span>
+          <span class="majo-meta-divider" aria-hidden="true">/</span>
+          <span data-majo-counter>01 / 03</span>
+        </div>
+        <nav class="majo-pagination" data-majo-pagination aria-label="选择画面">
+          {[0, 1, 2].map((index) => (
+            <button
+              type="button"
+              class:list={["majo-pagination__button", index === 0 && "is-active"]}
+              data-majo-pagination-button
+              data-majo-slide-to={index}
+              aria-label={`第 ${index + 1} 幕`}
+              aria-current={index === 0 ? 'true' : undefined}
+            >
+              <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    </footer>
+
+    <audio data-majo-audio preload="metadata" aria-label="majo 背景音乐"></audio>
+    <p class="majo-audio-status majo-visually-hidden" data-majo-audio-status aria-live="polite">
+      音乐已暂停
+    </p>
+  </main>
+
+  <script src="../scripts/majo-player.ts"></script>
+</Layout>

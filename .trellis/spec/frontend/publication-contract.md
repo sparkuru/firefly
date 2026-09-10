@@ -303,9 +303,99 @@ apps/site/dist + experiments/nerv/dist -> dist
 # promote artifacts and release together with rollback.
 ```
 
+## Scenario: Local-Media Experiment Inputs
+
+### 1. Scope / Trigger
+
+Use this contract when a listed Experiment needs binary images, audio, fonts, or
+other owner-authorized local media that must be available for a local build but
+must not enter Git. The current reference implementation is
+`experiments/majo/scripts/build.mjs`.
+
+### 2. Signatures
+
+```text
+experiments/<id>/scripts/build.mjs
+  -> validates public/media/<declared input> files
+  -> runs the package's static type-check/build
+  -> lets Astro copy public/media/ to dist/media/
+  -> verifies index.html, 404.html, and every emitted media output
+
+npm run build --prefix experiments/<id>
+  -> exit 0 only when every required input and output is valid
+```
+
+The package-local build owns the input/output mapping; the root assembler only
+consumes the resulting ordinary `dist/` tree through the manifest contract.
+
+### 3. Contracts
+
+- Required inputs live below `experiments/<id>/public/media/` and are regular
+  files, not symlinks; the directory is ignored by Git.
+- Every required input has an explicit `dist/media/` destination produced by
+  Astro's public-directory copy and served below the mounted Experiment media
+  path. The build does not download, substitute, or fetch a remote runtime
+  asset.
+- `dist/` is regenerated before validation/build so stale media cannot survive
+  a changed local input set; generated output is also ignored by Git.
+- A missing local input, non-regular file, symlink, or realpath escape is a
+  build error. A missing required output is a build error.
+- Publication must still contain only the copied static files and local
+  references; local media must not change the site catalog trust boundary.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| input is absent | fail with the `public/media/<path>` input named |
+| input is a symlink or non-regular file | fail before the framework build |
+| input realpath leaves `public/media/` | fail; never build it |
+| output path leaves `dist/` | reject the mapping |
+| stale output exists | remove only the package-local `dist/`, then rebuild |
+| static build or type-check fails | propagate non-zero status; do not claim a valid package |
+| emitted HTML/CSS/JS references an external runtime asset | fail the package/publication review |
+
+### 5. Good / Base / Bad Cases
+
+- **Good:** eight declared majo files exist below ignored `public/media/`, Astro
+  emits all eight below `dist/media/`, and the assembled `/lab/majo/media/`
+  paths serve them.
+- **Base:** local media is unavailable on a fresh checkout; the package fails
+  clearly and the maintainer restores owner-authorized inputs before building.
+- **Bad:** silently downloading a replacement, committing binaries, accepting a
+  symlink to a home/cache path, copying directly into root `dist/`, or leaving a
+  stale media file in the release.
+
+### 6. Tests Required
+
+- Package build: assert every declared input/output and the required HTML pages.
+- Package browser E2E: assert all local image/audio requests resolve on the
+  same origin, slide/audio controls work, reduced motion works, and no-JS
+  first-slide content remains usable.
+- Manifest/publication E2E: assert `/lab/<id>/` navigation and representative
+  media routes after assembly.
+- Runtime packaging: compare publication/release/image inventories and probe a
+  representative image and audio route in the read-only non-root container.
+- Repository hygiene: assert local media, generated `dist/`, reports, and test
+  results are ignored and absent from the tracked file set.
+
+### 7. Wrong vs Correct
+
+```js
+// Wrong: browser fallback hides a missing required input and changes the release.
+const src = localFileExists ? localFile : 'https://cdn.example.invalid/fallback.mp3';
+
+// Correct: validate the owner-provided public file and let Astro emit it.
+const source = await requireRegularContainedPublicMediaFile('music/track-01.mp3');
+await buildAstro();
+await verifyOutput('media/music/track-01.mp3');
+```
+
 ## Reference Files
 
 - `experiments/nerv/experiment.json`
+- `experiments/majo/experiment.json`
+- `experiments/majo/scripts/build.mjs`
 - `tooling/validate-experiments/src/index.ts`
 - `tooling/validate-experiments/src/cli.ts`
 - `tooling/assemble-publication/src/index.ts`

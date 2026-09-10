@@ -343,7 +343,8 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'ls ~/blog/lab/');
   const labListing = transcript.locator('.terminal-record').last();
   await expect(labListing.locator('.terminal-experiment-list')).toHaveCSS('list-style-type', 'none');
-  await expect(labListing.locator('[data-terminal-entry-kind="experiment"]')).toHaveCount(1);
+  await expect(labListing.locator('[data-terminal-entry-kind="experiment"]')).toHaveCount(2);
+  await expect(labListing.getByRole('link', { name: 'majo/' })).toHaveAttribute('href', '/lab/majo/');
   await expect(labListing.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await submit(page, 'ls ~/blog');
   await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
@@ -432,9 +433,10 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.locator('.terminal-record').last()).toContainText('Try "open lab/nerv".');
 
   await submit(page, 'ls lab');
+  await expect(transcript.locator('.terminal-record').last().getByRole('link', { name: 'majo/' })).toHaveAttribute('href', '/lab/majo/');
   await expect(transcript.locator('.terminal-record').last().getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(transcript).toContainText('NERV');
-  await expect(announcer).toHaveText('1 experiments listed.');
+  await expect(announcer).toHaveText('2 experiments listed.');
   await submit(page, 'open lab/unlisted');
   await expect(transcript).toContainText('No listed experiment named "lab/unlisted"');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();

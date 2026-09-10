@@ -125,8 +125,12 @@ test('lab index is a JavaScript-free semantic catalog with native navigation', a
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();
   await expect(main.getByRole('heading', { level: 2, name: 'NERV' })).toBeVisible();
-  await expect(main.locator('.content-meta')).toHaveText('landing · astro · fan-work');
+  const nervEntry = main.locator('li').filter({ has: main.getByRole('heading', { level: 2, name: 'NERV' }) });
+  await expect(nervEntry.locator('.content-meta')).toHaveText('landing · astro · fan-work');
   await expect(main.getByRole('link', { name: 'Open NERV' })).toHaveAttribute('href', '/lab/nerv/');
+  const majoEntry = main.locator('li').filter({ has: main.getByRole('heading', { level: 2, name: 'majo' }) });
+  await expect(majoEntry.locator('.content-meta')).toHaveText('landing · astro · carousel · music');
+  await expect(main.getByRole('link', { name: 'Open majo' })).toHaveAttribute('href', '/lab/majo/');
   await expect(page.locator('script')).toHaveCount(0);
 
   await page.keyboard.press('Tab');

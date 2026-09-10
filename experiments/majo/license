@@ -1,0 +1,9 @@
+majo static Experiment source
+================================
+
+The HTML, Astro, CSS, and browser controller in this directory are original
+Firefly work and are provided under the repository license. The files under
+public/media/ are owner-supplied local inputs and are not covered by this
+notice. Astro emits them below dist/media/ for the assembled
+/lab/majo/media/ mount. Their redistribution rights must be reviewed by the
+owner before a public release.

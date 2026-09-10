@@ -20,6 +20,15 @@ test('assembled release preserves cross-application navigation and mounted 404 o
   expect((await page.request.get(readerScript!)).status()).toBe(200);
   await page.goto('/lab/');
   await expect(page.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();
+  const majo = page.getByRole('link', { name: /Open majo/u });
+  await expect(majo).toHaveAttribute('href', '/lab/majo/');
+  await majo.click();
+  await expect(page).toHaveURL(/\/lab\/majo\/$/u);
+  await expect(page.locator('[data-majo-page]')).toHaveAttribute('data-majo-ready', 'true', { timeout: 60_000 });
+  await expect(page.locator('[data-majo-slide]')).toHaveCount(3);
+  expect((await page.request.get('/lab/majo/media/images/slide-01.jpg')).status()).toBe(200);
+  expect((await page.request.get('/lab/majo/media/music/track-01.mp3')).status()).toBe(200);
+  await page.goto('/lab/');
   const nerv = page.getByRole('link', { name: /Open NERV/u });
   await expect(nerv).toHaveAttribute('href', '/lab/nerv/');
   await nerv.click();

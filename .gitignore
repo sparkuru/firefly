@@ -5,6 +5,10 @@ artifacts/
 .devhome/
 experiments/nerv/playwright-report/
 experiments/nerv/test-results/
+experiments/majo/public/media/
+experiments/majo/playwright-report/
+experiments/majo/test-results/
+experiments/majo/dist/
 apps/site/playwright-report/
 apps/site/test-results/
 apps/site/.generated-content/

@@ -1,0 +1,24 @@
+{
+  "name": "@firefly/experiment-majo",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev --open /lab/majo/",
+    "start": "astro dev",
+    "check": "astro check",
+    "build": "node scripts/build.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "preview": "astro preview",
+    "start:e2e": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.6",
+    "astro": "^4.16.18",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0"
+  }
+}

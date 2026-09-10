@@ -214,8 +214,12 @@ main() {
 	probe_status 200 /posts/
 	probe_status 200 /posts/ai/llm-workflow-with-trellis/
 	probe_status 200 /lab/
+	probe_status 301 /lab/majo
+	probe_status 200 /lab/majo/
 	probe_status 301 /lab/nerv
 	probe_status 200 /lab/nerv/
+	probe_status 200 /lab/majo/media/images/slide-01.jpg
+	probe_status 200 /lab/majo/media/music/track-01.mp3
 	probe_status 404 /missing/
 	probe_status 404 /lab/nerv/missing/
 	probe_status 200 /fonts/JetBrainsMono-Regular-v2.304.woff2
