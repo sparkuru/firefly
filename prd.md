@@ -29,7 +29,7 @@
 | 2026-08-20 观察 | M5 完成时的 authored workspace 包含 95 篇 post、8 个 page；原始 SQL 的 93/7 仍作为历史输入保留 | 95/8 是当时工作区快照，不是持久架构或验收常量；每次发布以明确选择的受管 Markdown 与页面清单为准 |
 | 已确认 | M0–M5 已完成；M6 本地 TLS 方案已 superseded，M7 反向隧道 staging rehearsal 已完成 | M7 是当前主线的 staging 证据，M6 仅保留历史记录 |
 | 已确认 | v1.0.0 静态发布已通过构建、仓库候选汇编、部署侧不可变 release 切换、公开路由、错误页、安全响应头和静态缓存验证 | 仓库负责生成并验证静态 publication；外部不可变 release 与 rollback 切换由部署环境负责 |
-| 已实现、待启用决策 | M5.1 动态评论与身份服务已实现并完成私有运行时 provisioning；Unicode 文章路由兼容边界已关闭 | 跟踪配置仍保持 `comments.enabled = false`；公开启用、SMTP 和生产浏览器验证必须另行授权，主站不得改为 SSR 或直读数据库 |
+| 2026-09-05 已完成 | M5.1 动态评论与身份服务已完成生产启用、静态发布及受控公开提交、邮件送达和验证 smoke；Unicode 文章路由兼容边界已关闭 | 生产 owner-local 配置已启用，跟踪示例配置仍默认禁用；主站继续静态生成，不直读数据库。证据见 `.trellis/tasks/archive/2026-09/08-30-public-comments-enablement/evidence.md` |
 
 数据库备份保存在新工作区的 `.private/backups/`，由 `.gitignore` 排除。公开仓库只记录备份存在、时间和校验状态，不记录数据库内容。
 
@@ -515,7 +515,7 @@ publication-root/
 | M3 Terminal MVP | Terminal Presentation 与内容索引 | complete | 核心命令、静态 fallback、键盘和浏览器回归通过 |
 | M4 Experiment pipeline | manifest 校验、独立构建、发布汇编 | complete | `nerv` 挂载成功，普通 bundle 无污染，汇编与运行时检查通过 |
 | M5 全量迁移 | 受管 authored workspace、私有 memo/comment handoff、资源与原生 folder routes | complete | 2026-08-20 的 95/8 工作区快照通过当时清单、正文、元数据、资源和隐私边界验证；93/7 仅是历史 SQL 输入基线，后续库存按所选 workspace 推导 |
-| M5.1 动态评论与身份服务 | 私有写入/审核服务、静态公开读模型、发布与路由兼容边界 | production_provisioned_pending_enablement | 实现、私有 provisioning、route catalog 与 Unicode canonical route 兼容已完成；跟踪配置保持禁用，公开启用仍需单独授权 |
+| M5.1 动态评论与身份服务 | 私有写入/审核服务、静态公开读模型、发布与路由兼容边界 | complete | 2026-09-05 已完成生产启用、静态发布、SMTP 送达与受控公开提交/验证 smoke；测试记录与队列已清理，生产 owner-local 配置启用，跟踪示例仍默认禁用 |
 | M6 Staging | 本地 TLS 方案 | superseded / historical | 原计划被 M7 实际 staging rehearsal 取代，记录保留但不再是当前路径 |
 | M7 Staging rehearsal | 反向隧道、边缘代理、静态发布验证与 rollback | complete | 公开/direct-origin 路由、TLS、Basic Auth、浏览器和独立清理证据已归档 |
 | P0 Production | v1.0.0 不可变发布与原子切换 | complete | 构建、汇编、promotion、公开路由、错误页、安全头、缓存和 rollback 目标均已验证 |
@@ -569,7 +569,7 @@ publication-root/
 - Experiment 是可独立构建的完整静态子项目，统一挂载到 `/lab/<id>/`。
 - `nerv` 是首个 Experiment，也是其唯一公开身份。
 - Experiment 可保留自己的框架版本和 lockfile。
-- M5 不公开历史评论；M5.1 已实现公开读模型、新评论、审核与身份服务，但跟踪配置默认禁用，公开启用仍是独立 owner 决策。
+- M5 不公开历史评论；M5.1 已实现公开读模型、新评论、审核与身份服务，并于 2026-09-05 完成 owner 授权的生产启用。跟踪示例配置仍默认禁用，生产启用通过 owner-local 配置维护。
 - M5 保留 `views`、`stars`、`commentsNum` 为私有历史统计；未来展示必须另行设计 schema、隐私边界和回归覆盖。
 - 私有数据库备份不进入公开 Git。
 - M7 是当前主线认可的 staging rehearsal；P0 生产发布已经完成，生产只消费通过 guard 的静态 publication。
@@ -582,7 +582,7 @@ publication-root/
 - 分类关系按源结构生成文章文件夹；使用中的 tags 是否公开由元数据候选审查决定。
 - `cross.php` 与 `files.php` 先作为 page/template 候选记录，不自动生成 `/timeline/` 或 `/files/` 特殊路由。
 - 原站本地上传资源迁入受管静态资源，可信第三方链接保留为外链，其余逐项记录例外；当前 v1.0.0 不因未迁移的历史特殊语义回退到 CMS。
-- M5.1 已按独立写 API/数据库、审核与静态公开读模型边界实现和 provision，且 Unicode canonical post route 兼容已完成；主站继续静态生成且不直读数据库。SMTP、受控生产浏览器验证与公开启用必须在后续 guided 决策中单独授权。
+- M5.1 已按独立写 API/数据库、审核与静态公开读模型边界完成生产启用，且 Unicode canonical post route 兼容、SMTP 送达与受控公开提交/验证已通过归档验收；主站继续静态生成且不直读数据库。凭据/密钥轮换与保留旧数据库的恢复仍由 owner 后续处理；旧库保留副本不等同于已验证备份。
 - 仓库 owner、canonical 元数据和未来内容统计展示属于独立产品决策，不写入当前生产部署细节。
 
 ## 20. 技术依据

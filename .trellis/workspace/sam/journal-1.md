@@ -1324,3 +1324,9 @@ Terminal 文档补全现在同时识别 metadata display title 和物理路径�
 ### Next Steps
 
 - Playwright 当前因 node:22-alpine 缺少 glibc 动态加载器无法启动 Chromium；代码与测试文件已就绪，可在带 glibc 的浏览器运行时重跑。
+
+### Follow-up — 2026-09-08
+
+- 上述浏览器阻塞已关闭：使用项目锁定的 Playwright Noble 镜像与仓库 content fixture，站点检查零诊断、构建 28 页、静态测试 17/17 通过。
+- 首轮浏览器回归发现目录链接模糊匹配与 cwd 变化后输入框名称定位失效两处测试问题；修正定位并保留行为断言后，桌面/移动端 Terminal 回归 76/76 通过，无重试。可复现命令记录于原 completion-display-name 归档 PRD 的 Follow-up verification。
+- 主线与根 PRD 已根据 09-05 归档验收同步为 M5.1 生产启用完成，区分生产 owner-local 启用与跟踪示例默认禁用。本轮未重新探测或修改生产环境；按用户要求未创建新任务。

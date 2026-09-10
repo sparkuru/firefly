@@ -602,7 +602,7 @@ test('ls and tree entries expose document links and safe directory cd links', as
 
   await submit(page, 'ls ~/blog/posts');
   const lsListing = transcript.locator('.terminal-record').last().locator('.terminal-entry-list');
-  const lsDirectory = lsListing.getByRole('link', { name: 'ai/' });
+  const lsDirectory = lsListing.getByRole('link', { name: 'ai/', exact: true });
   await expect(lsDirectory).toHaveAttribute('href', '/posts/ai/');
   await expect(lsDirectory).toHaveAttribute('data-terminal-cd-path', '/posts/ai');
   await lsDirectory.click();
@@ -614,7 +614,7 @@ test('ls and tree entries expose document links and safe directory cd links', as
   await submit(page, 'tree ~/blog');
   const tree = transcript.locator('.terminal-record').last().locator('.terminal-tree');
   await expect(tree.getByRole('link', { name: 'posts/' })).toHaveAttribute('href', '/posts/');
-  const treeDirectory = tree.getByRole('link', { name: 'ai/' });
+  const treeDirectory = tree.getByRole('link', { name: 'ai/', exact: true });
   await treeDirectory.focus();
   await treeDirectory.press('Enter');
   await expect(page.locator('.terminal-command-row .terminal-prompt')).toHaveText(terminalPrompt('~/blog/posts/ai'));
@@ -898,7 +898,8 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
 
 test('the prompt owns unmodified Tab while completion only rewrites safe matches', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByRole('textbox', { name: terminalPromptName() });
+  const input = page.locator('#terminal-command');
+  await expect(input).toHaveAccessibleName(terminalPromptName());
   await input.focus();
   await input.fill('hel');
   await input.press('Tab');
@@ -954,11 +955,13 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   expect(learningFilename).toBeTruthy();
   await input.fill('cd ai');
   await input.press('Enter');
+  await expect(input).toHaveAccessibleName(terminalPromptName('~/blog/posts/ai'));
   await input.fill('cat LEARN');
   await input.press('Tab');
   await expect(input).toHaveValue(`cat ${learningFilename}`);
   await input.fill('cd ..');
   await input.press('Enter');
+  await expect(input).toHaveAccessibleName(terminalPromptName());
 
   for (const unsafe of ['cat ../ai/llm-w', 'cat ./nested/../ai/llm-w', 'cat /ai/llm-w', 'cat /posts/does-not-exist', 'cat https://example.com/llm-w', 'cat /etc/pass', 'cat ~', 'cat ~/', 'cat cafe\u0301.md', 'cat control\u0001path']) {
     await input.fill(unsafe);

@@ -50,3 +50,31 @@ resolved by `cat`, `vim`, and `ls`.
 - Terminal Playwright was attempted, but the `node:22-alpine` test container
   cannot launch the downloaded glibc Chromium binary (`ENOENT` for the dynamic
   loader); all 76 failures occur before a test starts.
+
+### Follow-up verification — 2026-09-08
+
+The browser blocker is resolved with the repository's pinned
+`mcr.microsoft.com/playwright:v1.62.0-noble` image and `SAM_IPC=host`.
+The tracked content fixture build passed Astro check with zero diagnostics,
+generated 28 pages, and passed all 17 static-output checks. The existing two
+CSS optimizer notices for `::highlight` remain unrelated.
+
+The first browser run passed 72/76 and exposed two test locator defects on
+both desktop and mobile: the `ai/` directory substring also matched document
+accessible paths, and the prompt locator retained the old cwd-dependent name
+after `cd ai`. Directory matching is now exact; the prompt uses its stable ID
+with explicit accessible-name assertions before and after cwd changes.
+The complete Terminal rerun passed 76/76 in 18.3 seconds without retries,
+including the case-insensitive title completion and physical-path assertion.
+No product runtime code changed in this follow-up.
+
+Reproduce from the repository root:
+
+```sh
+FIREFLY_CONTENT_ROOT="$PWD/content" \
+  SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+  ./sam npm --prefix apps/site run build
+FIREFLY_CONTENT_ROOT="$PWD/content" \
+  SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+  ./sam npm --prefix apps/site run test:e2e -- terminal.spec.ts --workers=2
+```

@@ -6,7 +6,7 @@
 - **Objective:** Reconcile Firefly's authoritative documentation and incrementally reduce validation, comments-contract, X Core, adapter, and release-quality risks without changing the working static-publication architecture.
 - **Mode:** guided
 - **Serial authorization:** none
-- **Owner decision:** 2026-08-30 — The P1 repository-audit remediation parent and all six ordered children are complete and archived. The release/observability child delivered the owner-approved private comments observability contract and explicitly deferred deployment crash recovery to the operator-owned boundary. M5.1 remains disabled in tracked configuration, and public enablement remains a separate guided decision. M7 remains the historical staging rehearsal; M6 remains superseded.
+- **Owner decision:** The P1 repository-audit remediation parent and all six ordered children were complete and archived on 2026-08-30. The separately authorized M5.1 public enablement task was completed and archived on 2026-09-05: production owner-local activation, static promotion, SMTP delivery, and controlled public submission/verification passed. Tracked example configuration remains disabled by default. Deployment crash recovery remains operator-owned. M7 remains the historical staging rehearsal; M6 remains superseded.
 
 ## Continuation Policy
 
@@ -25,7 +25,7 @@
 | 4 | `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface` — M3 Terminal interface | complete | The independently green shell-first home, inline document rendering, static recovery path, JavaScript-free canonical article, and targeted desktop review were approved, committed, and archived. |
 | 5 | `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline` — M4 Experiment pipeline | complete | Implementation, independent full-scope review/fixes, durable specs, browser evidence, production-shaped container probes, and focused owner review are complete; finish-work archives the approved task in this session. |
 | 6 | `.trellis/tasks/archive/2026-08/08-13-m5-content-filesystem-vim-reader` — M5 content-filesystem/Vim-reader prelude | complete | Owner-approved implementation, independent review, focused screenshots, commit, and archival are complete. |
-| 7 | M5.1 — dynamic comments and identity service | production_provisioned_pending_enablement | The service, static consumer, publication boundary, private provisioning, release-bound route catalog, and Unicode canonical-route compatibility are implemented and verified. Tracked configuration remains disabled by default. SMTP delivery, controlled public browser validation, and public enablement remain separate owner-authorized gates; the main site must not become SSR or directly read the database. |
+| 7 | M5.1 — dynamic comments and identity service | complete | The separately authorized public enablement task completed on 2026-09-05. Production owner-local activation, static promotion, SMTP delivery, and controlled public submission/verification passed; test records and queue were cleaned. Tracked example configuration remains disabled by default; the main site stays static and does not read the database. |
 | 8 | `.trellis/tasks/archive/2026-08/08-15-m7-reverse-tunnel-staging` — M7 reverse-tunnel staging rehearsal | complete | Owner-authorized Basic Auth rehearsal passed public/direct-origin, TLS, static, and browser checks; independent cleanup found no remote Nginx/auth/port or local runtime residue. This is the accepted staging verification for the current mainline. |
 | 9 | `.trellis/tasks/archive/2026-08/08-20-production-rollout-record` — Production rollout | complete | The approved v1.0.0 release passed guarded build/staging/integrity/promotion checks and public route, error, security-header, and static-asset cache verification. The prior immutable release remains the rollback target; detailed operational values are local-only. |
 | 10 | `.trellis/tasks/archive/2026-08/08-27-repository-audit-remediation/` — P1 repository audit remediation | complete | The Unicode compatibility prerequisite, documentation-convergence, deterministic-validation, comments-contract, X Core/route, adapter, and release/observability children are archived. |
@@ -34,6 +34,16 @@
 
 ## Evidence
 
+- Public comments enablement completion (2026-09-05):
+  `.trellis/tasks/archive/2026-09/08-30-public-comments-enablement/evidence.md`
+  and commit `e28ad4f` supersede the pending-enablement status in the earlier
+  evidence below. The exact 93/93 release/catalog pair, enabled empty epoch-0
+  publication, static release and blog mirror passed verification. Controlled
+  public submission, mail delivery, verification, test-record deletion, queue
+  cleanup, and runtime-health checks passed. Tracked examples remain disabled;
+  production activation is owner-local. Credential/key rotation remains an
+  owner follow-up. The prior database is retained for owner-led recovery and
+  is not a verified backup; it was not imported into the new empty store.
 - Product scope and milestone order: `prd.md`
 - Completed Trellis Plus initialization: `.trellis/tasks/archive/2026-08/08-12-trellis-plus-init/`
 - Completed prerequisite: `.trellis/tasks/archive/2026-08/00-bootstrap-guidelines/` contains the checked frontend-spec bootstrap task.
@@ -150,9 +160,9 @@ cleanup, and release/observability hardening; all six deliverables are now
 archived. No next product task is created automatically: guided mode requires
 a fresh owner decision after Project Pulse.
 
-Public comments enablement is intentionally outside that remediation sequence.
-M5.1 implementation, private provisioning, route-catalog reconciliation, and
-Unicode route compatibility have passed, while tracked configuration remains
-disabled. SMTP inputs, controlled public browser gates, and public enablement
-may proceed only through a separate owner-approved task. Historic counters
+Public comments enablement was completed through the separate owner-approved
+task archived on 2026-09-05. Production owner-local activation is enabled;
+tracked example configuration remains disabled by default. Credential/key
+rotation, retained-database recovery, and deployment crash recovery remain
+owner-operated follow-ups. No next product task is active. Historic counters
 remain private unless another task defines their schema and presentation.
