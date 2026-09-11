@@ -342,6 +342,11 @@ consumes the resulting ordinary `dist/` tree through the manifest contract.
   build error. A missing required output is a build error.
 - Publication must still contain only the copied static files and local
   references; local media must not change the site catalog trust boundary.
+- Progressive client enhancement must not begin by hiding a server-rendered
+  element that was initially visible. If a controller reveals a node after a
+  delay, the SSR state must already match that hidden state (for majo, the
+  `data-majo-enhanced="false"` selector hides quote index `1`); the controller
+  then adds its visible state exactly once.
 
 ### 4. Validation & Error Matrix
 
@@ -371,7 +376,8 @@ consumes the resulting ordinary `dist/` tree through the manifest contract.
 - Package build: assert every declared input/output and the required HTML pages.
 - Package browser E2E: assert all local image/audio requests resolve on the
   same origin, slide/audio controls work, reduced motion works, and no-JS
-  first-slide content remains usable.
+  first-slide content remains usable; delayed first-paint text begins in its
+  declared hidden state and does not perform a visible-to-hidden flash.
 - Manifest/publication E2E: assert `/lab/<id>/` navigation and representative
   media routes after assembly.
 - Runtime packaging: compare publication/release/image inventories and probe a
@@ -389,6 +395,20 @@ const src = localFileExists ? localFile : 'https://cdn.example.invalid/fallback.
 const source = await requireRegularContainedPublicMediaFile('music/track-01.mp3');
 await buildAstro();
 await verifyOutput('media/music/track-01.mp3');
+```
+
+For progressive first-slide text, this same rule applies to the initial DOM:
+
+```css
+/* Correct: SSR and the enhanced controller agree before the delayed reveal. */
+.majo-page[data-majo-enhanced='false'] [data-majo-quote-index='1'] {
+  opacity: 0;
+}
+
+/* Wrong: the first controller mutation hides a quote that SSR exposed. */
+.majo-page[data-majo-enhanced='true'] [data-majo-quote] {
+  opacity: 0;
+}
 ```
 
 ## Reference Files

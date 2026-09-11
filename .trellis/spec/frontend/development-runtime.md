@@ -16,7 +16,7 @@ direct host npm, and raw Docker are not project validation paths.
 
 ```bash
 ./sam <command> [arguments...]
-./dev.sh [start|up|preview|build|down|stop]
+./dev.sh [start|up|dev|preview|build|down|stop]
 
 WEB_HOST_PORT=4322 ./dev.sh
 WEB_HOST_PORT=4322 ./dev.sh preview
@@ -99,7 +99,7 @@ syntax check.
 | `FIREFLY_SITE_CONFIG_PATH` | Optional repository-relative `.toml` override for contained build/test projections. `sam` requires an existing readable file whose real path stays inside the repository, then passes the same relative path into the container; the site loader additionally rejects a symlinked file and unsafe segments. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
-| Root development entry | `dev.sh start`/`up` validates the site Astro dependency, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, materializes the configured workspace, and starts `apps/site` through `astro dev` without a publication build; source changes hot-reload. `dev.sh preview`/`build` is the explicit assembled-publication server path. |
+| Root development entry | `dev.sh`/`start`/`up` verifies the existing assembled publication output, stops its exact labeled containers, removes the generated `apps/site/.astro/dev.json` lock, and serves that output at `/` without rebuilding; `/lab/majo/` is therefore available by default after a successful `build:m4`. `dev.sh dev` is the explicit main-site-only `astro dev` hot-reload path; `preview`/`build` rebuild and serve the assembled publication. |
 | Package-local development | `npm run dev:nerv` is the autonomous NERV hot-development entry at `/lab/nerv/`; it must not be presented as the root publication because its Astro base does not own `/` or `/lab/`. |
 | Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
 | Publication dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
@@ -124,9 +124,10 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | wrapped command fails | preserve output and exit code |
 | generated Astro dev lock is stale after a container stop | remove only `apps/site/.astro/dev.json` before starting and during teardown; do not pass `astro dev --force`, because a container PID can collide with the stale PID and terminate the new Astro process |
 | `dev.sh down` finds no labeled container | report none and succeed |
-| a required M5 package binary is missing | fail before building and name the locked install delegate as recovery |
+| a required M4 package binary is missing in `preview`/`build` mode | fail before building and name the locked install delegate as recovery |
+| the assembled publication output is missing for default `dev.sh`/`start`/`up` | fail before stopping existing services and tell the developer to run `./sam npm run build:m4` or `./dev.sh preview` |
 | root publication build fails | preserve the wrapped failure, do not start the web service, and allow exact `sam.scope=dev.sh` cleanup |
-| a developer needs immutable publication evidence | use `dev.sh preview`/`build`; the default `dev.sh` Astro server is for fast visual review and is not build/static-output evidence |
+| a developer needs fast main-site hot reload | use `dev.sh dev`; the default `dev.sh` serves the existing assembled publication without rebuilding, while browser/static evidence still uses the dedicated build and Playwright gates |
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
 | browser image/server/fixture cannot start | record exact unavailable error; never report pass |
 | browser assertion fails | preserve report/screenshot/trace and review PRD before changing code/test |
@@ -148,10 +149,12 @@ so Playwright owns and terminates that preview process.
 
 - Good: the site build/static scan passes, then focused Playwright uses the
   matching Noble image, host IPC, and an owned preview of the unchanged artifact.
-- Good: `FIREFLY_CONTENT_ROOT=/absolute/path/to/blog WEB_HOST_PORT=4322 ./dev.sh`
-  uses exact read-only content mounts and starts the Astro development server;
-  the same host port can be checked for `/` and native content links while
-  source changes hot-reload.
+- Good: after `./sam npm run build:m4`, `WEB_HOST_PORT=4322 ./dev.sh`
+  validates the existing assembled output, does not rebuild it, and serves `/`,
+  `/lab/`, and listed Experiment mounts including `/lab/majo/`.
+- Good: `FIREFLY_CONTENT_ROOT=/absolute/path/to/blog WEB_HOST_PORT=4322 ./dev.sh dev`
+  uses exact read-only content mounts and starts the main-site Astro
+  development server for fast source-change hot reload.
 - Good: `SAM_BIND_HOST=127.0.0.1 WEB_HOST_PORT=4322 ./dev.sh preview` keeps the
   assembled publication preview loopback-only when LAN access is not wanted;
   the default `dev.sh` binding is `0.0.0.0` for review from another host.
@@ -191,9 +194,12 @@ shellcheck sam dev.sh package-runtime.sh verify.sh
 shfmt -d sam dev.sh package-runtime.sh verify.sh
 ./verify.sh --help
 ./sam node --version
-# Fast visual review; no M5 build.
+# Build once, then serve the complete local publication without rebuilding.
+./sam npm run build:m4
 WEB_HOST_PORT=4322 ./dev.sh
-# Immutable assembled-publication preview; performs the M5 build.
+# Fast main-site-only hot reload; no publication build.
+WEB_HOST_PORT=4322 ./dev.sh dev
+# Explicit assembled-publication rebuild and preview.
 WEB_HOST_PORT=4322 ./dev.sh preview
 # From another shell: assert 200 and expected titles/links at /, /lab/, /lab/nerv/.
 WEB_HOST_PORT=4322 ./dev.sh down

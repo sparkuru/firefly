@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# dev.sh - Run the Astro development server through ./sam.
+# dev.sh - Serve the assembled publication through ./sam.
 #
-# Default: http://${SAM_BIND_HOST:-0.0.0.0}:${WEB_HOST_PORT:-4321}/
-# Preview: ./dev.sh preview builds and serves the assembled publication.
+# Default: ./dev.sh serves the existing assembled publication without rebuilding.
+# Hot reload: ./dev.sh dev starts the main-site Astro development server.
+# Build: ./dev.sh preview rebuilds and serves the assembled publication.
 #
 # Service: http://${SAM_BIND_HOST:-0.0.0.0}:${WEB_HOST_PORT:-4321}/
-# Requires Docker, ./sam, and dependencies installed with:
+# Requires Docker and ./sam. The preview/build modes additionally require
+# dependencies installed with:
 #   ./sam npm run install:m4
 set -Eeuo pipefail
 
@@ -32,7 +34,7 @@ readonly ASTRO_DEV_LOCK_PATH
 service_pids=()
 
 usage() {
-	printf 'Usage: %s [start|up|preview|build|down|stop]\n' "${SCRIPT_NAME}" >&2
+	printf 'Usage: %s [start|up|dev|preview|build|down|stop]\n' "${SCRIPT_NAME}" >&2
 }
 
 require_command() {
@@ -94,6 +96,28 @@ ensure_dev_dependencies() {
 	return 0
 }
 
+ensure_publication_output() {
+	local -a required_files=(
+		"dist/index.html"
+		"dist/lab/index.html"
+		"dist/lab/majo/index.html"
+		"dist/lab/nerv/index.html"
+		"tooling/assemble-publication/dist/src/serve-release.js"
+	)
+	local file
+
+	for file in "${required_files[@]}"; do
+		if [[ ! -f "${REPO_ROOT}/${file}" ]]; then
+			printf '[dev.sh] assembled publication is missing: %s\n' "${REPO_ROOT}/${file}" >&2
+			printf '[dev.sh] build it first with: ./sam npm run build:m4\n' >&2
+			printf '[dev.sh] or run: ./dev.sh preview\n' >&2
+			return 1
+		fi
+	done
+
+	return 0
+}
+
 run_service() {
 	local name=$1
 	shift
@@ -112,10 +136,12 @@ run_service() {
 start_services() {
 	local mode=$1
 	local status=0
-	local -a required_binaries=("apps/site/node_modules/.bin/astro")
+	local content_root=""
+	local -a required_binaries=()
 
-	if [[ "${mode}" == preview ]]; then
-		local content_root=${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}
+	case "${mode}" in
+	publication-build)
+		content_root=${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}
 		required_binaries=(
 			"tooling/validate-experiments/node_modules/.bin/tsc"
 			"packages/x-core/node_modules/.bin/tsc"
@@ -124,25 +150,42 @@ start_services() {
 			"tooling/assemble-publication/node_modules/.bin/tsc"
 			"apps/site/node_modules/.bin/astro"
 			"experiments/nerv/node_modules/.bin/astro"
+			"experiments/majo/node_modules/.bin/astro"
 		)
-	fi
+		;;
+	dev)
+		required_binaries=("apps/site/node_modules/.bin/astro")
+		;;
+	publication) ;;
+	*)
+		printf '[dev.sh] unsupported service mode: %s\n' "${mode}" >&2
+		return 2
+		;;
+	esac
 
 	require_command docker
 	[[ -x "${REPO_ROOT}/sam" ]] || {
 		printf '[dev.sh] executable not found: %s/sam\n' "${REPO_ROOT}" >&2
 		return 1
 	}
-	ensure_dev_dependencies "${required_binaries[@]}"
+	if [[ "${mode}" == publication ]]; then
+		ensure_publication_output
+	else
+		ensure_dev_dependencies "${required_binaries[@]}"
+	fi
 
 	cd "${REPO_ROOT}"
 	trap cleanup INT TERM EXIT
 	down_services quiet
 	rm -f -- "${ASTRO_DEV_LOCK_PATH}"
 
-	if [[ "${mode}" == preview ]]; then
-		printf '[dev.sh] building the assembled publication for preview\n' >&2
+	if [[ "${mode}" == publication-build ]]; then
+		printf '[dev.sh] building the assembled publication\n' >&2
 		FIREFLY_CONTENT_ROOT="${content_root}" SAM_SCOPE=dev.sh ./sam npm run build:m4
-		printf '[dev.sh] publication preview: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
+	fi
+
+	if [[ "${mode}" == publication || "${mode}" == publication-build ]]; then
+		printf '[dev.sh] assembled publication: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
 		run_service web \
 			./sam env PUBLICATION_PORT="${WEB_CONTAINER_PORT}" \
 			npm --prefix tooling/assemble-publication run start:e2e
@@ -165,10 +208,13 @@ main() {
 
 	case "${command}" in
 	start | up)
+		start_services publication
+		;;
+	dev)
 		start_services dev
 		;;
 	preview | build)
-		start_services preview
+		start_services publication-build
 		;;
 	down | stop)
 		cd "${REPO_ROOT}"

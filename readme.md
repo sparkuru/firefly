@@ -86,8 +86,12 @@ The default clone path is:
 The build recreates ignored generated directories, including
 apps/site/.generated-content/, package dist/ folders, and the assembled
 publication dist/. They do not need to be created by hand. For local
-development use ./dev.sh after installation; ./dev.sh preview serves the
-assembled static publication.
+development use ./dev.sh after a completed build; it immediately serves the
+existing complete assembled publication, including /lab/majo/, without
+rebuilding it. If the assembled output is missing, the command prints the
+build command to run. Use ./dev.sh dev for the faster main-site-only Astro
+hot-reload server, or ./dev.sh preview when an explicit assembled-publication
+rebuild is needed.
 
 For the production-shaped Compose runtime, build the publication first and
 then start the default service definition:

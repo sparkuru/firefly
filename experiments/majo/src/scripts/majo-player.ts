@@ -1,23 +1,35 @@
 interface MajoTrack {
-  readonly title: string;
-  readonly subtitle: string;
+  readonly label: string;
+  readonly backgroundCredit: {
+    readonly label: string;
+    readonly href: string;
+  };
   readonly src: string;
 }
 
 const TRACKS: readonly MajoTrack[] = Object.freeze([
   Object.freeze({
-    title: 'Reminiscence (Genshin Impact Main Theme Var.)',
-    subtitle: '远方的回声',
+    label: '陈致逸,HOYO-MiX - Reminiscence (Genshin Impact Main Theme Var.) 追忆',
+    backgroundCredit: Object.freeze({
+      label: 'Cost',
+      href: 'https://www.pixiv.net/artworks/98156405'
+    }),
     src: '/lab/majo/media/music/track-01.mp3'
   }),
   Object.freeze({
-    title: 'Faraway Solicitude',
-    subtitle: '远方的牵挂',
+    label: '陈致逸,HOYO-MiX - Faraway Solicitude 遥远的嘱托',
+    backgroundCredit: Object.freeze({
+      label: '_',
+      href: '#'
+    }),
     src: '/lab/majo/media/music/track-02.mp3'
   }),
   Object.freeze({
-    title: 'The Fading Stories (Qingce Night)',
-    subtitle: '渐远的故事 · 碧水之夜',
+    label: '陈致逸,HOYO-MiX - The Fading Stories (Qingce Night) 不再年轻的村庄 (轻策夜间)',
+    backgroundCredit: Object.freeze({
+      label: '_',
+      href: '#'
+    }),
     src: '/lab/majo/media/music/track-03.mp3'
   })
 ]);
@@ -33,7 +45,6 @@ const IMAGE_ASSETS = Object.freeze([
 const FADE_DURATION_MS = 1500;
 const ZOOM_DURATION_MS = 10_000;
 const SECOND_QUOTE_DELAY_MS = 2000;
-const SCENE_LABELS = Object.freeze(['first light', 'after rain', 'quiet return']);
 
 interface MajoElements {
   readonly page: HTMLElement;
@@ -46,9 +57,8 @@ interface MajoElements {
   readonly playIcon: HTMLElement;
   readonly progress: HTMLInputElement;
   readonly trackTitle: HTMLElement;
-  readonly trackSubtitle: HTMLElement;
-  readonly scene: HTMLElement;
-  readonly counter: HTMLElement;
+  readonly bginfoLabel: HTMLElement;
+  readonly bginfoLink: HTMLAnchorElement;
   readonly audio: HTMLAudioElement;
   readonly audioStatus: HTMLElement;
   readonly quotes: readonly HTMLElement[];
@@ -77,9 +87,8 @@ function getElements(): MajoElements | null {
     playIcon: getRequired<HTMLElement>(page, '[data-majo-play-icon]'),
     progress: getRequired<HTMLInputElement>(page, '[data-majo-progress]'),
     trackTitle: getRequired<HTMLElement>(page, '[data-majo-track-title]'),
-    trackSubtitle: getRequired<HTMLElement>(page, '[data-majo-track-subtitle]'),
-    scene: getRequired<HTMLElement>(page, '[data-majo-scene]'),
-    counter: getRequired<HTMLElement>(page, '[data-majo-counter]'),
+    bginfoLabel: getRequired<HTMLElement>(page, '[data-majo-bginfo-label]'),
+    bginfoLink: getRequired<HTMLAnchorElement>(page, '[data-majo-bginfo-link]'),
     audio: getRequired<HTMLAudioElement>(page, '[data-majo-audio]'),
     audioStatus: getRequired<HTMLElement>(page, '[data-majo-audio-status]'),
     quotes: [...page.querySelectorAll<HTMLElement>('[data-majo-quote]')]
@@ -116,7 +125,7 @@ function setPlaying(elements: MajoElements, playing: boolean): void {
   elements.page.dataset.majoPlayerState = playing ? 'playing' : 'paused';
   elements.play.setAttribute('aria-pressed', String(playing));
   elements.play.setAttribute('aria-label', playing ? '暂停当前曲目' : '播放当前曲目');
-  elements.playIcon.textContent = playing ? 'Ⅱ' : '▶';
+  elements.playIcon.textContent = '';
   elements.audioStatus.textContent = playing ? '音乐正在播放' : '音乐已暂停';
 }
 
@@ -125,6 +134,7 @@ function updateProgress(elements: MajoElements): void {
   const ratio = duration === 0 ? 0 : Math.min(1, Math.max(0, elements.audio.currentTime / duration));
   const percentage = ratio * 100;
   elements.progress.value = percentage.toFixed(1);
+  elements.progress.style.setProperty('--majo-progress', `${percentage}%`);
   elements.progress.setAttribute('aria-valuetext', `${Math.round(percentage)}%`);
 }
 
@@ -141,8 +151,6 @@ function updateSlideState(elements: MajoElements, index: number): void {
     else button.removeAttribute('aria-current');
   });
   elements.page.dataset.majoActiveSlide = String(index);
-  elements.scene.textContent = SCENE_LABELS[index] ?? '';
-  elements.counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(elements.slides.length).padStart(2, '0')}`;
 }
 
 function resetZoom(elements: MajoElements, index: number, reducedMotion: boolean): void {
@@ -154,7 +162,7 @@ function resetZoom(elements: MajoElements, index: number, reducedMotion: boolean
     return;
   }
 
-  background.style.transform = 'scale(1.08)';
+  background.style.transform = 'scale(1.2)';
   void background.offsetWidth;
   background.style.transform = '';
   window.setTimeout(() => {
@@ -170,10 +178,13 @@ function updateTrack(elements: MajoElements, index: number, tryToPlay: boolean):
   elements.audio.pause();
   elements.audio.src = track.src;
   elements.audio.load();
-  elements.trackTitle.textContent = track.title;
-  elements.trackSubtitle.textContent = track.subtitle;
+  elements.trackTitle.textContent = track.label;
+  elements.bginfoLabel.textContent = 'Background by ';
+  elements.bginfoLink.textContent = track.backgroundCredit.label;
+  elements.bginfoLink.href = track.backgroundCredit.href;
   elements.page.dataset.majoCurrentTrack = String(index);
   elements.progress.value = '0';
+  elements.progress.style.setProperty('--majo-progress', '0%');
   elements.progress.setAttribute('aria-valuetext', '0%');
   setPlaying(elements, false);
   if (!tryToPlay) return;
