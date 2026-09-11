@@ -487,16 +487,27 @@ function appendHighlightedText(parent: HTMLElement, value: string, ranges: reado
 }
 
 function appendGrepMatch(parent: HTMLElement, match: TerminalGrepMatch): void {
+  if (match.separatorBefore === true) {
+    const separator = document.createElement('li');
+    separator.className = 'terminal-grep-separator';
+    separator.dataset.terminalGrepSeparator = '';
+    separator.textContent = '--';
+    parent.append(separator);
+  }
   const item = document.createElement('li');
-  item.className = 'terminal-grep-match';
+  item.className = match.context === true
+    ? 'terminal-grep-match terminal-grep-match--context'
+    : 'terminal-grep-match';
+  if (match.context === true) item.dataset.terminalGrepContext = '';
   const location = document.createElement('span');
   location.className = 'terminal-grep-location';
+  const delimiter = match.context === true ? '-' : ':';
   location.textContent = match.path === '-'
-    ? (match.lineNumber === undefined ? '' : `${match.lineNumber}:`)
-    : `${formatResourcePath(match.path)}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:`;
+    ? (match.lineNumber === undefined ? '' : `${match.lineNumber}${delimiter}`)
+    : `${formatResourcePath(match.path)}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}${delimiter}`;
   const line = document.createElement('span');
   line.className = 'terminal-grep-line';
-  appendHighlightedText(line, match.line, match.ranges);
+  appendHighlightedText(line, match.line, match.context === true ? [] : match.ranges);
   item.append(location, line);
   parent.append(item);
 }
@@ -688,7 +699,8 @@ function renderGrepEffect(effect: Extract<TerminalEffect, { kind: 'grep' }>, rec
   grep.className = 'terminal-grep';
   const summary = document.createElement('p');
   summary.className = 'terminal-grep-summary';
-  summary.textContent = effect.noResults ? `No matches for "${effect.pattern}".` : `${effect.matches.length} match${effect.matches.length === 1 ? '' : 'es'}`;
+  const matchCount = effect.matches.filter(({ context }) => context !== true).length;
+  summary.textContent = effect.noResults ? `No matches for "${effect.pattern}".` : `${matchCount} match${matchCount === 1 ? '' : 'es'}`;
   grep.append(summary);
   if (effect.matches.length > 0) {
     const list = document.createElement('ul');

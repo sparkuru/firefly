@@ -101,6 +101,10 @@ export interface TerminalGrepMatch {
   readonly lineNumber?: number;
   readonly line: string;
   readonly ranges: readonly (readonly [number, number])[];
+  /** Present only when this row is non-matching context. */
+  readonly context?: true;
+  /** Present only when a `--` separator precedes this row. */
+  readonly separatorBefore?: true;
 }
 
 export type TerminalEffect =
@@ -782,9 +786,19 @@ function formatHelpDetail(detail: TerminalHelpCommand): readonly string[] {
 }
 
 function formatGrepMatch(match: TerminalGrepMatch): string {
-  if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}:${match.line}`;
+  const delimiter = match.context === true ? '-' : ':';
+  if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}${delimiter}${match.line}`;
   const displayPath = formatResourcePath(match.path);
-  return `${displayPath}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
+  return `${displayPath}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}${delimiter}${match.line}`;
+}
+
+function formatGrepMatches(matches: readonly TerminalGrepMatch[]): readonly string[] {
+  const lines: string[] = [];
+  for (const match of matches) {
+    if (match.separatorBefore === true) lines.push('--');
+    lines.push(formatGrepMatch(match));
+  }
+  return Object.freeze(lines);
 }
 
 function formatFindMatch(entry: TerminalEntry): string {
@@ -802,7 +816,7 @@ function stdoutForEffect(effect: TerminalEffect): readonly string[] {
   if (effect.kind === 'links') return effect.links.length === 0
     ? Object.freeze(['No friend links.'])
     : Object.freeze(effect.links.map(formatFriendLink));
-  if (effect.kind === 'grep') return Object.freeze(effect.matches.map(formatGrepMatch));
+  if (effect.kind === 'grep') return formatGrepMatches(effect.matches);
   if (effect.kind === 'find') return Object.freeze(effect.entries.map(formatFindMatch));
   if (effect.kind === 'entries') return Object.freeze([
     ...effect.directories,
@@ -826,7 +840,10 @@ function announcementFor(effect: TerminalEffect): string {
     ? `${effect.groups.reduce((total, group) => total + group.commands.length, 0)} commands listed.`
     : `Help for ${effect.detail.name}.`;
   if (effect.kind === 'links') return effect.links.length === 0 ? 'No friend links.' : `${effect.links.length} friend link${effect.links.length === 1 ? '' : 's'} listed.`;
-  if (effect.kind === 'grep') return effect.noResults ? `No matches for "${effect.pattern}".` : `${effect.matches.length} grep match${effect.matches.length === 1 ? '' : 'es'} listed.`;
+  if (effect.kind === 'grep') {
+    const matchCount = effect.matches.filter(({ context }) => context !== true).length;
+    return effect.noResults ? `No matches for "${effect.pattern}".` : `${matchCount} grep match${matchCount === 1 ? '' : 'es'} listed.`;
+  }
   return effect.lines.at(-1) ?? '';
 }
 
@@ -1265,7 +1282,7 @@ function executeRshellStages(
     state = output.state;
     stdin = output.stdout;
     if (stage.redirect !== undefined) {
-      if (pure || index !== stages.length - 1 || (output.effect.kind !== 'lines' && output.effect.kind !== 'links' && output.effect.kind !== 'find')) return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
+      if (pure || index !== stages.length - 1 || (output.effect.kind !== 'lines' && output.effect.kind !== 'links' && output.effect.kind !== 'find' && output.effect.kind !== 'grep')) return rshellError(state, 'Only final text output can be redirected to rshell scratch.');
       const target = stage.target === undefined ? undefined : normaliseVirtualPath(stage.target, state.cwd);
       const name = target === undefined ? undefined : scratchName(target);
       if (name === undefined) return rshellError(state, 'Redirect only targets ~/blog/.rshell/tmp/<safe-name>.');

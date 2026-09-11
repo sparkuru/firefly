@@ -6,13 +6,15 @@ import { displayVirtualPath } from '../vfs/paths.js';
 import { textPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
 
-export const GREP_USAGE = 'grep [-inFwE] <pattern> [path ...]';
+export const GREP_USAGE = 'grep [-inFwE] [-A NUM] [-B NUM] [-C NUM] <pattern> [path ...]';
 export const GREP_SUMMARY = 'filter stdin or public text';
 
 const maxResources = 256;
 const maxLines = 50_000;
 const maxMatches = 240;
 const maxText = 24_000;
+const maxContext = 256;
+const emptyRanges: readonly (readonly [number, number])[] = Object.freeze([]);
 const GREP_EXAMPLES = Object.freeze([
   Object.freeze({ command: 'grep -w cat', description: 'match cat as a whole word' }),
   Object.freeze({ command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' }),
@@ -396,9 +398,19 @@ function literalMatcher(pattern: string, insensitive: boolean, wholeWord: boolea
 }
 
 function formatMatch(match: GrepMatch): string {
-  if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}:${match.line}`;
+  const delimiter = match.context === true ? '-' : ':';
+  if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}${delimiter}${match.line}`;
   const displayPath = displayVirtualPath(match.path);
-  return `${displayPath}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
+  return `${displayPath}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}${delimiter}${match.line}`;
+}
+
+function formatMatches(matches: readonly GrepMatch[]): readonly string[] {
+  const lines: string[] = [];
+  for (const match of matches) {
+    if (match.separatorBefore === true) lines.push('--');
+    lines.push(formatMatch(match));
+  }
+  return Object.freeze(lines);
 }
 
 function exampleLines(): readonly string[] {
@@ -454,6 +466,9 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
       '  -F, --fixed-strings     match the pattern literally.',
       '  -w, --word-regexp       require whole-word matches.',
       '  -E, --extended-regexp   use the safe extended regular-expression subset.',
+      '  -A NUM, --after-context NUM   show NUM lines of trailing context.',
+      '  -B NUM, --before-context NUM  show NUM lines of leading context.',
+      '  -C NUM, --context NUM         show NUM lines of leading and trailing context.',
       ...exampleLines()
     ]);
   }
@@ -463,6 +478,27 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
   const wholeWord = options['word-regexp'] === true;
   const extended = options['extended-regexp'] === true;
   if (literal && extended) return failureResult('grep cannot combine --extended-regexp with --fixed-strings.');
+  const readContextValue = (name: 'after-context' | 'before-context' | 'context'): number | ProcessResult | undefined => {
+    const raw = options[name];
+    if (raw === undefined) return undefined;
+    if (typeof raw !== 'string' || !/^[0-9]+$/u.test(raw)) {
+      return failureResult(`grep option --${name} expects an ASCII decimal value from 0 through ${maxContext}. Usage: ${GREP_USAGE}`);
+    }
+    const value = Number(raw);
+    if (!Number.isSafeInteger(value) || value > maxContext) {
+      return failureResult(`grep option --${name} expects an ASCII decimal value from 0 through ${maxContext}. Usage: ${GREP_USAGE}`);
+    }
+    return value;
+  };
+  const contextValue = readContextValue('context');
+  if (typeof contextValue !== 'number' && contextValue !== undefined) return contextValue;
+  const beforeValue = readContextValue('before-context');
+  if (typeof beforeValue !== 'number' && beforeValue !== undefined) return beforeValue;
+  const afterValue = readContextValue('after-context');
+  if (typeof afterValue !== 'number' && afterValue !== undefined) return afterValue;
+  const contextEnabled = contextValue !== undefined || beforeValue !== undefined || afterValue !== undefined;
+  const beforeContext = beforeValue ?? contextValue ?? 0;
+  const afterContext = afterValue ?? contextValue ?? 0;
   const pattern = operands[0];
   if (pattern === undefined || pattern.length === 0 || pattern.length > 256 || /[\u0000-\u001f\u007f]/u.test(pattern)) return failureResult(`Usage: ${GREP_USAGE}`);
   const matcher = literal ? literalMatcher(pattern, insensitive, wholeWord) : compileSafeRegex(pattern, insensitive, wholeWord);
@@ -494,33 +530,94 @@ export function executeGrep(context: ProcessContext, args: ParsedCommandArgument
   let outputSize = 0;
   let truncated = false;
   let scannedLines = 0;
-  for (const path of uniqueSourcePaths) {
-    const source = path === '-' ? context.stdin?.lines : context.fs.read(path)?.lines;
-    if (source === undefined) return failureResult(`No readable rshell resource named "${path}".`);
-    for (const [lineIndex, line] of source.entries()) {
-      scannedLines += 1;
-      if (scannedLines > maxLines) return failureResult('grep input exceeds the session work limit.');
-      if (!matcher.test(line)) continue;
-      const match: GrepMatch = Object.freeze({
-        path,
-        ...(number ? { lineNumber: lineIndex + 1 } : {}),
-        line,
-        ranges: Object.freeze([...matcher.ranges(line)])
-      });
-      const size = formatMatch(match).length;
-      if (matches.length >= maxMatches || outputSize + size > maxText) { truncated = true; break; }
-      matches.push(match);
-      outputSize += size;
+
+  if (contextEnabled) {
+    let emittedOutputLines = 0;
+    let hasEmittedBlock = false;
+    outer: for (const path of uniqueSourcePaths) {
+      const source = path === '-' ? context.stdin?.lines : context.fs.read(path)?.lines;
+      if (source === undefined) return failureResult(`No readable rshell resource named "${path}".`);
+      const sourceMatches = new Map<number, GrepMatch>();
+      for (const [lineIndex, line] of source.entries()) {
+        scannedLines += 1;
+        if (scannedLines > maxLines) return failureResult('grep input exceeds the session work limit.');
+        if (!matcher.test(line)) continue;
+        sourceMatches.set(lineIndex, Object.freeze({
+          path,
+          ...(number ? { lineNumber: lineIndex + 1 } : {}),
+          line,
+          ranges: Object.freeze([...matcher.ranges(line)])
+        }));
+      }
+      const intervals: Array<{ start: number; end: number }> = [];
+      for (const lineIndex of sourceMatches.keys()) {
+        const start = Math.max(0, lineIndex - beforeContext);
+        const end = Math.min(source.length - 1, lineIndex + afterContext);
+        const previous = intervals.at(-1);
+        if (previous !== undefined && start <= previous.end + 1) {
+          previous.end = Math.max(previous.end, end);
+        } else {
+          intervals.push({ start, end });
+        }
+      }
+      for (const interval of intervals) {
+        for (let lineIndex = interval.start; lineIndex <= interval.end; lineIndex += 1) {
+          const sourceMatch = sourceMatches.get(lineIndex);
+          const row = sourceMatch ?? Object.freeze({
+            path,
+            ...(number ? { lineNumber: lineIndex + 1 } : {}),
+            line: source[lineIndex]!,
+            ranges: emptyRanges,
+            context: true as const
+          });
+          const separator = hasEmittedBlock && lineIndex === interval.start;
+          const rowSize = formatMatch(row).length;
+          const separatorSize = separator ? 2 : 0;
+          if (
+            emittedOutputLines + separatorSize + 1 > maxMatches ||
+            outputSize + separatorSize + rowSize > maxText
+          ) {
+            truncated = true;
+            break outer;
+          }
+          const outputRow = separator ? Object.freeze({ ...row, separatorBefore: true as const }) : row;
+          matches.push(outputRow);
+          emittedOutputLines += separatorSize + 1;
+          outputSize += separatorSize + rowSize;
+          hasEmittedBlock = true;
+        }
+      }
     }
-    if (truncated) break;
+  }
+  else {
+    for (const path of uniqueSourcePaths) {
+      const source = path === '-' ? context.stdin?.lines : context.fs.read(path)?.lines;
+      if (source === undefined) return failureResult(`No readable rshell resource named "${path}".`);
+      for (const [lineIndex, line] of source.entries()) {
+        scannedLines += 1;
+        if (scannedLines > maxLines) return failureResult('grep input exceeds the session work limit.');
+        if (!matcher.test(line)) continue;
+        const match: GrepMatch = Object.freeze({
+          path,
+          ...(number ? { lineNumber: lineIndex + 1 } : {}),
+          line,
+          ranges: Object.freeze([...matcher.ranges(line)])
+        });
+        const size = formatMatch(match).length;
+        if (matches.length >= maxMatches || outputSize + size > maxText) { truncated = true; break; }
+        matches.push(match);
+        outputSize += size;
+      }
+      if (truncated) break;
+    }
   }
   const report: GrepReport = Object.freeze({
     pattern,
     matches: Object.freeze(matches),
-    noResults: matches.length === 0,
+    noResults: !matches.some(({ context: isContext }) => isContext !== true),
     truncated
   });
-  return successResult(matches.map(formatMatch), { value: { kind: 'grep-report', report } });
+  return successResult(formatMatches(matches), { value: { kind: 'grep-report', report } });
 }
 
 const grepArguments = createCommandArgumentParser({
@@ -533,7 +630,10 @@ const grepArguments = createCommandArgumentParser({
     { name: 'line-number', aliases: ['-n', '--line-number'] },
     { name: 'fixed-strings', aliases: ['-F', '--fixed-strings'] },
     { name: 'word-regexp', aliases: ['-w', '--word-regexp'] },
-    { name: 'extended-regexp', aliases: ['-E', '--extended-regexp'] }
+    { name: 'extended-regexp', aliases: ['-E', '--extended-regexp'] },
+    { name: 'after-context', aliases: ['-A', '--after-context'], value: 'required' },
+    { name: 'before-context', aliases: ['-B', '--before-context'], value: 'required' },
+    { name: 'context', aliases: ['-C', '--context'], value: 'required' }
   ]
 });
 

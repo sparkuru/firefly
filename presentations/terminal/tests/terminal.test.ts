@@ -324,7 +324,7 @@ test('every command has deterministic output and strict usage errors', () => {
     name: 'grep',
     aliases: [],
     summary: 'filter stdin or public text',
-    usage: 'grep [-inFwE] <pattern> [path ...]',
+    usage: 'grep [-inFwE] [-A NUM] [-B NUM] [-C NUM] <pattern> [path ...]',
     examples: [
       { command: 'grep -w cat', description: 'match cat as a whole word' },
       { command: 'grep -E "cat|dog"', description: 'match either cat or dog with a safe extended pattern' },
@@ -366,7 +366,7 @@ test('every command has deterministic output and strict usage errors', () => {
       kind: 'lines',
       tone: 'normal',
       lines: [
-        'Usage: grep [-inFwE] <pattern> [path ...]',
+        'Usage: grep [-inFwE] [-A NUM] [-B NUM] [-C NUM] <pattern> [path ...]',
         'filter stdin or public text',
         'Options:',
         '  -h, --help              show this help.',
@@ -375,6 +375,9 @@ test('every command has deterministic output and strict usage errors', () => {
         '  -F, --fixed-strings     match the pattern literally.',
         '  -w, --word-regexp       require whole-word matches.',
         '  -E, --extended-regexp   use the safe extended regular-expression subset.',
+        '  -A NUM, --after-context NUM   show NUM lines of trailing context.',
+        '  -B NUM, --before-context NUM  show NUM lines of leading context.',
+        '  -C NUM, --context NUM         show NUM lines of leading and trailing context.',
         'Examples:',
         '  grep -w cat — match cat as a whole word',
         '  grep -E "cat|dog" — match either cat or dog with a safe extended pattern',
@@ -794,6 +797,74 @@ test('grep preserves source lines, reports canonical locations, and exposes safe
   });
   assert.deepEqual(empty.effect, { kind: 'grep', pattern: 'absent', matches: [], noResults: true, truncated: false });
   assert.equal(empty.announcement, 'No matches for "absent".');
+});
+
+test('terminal grep keeps context markers through effects, pipelines, and redirects', () => {
+  const source: readonly TerminalTextDocument[] = Object.freeze([
+    Object.freeze({
+      virtualPath: 'posts/characters/alpha.md',
+      lines: Object.freeze(['zero', 'hit one', 'between', 'far', 'tail', 'hit two', 'after'])
+    })
+  ]);
+  const result = executeCommand({
+    state: createTerminalState(),
+    input: 'grep -n -C 1 hit ~/blog/posts/characters/alpha.md',
+    entries,
+    documents: source
+  });
+  assert.deepEqual(result.effect, {
+    kind: 'grep',
+    pattern: 'hit',
+    matches: [
+      { path: '/posts/characters/alpha.md', lineNumber: 1, line: 'zero', ranges: [], context: true },
+      { path: '/posts/characters/alpha.md', lineNumber: 2, line: 'hit one', ranges: [[0, 3]] },
+      { path: '/posts/characters/alpha.md', lineNumber: 3, line: 'between', ranges: [], context: true },
+      { path: '/posts/characters/alpha.md', lineNumber: 5, line: 'tail', ranges: [], context: true, separatorBefore: true },
+      { path: '/posts/characters/alpha.md', lineNumber: 6, line: 'hit two', ranges: [[0, 3]] },
+      { path: '/posts/characters/alpha.md', lineNumber: 7, line: 'after', ranges: [], context: true }
+    ],
+    noResults: false,
+    truncated: false
+  });
+  assert.equal(result.announcement, '2 grep matches listed.');
+
+  const piped = executeCommand({
+    state: createTerminalState(),
+    input: 'cat ~/blog/posts/characters/alpha.md | grep -n -A 0 hit | cat',
+    entries,
+    documents: source
+  });
+  assert.deepEqual(piped.effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: ['2:hit one', '--', '6:hit two']
+  });
+
+  const redirected = executeCommand({
+    state: createTerminalState(),
+    input: 'grep -n -A0 hit ~/blog/posts/characters/alpha.md > ~/blog/.rshell/tmp/context.txt',
+    entries,
+    documents: source
+  });
+  assert.deepEqual(redirected.effect, {
+    kind: 'lines',
+    tone: 'muted',
+    lines: ['Wrote 3 lines to ~/blog/.rshell/tmp/context.txt.']
+  });
+  assert.deepEqual(executeCommand({
+    state: redirected.state,
+    input: 'cat ~/blog/.rshell/tmp/context.txt',
+    entries,
+    documents: source
+  }).effect, {
+    kind: 'lines',
+    tone: 'normal',
+    lines: [
+      '~/blog/posts/characters/alpha.md:2:hit one',
+      '--',
+      '~/blog/posts/characters/alpha.md:6:hit two'
+    ]
+  });
 });
 
 test('friends stays clickable directly and remains deterministic in text shells', () => {

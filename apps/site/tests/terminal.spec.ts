@@ -488,14 +488,14 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.getByText('list curated friend links')).toBeVisible();
   await expect(transcript.getByText('clear the screen')).toBeVisible();
   await expect(transcript).toContainText('alias l, ll');
-  const grepUsage = transcript.locator('.terminal-help-command code').filter({ hasText: 'grep [-inFwE] <pattern> [path ...]' });
+  const grepUsage = transcript.locator('.terminal-help-command code').filter({ hasText: 'grep [-inFwE] [-A NUM] [-B NUM] [-C NUM] <pattern> [path ...]' });
   await expect(grepUsage).toHaveCount(1);
   if (await page.evaluate(() => window.innerWidth >= 768)) {
     const usageGeometry = await grepUsage.evaluate((element) => {
       const style = getComputedStyle(element);
       return { height: element.getBoundingClientRect().height, lineHeight: Number.parseFloat(style.lineHeight) };
     });
-    expect(usageGeometry.height).toBeLessThanOrEqual(usageGeometry.lineHeight * 1.25);
+    expect(usageGeometry.height).toBeLessThanOrEqual(usageGeometry.lineHeight * 2.25);
   }
   await expect(input).toBeFocused();
 
@@ -652,7 +652,7 @@ test('help detail renders descriptor-owned examples for canonical names and alia
   const grepRecord = transcript.locator('.terminal-record').last();
   const grepDetail = grepRecord.locator('.terminal-help-detail-view');
   await expect(grepDetail.getByRole('heading', { level: 2, name: 'grep' })).toBeVisible();
-  await expect(grepDetail.locator('.terminal-help-detail-usage')).toHaveText('grep [-inFwE] <pattern> [path ...]');
+  await expect(grepDetail.locator('.terminal-help-detail-usage')).toHaveText('grep [-inFwE] [-A NUM] [-B NUM] [-C NUM] <pattern> [path ...]');
   await expect(grepDetail.locator('.terminal-help-example')).toHaveCount(3);
   await expect(grepDetail).toContainText('grep -w cat');
   await expect(grepDetail).toContainText('grep -E "cat|dog"');
@@ -947,6 +947,15 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   }
   await submit(page, `cat ${copiedPath}`);
   await expect(transcript.locator('[data-terminal-stream-document]').last().getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' })).toBeVisible();
+
+  await submit(page, `grep -n -C 1 "workflow" ${workflow.shell}`);
+  const contextualGrep = transcript.locator('.terminal-record').last();
+  await expect.poll(async () => contextualGrep.locator('.terminal-grep-match--context').count()).toBeGreaterThan(0);
+  await expect(contextualGrep.locator('.terminal-grep-match--context .terminal-grep-line mark')).toHaveCount(0);
+  await expect(contextualGrep.locator('.terminal-grep-match:not(.terminal-grep-match--context) .terminal-grep-location').first()).toHaveText(/:\d+:$/u);
+  await expect(contextualGrep.locator('.terminal-grep-match--context .terminal-grep-location').first()).toHaveText(/:\d+-$/u);
+  await expect(contextualGrep.locator('.terminal-grep-summary')).toContainText(' match');
+  expect(await contextualGrep.locator('.terminal-grep').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 
   await submit(page, 'whoami > ~/blog/.rshell/tmp/identity.txt');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Wrote 1 line to ~/blog/.rshell/tmp/identity.txt.');

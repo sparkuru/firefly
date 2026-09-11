@@ -70,6 +70,10 @@ export interface GrepMatch {
   readonly lineNumber?: number;
   readonly line: string;
   readonly ranges: readonly (readonly [number, number])[];
+  /** Present only when this row is non-matching context. */
+  readonly context?: true;
+  /** Present only when a `--` separator precedes this row. */
+  readonly separatorBefore?: true;
 }
 
 export interface GrepReport {

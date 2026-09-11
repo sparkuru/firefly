@@ -213,6 +213,81 @@ test('grep supports whole-word fixed and safe-regex matching with explicit exten
   assert.match(runRshellInput('grep -EF nahida', runnerOptions()).stderr.lines[0] ?? '', /cannot combine/u);
 });
 
+test('grep supports bounded A/B/C context windows, separators, and resource boundaries', () => {
+  const stdin = textStream(['zero', 'hit one', 'between', 'hit two', 'tail', 'gap', 'far', 'hit three']);
+  const contextResult = executeGrep(
+    context({ stdin }),
+    args(['hit'], { context: '1', 'line-number': true })
+  );
+  assert.deepEqual(contextResult.stdout.lines, [
+    '1-zero',
+    '2:hit one',
+    '3-between',
+    '4:hit two',
+    '5-tail',
+    '--',
+    '7-far',
+    '8:hit three'
+  ]);
+  assert.deepEqual(contextResult.value?.kind === 'grep-report' ? contextResult.value.report.matches : [], [
+    { path: '-', lineNumber: 1, line: 'zero', ranges: [], context: true },
+    { path: '-', lineNumber: 2, line: 'hit one', ranges: [[0, 3]] },
+    { path: '-', lineNumber: 3, line: 'between', ranges: [], context: true },
+    { path: '-', lineNumber: 4, line: 'hit two', ranges: [[0, 3]] },
+    { path: '-', lineNumber: 5, line: 'tail', ranges: [], context: true },
+    { path: '-', lineNumber: 7, line: 'far', ranges: [], context: true, separatorBefore: true },
+    { path: '-', lineNumber: 8, line: 'hit three', ranges: [[0, 3]] }
+  ]);
+
+  const after = executeGrep(context({ stdin: textStream(['hit', 'after', 'far', 'hit']) }), args(['hit'], { 'after-context': '1' }));
+  assert.deepEqual(after.stdout.lines, ['hit', 'after', '--', 'hit']);
+  const before = executeGrep(context({ stdin: textStream(['before', 'hit', 'gap', 'far', 'hit']) }), args(['hit'], { 'before-context': '1' }));
+  assert.deepEqual(before.stdout.lines, ['before', 'hit', '--', 'far', 'hit']);
+
+  const override = executeGrep(
+    context({ stdin: textStream(['zero', 'hit one', 'between', 'far', 'tail', 'hit two', 'after']) }),
+    args(['hit'], { context: '1', 'after-context': '0' })
+  );
+  assert.deepEqual(override.stdout.lines, ['zero', 'hit one', '--', 'tail', 'hit two']);
+
+  const parseShort = GREP_COMMAND_SPEC.parse?.(['-nA2', 'hit']);
+  assert.deepEqual(parseShort?.ok ? parseShort.arguments : undefined, {
+    options: { 'line-number': true, 'after-context': '2' },
+    operands: ['hit']
+  });
+  const parseLong = GREP_COMMAND_SPEC.parse?.(['--before-context=2', 'hit']);
+  assert.deepEqual(parseLong?.ok ? parseLong.arguments : undefined, {
+    options: { 'before-context': '2' },
+    operands: ['hit']
+  });
+  assert.equal(GREP_COMMAND_SPEC.parse?.(['-C']).ok, false);
+  for (const value of ['-1', '+1', '1.0', '257']) {
+    const invalid = executeGrep(context({ stdin: textStream(['hit']) }), args(['hit'], { 'after-context': value }));
+    assert.equal(invalid.status, 1, value);
+    assert.match(invalid.stderr.lines[0] ?? '', /ASCII decimal value from 0 through 256/u, value);
+  }
+
+  const boundaryFs = createPublicIndex({
+    documents: [
+      { kind: 'post', path: '/posts/one.md', relativePath: 'one.md', filename: 'one.md', title: 'One', href: '/posts/one/', date: '2026-05-28' },
+      { kind: 'post', path: '/posts/two.md', relativePath: 'two.md', filename: 'two.md', title: 'Two', href: '/posts/two/', date: '2026-05-29' }
+    ],
+    experiments: [],
+    textDocuments: [
+      { path: '/posts/one.md', lines: ['unrelated', 'hit'] },
+      { path: '/posts/two.md', lines: ['unrelated', 'other hit'] }
+    ]
+  });
+  const named = executeGrep(context({ fs: boundaryFs, cwd: '/' }), args(['hit'], { 'before-context': '1', 'line-number': true }));
+  assert.deepEqual(named.stdout.lines, [
+    '~/blog/posts/one.md:1-unrelated',
+    '~/blog/posts/one.md:2:hit',
+    '--',
+    '~/blog/posts/two.md:1-unrelated',
+    '~/blog/posts/two.md:2:other hit'
+  ]);
+});
+
 test('grep defaults to the current recursive public cwd and keeps positional scopes explicit', () => {
   const nested = executeGrep(context({ fs: scopedFs, cwd: '/posts/infra' }), args(['marker']));
   assert.deepEqual(nested.value?.kind === 'grep-report' ? nested.value.report.matches.map(({ path }) => path) : [], [

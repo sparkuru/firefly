@@ -146,6 +146,10 @@ interface TerminalGrepMatch {
   readonly lineNumber?: number;
   readonly line: string;
   readonly ranges: readonly (readonly [number, number])[];
+  /** Present only when this row is non-matching context. */
+  readonly context?: true;
+  /** Present only when a `--` separator precedes this row. */
+  readonly separatorBefore?: true;
 }
 
 createTerminalCommandRegistry(
@@ -687,7 +691,7 @@ remain the existing grep contracts.
 #### 2. Signature
 
 ```ts
-const GREP_USAGE = 'grep [-inFwE] <pattern> [path ...]';
+const GREP_USAGE = 'grep [-inFwE] [-A NUM] [-B NUM] [-C NUM] <pattern> [path ...]';
 const GREP_SUMMARY = 'filter stdin or public text';
 
 executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResult;
@@ -709,6 +713,17 @@ executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResul
 - `grep -h` and `grep --help` return the complete usage/options block and a
   concrete `grep a ~/blog/posts` example; `help grep` derives its metadata from
   the command descriptor.
+- `-A/--after-context`, `-B/--before-context`, and `-C/--context` accept only
+  ASCII decimal values from `0` through `256`. Explicit `-A`/`-B` values
+  override the corresponding direction from `-C`; any context option enables
+  block separators, including a value of zero.
+- A matching row keeps its existing `:` location delimiter and match ranges.
+  A non-matching context row carries `context: true`, an empty frozen `ranges`
+  array, and uses `-` as its location delimiter when a path or line number is
+  present. The first row after a non-contiguous block carries
+  `separatorBefore: true`; text projections emit a standalone `--` line before
+  that row. Context rows never cross resource boundaries or count toward the
+  reported match summary.
 
 #### 4. Validation & Error Matrix
 
@@ -720,6 +735,8 @@ executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResul
 | Scratch file/directory operand | Read only the listed scratch file(s) under `~/blog/.rshell/tmp`. |
 | Non-public/unknown/unsafe resource or document-shaped path | Return the bounded public-resource error without host access. |
 | Stdin combined with any resource operand | Return the existing stdin/resource exclusivity error. |
+| Context option has no value | Return the parser's required-value usage diagnostic. |
+| Context value is negative, signed, non-decimal, empty, or above `256` | Return a bounded `grep option --<name> expects an ASCII decimal value from 0 through 256` diagnostic with usage. |
 | `-h`/`--help` with a pattern or other option | Return usage; with no other operand/option, return command help. |
 
 #### 5. Good / Base / Bad Cases
@@ -736,9 +753,12 @@ executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResul
 
 - Unit: nested cwd isolation, root/public-mount mapping, positional directory
   and file operands, multiple resources, non-public rejection, scratch files,
-  stdin exclusivity, and `-h`/`--help` output.
+  stdin exclusivity, context option parser forms and validation, A/B/C windows,
+  merged intervals, separators, match-only summaries, and `-h`/`--help` output.
 - Integration: terminal adapter cwd propagation, descriptor Help examples,
-  `grep` in existing pipelines, and browser Help detail rendering.
+  structured context/separator markers, matching delimiters and ranges, plain
+  direct/pipeline/substitution/redirect projections, and browser rendering
+  without context highlights or horizontal overflow.
 
 #### 7. Wrong vs Correct
 
@@ -780,10 +800,14 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   carries `nodes` to the browser without parsing tree glyphs back into paths.
 - The closed effect union includes structured `help` groups, structured `grep`
   results, and structured `find` results. `help` carries command metadata for
-  semantic group rendering; `grep` carries the original matched line,
-  canonical source path, optional one-based line number, bounded match ranges,
-  `noResults`, and `truncated`; `find` carries the bounded keyword and decoded
-  public entries for native document links.
+  semantic group rendering; `grep` carries the original line, canonical source
+  path, optional one-based line number, bounded match ranges, optional
+  `context` and `separatorBefore` row markers, `noResults`, and `truncated`;
+  `find` carries the bounded keyword and decoded public entries for native
+  document links. A grep match summary counts rows without `context`, while
+  plain projections emit `:` for matching rows, `-` for context rows, and a
+  standalone `--` before rows marked with `separatorBefore`. The browser
+  renderer creates text nodes for context rows and does not highlight them.
   `links` carries validated `{ name, desc?, url }` friend records for direct
   browser rendering; its deterministic `name — url` or `name — desc — url`
   projection is used for pipes and scratch redirects. Plain stdout is derived from those effects only for

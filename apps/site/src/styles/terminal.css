@@ -544,9 +544,21 @@
   min-width: 0;
 }
 
+.terminal-grep-match--context {
+  color: var(--terminal-color-muted);
+}
+
+.terminal-grep-match--context .terminal-grep-location {
+  color: var(--terminal-color-muted);
+}
+
+.terminal-grep-separator {
+  color: var(--terminal-color-muted);
+}
+
 .terminal-grep-location {
   color: var(--terminal-color-command);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .terminal-grep-line {
