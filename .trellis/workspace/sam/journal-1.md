@@ -1414,3 +1414,24 @@ Added a client-side boot gate that keeps the server-rendered 12-line home animat
 ### Status
 
 [OK] **Completed**
+
+
+## Session 63: Ctrl+L clear and grep context
+
+**Date**: 2026-09-11
+**Task**: Ctrl+L clear and grep context
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented bounded GNU-style grep -A/-B/-C context output across neutral shell, Terminal runtime, redirects, and site UI; preserved existing Ctrl+L clear behavior. Added contract/spec updates and focused tests. Terminal check/test/build, site check/content-test/build, and full 82-test Terminal Playwright regression passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `83c414c` | (see git log) |
+
+### Status
+
+[OK] **Completed**
