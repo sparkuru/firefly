@@ -99,7 +99,7 @@ test('metadata titles are visible while index filenames remain ordering and path
   assert.deepEqual(tree.stdout.lines, ['~/blog/posts/notes', '└── Readable note']);
   assert.equal(tree.value?.kind === 'tree' ? tree.value.nodes[0]?.node.path : undefined, '/posts/notes/index-001.md');
   const listing = executeLs(commandContext, args([]));
-  assert.deepEqual(listing.stdout.lines, ['Readable note — 2026-05-28 — notes/index-001.md']);
+  assert.deepEqual(listing.stdout.lines, ['Readable note — 2026-05-28 — ~/blog/posts/notes/index-001.md']);
 });
 
 test('public index exposes a bounded virtual namespace, not host paths', () => {
@@ -257,7 +257,7 @@ test('grep defaults to the current recursive public cwd and keeps positional sco
 test('find searches visible filenames, filters public paths and dates, and explains itself', () => {
   const alpha = executeFind(context(), args(['ALPHA']));
   assert.deepEqual(alpha.stdout.lines, [
-    'Alpha — 2026-05-28 — characters/alpha.md'
+    'Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
   ]);
   assert.deepEqual(alpha.value, {
     kind: 'document-search',
@@ -276,28 +276,28 @@ test('find searches visible filenames, filters public paths and dates, and expla
     'No matches for "about".'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'])).stdout.lines, [
-    'About — 2026-02-01 — /pages/about.md'
+    'About — 2026-02-01 — ~/blog/pages/about.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: 'pages' })).stdout.lines, [
-    'About — 2026-02-01 — /pages/about.md'
+    'About — 2026-02-01 — ~/blog/pages/about.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['alpha'], { path: '~/blog/posts' })).stdout.lines, [
-    'Alpha — 2026-05-28 — characters/alpha.md'
+    'Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/' }), args(['about'], { path: '~/blog' })).stdout.lines, [
-    'About — 2026-02-01 — /pages/about.md'
+    'About — 2026-02-01 — ~/blog/pages/about.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/posts/infra' }), args(['~/blog/posts', 'alpha'])).stdout.lines, [
-    'Alpha — 2026-05-28 — characters/alpha.md'
+    'Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
   ]);
   assert.deepEqual(executeFind(context({ cwd: '/posts/infra' }), args(['~/blog', 'about'])).stdout.lines, [
-    'About — 2026-02-01 — /pages/about.md'
+    'About — 2026-02-01 — ~/blog/pages/about.md'
   ]);
   assert.deepEqual(executeFind(context(), args(['durable'])).stdout.lines, [
     'No matches for "durable".'
   ]);
   assert.deepEqual(executeFind(context(), args(['alpha'], { after: '2026-05-28', before: '2026-05-28' })).stdout.lines, [
-    'Alpha — 2026-05-28 — characters/alpha.md'
+    'Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
   ]);
   assert.deepEqual(executeFind(context(), args(['alpha'], { before: '2026-02-01' })).stdout.lines, [
     'No matches for "alpha".'
@@ -339,10 +339,10 @@ test('find and grep neutral runners preserve cwd defaults and explicit path scop
   const nestedOptions = runnerOptions({ cwd: '/posts/characters' });
   assert.equal(runRshellInput('find ~/blog/posts alpha', nestedOptions).status, 0);
   assert.deepEqual(runRshellInput('find ~/blog/posts alpha', nestedOptions).stdout.lines, [
-    'Alpha — 2026-05-28 — characters/alpha.md'
+    'Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
   ]);
   assert.deepEqual(runRshellInput('find --path ~/blog/posts alpha', nestedOptions).stdout.lines, [
-    'Alpha — 2026-05-28 — characters/alpha.md'
+    'Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
   ]);
   assert.match(runRshellInput('find --path ~/blog/pages ~/blog/posts alpha', nestedOptions).stderr.lines[0] ?? '', /Usage:/u);
   assert.match(runRshellInput('grep -h', nestedOptions).stdout.lines.join('\n'), /grep a ~\/blog\/posts/u);
@@ -376,13 +376,13 @@ test('root resource mounts resolve for reads, search, and navigation without cha
 
   for (const operand of ['pages/about.md', './pages/about.md']) {
     const grep = executeGrep(root, args(['About', operand]));
-    assert.deepEqual(grep.stdout.lines, ['/pages/about.md:About page'], operand);
+    assert.deepEqual(grep.stdout.lines, ['~/blog/pages/about.md:About page'], operand);
     const wholeWordGrep = executeGrep(root, args(['about', operand], { 'ignore-case': true, 'word-regexp': true }));
     assert.deepEqual(wholeWordGrep.value?.kind === 'grep-report' ? wholeWordGrep.value.report.matches[0]?.ranges : [], [[0, 5]], operand);
     assert.deepEqual(executeVim(root, args([operand])).controls, [{ kind: 'open-document', path: '/pages/about.md' }], operand);
   }
   const postGrep = executeGrep(root, args(['Alpha', './posts/characters/alpha.md']));
-  assert.deepEqual(postGrep.stdout.lines, ['/posts/characters/alpha.md:Alpha record']);
+  assert.deepEqual(postGrep.stdout.lines, ['~/blog/posts/characters/alpha.md:Alpha record']);
   assert.deepEqual(executeVim(root, args(['./posts/characters/alpha.md'])).controls, [{ kind: 'open-document', path: '/posts/characters/alpha.md' }]);
 
   for (const operand of ['lab/nerv', './lab/nerv']) {
@@ -419,7 +419,7 @@ test('neutral commands exchange streams and values without terminal effects', ()
 
 test('grep and navigation use independent value/control channels', () => {
   const nested = executeGrep(context(), args(['nahida'], { 'line-number': true }));
-  assert.deepEqual(nested.stdout.lines, ['/posts/characters/alpha.md:2:nahida keeps the archive']);
+  assert.deepEqual(nested.stdout.lines, ['~/blog/posts/characters/alpha.md:2:nahida keeps the archive']);
   const report = executeGrep(context({ stdin: textStream(['nahida keeps the archive']) }), args(['nahida'], { 'line-number': true }));
   assert.equal(report.value?.kind, 'grep-report');
   assert.deepEqual(report.stdout.lines, ['1:nahida keeps the archive']);
@@ -432,6 +432,23 @@ test('grep and navigation use independent value/control channels', () => {
   assert.deepEqual(executeVim(context(), args(['~/blog/pages/about.md'])).controls, [{ kind: 'open-document', path: '/pages/about.md' }]);
 });
 
+test('named grep locations are directly reusable with cat while stdin stays line-oriented', () => {
+  const named = runRshellInput('grep -F "Alpha record"', runnerOptions());
+  assert.deepEqual(named.stdout.lines, ['~/blog/posts/characters/alpha.md:Alpha record']);
+  const namedMatch = named.stdout.lines[0];
+  assert.ok(namedMatch);
+  const [displayedPath] = namedMatch.split(':', 1);
+  assert.equal(displayedPath, '~/blog/posts/characters/alpha.md');
+  assert.deepEqual(runRshellInput(`cat ${displayedPath}`, runnerOptions()).stdout.lines, [
+    'Alpha record',
+    'nahida keeps the archive'
+  ]);
+
+  const stdin = executeGrep(context({ stdin: textStream(['Alpha record']) }), args(['Alpha'], { 'line-number': true }));
+  assert.deepEqual(stdin.stdout.lines, ['1:Alpha record']);
+  assert.deepEqual(stdin.value?.kind === 'grep-report' ? stdin.value.report.matches.map(({ path }) => path) : [], ['-']);
+});
+
 test('neutral runner wires stdout only and keeps final values and controls separate', () => {
   const piped = runRshellInput('cat characters/alpha.md | grep -nF nahida', runnerOptions());
   assert.equal(piped.status, 0);
@@ -441,7 +458,7 @@ test('neutral runner wires stdout only and keeps final values and controls separ
 
   const findPiped = runRshellInput('find alpha | cat', runnerOptions());
   assert.equal(findPiped.status, 0);
-  assert.deepEqual(findPiped.stdout.lines, ['Alpha — 2026-05-28 — characters/alpha.md']);
+  assert.deepEqual(findPiped.stdout.lines, ['Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md']);
 
   const opened = runRshellInput('open ~/blog/lab/nerv', runnerOptions());
   assert.deepEqual(opened.controls, [{ kind: 'open-experiment', id: 'nerv' }]);
@@ -488,17 +505,24 @@ test('neutral runner applies state patches and bounded scratch redirects', () =>
     ]
   }]);
 
-  const findRedirect = runRshellInput('find alpha > ~/blog/.rshell/tmp/find', runnerOptions());
+  const findRedirect = runRshellInput(
+    'find alpha > ~/blog/.rshell/tmp/find',
+    runnerOptions({ session: written.statePatch.session })
+  );
   assert.equal(findRedirect.status, 0);
   assert.deepEqual(findRedirect.stdout.lines, []);
-  assert.deepEqual(findRedirect.statePatch?.kind === 'session' ? findRedirect.statePatch.session.scratch : undefined, [
+  assert.deepEqual(
+    findRedirect.statePatch?.kind === 'session'
+      ? findRedirect.statePatch.session.scratch.find(({ name }) => name === 'find')
+      : undefined,
     {
       name: 'find',
-      lines: ['Alpha — 2026-05-28 — characters/alpha.md']
+      lines: ['Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md']
     }
-  ]);
+  );
 
-  const session = written.statePatch.session;
+  if (findRedirect.statePatch?.kind !== 'session') return;
+  const session = findRedirect.statePatch.session;
   const scratchFs = createPublicIndex({
     documents: [
       { kind: 'post', path: '/posts/characters/alpha.md', relativePath: 'characters/alpha.md', filename: 'alpha.md', title: 'Alpha', href: '/posts/characters/alpha/', date: '2026-05-28' },
@@ -508,9 +532,16 @@ test('neutral runner applies state patches and bounded scratch redirects', () =>
     textDocuments: [{ path: '/posts/characters/alpha.md', lines: ['Alpha record', 'nahida keeps the archive'] }],
     scratch: session.scratch
   });
+  const scratchGrep = runRshellInput(
+    'grep -F Alpha ~/blog/.rshell/tmp/find | cat',
+    runnerOptions({ fs: scratchFs, session })
+  );
+  assert.deepEqual(scratchGrep.stdout.lines, [
+    '~/blog/.rshell/tmp/find:Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md'
+  ]);
   const read = runRshellInput('cat ~/blog/.rshell/tmp/help', runnerOptions({ fs: scratchFs, session }));
   assert.equal(read.status, 0);
-  assert.deepEqual(read.stdout.lines, session.scratch[0]?.lines);
+  assert.deepEqual(read.stdout.lines, session.scratch.find(({ name }) => name === 'help')?.lines);
 });
 
 test('neutral session commands consume injected identity, command metadata, and VFS', () => {

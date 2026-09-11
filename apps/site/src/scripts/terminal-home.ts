@@ -8,6 +8,7 @@ import {
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
+  formatResourcePath,
   formatTerminalPrompt,
   formatDocumentOperand,
   navigateHistory,
@@ -492,7 +493,7 @@ function appendGrepMatch(parent: HTMLElement, match: TerminalGrepMatch): void {
   location.className = 'terminal-grep-location';
   location.textContent = match.path === '-'
     ? (match.lineNumber === undefined ? '' : `${match.lineNumber}:`)
-    : `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:`;
+    : `${formatResourcePath(match.path)}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:`;
   const line = document.createElement('span');
   line.className = 'terminal-grep-line';
   appendHighlightedText(line, match.line, match.ranges);
@@ -518,10 +519,6 @@ function createDirectoryLink(path: string, label: string): HTMLAnchorElement {
   link.dataset.terminalCdPath = path;
   link.textContent = label;
   return link;
-}
-
-function findDisplayPath(entry: TerminalEntry): string {
-  return entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
 }
 
 function appendDocumentRow(
@@ -571,10 +568,7 @@ function renderEntryListing(effect: Extract<TerminalEffect, { kind: 'entries' }>
 function renderFindEffect(effect: Extract<TerminalEffect, { kind: 'find' }>, record: HTMLElement): void {
   const listing = document.createElement('ul');
   listing.className = 'terminal-entry-list terminal-find-results';
-  for (const entry of effect.entries) {
-    const displayPath = findDisplayPath(entry);
-    appendDocumentRow(listing, entry, entry.title, displayPath);
-  }
+  for (const entry of effect.entries) appendDocumentRow(listing, entry);
   record.append(listing);
 }
 
@@ -720,7 +714,7 @@ function appendTreeNode(parent: HTMLElement, node: TerminalTreeNode): void {
     const link = document.createElement('a');
     link.href = node.document.href;
     link.textContent = node.name;
-    link.setAttribute('aria-label', node.document.kind === 'post' ? node.document.relativePath : node.document.path);
+    link.setAttribute('aria-label', formatResourcePath(node.document.path));
     parent.append(link);
     return;
   }

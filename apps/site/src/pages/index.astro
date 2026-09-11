@@ -1,7 +1,8 @@
 ---
 import {
   decodeTerminalEntries,
-  decodeTerminalExperiments
+  decodeTerminalExperiments,
+  formatResourcePath
 } from '@firefly/presentation-terminal/runtime';
 import TerminalHome from '../components/TerminalHome.astro';
 import TerminalLayout from '../layouts/TerminalLayout.astro';
@@ -48,7 +49,7 @@ const documents = await Promise.all(
   title={SITE_CONFIG.site.name}
   description={SITE_CONFIG.site.description}
   pathname="/"
-  path="~/blog/posts"
+  path={formatResourcePath('/posts')}
   home
 >
   <TerminalHome documents={documents} experiments={experiments} />

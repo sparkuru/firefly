@@ -1,5 +1,6 @@
 ---
 import {
+  formatResourcePath,
   formatTerminalPrompt
 } from '@firefly/presentation-terminal/runtime';
 import type { ContentDirectory } from '../lib/content';
@@ -11,15 +12,17 @@ interface Props {
 }
 
 const { directory } = Astro.props;
-const directoryPrompt = formatTerminalPrompt(terminalIdentityFromConfig(), { cwd: '~/blog' });
+const directoryRoot = formatResourcePath('/');
+const directoryPath = formatResourcePath(`/${directory.virtualPath}`);
+const directoryPrompt = formatTerminalPrompt(terminalIdentityFromConfig(), { cwd: directoryRoot });
 const parentHref = directory.virtualPath.includes('/')
   ? `/${directory.virtualPath.split('/').slice(0, -1).join('/')}/`
   : '/';
 ---
 
 <section class="terminal-directory">
-  <nav aria-label="Directory navigation"><a href="/">~/blog</a><span aria-hidden="true"> / </span><a href={parentHref}>..</a></nav>
-  <p class="terminal-prompt">{directoryPrompt} tree ~/blog/{directory.virtualPath}</p>
+  <nav aria-label="Directory navigation"><a href="/">{directoryRoot}</a><span aria-hidden="true"> / </span><a href={parentHref}>..</a></nav>
+  <p class="terminal-prompt">{directoryPrompt} tree {directoryPath}</p>
   <h1>{directory.virtualPath}/</h1>
   {
     directory.children.length === 0 ? (
@@ -28,7 +31,7 @@ const parentHref = directory.virtualPath.includes('/')
       <ul class="terminal-directory-list">
         {directory.children.map((child) => (
           <li data-kind={child.kind}>
-            <a href={child.href} aria-label={child.kind === 'file' ? child.document.filename : undefined}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
+            <a href={child.href} aria-label={child.kind === 'file' ? formatResourcePath(`/${child.document.virtualPath}`) : undefined}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
             {child.kind === 'file' && <ContentMarkers markers={child.document.markers} />}
           </li>
         ))}

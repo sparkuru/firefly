@@ -6,13 +6,10 @@ import { completeTree } from './completion.js';
 import { optionalPath, structuredTextPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
 import { documentDisplayName } from './document-format.js';
+import { displayVirtualPath } from '../vfs/paths.js';
 
 export const TREE_USAGE = 'tree [path]';
 export const TREE_SUMMARY = 'show a public content subtree';
-
-function displayPath(path: string): string {
-  return path === '/' ? '~/blog' : `~/blog${path}`;
-}
 
 function isDirectoryNode(node: TreeNode): boolean {
   return node.kind === 'directory';
@@ -69,7 +66,7 @@ export function executeTree(context: ProcessContext, args: ParsedCommandArgument
     });
   };
   visit(resolution.path, '');
-  const root = displayPath(resolution.path);
+  const root = displayVirtualPath(resolution.path);
   return successResult([root, ...lines], {
     value: { kind: 'tree', root, lines: Object.freeze(lines), nodes: Object.freeze(nodes) }
   });

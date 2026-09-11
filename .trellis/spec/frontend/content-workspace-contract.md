@@ -296,10 +296,12 @@ startTerminalReader(root: HTMLElement): void
   a non-empty trimmed front-matter `title`, otherwise the physical filename
   stem without `.md`. It does not strip an `index-` prefix. Directory indexes
   and Terminal tree/list/find output use this display name, while `filename`,
-  virtual paths, routes, operands, and accessible path labels retain physical
-  identity. Directory ordering remains based on the physical virtual path, so
-  an `index-*` filename can remain an ordering key without becoming the visible
-  title.
+  virtual paths, and routes retain physical identity. User-facing document
+  operands and accessible path labels use the shared shell-visible
+  `~/blog/<virtualPath>` projection; compact child names such as `posts/` and
+  `characters/` remain structural directory labels. Directory ordering remains
+  based on the physical virtual path, so an `index-*` filename can remain an
+  ordering key without becoming the visible title.
 - The legacy optional `source` field is accepted only as a safe relative Markdown
   reference with an optional safe fragment. It is provenance metadata only and
   never contributes to a route, public link, or rendered body. New content omits
@@ -598,9 +600,10 @@ publicDocumentSearchRoots(path: VirtualPath): readonly VirtualPath[] | undefined
 - `--path <directory>` and the positional path form are mutually exclusive.
   Supplying both path scopes is a usage error. With either form, `~/blog/posts`
   selects the posts subtree and `~/blog` selects both public document mounts.
-- Results are sorted by canonical virtual path and use the existing plain-text
-  row format `<display path> — <date> — <title>`. The text remains available to
-  pipelines and scratch redirects.
+- Results are sorted by canonical virtual path and use the plain-text row format
+  `<title> — <date> — ~/blog/<virtualPath>`. The shell-visible resource path is
+  the same for posts and pages, remains available to pipelines and scratch
+  redirects, and can be passed directly to `cat` or `vim`.
 - A successful direct search also carries a closed neutral `document-search`
   value with the bounded keyword and validated public documents. The runtime
   adapter maps it by exact virtual path to a closed `find` effect containing
@@ -723,8 +726,9 @@ executeGrep(context: ProcessContext, args: ParsedCommandArguments): ProcessResul
 
 - Good: `grep marker` from `~/blog/posts/infra` sees only that subtree, while
   `grep marker ~/blog/posts` intentionally includes sibling post directories.
-- Base: `grep marker ~/blog` searches both public mounts and preserves the
-  canonical `/posts/...` and `/pages/...` source paths.
+- Base: `grep marker ~/blog` searches both public mounts. Its structured report
+  preserves canonical `/posts/...` and `/pages/...` source paths, while its
+  text and browser projections use the copyable `~/blog/<virtualPath>` form.
 - Bad: default grep from `/` recursively walking the whole VFS, or an explicit
   `grep marker ~/blog/lab/leaked.md`, exposes experiment/host data.
 
@@ -823,11 +827,14 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   before resolution. Thus `lab/nerv` is valid from the root cwd, but is not a
   cross-cwd alias once the cwd is `~/blog/lab`; there the experiment is opened
   as `open nerv`, `open ./nerv`, or `open ~/blog/lab/nerv`. Internal VFS paths,
-  decoded metadata, and browser hrefs remain slash-rooted. Terminal document
-  title bars are the sole visible source-path identity and use
-  `~/blog/<virtualPath>`; the document body does not render a second
-  `.terminal-path` marker. Directory-mode `resolve('.', '/')` must produce `/`
-  rather than `//.`, and resource-mode `..` traversal remains rejected.
+  decoded metadata, and browser hrefs remain slash-rooted. Every displayed
+  document/resource identity uses the shared `~/blog/<virtualPath>` projection
+  (with `/` displayed as `~/blog` and `-` retained for stdin); directory/tree
+  child labels remain compact structural names. Terminal document title bars
+  use the same projection as grep, find, ls, and the no-JavaScript recovery
+  index; the document body does not render a second `.terminal-path` marker.
+  Directory-mode `resolve('.', '/')` must produce `/` rather than `//.`, and
+  resource-mode `..` traversal remains rejected.
 - When the prompt input is focused, the controller prevents the default action
   for every Tab event, including modifiers and IME/composition events. Only an
   unmodified, non-composing Tab may rewrite input through completion. Safe `cd`
@@ -835,11 +842,12 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   and explicitly refocuses the prompt. At the virtual root, `cd ` shows
   `lab/`, `pages/`, and `posts/` rather than nested descendants. Tab outside
   the prompt remains native page/control navigation.
-- Entry-list display is an executable operand view, not an internal-path dump:
-  entries in the cwd use relative operands such as `characters/nahida.md`; an
-  entry outside it uses `~/blog/pages/about.md`-style input. Help and not-found
-  errors describe this shell grammar, while internal routes and VFS metadata
-  retain slash-rooted paths.
+- Entry-list display is a user-facing resource view, not an internal-path dump:
+  document rows from `ls` (including exact and wildcard results), `find`, and
+  the recovery index use `~/blog/<virtualPath>` for both posts and pages,
+  regardless of cwd. Directory and tree child labels may remain relative
+  structural names. Help and not-found errors describe the input grammar, while
+  structured routes and VFS metadata retain slash-rooted paths.
 - A standalone `ls` entries effect carries the canonical public `directory` it
   resolved and contains only that directory's immediate children. The browser
   renders directories and documents as one flat shell-style list: directory
@@ -946,13 +954,16 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   ASCII `[A-Za-z0-9_]` word set, for both fixed and safe-regex modes; zero-width
   matches do not count. The boundary check runs during candidate search so a
   rejected occurrence cannot hide a later valid one. Validated public or
-  `~/blog/.rshell/tmp` user operands preserve source line boundaries, report
-  `/posts/...`, `/pages/...`, `/.rshell/tmp/...`, or `-` for stdin, and return a
-  safe no-result effect instead of conflating “no matches” with an invalid
-  resource. Without stdin or positional resource operands, grep recursively searches
-  only the current virtual cwd. Positional `grep <pattern> [path ...]`
-  operands explicitly select one or more public document/resource scopes,
-  including `grep <pattern> ~/blog/posts`; no `grep --path` option exists.
+  `~/blog/.rshell/tmp` user operands preserve source line boundaries. Named
+  resource text and browser projections report the copyable
+  `~/blog/<virtualPath>` form; stdin remains `-`, while structured match
+  metadata retains `/posts/...`, `/pages/...`, or `/.rshell/tmp/...` source
+  paths. These projections return a safe no-result effect instead of
+  conflating “no matches” with an invalid resource. Without stdin or positional
+  resource operands, grep recursively searches only the current virtual cwd.
+  Positional `grep <pattern> [path ...]` operands explicitly select one or more
+  public document/resource scopes, including `grep <pattern> ~/blog/posts`; no
+  `grep --path` option exists.
   `grep -h` and `grep --help` return command help with that positional path
   example. Resource, scanned-line, match-count, and output-size limits remain
   enforced before rendering.
@@ -1587,6 +1598,76 @@ setStartupState(nodes.root, 'ready');
 
 // Correct: retain the server-rendered surface until its named visual gate ends.
 cancelBootGate = createTerminalBootGate(nodes, completeStartup).cancel;
+```
+
+## Scenario: Unified shell-visible resource paths
+
+### 1. Scope / Trigger
+
+- Trigger: a cross-layer Terminal/site contract change fixed the misleading
+  `/posts/...` and cwd-relative document paths emitted by grep, find, ls, and
+  static recovery views.
+- Scope: project the validated internal VFS identity into one copyable shell
+  resource label without changing lookup, browser routes, or host boundaries.
+
+### 2. Signatures
+
+- `displayVirtualPath(path: VirtualPath): string` owns the internal-to-shell
+  root projection in `presentations/terminal/src/vfs/paths.ts`.
+- `formatResourcePath(path: VirtualPath): string` exposes that projection at
+  the Terminal runtime boundary for site code.
+- `formatDocumentOperand(entry: TerminalEntry): string` projects a validated
+  document entry through `formatResourcePath`.
+- `formatDocument(document: PublicDocument): string` uses the same projection
+  for neutral `ls`/document rows.
+
+### 3. Contracts
+
+- Validated `/posts/...`, `/pages/...`, and `/.rshell/tmp/...` identities are
+  displayed as `~/blog/<path>`; `/` is displayed as `~/blog`.
+- Named grep matches, find rows, ls document rows, title bars, accessibility
+  labels, and no-JavaScript directory/home recovery views use that display.
+- Stdin grep remains `-`; structured VFS values remain slash-rooted; browser
+  links remain canonical route `href` values and never come from display text.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| validated public or scratch VFS path reaches a formatter | prefix with `~/blog` and preserve the validated suffix |
+| grep match has `path === '-'` | keep `-` and its existing line-number form |
+| raw command input is slash-rooted or host-like | reject it through the existing resolver; do not call the formatter as a parser |
+| unknown/unsafe path reaches a resource-producing command | fail closed; never manufacture a plausible shell path |
+| structured value or browser navigation is rendered | retain internal path or canonical `href`, respectively |
+
+### 5. Good / Base / Bad Cases
+
+- Good: copy `~/blog/posts/infra/docker-handbook.md` from grep output into
+  `cat` and read the same validated document.
+- Base: a nested cwd still shows the document's full `~/blog/<virtualPath>`;
+  `posts/` and `characters/` remain compact child directory labels.
+- Bad: print `/posts/infra/docker-handbook.md` or `infra/docker-handbook.md`
+  as a document identity, or accept `/posts/...` merely because it was printed.
+
+### 6. Tests Required
+
+- Terminal unit tests assert the root/document formatter, post/page ls/find
+  rows, named grep, `-n`, stdin, scratch, pipelines, redirects, and retained
+  slash-rooted input rejection.
+- Site tests assert interactive grep/find/tree output, copy the named grep
+  location into `cat`, and verify home/directory static recovery labels and
+  canonical links.
+- Static output tests assert title bars and recovery/document labels use one
+  shell-visible path while templates and structured metadata keep VFS keys.
+
+### 7. Wrong vs Correct
+
+```ts
+// Wrong: a printed internal path looks like a command operand but is rejected.
+const label = match.path;
+
+// Correct: validated VFS identity is projected once for user-facing text.
+const label = match.path === '-' ? '-' : formatResourcePath(match.path);
 ```
 
 ## Reference Files

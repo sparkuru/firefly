@@ -2,11 +2,12 @@
 import ContentDirectoryIndex from '../../components/ContentDirectoryIndex.astro';
 import TerminalLayout from '../../layouts/TerminalLayout.astro';
 import { getCanonicalContent } from '../../lib/content';
+import { formatResourcePath } from '@firefly/presentation-terminal/runtime';
 
 const directory = (await getCanonicalContent()).directories.find(({ virtualPath }) => virtualPath === 'posts');
 if (directory === undefined) throw new Error('Missing public posts directory.');
 ---
 
-<TerminalLayout title="posts" description="Public post directories and documents." pathname="/posts/" path="~/blog/posts">
+<TerminalLayout title="posts" description="Public post directories and documents." pathname="/posts/" path={formatResourcePath('/posts')}>
   <ContentDirectoryIndex directory={directory} />
 </TerminalLayout>

@@ -1,4 +1,5 @@
 import type { PublicDocument } from '../vfs/contracts.js';
+import { displayVirtualPath } from '../vfs/paths.js';
 
 export function documentDisplayName(document: PublicDocument): string {
   const title = document.title.trim();
@@ -6,6 +7,6 @@ export function documentDisplayName(document: PublicDocument): string {
 }
 
 export function formatDocument(document: PublicDocument): string {
-  const displayPath = document.kind === 'post' ? document.relativePath : document.path;
+  const displayPath = displayVirtualPath(document.path);
   return `${documentDisplayName(document)} — ${document.date} — ${displayPath}`;
 }

@@ -29,6 +29,33 @@ async function submit(page: Page, command: string) {
   await input.press('Enter');
 }
 
+interface WorkflowPaths {
+  readonly relative: string;
+  readonly virtual: string;
+  readonly shell: string;
+  readonly partial: string;
+  readonly filename: string;
+}
+
+async function getWorkflowPaths(page: Page): Promise<WorkflowPaths> {
+  const entry = page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/llm-workflow-with-trellis/"]');
+  const relative = await entry.getAttribute('data-terminal-entry-relative-path');
+  if (relative === null) throw new Error('Missing workflow Terminal entry path.');
+  const filename = relative.slice(relative.lastIndexOf('/') + 1);
+  const marker = 'llm-workflow-with-trellis.md';
+  const markerIndex = filename.indexOf(marker);
+  if (markerIndex < 0) throw new Error(`Unexpected workflow filename: ${filename}`);
+  return {
+    relative,
+    virtual: `posts/${relative}`,
+    shell: `~/blog/posts/${relative}`,
+    partial: `${relative.slice(0, relative.length - marker.length)}llm-w`,
+    filename
+  };
+}
+
+const workflowDocumentPath = /^~\/blog\/posts\/ai\/[^/]*llm-workflow-with-trellis\.md$/u;
+
 async function readBootGeometry(page: Page) {
   return page.locator('[data-terminal-boot-log]').evaluate((log) => {
     return {
@@ -446,6 +473,7 @@ test('refresh starts a fresh session with the boot log as its first record', asy
 
 test('commands render continuous typed results, lab discovery, and latest announcements', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
   const announcer = page.locator('[data-terminal-announcer]');
@@ -483,14 +511,14 @@ test('commands render continuous typed results, lab discovery, and latest announ
 
   await submit(page, 'alias l');
   await expect(transcript.locator('.terminal-record').last()).toContainText('l=ls');
-  await submit(page, 'l ai/llm-workflow-with-trellis.md');
+  await submit(page, `l ${workflow.relative}`);
   await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(1);
-  await submit(page, 'll ai/llm-workflow-with-trellis.md');
+  await submit(page, `ll ${workflow.relative}`);
   await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(1);
 
-  await input.fill('ls ai/llm-w');
+  await input.fill(`ls ${workflow.partial}`);
   await input.press('Tab');
-  await expect(input).toHaveValue('ls ai/llm-workflow-with-trellis.md');
+  await expect(input).toHaveValue(`ls ${workflow.relative}`);
   await expect(input).toBeFocused();
   await input.press('Enter');
   await expect(transcript.locator('.terminal-record').last()).toContainText('llm-workflow-with-trellis');
@@ -541,7 +569,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   const nestedInput = page.getByRole('textbox', { name: terminalPromptName('~/blog/posts/ai') });
   await nestedInput.fill('cat ll');
   await nestedInput.press('Tab');
-  await expect(nestedInput).toHaveValue('cat llm-workflow-with-trellis.md');
+  await expect(nestedInput).toHaveValue(`cat ${workflow.filename}`);
   await expect(nestedInput).toBeFocused();
   await nestedInput.press('Enter');
   await expect(transcript).toContainText('llm-workflow-with-trellis');
@@ -579,7 +607,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(postsListing.locator('[data-terminal-entry-kind="document"]')).toHaveCount(0);
   await expect(postsListing.locator('.terminal-entry-group-heading')).toHaveCount(0);
   await expect(postsListing).toHaveCSS('padding-left', '0px');
-  await expect(postsListing.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toHaveCount(0);
+  await expect(postsListing.getByRole('link', { name: workflow.shell, exact: true })).toHaveCount(0);
   const listingColumns = await postsListing.locator('.terminal-entry-row').evaluateAll((rows) => rows.map((row) => getComputedStyle(row).gridTemplateColumns));
   expect(new Set(listingColumns).size).toBe(1);
   await expect(announcer).toHaveText('9 posts listed.');
@@ -596,10 +624,10 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
   await submit(page, 'cat ./pages/about.md');
   await expect(transcript.locator('.terminal-record').last()).toContainText('About this foundation');
-  await submit(page, 'cat posts/ai/llm-workflow-with-trellis.md');
+  await submit(page, `cat ${workflow.virtual}`);
   await expect(transcript.locator('.terminal-record').last()).toContainText('llm-workflow-with-trellis');
   await submit(page, 'grep -i about pages/about.md');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('/pages/about.md:');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('~/blog/pages/about.md:');
   await submit(page, 'cat ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-record').last().getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
   await submit(page, 'cat lab/nerv');
@@ -789,7 +817,7 @@ test('ls and tree entries expose document links and safe directory cd links', as
   await submit(page, 'cd ~/blog');
   await submit(page, 'tree ~/blog');
   const tree = transcript.locator('.terminal-record').last().locator('.terminal-tree');
-  await expect(tree.getByRole('link', { name: 'posts/' })).toHaveAttribute('href', '/posts/');
+  await expect(tree.getByRole('link', { name: 'posts/', exact: true })).toHaveAttribute('href', '/posts/');
   const treeDirectory = tree.getByRole('link', { name: 'ai/', exact: true });
   await treeDirectory.focus();
   await treeDirectory.press('Enter');
@@ -799,13 +827,14 @@ test('ls and tree entries expose document links and safe directory cd links', as
 
 test('find results expose canonical keyboard-accessible document links while pipes stay text', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const transcript = page.locator('[data-terminal-transcript]');
 
   await submit(page, 'find ~/blog/posts llm-workflow');
   const postRecord = transcript.locator('.terminal-record').last();
-  const postLink = postRecord.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' });
+  const postLink = postRecord.getByRole('link', { name: workflow.shell, exact: true });
   await expect(postLink).toHaveAttribute('href', '/posts/ai/llm-workflow-with-trellis/');
-  await expect(postRecord).toContainText('ai/llm-workflow-with-trellis.md');
+  await expect(postRecord).toContainText(workflow.shell);
   await expect(postRecord).toContainText('2026-05-28');
   await expect(postRecord).toContainText('llm-workflow-with-trellis');
   await postLink.focus();
@@ -816,7 +845,7 @@ test('find results expose canonical keyboard-accessible document links while pip
   await page.goto('/');
   await submit(page, 'find ~/blog/pages about');
   const pageRecord = transcript.locator('.terminal-record').last();
-  const pageLink = pageRecord.getByRole('link', { name: '/pages/about.md' });
+  const pageLink = pageRecord.getByRole('link', { name: '~/blog/pages/about.md' });
   await expect(pageLink).toHaveAttribute('href', '/pages/about/');
   await pageLink.focus();
   await expect(pageLink).toBeFocused();
@@ -825,17 +854,18 @@ test('find results expose canonical keyboard-accessible document links while pip
   await submit(page, 'find llm-workflow | cat');
   const pipedRecord = transcript.locator('.terminal-record').last();
   await expect(pipedRecord.getByRole('link')).toHaveCount(0);
-  await expect(pipedRecord).toContainText('llm-workflow-with-trellis — 2026-05-28 — ai/llm-workflow-with-trellis.md');
+  await expect(pipedRecord).toContainText(`llm-workflow-with-trellis — 2026-05-28 — ${workflow.shell}`);
 });
 
 test('user aliases are session-local and disappear after refresh', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   const transcript = page.locator('[data-terminal-transcript]');
 
   await submit(page, 'alias la=ls');
   await expect(transcript.locator('.terminal-record').last()).toContainText('la=ls');
-  await submit(page, 'la ai/llm-workflow-with-trellis.md');
+  await submit(page, `la ${workflow.relative}`);
   await expect(transcript.locator('.terminal-entry-list').last().locator('.terminal-entry-row--document')).toHaveCount(1);
   await submit(page, 'help');
   await expect(transcript.locator('.terminal-record').last()).toContainText('la');
@@ -880,6 +910,7 @@ test('open navigates only to the validated listed experiment destination', async
 
 test('rshell updates its prompt and keeps pipes, scratch, and grep inside public session resources', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const input = page.locator('#terminal-command');
   const transcript = page.locator('[data-terminal-transcript]');
 
@@ -891,11 +922,11 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await expect(transcript.locator('.terminal-record').last()).toContainText('About');
   await expect(transcript.locator('[data-terminal-stream-document]')).toHaveCount(0);
   await submit(page, 'cd ~/blog/posts');
-  await submit(page, 'cat ai/llm-workflow-with-trellis.md | grep a');
+  await submit(page, `cat ${workflow.relative} | grep a`);
   const pipedGrep = transcript.locator('.terminal-record').last();
   await expect(pipedGrep.locator('.terminal-grep-line mark').first()).toHaveText('a');
   await submit(page, 'grep -inF about ~/blog/pages/about.md');
-  await expect(transcript.locator('.terminal-grep-match').last()).toContainText('/pages/about.md:');
+  await expect(transcript.locator('.terminal-grep-match').last()).toContainText('~/blog/pages/about.md:');
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
   await submit(page, 'grep -iwF about ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
@@ -905,10 +936,17 @@ test('rshell updates its prompt and keeps pipes, scratch, and grep inside public
   await expect(transcript.locator('.terminal-grep-line mark').last()).toHaveText('About');
   await submit(page, 'grep -F definitely-not-in-the-public-corpus');
   await expect(transcript.locator('.terminal-grep-summary').last()).toHaveText('No matches for "definitely-not-in-the-public-corpus".');
-  await submit(page, 'grep -nF "build" ~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await submit(page, `grep -nF "workflow" ${workflow.shell}`);
   const sourceMatches = transcript.locator('.terminal-record').last().locator('.terminal-grep-line');
   await expect.poll(async () => sourceMatches.count()).toBeGreaterThan(1);
   expect((await sourceMatches.allTextContents()).every((line) => line.length < 5000)).toBe(true);
+  const firstGrepLocation = await transcript.locator('.terminal-record').last().locator('.terminal-grep-location').first().textContent();
+  const copiedPath = firstGrepLocation?.replace(/:\d+:$/u, '');
+  if (copiedPath === undefined || !copiedPath.startsWith('~/blog/posts/')) {
+    throw new Error(`Grep did not expose a copyable document path: ${firstGrepLocation ?? 'missing'}`);
+  }
+  await submit(page, `cat ${copiedPath}`);
+  await expect(transcript.locator('[data-terminal-stream-document]').last().getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' })).toBeVisible();
 
   await submit(page, 'whoami > ~/blog/.rshell/tmp/identity.txt');
   await expect(transcript.locator('.terminal-record').last()).toContainText('Wrote 1 line to ~/blog/.rshell/tmp/identity.txt.');
@@ -983,6 +1021,7 @@ test('tall desktop keeps startup, output, and clear in one reading band', async 
   await page.setViewportSize({ width: 2048, height: 1244 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
 
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   const session = page.locator('[data-terminal-session]');
@@ -1001,7 +1040,7 @@ test('tall desktop keeps startup, output, and clear in one reading band', async 
   expect(short.rowBottom).toBeLessThanOrEqual(short.viewportHeight);
   expect(Math.abs(short.bandCenter - short.viewportHeight / 2)).toBeLessThan(48);
 
-  await submit(page, 'grep -nF a ~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await submit(page, `grep -nF a ${workflow.shell}`);
   const long = await readCommandBandGeometry(page);
   expect(long.sessionInitial).toBe(false);
   expect(long.scrollHeight).toBeGreaterThan(long.viewportHeight);
@@ -1045,7 +1084,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   await expect(input).toHaveValue('whoami');
   await input.fill('vim ./');
   await input.press('Tab');
-  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './apps/', './dev/', './essays/', './infra/', './learning/', './security/']);
+  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './app/', './dev/', './essays/', './infra/', './learning/', './security/']);
   await expect(input).toBeFocused();
   const modifiedVariants = await input.evaluate((element) => [
     { altKey: true, ctrlKey: true },
@@ -1059,7 +1098,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   }))));
   expect(modifiedVariants).toEqual([true, true, true]);
   await expect(input).toHaveValue('vim ./');
-  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './apps/', './dev/', './essays/', './infra/', './learning/', './security/']);
+  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './app/', './dev/', './essays/', './infra/', './learning/', './security/']);
   await input.press('Control+c');
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
@@ -1074,6 +1113,7 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
 
 test('the prompt owns unmodified Tab while completion only rewrites safe matches', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const input = page.locator('#terminal-command');
   await expect(input).toHaveAccessibleName(terminalPromptName());
   await input.focus();
@@ -1110,9 +1150,9 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
     await expect(page.locator('[data-terminal-completion]')).toHaveText('No matches.');
   }
 
-  await input.fill('cat ai/llm-w');
+  await input.fill(`cat ${workflow.partial}`);
   await input.press('Tab');
-  await expect(input).toHaveValue('cat ai/llm-workflow-with-trellis.md');
+  await expect(input).toHaveValue(`cat ${workflow.relative}`);
 
   await input.fill('cat ai');
   await input.press('Tab');
@@ -1123,7 +1163,7 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
 
   await input.fill('cat ./ai/llm-w');
   await input.press('Tab');
-  await expect(input).toHaveValue('cat ./ai/llm-workflow-with-trellis.md');
+  await expect(input).toHaveValue(`cat ./${workflow.relative}`);
   await expect(input).toBeFocused();
 
   const learningEntry = page.locator('[data-terminal-entry][data-terminal-entry-kind="post"][data-terminal-entry-title^="Learning"]').first();
@@ -1318,6 +1358,7 @@ test('native Enter submission works at desktop and mobile viewport contracts', a
 
 test('short output settles the active prompt and document output settles its reading start', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   for (let index = 0; index < 12; index += 1) {
     await submit(page, 'help');
@@ -1335,7 +1376,7 @@ test('short output settles the active prompt and document output settles its rea
   await expect(reducedHelp.getByText('show this command list')).toBeVisible();
   await expectInViewport(input, 0, 1);
 
-  await submit(page, 'cat ./ai/llm-workflow-with-trellis.md');
+  await submit(page, `cat ./${workflow.relative}`);
   const title = page
     .locator('[data-terminal-stream-document]')
     .last()
@@ -1346,8 +1387,9 @@ test('short output settles the active prompt and document output settles its rea
 
 test('eligible printable typing returns to the prompt while protected interactions stay native', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   const input = page.getByRole('textbox', { name: terminalPromptName() });
-  await submit(page, 'cat ai/llm-workflow-with-trellis.md');
+  await submit(page, `cat ${workflow.relative}`);
   const streamedDocument = page.locator('[data-terminal-stream-document]').last();
   const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
   await expect(title).toBeFocused();
@@ -1458,9 +1500,10 @@ test('firefly theme and official JetBrains Mono assets stay same-origin', async 
 
 test('cat appends trusted inline documents without navigation and scopes repeated IDs', async ({ page }) => {
   await page.goto('/');
-  await page.evaluate(() => {
+  const workflow = await getWorkflowPaths(page);
+  await page.evaluate((virtualPath) => {
     const template = [...document.querySelectorAll<HTMLTemplateElement>('[data-terminal-template]')]
-      .find((candidate) => candidate.dataset.terminalTemplatePath === 'posts/ai/llm-workflow-with-trellis.md');
+      .find((candidate) => candidate.dataset.terminalTemplatePath === virtualPath);
     const article = template?.content.querySelector<HTMLElement>('[data-terminal-stream-document]');
     const firstHeading = article?.querySelector<HTMLElement>('[id="install"]');
     const firstHeader = article?.querySelector<HTMLElement>('th');
@@ -1499,8 +1542,8 @@ test('cat appends trusted inline documents without navigation and scopes repeate
     firstCell.dataset.scopedCell = '';
     firstCell.setAttribute('headers', 'scoped-column');
     article.append(localLink, label, field, labelled, externalFragment);
-  });
-  await submit(page, 'cat ai/llm-workflow-with-trellis.md');
+  }, workflow.virtual);
+  await submit(page, `cat ${workflow.relative}`);
 
   await expect(page).toHaveURL(/\/$/u);
   const documents = page.locator('[data-terminal-stream-document]');
@@ -1542,7 +1585,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   expect(longDocumentGeometry.articleRight).toBeLessThanOrEqual(longDocumentGeometry.viewportWidth);
   expect(longDocumentGeometry.scrollHeight).toBeGreaterThan(longDocumentGeometry.viewportHeight);
 
-  await submit(page, 'cat ai/llm-workflow-with-trellis.md');
+  await submit(page, `cat ${workflow.relative}`);
   await expect(documents).toHaveCount(2);
   const identityEvidence = await page.evaluate(() => {
     const ids = [...document.querySelectorAll<HTMLElement>('[id]')].map((element) => element.id);
@@ -1571,7 +1614,8 @@ test('cat appends trusted inline documents without navigation and scopes repeate
 
 test('cat respects semantic and page adapter output in the home stream', async ({ page }) => {
   await page.goto('/');
-  await submit(page, 'cat ai/llm-workflow-with-trellis.md');
+  const workflow = await getWorkflowPaths(page);
+  await submit(page, `cat ${workflow.relative}`);
   const semanticDocument = page.locator('[data-terminal-stream-document]').first();
   await expect(semanticDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' })).toBeFocused();
   await expect(semanticDocument.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
@@ -1598,10 +1642,11 @@ test('malformed startup preserves the untouched native recovery product', async 
     observer.observe(document, { childList: true, subtree: true });
   });
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: workflow.shell, exact: true })).toBeVisible();
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
 });
 
@@ -1617,11 +1662,12 @@ test('a missing home controller restores recovery at DOM ready', async ({ page }
   });
   await page.route(/TerminalHome.*\.js$/u, (route) => route.abort());
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
 
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-startup]')).toBeHidden();
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: workflow.shell, exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect.poll(() => page.evaluate(() => {
     const tracker = window as Window & { __terminalEscapeDefaultPrevented?: boolean[] };
@@ -1710,6 +1756,7 @@ test('post-start clone-scoping failure restores one focused recovery target', as
 
 test('post-start renderer failure restores one focused recovery target', async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('#terminal-command')).toBeVisible();
   await page.evaluate(() => {
     const original = document.createElement.bind(document);
     document.createElement = ((name: string, options?: ElementCreationOptions) => {
@@ -1724,13 +1771,14 @@ test('post-start renderer failure restores one focused recovery target', async (
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
   await expect(page.locator('[data-terminal-failure] .terminal-status-label')).toHaveCount(1);
-  await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: workflowDocumentPath })).toBeVisible();
   await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
 });
 
 test('post-start executor failure restores the same native recovery product', async ({ page }) => {
   await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
   await page.evaluate(() => {
     Date.prototype.toISOString = () => {
       throw new Error('Injected executor failure');
@@ -1740,7 +1788,7 @@ test('post-start executor failure restores the same native recovery product', as
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
   await expect(page.locator('[data-terminal-failure]')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: workflow.shell, exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: 'Browse public documents' })).toBeFocused();
 });
 

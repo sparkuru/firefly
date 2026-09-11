@@ -1,5 +1,6 @@
 ---
 import {
+  formatDocumentOperand,
   formatTerminalPrompt,
   type TerminalEntry,
   type TerminalExperiment
@@ -194,8 +195,8 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
                   data-terminal-entry-href={terminalEntry.href}
                   data-terminal-entry-date={terminalEntry.date}
                 >
-                  <a href={terminalEntry.href} aria-label={terminalEntry.relativePath}>{terminalEntry.title}</a>
-                  <span> — {terminalEntry.relativePath}</span>
+                  <a href={terminalEntry.href} aria-label={formatDocumentOperand(terminalEntry)}>{terminalEntry.title}</a>
+                  <span> — {formatDocumentOperand(terminalEntry)}</span>
                   <ContentMarkers markers={canonical.markers} />
                   <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
                 </li>
@@ -224,8 +225,8 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
                   data-terminal-entry-href={terminalEntry.href}
                   data-terminal-entry-date={terminalEntry.date}
                 >
-                  <a href={terminalEntry.href} aria-label={terminalEntry.filename}>{terminalEntry.title}</a>
-                  <span> — {terminalEntry.filename}</span>
+                  <a href={terminalEntry.href} aria-label={formatDocumentOperand(terminalEntry)}>{terminalEntry.title}</a>
+                  <span> — {formatDocumentOperand(terminalEntry)}</span>
                   <ContentMarkers markers={canonical.markers} />
                   <time datetime={terminalEntry.date}>{terminalEntry.date}</time>
                 </li>

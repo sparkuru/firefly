@@ -38,7 +38,7 @@ async function expectHeadingLevels(page: Page, levels: number[]) {
   expect(actual).toEqual(levels);
 }
 
-async function expectTerminalDocument(page: Page, expectedPath: string) {
+async function expectTerminalDocument(page: Page, expectedPath: string | RegExp) {
   await expect(page.locator('html.terminal-root[data-terminal-theme="firefly"]')).toHaveCount(1);
   await expect(page.locator('.terminal-document')).toHaveCount(1);
   await expect(page.locator('.semantic-document')).toHaveCount(0);
@@ -49,6 +49,27 @@ async function expectTerminalDocument(page: Page, expectedPath: string) {
   await expect(page.locator('.terminal-path')).toHaveCount(0);
   await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
 }
+
+interface WorkflowPaths {
+  readonly relative: string;
+  readonly virtual: string;
+  readonly shell: string;
+}
+
+async function getWorkflowPaths(page: Page): Promise<WorkflowPaths> {
+  const entry = page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/llm-workflow-with-trellis/"]');
+  const relative = await entry.getAttribute('data-terminal-entry-relative-path');
+  if (relative === null || !relative.endsWith('llm-workflow-with-trellis.md')) {
+    throw new Error(`Unexpected workflow entry path: ${relative ?? 'missing'}`);
+  }
+  return {
+    relative,
+    virtual: `posts/${relative}`,
+    shell: `~/blog/posts/${relative}`
+  };
+}
+
+const workflowDocumentPath = /^~\/blog\/posts\/ai\/[^/]*llm-workflow-with-trellis\.md$/u;
 
 test('home exposes Terminal fallback content and visible keyboard focus', async ({ page }) => {
   await page.goto('/');
@@ -73,11 +94,12 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
       name: 'Browse public documents'
     })
   ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toHaveAttribute(
+  const workflow = await getWorkflowPaths(page);
+  await expect(page.getByRole('link', { name: workflow.shell, exact: true })).toHaveAttribute(
     'href',
     '/posts/ai/llm-workflow-with-trellis/'
   );
-  await expect(page.getByRole('link', { name: 'about.md' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '~/blog/pages/about.md', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(main.getByRole('heading', { level: 3, name: 'friend links' })).toBeVisible();
   if (SITE_CONFIG.terminal.friends.length === 0) {
@@ -91,9 +113,9 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   }
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'ai/Learning-with-LLM.md' })).toBeVisible();
+  await expect(page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/learning-with-llm/"] a')).toBeVisible();
   await expect(
-    page.locator('template[data-terminal-template][data-terminal-template-path="posts/ai/llm-workflow-with-trellis.md"]')
+    page.locator(`template[data-terminal-template][data-terminal-template-path="${workflow.virtual}"]`)
   ).toHaveCount(1);
   await expect(page.locator('.terminal-titlebar')).toHaveCount(0);
   await expect(page.getByText('Hidden draft')).toHaveCount(0);
@@ -142,7 +164,7 @@ test('post deep link uses the firefly default with a reader fragment', async ({ 
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
 
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/$/);
-  await expectTerminalDocument(page, '~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await expectTerminalDocument(page, workflowDocumentPath);
   const article = page.locator('article.terminal-document');
   await expect(
     article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })
@@ -193,7 +215,7 @@ test('post deep link uses the firefly default with a reader fragment', async ({ 
 test('firefly article remains complete and exposes one canonical route', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
 
-  await expectTerminalDocument(page, '~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await expectTerminalDocument(page, workflowDocumentPath);
   const article = page.locator('article.terminal-document');
   await expect(article.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(article.getByRole('heading', { level: 2, name: 'install' })).toBeVisible();
@@ -229,7 +251,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await page.goto('/posts/');
   await expect(page.getByRole('heading', { level: 1, name: 'posts/' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'ai/' })).toHaveAttribute('href', '/posts/ai/');
-  await expect(page.getByRole('link', { name: 'ai/llm-workflow-with-trellis.md' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: workflowDocumentPath })).toHaveCount(0);
   await expect(page.getByText(/Hidden draft|PRIVATE_TITLE_FIREFLY_7f2a|private-handoff|source-ledger/u)).toHaveCount(0);
   await expect(page.locator('script')).toHaveCount(0);
 
@@ -238,21 +260,23 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await expect(page.locator('.terminal-titlebar')).toBeVisible();
   await expect(page.locator('.terminal-titlebar span')).toHaveCount(2);
   await expect(page.locator('.terminal-titlebar span').nth(1)).toHaveText('~/blog/posts/ai');
-  await expect(page.getByRole('link', { name: 'llm-workflow-with-trellis.md' })).toHaveAttribute(
+  const nestedWorkflowLink = page.getByRole('link', { name: workflowDocumentPath });
+  await expect(nestedWorkflowLink).toHaveAttribute(
     'href',
     '/posts/ai/llm-workflow-with-trellis/'
   );
+  await expect(nestedWorkflowLink).toHaveAttribute('aria-label', workflowDocumentPath);
   await expect(page.locator('script')).toHaveCount(0);
 
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
-  await expectTerminalDocument(page, '~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await expectTerminalDocument(page, workflowDocumentPath);
   await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 
   await page.goto('/pages/');
   await expect(page.getByRole('heading', { level: 1, name: 'pages/' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'about.md' })).toHaveAttribute('href', '/pages/about/');
+  await expect(page.getByRole('link', { name: '~/blog/pages/about.md', exact: true })).toHaveAttribute('href', '/pages/about/');
   await expect(page.locator('script')).toHaveCount(0);
 });
 

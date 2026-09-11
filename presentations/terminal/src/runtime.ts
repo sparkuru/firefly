@@ -599,8 +599,15 @@ function lines(tone: TerminalTone, ...values: string[]): TerminalEffect {
   return Object.freeze({ kind: 'lines', tone, lines: Object.freeze(values) });
 }
 
+/**
+ * Projects a validated internal VFS path into the copyable shell resource
+ * path. Callers resolve and validate paths before using this presentation
+ * helper; it is not a shell-input parser.
+ */
+export const formatResourcePath = displayVfsPath;
+
 export function formatDocumentOperand(entry: TerminalEntry): string {
-  return entry.kind === 'post' ? entry.relativePath : `~/blog/${entry.virtualPath}`;
+  return formatResourcePath(`/${entry.virtualPath}`);
 }
 
 export function createTerminalCommandRegistry(definitions: readonly TerminalCommandDefinition[]): TerminalCommandRegistry {
@@ -776,11 +783,12 @@ function formatHelpDetail(detail: TerminalHelpCommand): readonly string[] {
 
 function formatGrepMatch(match: TerminalGrepMatch): string {
   if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}:${match.line}`;
-  return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
+  const displayPath = formatResourcePath(match.path);
+  return `${displayPath}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
 }
 
 function formatFindMatch(entry: TerminalEntry): string {
-  const displayPath = entry.kind === 'post' ? entry.relativePath : `/${entry.virtualPath}`;
+  const displayPath = formatDocumentOperand(entry);
   return `${entry.title} — ${entry.date} — ${displayPath}`;
 }
 

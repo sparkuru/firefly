@@ -2,6 +2,7 @@ import type { GrepMatch, GrepReport, ProcessContext, ProcessResult } from '../sh
 import { failureResult, successResult } from '../shell/streams.js';
 import { createCommandArgumentParser, type ParsedCommandArguments } from './arguments.js';
 import { publicDocumentSearchRoots, walkPublicDocuments, type PublicDocumentWalk } from '../vfs/public-documents.js';
+import { displayVirtualPath } from '../vfs/paths.js';
 import { textPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
 
@@ -396,7 +397,8 @@ function literalMatcher(pattern: string, insensitive: boolean, wholeWord: boolea
 
 function formatMatch(match: GrepMatch): string {
   if (match.path === '-') return match.lineNumber === undefined ? match.line : `${match.lineNumber}:${match.line}`;
-  return `${match.path}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
+  const displayPath = displayVirtualPath(match.path);
+  return `${displayPath}${match.lineNumber === undefined ? '' : `:${match.lineNumber}`}:${match.line}`;
 }
 
 function exampleLines(): readonly string[] {

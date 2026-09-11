@@ -21,6 +21,7 @@ import {
   decodeTerminalEntries,
   decodeTerminalExperiments,
   executeCommand,
+  formatResourcePath,
   formatTerminalPrompt,
   formatDocumentOperand,
   navigateHistory,
@@ -404,7 +405,9 @@ test('every command has deterministic output and strict usage errors', () => {
   const workspaceState = run('cd ../', run('cd ~/blog/posts').state).state;
   assert.equal(workspaceState.cwd, '~/blog');
   assert.deepEqual(run('ls', workspaceState).effect, run('ls ~/blog').effect);
-  assert.equal(formatDocumentOperand(entries[0]!), 'characters/alpha.md');
+  assert.equal(formatResourcePath('/'), '~/blog');
+  assert.equal(formatResourcePath('/posts/characters/alpha.md'), '~/blog/posts/characters/alpha.md');
+  assert.equal(formatDocumentOperand(entries[0]!), '~/blog/posts/characters/alpha.md');
   assert.equal(formatDocumentOperand(entries[1]!), '~/blog/pages/about.md');
   const document = run('cat characters/alpha.md');
   assert.equal(document.effect?.kind, 'document');

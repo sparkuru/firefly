@@ -505,6 +505,8 @@ test('Terminal document and directory chrome use the visible shell path once', a
     assert.doesNotMatch(titlebar, /<span>~\/posts\//u);
     assert.doesNotMatch(html, /class="terminal-path"/u);
   }
+  const nestedDirectory = await readFile(path.join(distRoot, 'posts/ai/index.html'), 'utf8');
+  assert.match(nestedDirectory, new RegExp(`aria-label="${escapeRegExp(workflow.visiblePath)}"`, 'u'));
 });
 
 test('official JetBrains Mono assets retain pinned license and provenance', async () => {
@@ -580,6 +582,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, new RegExp(`data-terminal-entry-filename="${escapeRegExp(workflow.filename)}"`, 'u'));
   assert.match(home, /data-terminal-entry-href="\/posts\/ai\/llm-workflow-with-trellis\/"/u);
   assert.match(home, new RegExp(`data-terminal-entry-date="${escapeRegExp(workflow.date)}(?:T[^"]+)?"`, 'u'));
+  assert.match(home, new RegExp(`aria-label="${escapeRegExp(workflow.visiblePath)}"`, 'u'));
+  assert.match(home, new RegExp(`<span> — ${escapeRegExp(workflow.visiblePath)}<\\/span>`, 'u'));
+  assert.match(home, /aria-label="~\/blog\/pages\/about\.md"/u);
+  assert.match(home, /<span> — ~\/blog\/pages\/about\.md<\/span>/u);
   assert.doesNotMatch(home, /data-terminal-entry-(?:description|body|draft|source|presentation)/u);
   assert.match(home, /data-terminal-experiment-id="nerv"/u);
   assert.match(home, /data-terminal-experiment-title="NERV"/u);
