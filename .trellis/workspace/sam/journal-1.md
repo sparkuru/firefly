@@ -1393,3 +1393,24 @@ Added a client-side boot gate that keeps the server-rendered 12-line home animat
 ### Status
 
 [OK] **Completed**
+
+
+## Session 62: Unify shell-visible resource paths
+
+**Date**: 2026-09-11
+**Task**: Unify shell-visible resource paths
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+统一终端与站点所有用户可见的文档资源路径为 ~/blog/<virtualPath>；保留内部 VFS 与 href 的 slash-rooted 规范；grep 输出可直接复制给 cat；补充运行时、静态输出、终端单测与浏览器回归，并更新前端内容工作区契约。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6a1e470` | (see git log) |
+
+### Status
+
+[OK] **Completed**
