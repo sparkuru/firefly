@@ -1477,3 +1477,24 @@ Implemented the site-owned articleTheme registry and strict post/page schema def
 ### Status
 
 [OK] **Completed**
+
+
+## Session 66: Add paper article theme
+
+**Date**: 2026-09-15
+**Task**: Add paper article theme
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented the paper article theme with frozen registry ID, content-scoped tokenized CSS, semantic and Terminal static delivery, schema/build/X Core/browser regressions, updated frontend contracts, and passed M4 plus external workspace build. Archived the task after commit; preserved the unrelated readme.md change.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9ba2bb3` | (see git log) |
+
+### Status
+
+[OK] **Completed**
