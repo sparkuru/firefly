@@ -911,6 +911,19 @@ function settleCommandOutput(record: HTMLElement, input: HTMLInputElement): void
   input.scrollIntoView({ behavior, block: 'end', inline: 'nearest' });
 }
 
+function isUnmodifiedCtrlL(event: KeyboardEvent): boolean {
+  return event.key.toLocaleLowerCase('en-US') === 'l' &&
+    event.ctrlKey &&
+    !event.altKey &&
+    !event.metaKey &&
+    !event.shiftKey;
+}
+
+function isCollapsedSelection(): boolean {
+  const selection = window.getSelection();
+  return selection === null || selection.isCollapsed;
+}
+
 function isEligibleTypingTarget(event: KeyboardEvent): boolean {
   if (
     event.defaultPrevented ||
@@ -929,8 +942,30 @@ function isEligibleTypingTarget(event: KeyboardEvent): boolean {
   if (target instanceof Element && target.closest(protectedTypingTargetSelector) !== null) {
     return false;
   }
-  const selection = window.getSelection();
-  return selection === null || selection.isCollapsed;
+  return isCollapsedSelection();
+}
+
+function isEligibleInlineClearTarget(event: KeyboardEvent, transcript: HTMLElement): boolean {
+  if (
+    event.defaultPrevented ||
+    !event.cancelable ||
+    event.isComposing ||
+    !isUnmodifiedCtrlL(event)
+  ) {
+    return false;
+  }
+  const target = event.target;
+  if (!(target instanceof Element) || !transcript.contains(target)) {
+    return false;
+  }
+  const streamDocument = target.closest('[data-terminal-stream-document]');
+  if (streamDocument === null || !transcript.contains(streamDocument)) {
+    return false;
+  }
+  if (target.closest(protectedTypingTargetSelector) !== null) {
+    return false;
+  }
+  return isCollapsedSelection();
 }
 
 function isUnmodifiedPrimaryClick(event: MouseEvent): boolean {
@@ -1044,6 +1079,13 @@ export function startTerminalHome(
   const dismissCompletion = (): void => {
     completionPanel = null;
     clearCompletionDisplay(nodes);
+  };
+
+  const clearCommandTranscript = (): void => {
+    state = cancelCommandInput(state);
+    updatePrompt();
+    dismissCompletion();
+    clearTranscript(nodes, 'Command transcript cleared.');
   };
 
   const setPromptValue = (value: string): void => {
@@ -1221,18 +1263,9 @@ export function startTerminalHome(
       settleViewport(nodes.input, 'center');
       return;
     }
-    if (
-      event.key.toLocaleLowerCase('en-US') === 'l' &&
-      event.ctrlKey &&
-      !event.altKey &&
-      !event.metaKey &&
-      !event.shiftKey
-    ) {
+    if (isUnmodifiedCtrlL(event)) {
       event.preventDefault();
-      state = cancelCommandInput(state);
-      updatePrompt();
-      dismissCompletion();
-      clearTranscript(nodes, 'Command transcript cleared.');
+      clearCommandTranscript();
       return;
     }
     if (
@@ -1318,7 +1351,15 @@ export function startTerminalHome(
   });
 
   document.addEventListener('keydown', (event) => {
-    if (failed || !interactiveReady || composing || !isEligibleTypingTarget(event)) {
+    if (failed || !interactiveReady || composing) {
+      return;
+    }
+    if (isEligibleInlineClearTarget(event, nodes.transcript)) {
+      event.preventDefault();
+      clearCommandTranscript();
+      return;
+    }
+    if (!isEligibleTypingTarget(event)) {
       return;
     }
     event.preventDefault();

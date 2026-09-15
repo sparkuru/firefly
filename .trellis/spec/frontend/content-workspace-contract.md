@@ -991,6 +991,17 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   transcript through the same presentation path as `clear`, resets the draft and
   completion display, preserves submitted command history for ArrowUp, and
   refocuses the prompt. Alt/Meta/Shift variants and composition remain native.
+- The interactive home controller also owns an exact unmodified, cancelable
+  `Ctrl+L` delivered to a non-interactive element inside the current Terminal
+  transcript's `[data-terminal-stream-document]` produced by inline `cat`,
+  including its focused title. It uses the same clear transition as the active
+  prompt. Links, native/ARIA controls, editables, local-scroll code/table
+  widgets, composing input, modified variants, and non-collapsed user text
+  selections remain native; the standalone `vim` reader route is unchanged.
+- Browser/OS shortcuts remain best-effort: page code can prevent the default
+  only when the browser delivers a cancelable key event to the document. It
+  cannot override an address-bar/search reservation consumed before DOM event
+  dispatch.
 - The `ls` command definition owns the built-in `l` and `ll` aliases, and the
   `clear` definition owns `cls`; `help`, `alias`, command resolution, and
   completion derive these mappings from the same frozen registry metadata.

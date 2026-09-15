@@ -1081,6 +1081,157 @@ test('Ctrl+L clears the transcript without consuming command history and cls ali
   await expect(input).toBeFocused();
 });
 
+test('inline cat Ctrl+L clears from its reading surface and preserves history', async ({ page }) => {
+  await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
+  const transcript = page.locator('[data-terminal-transcript]');
+  const completion = page.locator('[data-terminal-completion]');
+
+  await submit(page, 'pwd');
+  await submit(page, `cat ${workflow.relative}`);
+  const streamedDocument = page.locator('[data-terminal-stream-document]').last();
+  const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
+  await expect(title).toBeFocused();
+
+  await input.fill('vim ./');
+  await input.press('Tab');
+  await expect(completion).not.toBeEmpty();
+  await title.focus();
+
+  const cancellation = await title.evaluate((element) => {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: 'l'
+    });
+    const dispatchResult = element.dispatchEvent(event);
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  });
+  expect(cancellation).toEqual({ dispatchResult: false, defaultPrevented: true });
+  await expect(transcript).toBeEmpty();
+  await expect(completion).toBeEmpty();
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command transcript cleared.');
+  await expectCenteredEmptySession(page);
+
+  await input.press('ArrowUp');
+  await expect(input).toHaveValue(`cat ${workflow.relative}`);
+  await input.press('ArrowUp');
+  await expect(input).toHaveValue('pwd');
+});
+
+test('inline cat Ctrl+L preserves protected, modified, composing, and selected native boundaries', async ({ page }) => {
+  await page.goto('/');
+  const workflow = await getWorkflowPaths(page);
+  const input = page.getByRole('textbox', { name: terminalPromptName() });
+  const transcript = page.locator('[data-terminal-transcript]');
+  await submit(page, `cat ${workflow.relative}`);
+  const streamedDocument = page.locator('[data-terminal-stream-document]').last();
+  const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
+  const link = streamedDocument.getByRole('link', { name: 'permalink' });
+  await expect(title).toBeFocused();
+
+  const modifiedVariants = await title.evaluate((element) => [
+    { altKey: true },
+    { metaKey: true },
+    { shiftKey: true }
+  ].map((modifiers) => {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: 'l',
+      ...modifiers
+    });
+    const dispatchResult = element.dispatchEvent(event);
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  }));
+  expect(modifiedVariants).toEqual([
+    { dispatchResult: true, defaultPrevented: false },
+    { dispatchResult: true, defaultPrevented: false },
+    { dispatchResult: true, defaultPrevented: false }
+  ]);
+  await expect(transcript).not.toBeEmpty();
+  await expect(title).toBeFocused();
+
+  await link.focus();
+  const linkResult = await link.evaluate((element) => {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: 'l'
+    });
+    const dispatchResult = element.dispatchEvent(event);
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  });
+  expect(linkResult).toEqual({ dispatchResult: true, defaultPrevented: false });
+  await expect(link).toBeFocused();
+  await expect(transcript).not.toBeEmpty();
+
+  await title.focus();
+  await page.evaluate(() => {
+    const paragraph = document.querySelector<HTMLElement>('.terminal-stream-prose p');
+    const selection = window.getSelection();
+    if (paragraph === null || selection === null || paragraph.firstChild === null) {
+      throw new Error('Missing selection fixture.');
+    }
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  const selectionResult = await title.evaluate((element) => {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: 'l'
+    });
+    const dispatchResult = element.dispatchEvent(event);
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  });
+  expect(selectionResult).toEqual({ dispatchResult: true, defaultPrevented: false });
+  await expect(title).toBeFocused();
+  await expect(transcript).not.toBeEmpty();
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+
+  const compositionResult = await title.evaluate((element) => {
+    element.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      isComposing: true,
+      key: 'l'
+    });
+    const dispatchResult = element.dispatchEvent(event);
+    element.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  });
+  expect(compositionResult).toEqual({ dispatchResult: true, defaultPrevented: false });
+  await expect(title).toBeFocused();
+  await expect(transcript).not.toBeEmpty();
+
+  const nonCancelableResult = await title.evaluate((element) => {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: false,
+      ctrlKey: true,
+      key: 'l'
+    });
+    const dispatchResult = element.dispatchEvent(event);
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  });
+  expect(nonCancelableResult).toEqual({ dispatchResult: true, defaultPrevented: false });
+  await expect(input).toHaveValue('');
+  await expect(title).toBeFocused();
+  await expect(transcript).not.toBeEmpty();
+});
+
 test('Control+C cancels only the current prompt and completion state', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
