@@ -8,6 +8,10 @@ import type { PublicPage, PublicPost } from './content';
 
 export type PublicDocument = PublicPost | PublicPage;
 
+function normalizeHeadingText(text: string) {
+  return text.replace(/\s+/gu, ' ').trim();
+}
+
 function assertHeadingMetadata(
   outline: readonly OutlineItem[],
   headings: readonly { depth: number; slug: string; text: string }[],
@@ -27,7 +31,7 @@ function assertHeadingMetadata(
       !heading ||
       item.depth !== heading.depth ||
       item.id !== heading.slug ||
-      item.text !== heading.text
+      item.text !== normalizeHeadingText(heading.text)
     ) {
       throw xCoreError(
         'XCORE_HEADING_METADATA_DRIFT',

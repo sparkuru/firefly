@@ -30,6 +30,13 @@
   --terminal-color-focus: #9affbd;
   --terminal-color-highlight: rgb(255 209 102 / 28%);
   --terminal-color-shadow: rgb(0 0 0 / 35%);
+  --article-content-text: var(--terminal-color-text);
+  --article-content-muted: var(--terminal-color-muted);
+  --article-content-surface: var(--terminal-color-canvas);
+  --article-content-surface-raised: var(--terminal-color-surface);
+  --article-content-border: var(--terminal-color-border);
+  --article-content-link: var(--terminal-color-link);
+  --article-content-focus: var(--terminal-color-focus);
   --terminal-font-family: 'JetBrains Mono', 'Noto Sans Mono CJK SC',
     'Sarasa Mono SC', 'Microsoft YaHei UI', ui-monospace, monospace;
   --terminal-font-size: 1rem;

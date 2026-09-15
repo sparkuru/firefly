@@ -19,6 +19,7 @@ new PresentationRegistry(defaultId?: string)
 createXCorePlugins(options: {
   registry: PresentationRegistry;
   resolveContext: DocumentContextResolver;
+  allowAuthoredHtml?: boolean;
 }): { remarkPlugin; rehypePlugin }
 
 parseXCoreMetadata(value: unknown, owner?: string): XCoreMetadata
@@ -44,8 +45,20 @@ interface PresentationAdapter {
   route, collection, canonical slug, layout, and selected presentation. The
   app resolves it from the guest-projected `CanonicalDocument`; no host workspace
   path enters context or diagnostics.
-- Remark rejects authored raw HTML, derives the first substantive prose summary,
-  and classifies link/resource references as fragment/internal/relative/external.
+- Remark rejects authored raw HTML by default, derives the first substantive
+  prose summary, and classifies link/resource references as
+  fragment/internal/relative/external. A host may set
+  `allowAuthoredHtml: true` only when its own processor parses and sanitizes
+  authored HTML before the X Core rehype stage; the option does not parse,
+  sanitize, or authorize HTML by itself.
+- The site-owned Markdown processor runs `rehypeRaw`, then its explicit
+  `rehype-sanitize` schema, then the X Core rehype plugin. The site schema keeps
+  only structural/semantic HTML, `<center>` for legacy compatibility, safe
+  relative/HTTP(S) URLs, and the documented `firefly-content-callout` and
+  `firefly-content-center` classes. It removes style elements/attributes,
+  scripts, event handlers, unsafe URLs, browser embedding/form primitives, and
+  other unsupported content. The final raw-HAST guard remains required even
+  for opted-in hosts.
 - Rehype assigns GitHub-compatible heading IDs, an ordered outline, deterministic
   `data-node-id` values, applies one registered adapter, validates its output, and
   writes only versioned JSON-compatible `xCore` metadata.
@@ -53,8 +66,9 @@ interface PresentationAdapter {
   introduce HAST `raw` nodes. Every enhancement target must exist in emitted DOM.
 - Metadata fields are exact: `version`, `presentation`, `summary`, `references`,
   `outline`, and `enhancements`. Site `renderDocument()` also requires exact
-  agreement with Astro's heading metadata and sequential body headings starting
-  at level two.
+  agreement with Astro's heading depths/IDs and canonical heading text
+  (whitespace is collapsed and trimmed at the comparison boundary), plus
+  sequential body headings starting at level two.
 - JSON values are finite primitives, plain dense arrays, or plain/null-prototype
   objects with enumerable string data properties. Symbols, accessors, cycles,
   custom prototypes, sparse/decorated arrays, forbidden prototype keys, and
@@ -91,7 +105,7 @@ interface PresentationAdapter {
 | unregistered presentation | `XCORE_UNKNOWN_PRESENTATION` with document context |
 | unsupported or throwing/non-boolean `supports` | typed `XCORE_*` diagnostic with context/cause |
 | resolver throws or returns incomplete context | `XCORE_CONTEXT_RESOLUTION` / `XCORE_INVALID_CONTEXT` |
-| raw Markdown HTML or raw transformed HAST | `XCORE_RAW_HTML` / `XCORE_INVALID_TRANSFORM` |
+| raw Markdown HTML without host opt-in, or raw transformed HAST | `XCORE_RAW_HTML` / `XCORE_INVALID_TRANSFORM` |
 | transform is not a HAST root or throws | typed transform diagnostic with document context |
 | heading/node ID collision or adapter identity drift | typed collision/drift diagnostic; no partial output |
 | malformed/non-dense enhancement output or missing target | typed manifest/target diagnostic |
@@ -108,12 +122,14 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
 - Good: one schema-validated Markdown document passes through the actual Astro
   processor and the same production registry; semantic, Terminal, and a fixture
   adapter produce deterministic adapter-specific output without changing the
-  Markdown or stable identities.
+  Markdown or stable identities. An opted-in site parses and sanitizes HTML
+  before X Core assigns headings and node identities.
 - Base: omitted presentation selects `firefly`, emits Terminal static native
   HTML and an empty enhancement list, and remains complete with JavaScript
   disabled.
-- Bad: route code calls `render(entry)` directly, asserts plugin metadata, trusts
-  adapter return values, stores AST/functions in frontmatter, mutates generated
+- Bad: a host enables `allowAuthoredHtml` without its parser/sanitizer, route
+  code calls `render(entry)` directly, asserts plugin metadata, trusts adapter
+  return values, stores AST/functions in frontmatter, mutates generated
   identities, or adds a browser Markdown/enhancement runtime.
 
 ### 6. Tests Required
@@ -131,7 +147,8 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   compare semantic and fixture adapters and repeated determinism.
 - `apps/site run test:content`: schema/materializer/access plus isolated real
   negative builds for route/path collision, unsupported layout, unregistered
-  adapter, private leakage, and raw HTML.
+  adapter, and private leakage. Site authored HTML policy coverage belongs to
+  `test:x-core`; hosts without the opt-in retain the raw-HTML negative.
 - `apps/site run build`: validate the exact HTML route inventory derived from the
   explicitly selected fixture/workspace, one semantic CSS, one home command JS,
   one canonical-document reader JS, zero maps/unknown files,

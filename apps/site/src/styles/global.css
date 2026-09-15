@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './article-content.css';
 
 :root {
   --surface: #f7f7f5;
@@ -9,6 +10,13 @@
   --link: #174a7e;
   --link-active: #0d3157;
   --focus: #9b5b00;
+  --article-content-text: var(--text);
+  --article-content-muted: var(--text-muted);
+  --article-content-surface: var(--surface);
+  --article-content-surface-raised: var(--surface-raised);
+  --article-content-border: var(--border);
+  --article-content-link: var(--link);
+  --article-content-focus: var(--focus);
   --content-marker-color: var(--focus);
   color-scheme: light;
   font-family:

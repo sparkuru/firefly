@@ -1,0 +1,23 @@
+/*
+ * Generic article-content contract. Website layouts map these variables to
+ * their own tokens; this layer does not depend on a presentation or chrome
+ * selector. The content root is also the future article-theme seam.
+ */
+[data-article-content] {
+  color: var(--article-content-text);
+}
+
+[data-article-content] .firefly-content-callout {
+  margin-block: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--article-content-border);
+  border-radius: 0.25rem;
+  background: var(--article-content-surface-raised);
+  color: var(--article-content-text);
+}
+
+[data-article-content] .firefly-content-center,
+[data-article-content] center {
+  margin-inline: auto;
+  text-align: center;
+}

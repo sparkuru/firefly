@@ -128,27 +128,4 @@ This content must never be published.
     });
   });
 
-  await context.test('raw authored HTML fails with source context', async () => {
-    await expectNegativeBuild({
-      collection: 'posts',
-      filename: 'x-core-negative-raw-html.md',
-      source: `---
-title: Raw HTML fixture
-slug: x-core-negative-raw-html
-date: 2026-08-12
-description: Must fail the authored HTML boundary.
-draft: false
-layout: post
-presentation: semantic
----
-
-<div>This content must never be published.</div>
-`,
-      patterns: [
-        /XCORE_RAW_HTML/u,
-        /posts\/x-core-negative-raw-html/u,
-        /posts\/x-core-negative-raw-html\.md/u
-      ]
-    });
-  });
 });

@@ -327,6 +327,25 @@ startTerminalReader(root: HTMLElement): void
 - Directory indexes list only immediate guest-visible children. Private-only
   branches do not create empty directories, routes, templates, completion
   candidates, or tree nodes.
+- Authored Markdown HTML is a site-owned presentation input, not workspace
+  metadata. The site opts into it only after `rehypeRaw` parses the Markdown
+  bridge and `rehype-sanitize` applies its explicit schema before X Core. The
+  schema permits structural/semantic elements, legacy `<center>`, safe
+  relative/HTTP(S) links and images, and only the namespaced
+  `firefly-content-callout` and `firefly-content-center` classes. It removes
+  `<style>`, `style`, scripts, event handlers, unsafe/protocol-relative URLs,
+  forms, browser embedding primitives, and unsupported attributes/elements.
+  Hosts that do not install this policy retain X Core's default raw-HTML
+  rejection; no host path or source identity enters the HTML context.
+- The rendered Markdown body has one stable `[data-article-content]` root in
+  both semantic and Terminal document presentations. Its generic
+  `--article-content-*` tokens are mapped from each presentation's existing
+  website tokens, and its initial class vocabulary is independent of
+  `.site-*`, `.terminal-*`, `.prose`, and `.terminal-prose` selectors. This
+  content root is the additive seam for a future validated article-theme ID;
+  this contract does not add a theme field, registry, picker, or stylesheet
+  selector, and the article theme must remain separate from website
+  `presentation` selection.
 - Terminal permalinks render the exact token order
   `guest@firefly:~/blog $ / posts / characters / nahida.md` for the nested
   fixture. The root and every parent are native underlined links; the current

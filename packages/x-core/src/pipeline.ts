@@ -40,6 +40,7 @@ interface AstroFileData {
 interface XCorePluginOptions {
   readonly registry: PresentationRegistry;
   readonly resolveContext: DocumentContextResolver;
+  readonly allowAuthoredHtml?: boolean;
 }
 
 const addressableTags = new Set([
@@ -172,17 +173,23 @@ function classifyReference(target: string): DocumentReference['kind'] {
   return 'relative';
 }
 
-function analyzeMarkdown(tree: MdastRoot, context: DocumentContext): PipelineState {
+function analyzeMarkdown(
+  tree: MdastRoot,
+  context: DocumentContext,
+  allowAuthoredHtml: boolean
+): PipelineState {
   let summary = '';
   const references: DocumentReference[] = [];
 
-  visit(tree, 'html', (node: MdastHtml) => {
-    throw xCoreError(
-      'XCORE_RAW_HTML',
-      'Raw authored HTML is not supported.',
-      context
-    );
-  });
+  if (!allowAuthoredHtml) {
+    visit(tree, 'html', (node: MdastHtml) => {
+      throw xCoreError(
+        'XCORE_RAW_HTML',
+        'Raw authored HTML is not supported.',
+        context
+      );
+    });
+  }
 
   visit(tree, (node) => {
     if (!summary && node.type === 'paragraph') {
@@ -633,7 +640,10 @@ export function createXCorePlugins(options: XCorePluginOptions): {
 
   const remarkPlugin: Plugin<[], MdastRoot> = () => (tree, file) => {
     const context = contextFromResolver(options.resolveContext, file);
-    stateByFile.set(file, analyzeMarkdown(tree, context));
+    stateByFile.set(
+      file,
+      analyzeMarkdown(tree, context, options.allowAuthoredHtml === true)
+    );
   };
 
   const rehypePlugin: Plugin<[], HastRoot> = () => (tree, file) => {

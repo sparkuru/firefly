@@ -7,7 +7,10 @@ import {
 } from '@firefly/x-core';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { terminalHomeAssetsInlineLimit } from './src/lib/assets-inline-limit.mjs';
+import { markdownHtmlSchema } from './src/lib/markdown-html-policy.mjs';
 import { createSiteSeoIntegration } from './src/lib/site-seo.mjs';
 import { resolveDocumentContext } from './src/lib/x-core-context';
 
@@ -16,7 +19,8 @@ export const presentationRegistry = new PresentationRegistry()
   .register(terminalPresentation);
 const xCorePlugins = createXCorePlugins({
   registry: presentationRegistry,
-  resolveContext: resolveDocumentContext
+  resolveContext: resolveDocumentContext,
+  allowAuthoredHtml: true
 });
 
 export default defineConfig({
@@ -26,8 +30,12 @@ export default defineConfig({
   markdown: {
     processor: unified({
       remarkPlugins: [xCorePlugins.remarkPlugin],
-      rehypePlugins: [xCorePlugins.rehypePlugin],
-      remarkRehype: { allowDangerousHtml: false }
+      rehypePlugins: [
+        rehypeRaw,
+        [rehypeSanitize, markdownHtmlSchema],
+        xCorePlugins.rehypePlugin
+      ],
+      remarkRehype: { allowDangerousHtml: true }
     })
   },
   vite: {

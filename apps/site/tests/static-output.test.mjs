@@ -457,6 +457,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, /data-terminal-theme="firefly"/u);
     assert.match(html, /class="terminal-titlebar"/u);
     assert.match(html, /class="terminal-document"/u);
+    assert.match(html, /data-article-content/u);
     assert.doesNotMatch(html, /class="terminal-path"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
     assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
@@ -689,6 +690,7 @@ test('default firefly output contains reader boundaries and localized wide regio
   assert.ok(statusIndex > readerIndex);
   assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
   assert.match(post, /data-terminal-reader-entry="always"/u);
+  assert.match(post, /data-article-content/u);
   assert.doesNotMatch(post, /data-terminal-reader-status[^>]*hidden/u);
   assert.match(post, /class="terminal-outline"/u);
   assert.match(post, /<ul\b/u);
@@ -712,6 +714,8 @@ test('both reader presentations keep status after content and fixed to the viewp
   );
   const semanticStyles = await readFile(path.join(sourceRoot, 'styles/global.css'), 'utf8');
   const terminalStyles = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
+  const articleStyles = await readFile(path.join(sourceRoot, 'styles/article-content.css'), 'utf8');
+  const terminalLayout = await readFile(path.join(sourceRoot, 'layouts/TerminalLayout.astro'), 'utf8');
 
   for (const [component, variant] of [
     [semanticComponent, 'semantic'],
@@ -721,7 +725,16 @@ test('both reader presentations keep status after content and fixed to the viewp
     const statusIndex = component.indexOf(`<ReaderStatus variant="${variant}"`);
     assert.ok(readerIndex >= 0);
     assert.ok(statusIndex > readerIndex);
+    assert.match(component, /data-article-content/u);
   }
+
+  assert.match(semanticStyles, /@import ['"]\.\/article-content\.css['"]/u);
+  assert.match(terminalLayout, /articleContentCss/u);
+  assert.match(articleStyles, /\[data-article-content\]/u);
+  assert.match(articleStyles, /\.firefly-content-callout/u);
+  assert.match(articleStyles, /\.firefly-content-center/u);
+  assert.match(articleStyles, /\[data-article-content\]\s+center/u);
+  assert.doesNotMatch(articleStyles, /\.prose|\.terminal-prose|\.site-|\.terminal-/u);
 
   for (const [styles, selector] of [
     [semanticStyles, '.reader-status'],

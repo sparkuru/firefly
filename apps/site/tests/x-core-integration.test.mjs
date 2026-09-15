@@ -10,7 +10,10 @@ import {
   PresentationRegistry,
   XCoreError
 } from '@firefly/x-core';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { postSchema } from '../src/lib/content-schema.mjs';
+import { markdownHtmlSchema } from '../src/lib/markdown-html-policy.mjs';
 
 const validFrontmatter = postSchema.parse({
   title: 'Integration fixture',
@@ -45,13 +48,21 @@ async function createProcessor(
     .register(semanticPresentation)
     .register(terminalPresentation)
 ) {
-  const plugins = createXCorePlugins({ registry, resolveContext: contextResolver });
+  const plugins = createXCorePlugins({
+    registry,
+    resolveContext: contextResolver,
+    allowAuthoredHtml: true
+  });
 
   return createMarkdownProcessor({
     syntaxHighlight: false,
     remarkPlugins: [plugins.remarkPlugin],
-    rehypePlugins: [plugins.rehypePlugin],
-    remarkRehype: { allowDangerousHtml: false }
+    rehypePlugins: [
+      rehypeRaw,
+      [rehypeSanitize, markdownHtmlSchema],
+      plugins.rehypePlugin
+    ],
+    remarkRehype: { allowDangerousHtml: true }
   });
 }
 
@@ -191,19 +202,71 @@ test('Astro surfaces unknown adapters with owning document context', async () =>
   );
 });
 
-test('Astro rejects raw HTML before the dangerous HTML bridge', async () => {
+test('Astro sanitizes authored HTML before X Core metadata and presentation transforms', async () => {
   const processor = await createProcessor();
+  const markdown = `## Safe HTML
 
-  await assert.rejects(
-    processor.render('<div>Authored HTML is prohibited.</div>', {
+<div class="firefly-content-callout arbitrary-author-class" style="color: red" onclick="alert(1)">A safe callout.</div>
+
+<script>alert('script')</script>
+<style>body { color: red; }</style>
+<iframe src="https://unsafe-embedding.test/">embedding</iframe>
+<form action="https://unsafe-form.test/"><input type="text" value="unsafe"></form>
+<a href="javascript:alert(1)" onmouseover="alert(1)">unsafe link</a>
+<a href="//unsafe-protocol-relative.test/">protocol-relative link</a>
+<img src="data:text/html,unsafe" onerror="alert(1)" style="display: none" alt="unsafe image">
+
+## <center> Legacy center heading </center>
+
+A paragraph remains in the normalized document.`;
+
+  const semantic = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/integration-fixture.md'),
+    frontmatter: validFrontmatter
+  });
+  const terminal = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/integration-fixture.md'),
+    frontmatter: { ...validFrontmatter, presentation: DEFAULT_PRESENTATION_ID }
+  });
+  const semanticMetadata = parseXCoreMetadata(semantic.metadata.frontmatter.xCore);
+  const terminalMetadata = parseXCoreMetadata(terminal.metadata.frontmatter.xCore);
+
+  assert.deepEqual(semanticMetadata.outline, [
+    { depth: 2, id: 'safe-html', text: 'Safe HTML' },
+    { depth: 2, id: 'legacy-center-heading', text: 'Legacy center heading' }
+  ]);
+  assert.deepEqual(semanticMetadata.outline, terminalMetadata.outline);
+  assert.equal(semanticMetadata.presentation, 'semantic');
+  assert.equal(terminalMetadata.presentation, DEFAULT_PRESENTATION_ID);
+  assert.deepEqual(semanticMetadata.enhancements, []);
+  assert.deepEqual(terminalMetadata.enhancements, []);
+
+  for (const rendered of [semantic, terminal]) {
+    assert.match(rendered.code, /<div class="firefly-content-callout">A safe callout\.<\/div>/u);
+    assert.match(rendered.code, /<center>\s+Legacy center heading\s+<\/center>/u);
+    assert.match(rendered.code, /data-node-id="posts-integration-fixture-p-1"/u);
+    assert.doesNotMatch(rendered.code, /<script|<style|<iframe|<form|<input|javascript:|data:text|onmouseover|onerror|style=/iu);
+    assert.doesNotMatch(rendered.code, /arbitrary-author-class|unsafe-protocol-relative/u);
+  }
+
+  assert.match(semantic.code, /class="firefly-content-callout"/u);
+  assert.doesNotMatch(semantic.code, /data-terminal-wide|terminal-wide/u);
+  assert.match(terminal.code, /class="firefly-content-callout"/u);
+  assert.doesNotMatch(terminal.code, /data-wide-content|wide-content/u);
+});
+
+test('site policy preserves safe relative and HTTP(S) resource links only', async () => {
+  const processor = await createProcessor();
+  const rendered = await processor.render(
+    '<a href="/pages/about/">internal</a> <a href="guide.md">relative</a> <a href="https://safe.test/">external</a> <a href="mailto:unsafe@example.test">removed</a>',
+    {
       fileURL: new URL('file:///repo/content/posts/integration-fixture.md'),
       frontmatter: validFrontmatter
-    }),
-    (error) => {
-      assert.ok(error instanceof XCoreError);
-      assert.equal(error.diagnostic.code, 'XCORE_RAW_HTML');
-      assert.match(error.message, /content\/posts\/integration-fixture\.md/u);
-      return true;
     }
   );
+
+  assert.match(rendered.code, /<a href="\/pages\/about\/">internal<\/a>/u);
+  assert.match(rendered.code, /<a href="guide\.md">relative<\/a>/u);
+  assert.match(rendered.code, /<a href="https:\/\/safe\.test\/">external<\/a>/u);
+  assert.match(rendered.code, /<a>removed<\/a>/u);
 });

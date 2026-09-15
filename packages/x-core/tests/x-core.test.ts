@@ -50,22 +50,31 @@ const defaultPresentationAdapter: PresentationAdapter = {
   id: DEFAULT_PRESENTATION_ID
 };
 
+interface ProcessOptions {
+  readonly allowAuthoredHtml?: boolean;
+  readonly allowDangerousHtml?: boolean;
+}
+
 async function processMarkdown(
   markdown: string,
   adapter: PresentationAdapter = passThroughAdapter,
   context: DocumentContext = semanticContext,
-  resolvedContext: DocumentContext = context
+  resolvedContext: DocumentContext = context,
+  processOptions: ProcessOptions = {}
 ) {
   const registry = new PresentationRegistry().register(adapter);
   const plugins = createXCorePlugins({
     registry,
-    resolveContext: () => resolvedContext
+    resolveContext: () => resolvedContext,
+    allowAuthoredHtml: processOptions.allowAuthoredHtml
   });
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(plugins.remarkPlugin)
-    .use(remarkRehype, { allowDangerousHtml: false })
+    .use(remarkRehype, {
+      allowDangerousHtml: processOptions.allowDangerousHtml === true
+    })
     .use(plugins.rehypePlugin)
     .use(rehypeStringify)
     .process({ value: markdown, path: context.sourcePath });
@@ -284,6 +293,24 @@ test('adapter failures and raw transform output become document-aware diagnostic
       assert.ok(error instanceof XCoreError);
       assert.equal(error.diagnostic.code, 'XCORE_INVALID_TRANSFORM');
       assert.match(error.message, /posts\/fixture\.md/u);
+      return true;
+    }
+  );
+});
+
+test('authored HTML opt-in leaves parsing to the host and preserves the raw-HAST guard', async () => {
+  await assert.rejects(
+    processMarkdown(
+      '<div>Host policy must parse this first.</div>',
+      passThroughAdapter,
+      semanticContext,
+      semanticContext,
+      { allowAuthoredHtml: true, allowDangerousHtml: true }
+    ),
+    (error: unknown) => {
+      assert.ok(error instanceof XCoreError);
+      assert.equal(error.diagnostic.code, 'XCORE_INVALID_TRANSFORM');
+      assert.match(error.message, /raw HTML/u);
       return true;
     }
   );

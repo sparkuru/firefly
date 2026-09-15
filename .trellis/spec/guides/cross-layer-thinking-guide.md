@@ -121,6 +121,39 @@ After implementation:
 - [ ] Checked that derived state points back to the source event identifier
       (`seq`, `id`, `version`) instead of inventing a second cursor
 
+### Markdown HTML / Renderer Bridge
+
+Authored HTML crosses two different ASTs before it becomes published HTML.
+When a host enables it, trace and test the complete boundary:
+
+```text
+MDAST html
+  → remark-rehype allowDangerousHtml
+  → rehypeRaw
+  → host-owned sanitizer
+  → X Core rehype
+  → Astro metadata/render bridge
+```
+
+- Keep the framework-level authored-HTML opt-in default-off. It only permits
+  the MDAST node to continue; it does not parse, sanitize, or authorize HTML.
+- Put the host parser and sanitizer before the X Core rehype stage. Test the
+  misconfigured opt-in separately: unparsed HAST must fail at X Core's final
+  raw-node guard rather than reaching a renderer.
+- Treat a failed content transform and missing published metadata as one
+  failure path. Fix the first typed content error; do not add an undefined
+  metadata fallback that masks it.
+- If one renderer reports heading text with source-format whitespace around
+  embedded elements and another reports canonical text, keep depth and ID
+  exact and normalize whitespace only at that explicit metadata boundary.
+- Run the real external content workspace in addition to repository fixtures;
+  legacy HTML can exist only in the configured source workspace. Preserve the
+  synchronizer's build-before-promotion boundary.
+
+The concrete site allowlist and X Core contract live in
+`.trellis/spec/frontend/x-core-contract.md` and
+`.trellis/spec/frontend/content-workspace-contract.md`.
+
 ---
 
 ## Cross-Platform Template Consistency
