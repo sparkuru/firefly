@@ -109,6 +109,55 @@ wide content
   assert.doesNotMatch(first.code, /<script/u);
 });
 
+test('paper article metadata stays outside X Core while headings and sanitization remain stable', async () => {
+  const processor = await createProcessor();
+  const markdown = `## Stable heading
+
+<div class="firefly-content-callout" data-article-theme="future" style="color: red" onclick="alert(1)">Safe callout.</div>
+
+<script>alert('unsafe')</script>
+
+A body with a [safe link](https://example.test/paper).`;
+  const baseFrontmatter = { ...validFrontmatter, slug: 'paper-boundary' };
+  const paperFrontmatter = { ...baseFrontmatter, articleTheme: 'paper' };
+  const baseSemantic = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/paper-boundary.md'),
+    frontmatter: baseFrontmatter
+  });
+  const paperSemantic = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/paper-boundary.md'),
+    frontmatter: paperFrontmatter
+  });
+  const paperTerminal = await processor.render(markdown, {
+    fileURL: new URL('file:///repo/content/posts/paper-boundary.md'),
+    frontmatter: { ...paperFrontmatter, presentation: DEFAULT_PRESENTATION_ID }
+  });
+  const baseMetadata = parseXCoreMetadata(baseSemantic.metadata.frontmatter.xCore);
+  const paperSemanticMetadata = parseXCoreMetadata(paperSemantic.metadata.frontmatter.xCore);
+  const paperTerminalMetadata = parseXCoreMetadata(paperTerminal.metadata.frontmatter.xCore);
+  const nodeIds = (code) => [...code.matchAll(/\bdata-node-id="([^"]+)"/gu)].map(([, id]) => id);
+
+  assert.deepEqual(paperSemanticMetadata, baseMetadata);
+  assert.deepEqual(paperTerminalMetadata.outline, paperSemanticMetadata.outline);
+  assert.equal(paperSemanticMetadata.presentation, 'semantic');
+  assert.equal(paperTerminalMetadata.presentation, DEFAULT_PRESENTATION_ID);
+  assert.equal(Object.hasOwn(paperSemanticMetadata, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(paperTerminalMetadata, 'articleTheme'), false);
+  assert.deepEqual(nodeIds(paperSemantic.code), nodeIds(baseSemantic.code));
+  assert.deepEqual(nodeIds(paperSemantic.code), nodeIds(paperTerminal.code));
+  for (const rendered of [paperSemantic, paperTerminal]) {
+    assert.match(rendered.code, /<div class="firefly-content-callout">Safe callout\.<\/div>/u);
+    assert.doesNotMatch(rendered.code, /<script|data-article-theme|onclick=|style=/u);
+  }
+
+  const context = contextResolver({
+    path: '/app/apps/site/.generated-content/posts/paper-boundary.md',
+    data: { astro: { frontmatter: paperFrontmatter } }
+  });
+  assert.equal(context.presentation, 'semantic');
+  assert.equal(Object.hasOwn(context, 'articleTheme'), false);
+});
+
 test('omitted presentation selects firefly while explicit semantic remains available', async () => {
   const processor = await createProcessor();
   const frontmatter = postSchema.parse({

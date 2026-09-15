@@ -187,13 +187,16 @@ the framework-neutral fallback for package consumers and tests.
 
 Supported strict optional Markdown front matter is `htmlTitle`, `canonical`,
 `seoImage`, `noindex`, and the site-owned `articleTheme` ID. Omitted
-`articleTheme` defaults to the sole registered ID `default`; explicit
-`default` is accepted and every other or malformed value is rejected by the
-shared post/page schema. The theme is a content-boundary styling seam only:
-it is emitted as `data-article-theme="default"` on the existing
-`[data-article-content]` root, never as a stylesheet URL, arbitrary selector,
-class, or website-chrome setting. This release ships no alternate skin or
-picker. Unknown keys remain schema errors. These fields do not change route
+`articleTheme` defaults to the registered ID `default`; the exact registered
+IDs are `default` and `paper`. Explicit `default` and `paper` are accepted and
+every other or malformed value is rejected by the shared post/page schema. The
+theme is a content-boundary styling seam only: it is emitted as
+`data-article-theme="<id>"` on the existing `[data-article-content]` root,
+never as a stylesheet URL, arbitrary selector, class, or website-chrome
+setting. The shipped `paper` variant provides a warm paper reading surface,
+serif editorial text, monospace code, muted brown text, and restrained
+terracotta/ochre accents inside that root only; there is no picker or runtime
+switcher. Unknown keys remain schema errors. These fields do not change route
 ownership or draft/private filtering.
 
 #### Article theme registry contract
@@ -217,7 +220,8 @@ resolveArticleThemeId(value: unknown): ArticleThemeId
 ```
 
 The post and page schemas expose `articleTheme?: ArticleThemeId`; omitted
-values are normalized to `DEFAULT_ARTICLE_THEME_ID`.
+values are normalized to `DEFAULT_ARTICLE_THEME_ID`. The current registry is
+`['default', 'paper']` in that order.
 
 ##### 3. Contracts
 
@@ -245,9 +249,9 @@ values are normalized to `DEFAULT_ARTICLE_THEME_ID`.
 
 ##### 5. Good / Base / Bad Cases
 
-- Good: `articleTheme: default` is accepted and appears once on the content
-  root in both document presentations.
-- Base: no `articleTheme` field is accepted for legacy content and renders as
+- Good: `articleTheme: default` or `articleTheme: paper` is accepted and
+  appears once on the content root in both document presentations.
+- Base: omitting `articleTheme` for legacy content is accepted and renders as
   the same `default` output.
 - Bad: `articleTheme: ../default` or
   `articleTheme: https://example.test/theme.css` fails closed and never reaches
@@ -256,8 +260,12 @@ values are normalized to `DEFAULT_ARTICLE_THEME_ID`.
 ##### 6. Tests Required
 
 - Registry/schema tests assert the frozen ID list, omission fallback, explicit
-  default, unknown/unsafe/wrong-type rejection, and strict unknown-key
+  registered IDs, unknown/unsafe/wrong-type rejection, and strict unknown-key
   behavior.
+- Static source/build tests assert that the paper CSS is present in the
+  semantic compiled stylesheet and Terminal inline style, with every rule
+  rooted at `[data-article-content][data-article-theme='paper']` and no
+  website-chrome selectors.
 - Static-output tests assert exactly one theme attribute on semantic and
   Terminal content roots and none on home, lab, 404, comments, or other
   website chrome.

@@ -27,19 +27,57 @@ function assertArticleThemeBoundary(html, route) {
   const contentRoots = [...html.matchAll(
     /<div\b[^>]*\bdata-article-content(?:\s|>)[^>]*>/gu
   )].map(([openingTag]) => openingTag);
+  const contentRootMarkup = contentRoots.join('\n');
 
   assert.equal(contentRoots.length, 1, `${route}: expected one article-content root`);
   assert.match(contentRoots[0], /\bdata-article-theme="default"/u, route);
   assert.equal(
-    (html.match(/\bdata-article-theme\s*=/gu) ?? []).length,
+    (contentRootMarkup.match(/\bdata-article-theme\s*=/gu) ?? []).length,
     1,
     `${route}: expected one article theme attribute`
   );
   assert.equal(
-    (html.match(/\bdata-article-theme="default"/gu) ?? []).length,
+    (contentRootMarkup.match(/\bdata-article-theme="default"/gu) ?? []).length,
     1,
     `${route}: theme metadata must stay on the article-content root`
   );
+}
+
+function splitCssSelectors(selectorList) {
+  const selectors = [];
+  let start = 0;
+  let depth = 0;
+
+  for (let index = 0; index < selectorList.length; index += 1) {
+    const character = selectorList[index];
+    if (character === '(') depth += 1;
+    if (character === ')') depth = Math.max(0, depth - 1);
+    if (character === ',' && depth === 0) {
+      selectors.push(selectorList.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+
+  selectors.push(selectorList.slice(start).trim());
+  return selectors.filter(Boolean);
+}
+
+function assertPaperCssScope(css) {
+  const paperScope = /^\[data-article-content\]\[data-article-theme=['"]paper['"]\]/u;
+  const rules = [...css.replace(/\/\*[\s\S]*?\*\//gu, '').matchAll(/([^{}]+)\{/gu)]
+    .map(([selector]) => selector.trim())
+    .filter((selector) => !selector.startsWith('@'));
+
+  assert.ok(rules.length > 0, 'paper theme should contain CSS rules');
+  for (const rule of rules) {
+    for (const selector of splitCssSelectors(rule)) {
+      assert.match(selector, paperScope, `unscoped paper selector: ${selector}`);
+    }
+  }
+}
+
+function stripStyleBlocks(html) {
+  return html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gu, '');
 }
 
 function hasFeaturedMarker(frontmatter) {
@@ -506,7 +544,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     lab: routes.lab,
     notFound: routes.notFound
   })) {
-    assert.doesNotMatch(html, /\bdata-article-theme=/u, route);
+    assert.doesNotMatch(stripStyleBlocks(html), /\bdata-article-theme=/u, route);
   }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/majo\/"/u);
@@ -736,6 +774,47 @@ test('default firefly output contains reader boundaries and localized wide regio
   assert.match(post, /<h1>llm-workflow-with-trellis<\/h1>/u);
   assert.match(post, new RegExp(`<span>${escapeRegExp(workflow.visiblePath)}<\\/span>`, 'u'));
   assert.doesNotMatch(post, /class="terminal-path"/u);
+});
+
+test('paper article theme is content-scoped and delivered through both static style paths', async () => {
+  const paperStyles = await readFile(
+    path.join(sourceRoot, 'styles/article-themes/paper.css'),
+    'utf8'
+  );
+  const semanticStyles = await readFile(path.join(sourceRoot, 'styles/global.css'), 'utf8');
+  const terminalLayout = await readFile(
+    path.join(sourceRoot, 'layouts/TerminalLayout.astro'),
+    'utf8'
+  );
+
+  assertPaperCssScope(paperStyles);
+  for (const token of [
+    '--article-paper-primitive-canvas',
+    '--article-paper-primitive-ink',
+    '--article-paper-canvas',
+    '--article-paper-ink',
+    '--article-paper-panel-background',
+    '--article-paper-code-background',
+    '--article-paper-callout-background',
+    '--article-paper-wide-background'
+  ]) {
+    assert.match(paperStyles, new RegExp(escapeRegExp(token), 'u'));
+  }
+  assert.doesNotMatch(paperStyles, /\burl\s*\(|\$\{|\/themes\//u);
+  assert.doesNotMatch(
+    paperStyles,
+    /(?:^|\n)\s*(?:html|body|:root|\.site-|\.terminal-root|\.terminal-body|\.terminal-shell|\.terminal-titlebar|\.terminal-main|\.terminal-document|\.reader-status|\.comment)/mu
+  );
+
+  const contentImport = semanticStyles.indexOf("@import './article-content.css';");
+  const paperImport = semanticStyles.indexOf("@import './article-themes/paper.css';");
+  assert.ok(contentImport >= 0);
+  assert.ok(paperImport > contentImport);
+  assert.match(
+    terminalLayout,
+    /import paperCss from ['"]\.\.\/styles\/article-themes\/paper\.css\?raw['"]/u
+  );
+  assert.match(terminalLayout, /\$\{articleContentCss\}\\n\$\{paperCss\}/u);
 });
 
 test('both reader presentations keep status after content and fixed to the viewport bottom', async () => {

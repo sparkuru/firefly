@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './article-content.css';
+@import './article-themes/paper.css';
 
 :root {
   --surface: #f7f7f5;

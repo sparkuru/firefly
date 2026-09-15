@@ -1,5 +1,5 @@
 /**
- * @typedef {'default'} ArticleThemeId
+ * @typedef {'default' | 'paper'} ArticleThemeId
  */
 
 /** @type {ArticleThemeId} */
@@ -7,7 +7,8 @@ export const DEFAULT_ARTICLE_THEME_ID = 'default';
 
 /** @type {readonly ArticleThemeId[]} */
 export const ARTICLE_THEME_IDS = Object.freeze([
-  DEFAULT_ARTICLE_THEME_ID
+  DEFAULT_ARTICLE_THEME_ID,
+  'paper'
 ]);
 
 const articleThemeIds = new Set(ARTICLE_THEME_IDS);

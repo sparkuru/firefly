@@ -1,0 +1,267 @@
+/*
+ * Paper is a content-only variant. Keep every rule below the article root so
+ * the semantic page chrome and the Terminal shell retain their own themes.
+ */
+[data-article-content][data-article-theme='paper'] {
+  /* Primitive tokens: palette, typography, spacing, radius, and shadow. */
+  --article-paper-primitive-canvas: #f4ecdd;
+  --article-paper-primitive-surface: #fbf7ee;
+  --article-paper-primitive-ink: #2c241f;
+  --article-paper-primitive-muted: #6b594b;
+  --article-paper-primitive-border: #c6b398;
+  --article-paper-primitive-link: #97452f;
+  --article-paper-primitive-link-hover: #6e2c1d;
+  --article-paper-primitive-focus: #8a5a00;
+  --article-paper-primitive-code: #ebe0cc;
+  --article-paper-primitive-shadow: rgb(67 45 25 / 16%);
+  --article-paper-primitive-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --article-paper-primitive-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  --article-paper-primitive-body-size: 1.0625rem;
+  --article-paper-primitive-body-line-height: 1.8;
+  --article-paper-primitive-panel-padding: clamp(1.5rem, 4vw, 3.5rem);
+  --article-paper-primitive-panel-padding-narrow: 1rem;
+  --article-paper-primitive-radius: 0.5rem;
+  --article-paper-primitive-radius-narrow: 0.35rem;
+
+  /* Semantic tokens: roles shared by the paper components. */
+  --article-paper-canvas: var(--article-paper-primitive-canvas);
+  --article-paper-surface: var(--article-paper-primitive-surface);
+  --article-paper-ink: var(--article-paper-primitive-ink);
+  --article-paper-muted: var(--article-paper-primitive-muted);
+  --article-paper-border: var(--article-paper-primitive-border);
+  --article-paper-link: var(--article-paper-primitive-link);
+  --article-paper-link-hover: var(--article-paper-primitive-link-hover);
+  --article-paper-focus: var(--article-paper-primitive-focus);
+  --article-paper-body-family: var(--article-paper-primitive-serif);
+  --article-paper-code-family: var(--article-paper-primitive-mono);
+  --article-paper-body-size: var(--article-paper-primitive-body-size);
+  --article-paper-body-line-height: var(--article-paper-primitive-body-line-height);
+
+  /* Component tokens: concrete surfaces and panel geometry. */
+  --article-paper-panel-background: var(--article-paper-canvas);
+  --article-paper-panel-padding: var(--article-paper-primitive-panel-padding);
+  --article-paper-panel-radius: var(--article-paper-primitive-radius);
+  --article-paper-panel-shadow: 0 1rem 2.5rem var(--article-paper-primitive-shadow);
+  --article-paper-code-background: var(--article-paper-primitive-code);
+  --article-paper-callout-background: var(--article-paper-surface);
+  --article-paper-wide-background: var(--article-paper-surface);
+
+  /* Shared content contract, scoped to this root rather than global tokens. */
+  --article-content-text: var(--article-paper-ink);
+  --article-content-muted: var(--article-paper-muted);
+  --article-content-surface: var(--article-paper-canvas);
+  --article-content-surface-raised: var(--article-paper-surface);
+  --article-content-border: var(--article-paper-border);
+  --article-content-link: var(--article-paper-link);
+  --article-content-focus: var(--article-paper-focus);
+
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--article-paper-panel-padding);
+  border: 1px solid var(--article-paper-border);
+  border-radius: var(--article-paper-panel-radius);
+  background: var(--article-paper-panel-background);
+  box-shadow: var(--article-paper-panel-shadow);
+  color: var(--article-paper-ink);
+  font-family: var(--article-paper-body-family);
+  font-size: var(--article-paper-body-size);
+  line-height: var(--article-paper-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+[data-article-content][data-article-theme='paper'] :where(p, li, dt, dd) {
+  color: var(--article-paper-ink);
+}
+
+[data-article-content][data-article-theme='paper'] :where(h1, h2, h3, h4, h5, h6) {
+  color: var(--article-paper-ink);
+  font-family: var(--article-paper-body-family);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+[data-article-content][data-article-theme='paper'] h1 {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: -0.03em;
+}
+
+[data-article-content][data-article-theme='paper'] h2 {
+  padding-block-end: 0.35rem;
+  border-block-end: 1px solid var(--article-paper-border);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+[data-article-content][data-article-theme='paper'] h3 {
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+}
+
+[data-article-content][data-article-theme='paper'] :where(h4, h5, h6) {
+  font-size: 1.1rem;
+}
+
+[data-article-content][data-article-theme='paper'] :where(a) {
+  color: var(--article-paper-link);
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.18em;
+  overflow-wrap: anywhere;
+}
+
+[data-article-content][data-article-theme='paper'] :where(a:hover) {
+  color: var(--article-paper-link-hover);
+}
+
+[data-article-content][data-article-theme='paper']:focus-visible {
+  outline: 0.1875rem solid var(--article-paper-focus);
+  outline-offset: 0.25rem;
+}
+
+[data-article-content][data-article-theme='paper'] :where(a, [tabindex]):focus-visible {
+  border-radius: 0.125rem;
+  outline: 0.1875rem solid var(--article-paper-focus);
+  outline-offset: 0.1875rem;
+}
+
+[data-article-content][data-article-theme='paper'] blockquote {
+  margin-inline: 0;
+  padding: 0.85rem 1.1rem;
+  border-inline-start: 0.3rem solid var(--article-paper-link);
+  background: var(--article-paper-surface);
+  color: var(--article-paper-muted);
+  font-style: italic;
+}
+
+[data-article-content][data-article-theme='paper'] blockquote :where(p, ul, ol) {
+  color: inherit;
+}
+
+[data-article-content][data-article-theme='paper'] .firefly-content-callout {
+  margin-block: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--article-paper-border);
+  border-inline-start: 0.35rem solid var(--article-paper-link);
+  border-radius: 0.25rem;
+  background: var(--article-paper-callout-background);
+  color: var(--article-paper-ink);
+}
+
+[data-article-content][data-article-theme='paper'] .firefly-content-center,
+[data-article-content][data-article-theme='paper'] center {
+  margin-inline: auto;
+  text-align: center;
+}
+
+[data-article-content][data-article-theme='paper'] :where(code, kbd, samp) {
+  font-family: var(--article-paper-code-family);
+}
+
+[data-article-content][data-article-theme='paper'] code:not(pre code) {
+  padding: 0.1em 0.3em;
+  border: 1px solid var(--article-paper-border);
+  border-radius: 0.2rem;
+  background: var(--article-paper-code-background);
+  color: var(--article-paper-ink);
+  font-size: 0.9em;
+}
+
+[data-article-content][data-article-theme='paper'] pre {
+  max-inline-size: 100%;
+  margin-block: 0 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--article-paper-border);
+  border-radius: 0.25rem;
+  background: var(--article-paper-code-background);
+  color: var(--article-paper-ink);
+}
+
+[data-article-content][data-article-theme='paper'] pre code {
+  font-family: var(--article-paper-code-family);
+}
+
+[data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) {
+  max-inline-size: 100%;
+  margin-block: 0 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--article-paper-border);
+  border-radius: 0.25rem;
+  background: var(--article-paper-wide-background);
+  overscroll-behavior-inline: contain;
+}
+
+[data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) pre {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 1rem;
+  overflow-wrap: normal;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+[data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) code {
+  white-space: pre;
+}
+
+[data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  background: var(--article-paper-wide-background);
+}
+
+[data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) :is(th, td) {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--article-paper-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+[data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) th {
+  background: var(--article-paper-code-background);
+  color: var(--article-paper-ink);
+}
+
+[data-article-content][data-article-theme='paper'] :where(img, video) {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+[data-article-content][data-article-theme='paper'] figure {
+  margin-inline: 0;
+}
+
+[data-article-content][data-article-theme='paper'] figcaption {
+  margin-block-start: 0.5rem;
+  color: var(--article-paper-muted);
+  font-size: 0.9em;
+}
+
+[data-article-content][data-article-theme='paper'] hr {
+  margin-block: 2rem;
+  border: 0;
+  border-block-start: 1px solid var(--article-paper-border);
+}
+
+[data-article-content][data-article-theme='paper'] mark {
+  background: var(--article-paper-primitive-focus);
+  color: var(--article-paper-surface);
+}
+
+@media (max-width: 40rem) {
+  [data-article-content][data-article-theme='paper'] {
+    --article-paper-panel-padding: var(--article-paper-primitive-panel-padding-narrow);
+    --article-paper-panel-radius: var(--article-paper-primitive-radius-narrow);
+    --article-paper-panel-shadow: 0 0.5rem 1.25rem var(--article-paper-primitive-shadow);
+    font-size: 1rem;
+  }
+
+  [data-article-content][data-article-theme='paper'] :where(.wide-content, .terminal-wide) {
+    margin-inline: 0;
+  }
+
+  [data-article-content][data-article-theme='paper'] :where(p, li, a) {
+    overflow-wrap: anywhere;
+  }
+}

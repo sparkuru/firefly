@@ -37,9 +37,9 @@ test('X Core context routes agree with the site canonical projection', () => {
   }
 });
 
-test('X Core context preserves the default presentation and fails closed for unstaged posts', () => {
+test('X Core context excludes paper theme metadata and preserves presentation selection', () => {
   const context = resolveDocumentContext(
-    stagedFile('posts', 'default.md', { layout: 'post', articleTheme: 'default' })
+    stagedFile('posts', 'default.md', { layout: 'post', articleTheme: 'paper' })
   );
   assert.equal(context.presentation, DEFAULT_PRESENTATION_ID);
   assert.equal(Object.hasOwn(context, 'articleTheme'), false);
@@ -52,6 +52,16 @@ test('X Core context preserves the default presentation and fails closed for uns
     'slug',
     'sourcePath'
   ]);
+
+  const semanticContext = resolveDocumentContext(
+    stagedFile('posts', 'paper-semantic.md', {
+      layout: 'post',
+      presentation: 'semantic',
+      articleTheme: 'paper'
+    })
+  );
+  assert.equal(semanticContext.presentation, 'semantic');
+  assert.equal(Object.hasOwn(semanticContext, 'articleTheme'), false);
 
   assert.throws(
     () => resolveDocumentContext({

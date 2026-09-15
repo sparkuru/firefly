@@ -212,6 +212,45 @@ test('post deep link uses the firefly default with a reader fragment', async ({ 
   await expectNoHorizontalOverflow(page);
 });
 
+test('paper theme stays readable inside the Terminal content boundary', async ({ page }) => {
+  await page.goto('/posts/ai/llm-workflow-with-trellis/');
+
+  const content = page.locator('[data-article-content]');
+  await expect(content).toHaveCount(1);
+  await content.evaluate((element) => element.setAttribute('data-article-theme', 'paper'));
+
+  const rootStyles = await content.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      backgroundColor: styles.backgroundColor,
+      color: styles.color,
+      fontFamily: styles.fontFamily,
+      paddingInline: styles.paddingInline
+    };
+  });
+  expect(rootStyles.backgroundColor).toBe('rgb(244, 236, 221)');
+  expect(rootStyles.color).toBe('rgb(44, 36, 31)');
+  expect(rootStyles.fontFamily).toContain('ui-serif');
+  expect(Number.parseFloat(rootStyles.paddingInline)).toBeGreaterThan(0);
+
+  const link = content.getByRole('link', { name: 'Trellis repository' });
+  await link.focus();
+  await expect(link).toBeFocused();
+  const linkFocusStyles = await link.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return { color: styles.color, outlineColor: styles.outlineColor, outlineStyle: styles.outlineStyle };
+  });
+  expect(linkFocusStyles.color).toBe('rgb(151, 69, 47)');
+  expect(linkFocusStyles.outlineColor).toBe('rgb(138, 90, 0)');
+  expect(linkFocusStyles.outlineStyle).toBe('solid');
+
+  const codeRegion = page.getByRole('region', { name: /^Code content:/u }).first();
+  await expect(codeRegion).toHaveCSS('overflow-x', 'auto');
+  await expect(codeRegion).toHaveCSS('background-color', 'rgb(251, 247, 238)');
+  await expect(page.locator('html.terminal-root[data-terminal-theme="firefly"]')).toHaveCount(1);
+  await expectNoHorizontalOverflow(page);
+});
+
 test('firefly article remains complete and exposes one canonical route', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
 

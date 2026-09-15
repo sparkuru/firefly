@@ -1,6 +1,7 @@
 ---
 import terminalCss from '../styles/terminal.css?raw';
 import articleContentCss from '../styles/article-content.css?raw';
+import paperCss from '../styles/article-themes/paper.css?raw';
 import SiteHead from '../components/SiteHead.astro';
 import { SITE_CONFIG } from '../lib/site-config.mjs';
 
@@ -40,7 +41,7 @@ const { title, description, path, home = false, ...headProps } = Astro.props;
       type="font/woff2"
       crossorigin="anonymous"
     />
-    <style is:inline set:html={`${terminalCss}\n${articleContentCss}`}></style>
+    <style is:inline set:html={`${terminalCss}\n${articleContentCss}\n${paperCss}`}></style>
   </head>
   <body class:list={['terminal-body', { 'terminal-body--home': home }]}>
     <a class="terminal-skip" href="#main-content">Skip to main content</a>

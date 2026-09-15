@@ -55,9 +55,10 @@ test('valid metadata parses and coerces dates', () => {
 });
 
 test('the article theme registry is frozen, ID-only, and defaults safely', () => {
-  assert.deepEqual(ARTICLE_THEME_IDS, [DEFAULT_ARTICLE_THEME_ID]);
+  assert.deepEqual(ARTICLE_THEME_IDS, [DEFAULT_ARTICLE_THEME_ID, 'paper']);
   assert.ok(Object.isFrozen(ARTICLE_THEME_IDS));
   assert.equal(isArticleThemeId(DEFAULT_ARTICLE_THEME_ID), true);
+  assert.equal(isArticleThemeId('paper'), true);
   for (const value of [
     'future',
     'Future',
@@ -76,9 +77,10 @@ test('the article theme registry is frozen, ID-only, and defaults safely', () =>
   }
   assert.equal(resolveArticleThemeId(undefined), DEFAULT_ARTICLE_THEME_ID);
   assert.equal(resolveArticleThemeId(DEFAULT_ARTICLE_THEME_ID), DEFAULT_ARTICLE_THEME_ID);
+  assert.equal(resolveArticleThemeId('paper'), 'paper');
 });
 
-test('article theme front matter defaults, accepts default, and rejects unsafe or unknown IDs', () => {
+test('article theme front matter defaults, accepts registered IDs, and rejects unsafe or unknown IDs', () => {
   assert.equal(
     postSchema.parse({ ...validPost, articleTheme: undefined }).articleTheme,
     DEFAULT_ARTICLE_THEME_ID
@@ -87,6 +89,8 @@ test('article theme front matter defaults, accepts default, and rejects unsafe o
     postSchema.parse({ ...validPost, articleTheme: DEFAULT_ARTICLE_THEME_ID }).articleTheme,
     DEFAULT_ARTICLE_THEME_ID
   );
+  assert.equal(postSchema.parse({ ...validPost, articleTheme: 'paper' }).articleTheme, 'paper');
+  assert.equal(pageSchema.parse({ ...validPage, articleTheme: 'paper' }).articleTheme, 'paper');
 
   for (const articleTheme of [
     'future',

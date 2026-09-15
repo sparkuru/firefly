@@ -343,12 +343,15 @@ startTerminalReader(root: HTMLElement): void
   website tokens, and its initial class vocabulary is independent of
   `.site-*`, `.terminal-*`, `.prose`, and `.terminal-prose` selectors. The
   shared post/page schema accepts optional `articleTheme` metadata, which
-  defaults to the sole site-owned registry ID `default`; malformed, unsafe,
-  unknown, and wrong-type values fail before rendering. The validated ID is
-  emitted as `data-article-theme="default"` only on that content root. This
-  release ships no alternate theme, picker, browser switcher, dynamic
-  stylesheet, or theme-specific Markdown syntax, and the article theme remains
-  separate from website `presentation` selection and Terminal chrome.
+  defaults to the site-owned registry ID `default`; the shipped IDs are
+  `default` and `paper`. Malformed, unsafe, unknown, and wrong-type values fail
+  before rendering. The validated ID is emitted as
+  `data-article-theme="<id>"` only on that content root. The `paper` ID selects
+  a warm, serif reading surface with monospace code and restrained
+  terracotta/ochre accents inside the content boundary only. This release
+  ships no picker, browser switcher, dynamic stylesheet, or theme-specific
+  Markdown syntax, and the article theme remains separate from website
+  `presentation` selection and Terminal chrome.
 - Terminal permalinks render the exact token order
   `guest@firefly:~/blog $ / posts / characters / nahida.md` for the nested
   fixture. The root and every parent are native underlined links; the current
@@ -390,8 +393,9 @@ startTerminalReader(root: HTMLElement): void
   treated as an empty mapping.
 - The output uses ordinary Markdown/YAML syntax. Validated site metadata,
   including the optional `articleTheme` ID and its `default` fallback, is
-  retained; Firefly-specific values stay under the validated `firefly` mapping
-  and do not alter body semantics.
+  retained; the shipped `paper` value is retained without changing workspace
+  materialization, routes, or body semantics. Firefly-specific values stay
+  under the validated `firefly` mapping.
 
 ### 4. Validation & Error Matrix
 
