@@ -314,3 +314,35 @@ the generated stage only; source and production Markdown remain unchanged.
 All configuration and Markdown values are embedded at build time. No runtime
 configuration service, client-side config fetch, credentials, or private
 author data is supported.
+
+<p align = "center" style="font-size: 26px;" > <strong> Article theme implementation and references </strong> </p>
+
+Theme implementation and paths
+
+Article themes are site-owned, build-time content styles. The current
+implementation registers `default` and `paper`; omitted `articleTheme`
+metadata still resolves to `default`. The `paper` variant provides a warm paper
+reading surface with serif text, monospace code, and restrained accents. Theme
+selection is applied only to the rendered Markdown content and does not change
+the outer presentation, route, comments, website chrome, or authored Markdown.
+
+- Registry and fail-closed resolver: `apps/site/src/lib/article-theme.mjs`
+- Front matter validation and default: `apps/site/src/lib/content-schema.mjs`,
+  consumed by `apps/site/src/content.config.ts`
+- Theme resolution and handoff: `apps/site/src/components/DocumentPresentation.astro`
+- Semantic content boundary: `apps/site/src/components/SemanticDocument.astro`
+- Terminal content boundary: `apps/site/src/components/TerminalDocument.astro`
+- Shared article-content style contract: `apps/site/src/styles/article-content.css`
+- Paper theme stylesheet: `apps/site/src/styles/article-themes/paper.css`
+- Presentation token mappings: `apps/site/src/styles/global.css` and
+  `apps/site/src/styles/terminal.css`
+- Front matter normalization: `apps/site/scripts/blog-meta.mjs`
+
+The extension point for additional alternate article themes is
+`apps/site/src/styles/article-themes/<theme-id>.css`. Its selectors should stay
+below `[data-article-content][data-article-theme="<theme-id>"]`; theme IDs are
+validated before rendering and never become dynamic stylesheet URLs.
+
+Other references:
+
+1. theme-firefly (default), from game 「Honkai: Starrail」, https://zhuanlan.zhihu.com/p/704319639
