@@ -20,7 +20,7 @@ presentations/terminal/dist/
 .private/
 .DS_Store
 *.log
-tooling/sync-server/
+tooling/.gitignore
 
 config/site.toml
 config.dev

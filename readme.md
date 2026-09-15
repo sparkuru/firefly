@@ -227,6 +227,18 @@ npm --prefix apps/site run blog:meta -- /path/to/article.md --blog-root /path/to
 npm --prefix apps/site run blog:meta -- /path/to/article.md --write-back
 ~~~
 
+To create a new article interactively, provide its final path instead:
+
+~~~sh
+tooling/new-article.py content/posts/notes/first-entry.md
+FIREFLY_CONTENT_ROOT=/path/to/blog tooling/new-article.py /path/to/blog/posts/notes/first-entry.md
+~~~
+
+The creator asks for publication metadata, opens `$VISUAL` or `$EDITOR` for
+the Markdown body, and keeps new entries as drafts unless publication is
+explicitly confirmed. Use `--editor COMMAND` to select an editor and
+`--preview` to validate without writing.
+
 Save-as is the default. It writes below the selected blog root, inferring
 `posts` and a safe slug unless `--collection`, `--category`, `--output`, or
 metadata overrides are supplied. Existing targets are never replaced unless
