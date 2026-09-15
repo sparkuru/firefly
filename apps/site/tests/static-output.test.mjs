@@ -23,6 +23,25 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
+function assertArticleThemeBoundary(html, route) {
+  const contentRoots = [...html.matchAll(
+    /<div\b[^>]*\bdata-article-content(?:\s|>)[^>]*>/gu
+  )].map(([openingTag]) => openingTag);
+
+  assert.equal(contentRoots.length, 1, `${route}: expected one article-content root`);
+  assert.match(contentRoots[0], /\bdata-article-theme="default"/u, route);
+  assert.equal(
+    (html.match(/\bdata-article-theme\s*=/gu) ?? []).length,
+    1,
+    `${route}: expected one article theme attribute`
+  );
+  assert.equal(
+    (html.match(/\bdata-article-theme="default"/gu) ?? []).length,
+    1,
+    `${route}: theme metadata must stay on the article-content root`
+  );
+}
+
 function hasFeaturedMarker(frontmatter) {
   let inFirefly = false;
   let inMarkers = false;
@@ -421,7 +440,14 @@ test('route closures keep public documents in Terminal styles and isolate home J
     markdown: await readFile(path.join(distRoot, 'pages/markdown-template/index.html'), 'utf8')
   };
   const terminalDocumentRoutes = [routes.about, routes.article, routes.markdown];
-  const semanticDocumentRoutes = [];
+  const builtDocumentRoutes = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.html'))
+      .map(async (file) => [file, await readFile(path.join(distRoot, file), 'utf8')])
+  );
+  const semanticDocumentRoutes = builtDocumentRoutes
+    .filter(([, html]) => /class="semantic-document"/u.test(html))
+    .map(([, html]) => html);
   const staticRoutes = [routes.notFound, routes.lab];
 
   assert.match(routes.home, /data-terminal-home/u);
@@ -458,6 +484,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, /class="terminal-titlebar"/u);
     assert.match(html, /class="terminal-document"/u);
     assert.match(html, /data-article-content/u);
+    assertArticleThemeBoundary(html, 'Terminal document');
     assert.doesNotMatch(html, /class="terminal-path"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
     assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
@@ -472,6 +499,14 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
+    assertArticleThemeBoundary(html, 'semantic document');
+  }
+  for (const [route, html] of Object.entries({
+    home: routes.home,
+    lab: routes.lab,
+    notFound: routes.notFound
+  })) {
+    assert.doesNotMatch(html, /\bdata-article-theme=/u, route);
   }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/majo\/"/u);
@@ -726,6 +761,7 @@ test('both reader presentations keep status after content and fixed to the viewp
     assert.ok(readerIndex >= 0);
     assert.ok(statusIndex > readerIndex);
     assert.match(component, /data-article-content/u);
+    assert.equal((component.match(/data-article-theme=\{articleTheme\}/gu) ?? []).length, 1);
   }
 
   assert.match(semanticStyles, /@import ['"]\.\/article-content\.css['"]/u);

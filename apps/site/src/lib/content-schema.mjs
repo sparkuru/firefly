@@ -1,5 +1,9 @@
 import { z } from 'astro/zod';
 import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
+import {
+  DEFAULT_ARTICLE_THEME_ID,
+  isArticleThemeId
+} from './article-theme.mjs';
 import { isSafeHttpUrl, isSafeImageReference } from './site-config.mjs';
 
 const requiredText = z.string().trim().min(1);
@@ -50,6 +54,10 @@ const presentation = requiredText.regex(
   /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u,
   'Presentation must be a lowercase kebab-case adapter ID'
 );
+const articleTheme = z.string().refine(
+  isArticleThemeId,
+  'Article theme must be a registered site-owned ID'
+);
 const fireflyMarker = requiredText
   .refine((value) => value.normalize('NFC') === value, 'Firefly marker must be NFC-normalized')
   .regex(
@@ -81,6 +89,7 @@ const sharedMetadata = {
   firefly: fireflyMetadata,
   draft: z.boolean(),
   presentation: presentation.optional().default(DEFAULT_PRESENTATION_ID),
+  articleTheme: articleTheme.optional().default(DEFAULT_ARTICLE_THEME_ID),
   aliases: z.array(alias).optional(),
   source: source.optional(),
   access: access.optional().default({ visibility: 'public' })

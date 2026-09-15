@@ -39,9 +39,19 @@ test('X Core context routes agree with the site canonical projection', () => {
 
 test('X Core context preserves the default presentation and fails closed for unstaged posts', () => {
   const context = resolveDocumentContext(
-    stagedFile('posts', 'default.md', { layout: 'post' })
+    stagedFile('posts', 'default.md', { layout: 'post', articleTheme: 'default' })
   );
   assert.equal(context.presentation, DEFAULT_PRESENTATION_ID);
+  assert.equal(Object.hasOwn(context, 'articleTheme'), false);
+  assert.deepEqual(Object.keys(context).sort(), [
+    'collection',
+    'documentId',
+    'layout',
+    'presentation',
+    'route',
+    'slug',
+    'sourcePath'
+  ]);
 
   assert.throws(
     () => resolveDocumentContext({

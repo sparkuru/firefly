@@ -44,7 +44,9 @@ interface PresentationAdapter {
 - `DocumentContext` contains document ID, optional safe virtual source, canonical
   route, collection, canonical slug, layout, and selected presentation. The
   app resolves it from the guest-projected `CanonicalDocument`; no host workspace
-  path enters context or diagnostics.
+  path enters context or diagnostics. Site-owned `articleTheme` metadata is
+  intentionally outside this context and remains a render-boundary concern; it
+  never selects an adapter or changes `presentation`.
 - Remark rejects authored raw HTML by default, derives the first substantive
   prose summary, and classifies link/resource references as
   fragment/internal/relative/external. A host may set
@@ -68,7 +70,8 @@ interface PresentationAdapter {
   `outline`, and `enhancements`. Site `renderDocument()` also requires exact
   agreement with Astro's heading depths/IDs and canonical heading text
   (whitespace is collapsed and trimmed at the comparison boundary), plus
-  sequential body headings starting at level two.
+  sequential body headings starting at level two. `articleTheme` is not an
+  X Core metadata field.
 - JSON values are finite primitives, plain dense arrays, or plain/null-prototype
   objects with enumerable string data properties. Symbols, accessors, cycles,
   custom prototypes, sparse/decorated arrays, forbidden prototype keys, and

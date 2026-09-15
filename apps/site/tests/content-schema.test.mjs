@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
+import {
+  ARTICLE_THEME_IDS,
+  DEFAULT_ARTICLE_THEME_ID,
+  isArticleThemeId,
+  resolveArticleThemeId
+} from '../src/lib/article-theme.mjs';
 import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
 
 const validPost = {
@@ -41,9 +47,69 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(page.date instanceof Date);
   assert.deepEqual(post.access, { visibility: 'public' });
   assert.deepEqual(post.firefly, { markers: [] });
+  assert.equal(post.articleTheme, DEFAULT_ARTICLE_THEME_ID);
+  assert.equal(page.articleTheme, DEFAULT_ARTICLE_THEME_ID);
   assert.deepEqual(post.tags, ['trellis']);
   assert.equal(post.source, 'legacy/379.md#workflow');
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
+});
+
+test('the article theme registry is frozen, ID-only, and defaults safely', () => {
+  assert.deepEqual(ARTICLE_THEME_IDS, [DEFAULT_ARTICLE_THEME_ID]);
+  assert.ok(Object.isFrozen(ARTICLE_THEME_IDS));
+  assert.equal(isArticleThemeId(DEFAULT_ARTICLE_THEME_ID), true);
+  for (const value of [
+    'future',
+    'Future',
+    '../default',
+    'default selector',
+    ' default ',
+    'default\n',
+    'https://example.test/theme.css',
+    null,
+    1,
+    {},
+    []
+  ]) {
+    assert.equal(isArticleThemeId(value), false, value);
+    assert.throws(() => resolveArticleThemeId(value), /Invalid article theme ID/u);
+  }
+  assert.equal(resolveArticleThemeId(undefined), DEFAULT_ARTICLE_THEME_ID);
+  assert.equal(resolveArticleThemeId(DEFAULT_ARTICLE_THEME_ID), DEFAULT_ARTICLE_THEME_ID);
+});
+
+test('article theme front matter defaults, accepts default, and rejects unsafe or unknown IDs', () => {
+  assert.equal(
+    postSchema.parse({ ...validPost, articleTheme: undefined }).articleTheme,
+    DEFAULT_ARTICLE_THEME_ID
+  );
+  assert.equal(
+    postSchema.parse({ ...validPost, articleTheme: DEFAULT_ARTICLE_THEME_ID }).articleTheme,
+    DEFAULT_ARTICLE_THEME_ID
+  );
+
+  for (const articleTheme of [
+    'future',
+    'Future',
+    'default selector',
+    '../default',
+    ' default ',
+    'default\n',
+    'default.css',
+    'https://example.test/theme.css',
+    '',
+    null,
+    true,
+    1,
+    {},
+    []
+  ]) {
+    assert.equal(
+      postSchema.safeParse({ ...validPost, articleTheme }).success,
+      false,
+      articleTheme
+    );
+  }
 });
 
 test('omitted presentation defaults to firefly while semantic remains explicit', () => {

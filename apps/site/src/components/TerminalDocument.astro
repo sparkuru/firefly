@@ -9,6 +9,7 @@ import ReaderStatus from './ReaderStatus.astro';
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface Props {
+  articleTheme: string;
   canonical: CanonicalDocument;
   document: RenderedDocument;
   comments: readonly PublicComment[];
@@ -17,7 +18,7 @@ interface Props {
   commentsEnabled: boolean;
 }
 
-const { canonical, document, comments, commentsPostPath, commentsConfig, commentsEnabled } = Astro.props;
+const { articleTheme, canonical, document, comments, commentsPostPath, commentsConfig, commentsEnabled } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
 const showOutline = metadata.outline.length >= 2;
@@ -90,6 +91,7 @@ function outlinePrefix(index: number, depth: number) {
     id="terminal-reader"
     class="terminal-prose"
     data-article-content
+    data-article-theme={articleTheme}
     data-terminal-reader-region
     tabindex="0"
     role="region"

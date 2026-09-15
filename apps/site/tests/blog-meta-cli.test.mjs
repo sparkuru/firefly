@@ -102,6 +102,7 @@ test('empty and existing front matter are normalized without losing authored fie
     '  - retained',
     'draft: true',
     'layout: post',
+    'articleTheme: default',
     'firefly:',
     '  markers:',
     '    - featured',
@@ -115,6 +116,7 @@ test('empty and existing front matter are normalized without losing authored fie
   assert.equal(existingOutput.metadata.title, 'Existing title');
   assert.deepEqual(existingOutput.metadata.tags, ['retained']);
   assert.deepEqual(existingOutput.metadata.firefly, { markers: ['featured'] });
+  assert.equal(existingOutput.metadata.articleTheme, 'default');
   assert.equal(existingOutput.body.toString('utf8'), '\nExisting body.\n');
 });
 

@@ -341,11 +341,14 @@ startTerminalReader(root: HTMLElement): void
   both semantic and Terminal document presentations. Its generic
   `--article-content-*` tokens are mapped from each presentation's existing
   website tokens, and its initial class vocabulary is independent of
-  `.site-*`, `.terminal-*`, `.prose`, and `.terminal-prose` selectors. This
-  content root is the additive seam for a future validated article-theme ID;
-  this contract does not add a theme field, registry, picker, or stylesheet
-  selector, and the article theme must remain separate from website
-  `presentation` selection.
+  `.site-*`, `.terminal-*`, `.prose`, and `.terminal-prose` selectors. The
+  shared post/page schema accepts optional `articleTheme` metadata, which
+  defaults to the sole site-owned registry ID `default`; malformed, unsafe,
+  unknown, and wrong-type values fail before rendering. The validated ID is
+  emitted as `data-article-theme="default"` only on that content root. This
+  release ships no alternate theme, picker, browser switcher, dynamic
+  stylesheet, or theme-specific Markdown syntax, and the article theme remains
+  separate from website `presentation` selection and Terminal chrome.
 - Terminal permalinks render the exact token order
   `guest@firefly:~/blog $ / posts / characters / nahida.md` for the nested
   fixture. The root and every parent are native underlined links; the current
@@ -385,8 +388,10 @@ startTerminalReader(root: HTMLElement): void
   validated by the selected Firefly post/page schema. The body bytes after the
   original closing delimiter are preserved exactly; absent front matter is
   treated as an empty mapping.
-- The output uses ordinary Markdown/YAML syntax. Firefly-specific values stay
-  under the validated `firefly` mapping and do not alter body semantics.
+- The output uses ordinary Markdown/YAML syntax. Validated site metadata,
+  including the optional `articleTheme` ID and its `default` fallback, is
+  retained; Firefly-specific values stay under the validated `firefly` mapping
+  and do not alter body semantics.
 
 ### 4. Validation & Error Matrix
 

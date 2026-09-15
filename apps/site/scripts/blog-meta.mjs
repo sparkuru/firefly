@@ -36,6 +36,7 @@ const outputKeys = Object.freeze([
   'draft',
   'layout',
   'presentation',
+  'articleTheme',
   'aliases',
   'source',
   'access'

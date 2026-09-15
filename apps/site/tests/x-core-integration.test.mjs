@@ -95,6 +95,15 @@ wide content
   assert.deepEqual(metadata.outline.map(({ id }) => id), ['duplicate', 'duplicate-1']);
   assert.equal(metadata.presentation, 'semantic');
   assert.deepEqual(metadata.enhancements, []);
+  assert.equal(Object.hasOwn(metadata, 'articleTheme'), false);
+  assert.deepEqual(Object.keys(metadata).sort(), [
+    'enhancements',
+    'outline',
+    'presentation',
+    'references',
+    'summary',
+    'version'
+  ]);
   assert.match(first.code, /role="region"/u);
   assert.match(first.code, /data-wide-content="code"/u);
   assert.doesNotMatch(first.code, /<script/u);
@@ -117,6 +126,7 @@ test('omitted presentation selects firefly while explicit semantic remains avail
   const metadata = parseXCoreMetadata(rendered.metadata.frontmatter.xCore);
 
   assert.equal(metadata.presentation, DEFAULT_PRESENTATION_ID);
+  assert.equal(Object.hasOwn(metadata, 'articleTheme'), false);
   assert.match(rendered.code, /data-terminal-wide/u);
 });
 
@@ -206,7 +216,7 @@ test('Astro sanitizes authored HTML before X Core metadata and presentation tran
   const processor = await createProcessor();
   const markdown = `## Safe HTML
 
-<div class="firefly-content-callout arbitrary-author-class" style="color: red" onclick="alert(1)">A safe callout.</div>
+<div class="firefly-content-callout arbitrary-author-class" data-article-theme="future" style="color: red" onclick="alert(1)">A safe callout.</div>
 
 <script>alert('script')</script>
 <style>body { color: red; }</style>
@@ -245,7 +255,7 @@ A paragraph remains in the normalized document.`;
     assert.match(rendered.code, /<div class="firefly-content-callout">A safe callout\.<\/div>/u);
     assert.match(rendered.code, /<center>\s+Legacy center heading\s+<\/center>/u);
     assert.match(rendered.code, /data-node-id="posts-integration-fixture-p-1"/u);
-    assert.doesNotMatch(rendered.code, /<script|<style|<iframe|<form|<input|javascript:|data:text|onmouseover|onerror|style=/iu);
+    assert.doesNotMatch(rendered.code, /<script|<style|<iframe|<form|<input|javascript:|data:text|data-article-theme|onmouseover|onerror|style=/iu);
     assert.doesNotMatch(rendered.code, /arbitrary-author-class|unsafe-protocol-relative/u);
   }
 
