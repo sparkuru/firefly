@@ -1456,3 +1456,24 @@ Verified the safe embedded Markdown HTML implementation through X Core, site, M4
 ### Status
 
 [OK] **Completed**
+
+
+## Session 65: Article theme infrastructure
+
+**Date**: 2026-09-15
+**Task**: Article theme infrastructure
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented the site-owned articleTheme registry and strict post/page schema defaulting to default; preserved the field in blog-meta normalization; emitted the validated ID only at semantic and Terminal article-content roots; added X Core/static/schema coverage and updated frontend contracts. Passed ./sam site checks, content/X Core tests, site build, M4 check/test/build, and the external workspace build. Archived 09-15-article-themes.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3a0e86a` | (see git log) |
+
+### Status
+
+[OK] **Completed**
