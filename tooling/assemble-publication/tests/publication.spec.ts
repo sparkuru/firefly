@@ -14,10 +14,10 @@ test('assembled release preserves cross-application navigation and mounted 404 o
   );
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
   await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
-  await expect(page.locator('[data-terminal-reader]')).toBeVisible();
-  const readerScript = await page.locator('script[src*="ReaderStatus"]').getAttribute('src');
-  expect(readerScript).toMatch(/^\/_astro\/ReaderStatus[^/]+\.js$/u);
-  expect((await page.request.get(readerScript!)).status()).toBe(200);
+  await expect(page.locator('[data-document-navigator]')).toBeVisible();
+  const navigationScript = await page.locator('script[src*="DocumentNavigationStatus"]').getAttribute('src');
+  expect(navigationScript).toMatch(/^\/_astro\/DocumentNavigationStatus[^/]+\.js$/u);
+  expect((await page.request.get(navigationScript!)).status()).toBe(200);
   await page.goto('/lab/');
   await expect(page.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();
   const majo = page.getByRole('link', { name: /Open majo/u });

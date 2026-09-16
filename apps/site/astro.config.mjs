@@ -1,6 +1,4 @@
 import { unified } from '@astrojs/markdown-remark';
-import { semanticPresentation } from '@firefly/presentation-semantic';
-import { terminalPresentation } from '@firefly/presentation-terminal';
 import {
   createXCorePlugins,
   PresentationRegistry
@@ -11,12 +9,14 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { terminalHomeAssetsInlineLimit } from './src/lib/assets-inline-limit.mjs';
 import { markdownHtmlSchema } from './src/lib/markdown-html-policy.mjs';
+import { PRESENTATION_EXPERIENCES } from './src/lib/presentation-experiences';
 import { createSiteSeoIntegration } from './src/lib/site-seo.mjs';
 import { resolveDocumentContext } from './src/lib/x-core-context';
 
-export const presentationRegistry = new PresentationRegistry()
-  .register(semanticPresentation)
-  .register(terminalPresentation);
+export const presentationRegistry = new PresentationRegistry();
+for (const experience of PRESENTATION_EXPERIENCES) {
+  presentationRegistry.register(experience.adapter);
+}
 const xCorePlugins = createXCorePlugins({
   registry: presentationRegistry,
   resolveContext: resolveDocumentContext,

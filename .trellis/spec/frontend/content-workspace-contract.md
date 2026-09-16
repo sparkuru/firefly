@@ -1,4 +1,4 @@
-# Content Workspace, Virtual Filesystem, and Reader Contract
+# Content Workspace, Virtual Filesystem, and Document Navigator Contract
 
 ## Scenario: Workspace-Backed Static Content
 
@@ -6,7 +6,7 @@
 
 Use this contract whenever changing the Markdown posts root, symbolic-link
 handling, content materialization, access metadata, canonical document paths,
-directory routes, Terminal document commands, or the read-only document reader.
+directory routes, Terminal document commands, or the read-only document navigator.
 
 The repository publishes one static `guest` projection. A configured host
 workspace and any linked targets are authoring inputs only: host paths, hidden
@@ -186,10 +186,51 @@ completeCommand(
   cwd?: string
 ): CompletionResult
 
-startTerminalReader(root: HTMLElement): void
+startDocumentNavigator(root: HTMLElement): void
+
+type DocumentNavigatorEntry = 'always' | 'fragment'
+
+interface DocumentNavigatorProfile {
+  readonly kind: 'document-navigator';
+  readonly entry: DocumentNavigatorEntry;
+}
+
+interface PresentationExperience {
+  readonly id: string;
+  readonly adapter: PresentationAdapter;
+  readonly documentKind: 'semantic' | 'terminal';
+  readonly documentNavigator: DocumentNavigatorProfile;
+}
+
+createPresentationExperienceRegistry(
+  definitions: readonly PresentationExperience[]
+): readonly PresentationExperience[]
+
+resolvePresentationExperience(id: string): PresentationExperience
 ```
 
 ### 3. Contracts
+
+#### Presentation experience composition
+
+- `PRESENTATION_EXPERIENCES` is the single site-owned definition consumed by
+  both X Core registration and Astro document dispatch. Its initial entries
+  are `firefly -> terminal + { kind: 'document-navigator', entry: 'always' }`
+  and `semantic -> semantic + { kind: 'document-navigator', entry:
+  'fragment' }`.
+- The adapter ID is authoritative. `createPresentationExperienceRegistry`
+  rejects an empty experience ID, an adapter identity mismatch, an unsupported
+  document kind, an invalid navigator kind/entry, or duplicate IDs. It returns
+  a frozen array containing frozen experience/profile records.
+- `resolvePresentationExperience` returns the registered experience or throws
+  `Unsupported site presentation "<id>"`. Document components receive the
+  resolved profile; they must derive entry attributes, initial region
+  `tabindex`, and initial status visibility from that profile rather than
+  repeating presentation-specific literals.
+- The front-matter contract remains `presentation` plus optional
+  `articleTheme`. Navigator profiles are site-owned DOM/runtime data and must
+  not enter X Core metadata, content schema, route identity, comments payloads,
+  or article-theme resolution.
 
 #### Workspace transport and materialization
 
@@ -997,7 +1038,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   including its focused title. It uses the same clear transition as the active
   prompt. Links, native/ARIA controls, editables, local-scroll code/table
   widgets, composing input, modified variants, and non-collapsed user text
-  selections remain native; the standalone `vim` reader route is unchanged.
+  selections remain native; the standalone `vim` document navigator route is unchanged.
 - During the home startup `connecting` state, the inline startup marker also
   owns an exact unmodified, cancelable, non-composing `Ctrl+L` delivered to
   the visible startup/page surface. It prevents the default and records one
@@ -1143,35 +1184,35 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   boot log does not change its geometry. This responsive fallback is required at
   the mobile profile as well as desktop.
 
-#### Read-only Vim reader
+#### Read-only document navigator
 
-- Canonical document routes load `terminal-reader.ts` as progressive
-  enhancement. Terminal documents are reader-capable when focused; semantic
-  documents keep the reader status hidden and activate it only for the explicit
+- Canonical document routes load `document-navigator.ts` as progressive
+  enhancement. Terminal documents support document navigation when focused; semantic
+  documents keep the document navigation status hidden and activate it only for the explicit
   `#terminal-reader` entry fragment. Static HTML remains complete and
   navigable without JavaScript; directory indexes, home, lab, and NERV do not
-  load the reader asset.
+  load the document navigator asset.
 - The pure `document-navigation` effect remains fragment-free and carries the
   validated canonical `entry.href`. The browser controller owns the only
-  reader-intent decoration: `readerDestinationHref(href: string)` must accept a
+  document-navigator intent decoration: `documentNavigatorDestinationHref(href: string)` must accept a
   same-origin absolute or path-like canonical URL, set exactly
   `#terminal-reader`, and return only its path/query/hash form. Raw `vim`
   operands never reach this helper, and ordinary breadcrumbs, directory links,
   permalinks, and inline `cat` output remain fragment-free.
-- A semantic document uses `data-terminal-reader-entry="fragment"`; its status
+- A semantic document uses `data-document-navigator-entry="fragment"`; its status
   stays hidden and its region is not focusable until `window.location.hash ===
   '#terminal-reader'`. A Terminal document uses
-  `data-terminal-reader-entry="always"`; its status is visible on direct entry,
-  but it only steals focus for the exact reader fragment. Fragment entry waits
+  `data-document-navigator-entry="always"`; its status is visible on direct entry,
+  but it only steals focus for the exact document navigator fragment. Fragment entry waits
   one animation frame after native hash settlement, then calls
   `focus({ preventScroll: true })`; direct canonical routes, other fragments,
   Back/Forward, and JavaScript-disabled pages retain native browser ownership.
-- `:q` assigns `/` directly and does not use `history` APIs. Reader mode,
+- `:q` assigns `/` directly and does not use `history` APIs. Document navigator mode,
   search, selection, active-unit, and generated-unit state remain route-local
   and ephemeral; a route change discards them.
-- The reader owns local `normal`, `visual`, `search`, and `command` modes. Its
+- The document navigator owns local `normal`, `visual`, `search`, and `command` modes. Its
   bounded keys are `j`, `k`, `g`, `G`, `/`, `?`, `n`, `N`, `v`, `Escape`, and
-  `:q`. It is a reader, not an editor.
+  `:q`. It is a navigator, not an editor.
 - Movement uses semantic top-level reading units and scrolls the active unit to
   a centered reading band; reduced motion changes smooth scrolling to immediate.
 - Visual mode owns a real `Range` only while the browser selection has exactly
@@ -1182,39 +1223,39 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   text offsets back to the original DOM boundaries, and never crosses units or
   rewrites authored content. `n`/`N` navigate those occurrence records with
   wraparound, including repeated matches inside one paragraph or `<pre>`.
-  When supported, CSS Highlights register `terminal-reader-search` for all
-  cloned ranges and `terminal-reader-search-active` for the current clone; the
+  When supported, CSS Highlights register `document-navigation-search` for all
+  cloned ranges and `document-navigation-search-active` for the current clone; the
   unsupported-Highlight fallback keeps status/navigation/scrolling functional
   without inserting `<mark>` or taking browser selection ownership. A
-  committed query exposes persistent `data-reader-search-status` text for the
+  committed query exposes persistent `data-navigation-search-status` text for the
   current occurrence (or bounded no-results text), while the `/`/`?` prefix,
   direction-specific label, and placeholder identify search direction.
   Occurrence movement settles only the page viewport from the range rectangle,
   never a protected nested scroll region. A committed query also sets
-  `data-reader-search-active` on the complete reader status section while the
-  reader is not editing a search or command form; opening `/` or `?` removes
+  `data-navigation-search-active` on the complete document navigation status section while the
+  document navigator is not editing a search or command form; opening `/` or `?` removes
   that marker temporarily but preserves the prior committed status text until
   the form is submitted or cancelled. The status section is viewport-fixed to
-  the block-end whenever it is visible, and follows the rendered reader region
+  the block-end whenever it is visible, and follows the rendered document navigator region
   in source order so the document header, outline, and prose remain continuous.
   It uses the presentation's token-backed opaque inverse/contrasting surface;
   the Terminal document provides a conservative no-JavaScript fallback, while
-  reader startup measures the rendered status height and writes the route-local
-  `--reader-status-reserve` value on the article. A `ResizeObserver` refreshes
+  document navigator startup measures the rendered status height and writes the route-local
+  `--navigation-status-reserve` value on the article. A `ResizeObserver` refreshes
   that reservation when search/command chrome or responsive wrapping changes;
   article bottom padding and reading-unit scroll margins keep active and final
   content above the fixed edge. The visible status section may bleed from its
-  centered reader frame to the viewport edges, while the document header,
+  centered document navigator frame to the viewport edges, while the document header,
   outline, and prose retain their existing readable measure; this full-bleed
   treatment must not create document-level horizontal overflow.
   A non-empty query replaces the query, occurrence records, highlights, and
   committed-search marker as one lifecycle;
   an empty submission or Escape clears the query/highlights without changing
-  the permanent fixed status lifecycle. The mode/position row owns reader
-  orientation, `data-reader-search-status` owns committed occurrence context,
-  and `data-reader-message` owns the latest visible action feedback. When the
+  the permanent fixed status lifecycle. The mode/position row owns document navigator
+  orientation, `data-navigation-search-status` owns committed occurrence context,
+  and `data-navigation-message` owns the latest visible action feedback. When the
   committed search status owns the current feedback, the generic message is
-  hidden to avoid a duplicate line; `data-reader-announcer` remains the
+  hidden to avoid a duplicate line; `data-navigation-announcer` remains the
   separate polite live channel for the same updates. Each visible
   search/command form is a flex row with one
   continuous inset bottom rule and `:focus-within` focus treatment; its fixed
@@ -1246,6 +1287,9 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 | permalink breadcrumb contains `cd`, duplicate/glued slash, dead parent, or current self-link | static/browser failure |
 | breadcrumb normalized text is correct but gap boxes collapse to zero | browser geometry failure at both viewports |
 | accessor, sparse input, unknown field, unsafe Terminal path | decoder `TypeError` before shell reveal |
+| experience ID differs from its adapter ID, navigator profile is invalid, or an experience ID is duplicated | experience registry rejects the definition before Astro registration or document dispatch |
+| authored presentation is omitted, `firefly`, or `semantic` | X Core keeps the existing default/metadata behavior; site dispatch selects the matching terminal/semantic experience and its always/fragment profile |
+| unknown site presentation ID | `resolvePresentationExperience` throws `Unsupported site presentation "<id>"` with no fallback experience |
 | command token/alias collision or invalid metadata/handler | registry `TypeError` at creation |
 | missing command argv parser or unsafe option definition | neutral registry rejects the command before execution |
 | duplicate hardcoded command dispatch or help metadata | implementation review failure; definitions must be the single execution/help source |
@@ -1277,13 +1321,13 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 | `ls lab` presentation | render listed experiments as flat no-marker terminal rows with native links and readable titles; preserve catalog navigation |
 | inline `cat` stream footer | end at the trusted document content without a redundant `Return to prompt` control; keep the prompt below and focused |
 | long help after prior output | fitting record/prompt group centered in the readable band; oversized output keeps the fresh prompt usable/visible without top-clipping the new record |
-| JavaScript unavailable or reader startup cannot initialize | full document/breadcrumb remains usable |
-| empty reader search | cancel the input without creating or replacing a committed query |
+| JavaScript unavailable or document navigator startup cannot initialize | full document/breadcrumb remains usable |
+| empty document navigator search | cancel the input without creating or replacing a committed query |
 | committed literal search with matches | one exact DOM range per non-overlapping occurrence; persistent current/total status; all/active CSS Highlights when supported |
 | repeated matches within one reading unit | `n`/`N` changes the active occurrence and status even when the active unit ID is unchanged |
 | committed literal search with no matches | clear prior ranges and show bounded `No results for “…”` status/announcement |
 | CSS Highlights unavailable | retain occurrence count, active unit, keyboard navigation, and page settlement without DOM wrappers or selection mutation |
-| protected reader target, IME, modifier, or user-owned selection | preserve native behavior; no reader movement/mode takeover |
+| protected document navigator target, IME, modifier, or user-owned selection | preserve native behavior; no document navigator movement/mode takeover |
 | unsupported ex command | stay on document and announce bounded error |
 | `:q` | navigate to `/` exactly |
 
@@ -1323,10 +1367,15 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   unchanged. Ctrl/Cmd/Alt/Shift activation remains a native directory link.
 - Base: omitted `FIREFLY_CONTENT_ROOT` and `config.dev` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
+- Good: one frozen `PresentationExperience` record supplies the adapter used by
+  `PresentationRegistry` and the document component's navigator profile; the
+  same record yields terminal/always for `firefly` and semantic/fragment for
+  `semantic`.
 - Bad: mount `$HOME`, let Astro follow the authored link directly, serialize all
   documents then hide private ones in the browser, derive a URL from a `vim`
-  operand, flatten a `<pre>` block before grep sees it, or keep a second
-  built-in dispatch/help switch beside the definitions.
+  operand, flatten a `<pre>` block before grep sees it, add an author-facing
+  `reader` field, or keep a second presentation-to-entry-policy map beside the
+  experience definitions.
 
 ### 6. Tests Required
 
@@ -1362,21 +1411,22 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - Site build/static tests: canonical document/directory routes, breadcrumbs,
   exact route-owned scripts/styles/fonts/licenses, guest-only templates/indexes,
   marker badges on supported public surfaces, no source/private sentinel, no
-  maps/symlinks/unknown files.
+  maps/symlinks/unknown files; experience definitions reject identity drift and
+  duplicate IDs, and built routes keep the profile-specific entry/status shape.
 - Site Playwright at `1440x900` and `375x812`: static/no-JS route and breadcrumb
   coverage; tree/cat/vim plus native document/experiment links and directory
   link-to-`cd` prompt/cwd updates; grouped-help usage readability; root ambiguous `cd`
   Tab focus; inline `cat` prompt adjacency; Ctrl+C and modifier/IME exclusions;
   safe ambiguous and zero-result path Tab focus plus prompt-wide Tab prevention;
-  repeated help settlement; all reader modes/keys; Ctrl+L clear and `ls lab`
-  row presentation; exact reader search ranges and current/total status;
+  repeated help settlement; all document navigator modes/keys; Ctrl+L clear and `ls lab`
+  row presentation; exact document navigator search ranges and current/total status;
   same-unit `n`/`N` wraparound; backward-search prefix/label/placeholder;
   Range ownership; reduced motion; overflow and focus.
 - External workspace E2E: native Markdown plus chained file/directory links,
   exact read-only mounts, built routes, zero stage symlinks, no private or host
   path in output, then restore the default build.
 - Publication/container: exact manifest/release/image inventory, nested routes,
-  canonical redirects, distinct site/NERV 404s, security and immutable reader/
+  canonical redirects, distinct site/NERV 404s, security and immutable document navigator/
   font headers, non-root/read-only confinement, and exact teardown.
 
 ### 7. Wrong vs Correct
@@ -1408,6 +1458,14 @@ if (result.effect?.kind === 'document-navigation') {
 ```
 
 ```ts
+// Wrong: registration and dispatch can silently disagree about entry policy.
+const readerByPresentation = { firefly: 'always', semantic: 'fragment' };
+
+// Correct: one experience owns adapter identity, document kind, and navigator profile.
+const experience = resolvePresentationExperience(document.metadata.presentation);
+presentationRegistry.register(experience.adapter);
+renderDocument(experience.documentKind, experience.documentNavigator);
+
 // Correct: make structured effects the browser boundary; do not split a whole
 // source block into a whitespace-normalized string or inject command text.
 if (effect.kind === 'grep') {
@@ -1753,7 +1811,7 @@ const label = match.path === '-' ? '-' : formatResourcePath(match.path);
 - `apps/site/src/lib/content.ts`
 - `presentations/terminal/src/runtime.ts`
 - `apps/site/src/scripts/terminal-home.ts`
-- `apps/site/src/scripts/terminal-reader.ts`
+- `apps/site/src/scripts/document-navigator.ts`
 - `apps/site/src/pages/posts/index.astro`
 - `apps/site/src/pages/posts/[...path].astro`
 - `apps/site/src/pages/pages/index.astro`

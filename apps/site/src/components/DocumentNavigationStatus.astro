@@ -1,0 +1,39 @@
+---
+import type { DocumentNavigatorProfile } from '../lib/document-navigation.ts';
+import { navigationInitialState } from '../lib/document-navigation.ts';
+
+interface Props {
+  variant: 'semantic' | 'terminal';
+  profile: DocumentNavigatorProfile;
+}
+
+const { variant, profile } = Astro.props;
+const className = variant === 'terminal' ? 'terminal-navigation-status' : 'document-navigation-status';
+const { statusHidden: initiallyHidden } = navigationInitialState(profile);
+---
+
+<section
+  class={className}
+  data-document-navigator-status
+  aria-label="Document navigation status"
+  hidden={initiallyHidden}
+>
+  <p><span data-navigation-mode>-- NORMAL --</span><span data-navigation-position>1/1</span></p>
+  <p data-navigation-search-status hidden></p>
+  <form data-navigation-search-form hidden>
+    <label data-navigation-search-label for="document-navigation-search">Search document forward</label>
+    <span data-navigation-search-prefix aria-hidden="true">/</span><input id="document-navigation-search" type="search" autocomplete="off" placeholder="Search forward…" />
+  </form>
+  <form data-navigation-command-form hidden>
+    <label for="document-navigation-command">Navigation command</label>
+    <span aria-hidden="true">:</span><input id="document-navigation-command" type="text" autocomplete="off" />
+  </form>
+  <p data-navigation-message>j/k move · /? search · v select · :q exit</p>
+  <p class={variant === 'terminal' ? 'terminal-visually-hidden' : 'navigation-visually-hidden'} data-navigation-announcer aria-live="polite" aria-atomic="true"></p>
+</section>
+
+<script>
+  import { startDocumentNavigator } from '../scripts/document-navigator.ts';
+  const navigator = document.querySelector<HTMLElement>('[data-document-navigator]');
+  if (navigator !== null) startDocumentNavigator(navigator);
+</script>

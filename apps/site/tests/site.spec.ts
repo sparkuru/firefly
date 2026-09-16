@@ -29,7 +29,7 @@ async function expectContainedInViewport(
 async function expectHeadingLevels(page: Page, levels: number[]) {
   const actual = await page
     .locator(
-      'article.terminal-document > .terminal-document-header h1, article.terminal-document > [data-terminal-reader-region] h1, article.terminal-document > [data-terminal-reader-region] h2, article.terminal-document > [data-terminal-reader-region] h3, article.terminal-document > [data-terminal-reader-region] h4, article.terminal-document > [data-terminal-reader-region] h5, article.terminal-document > [data-terminal-reader-region] h6'
+      'article.terminal-document > .terminal-document-header h1, article.terminal-document > [data-document-navigator-region] h1, article.terminal-document > [data-document-navigator-region] h2, article.terminal-document > [data-document-navigator-region] h3, article.terminal-document > [data-document-navigator-region] h4, article.terminal-document > [data-document-navigator-region] h5, article.terminal-document > [data-document-navigator-region] h6'
     )
     .evaluateAll((headings) =>
       headings.map((heading) => Number(heading.tagName.slice(1)))
@@ -47,7 +47,7 @@ async function expectTerminalDocument(page: Page, expectedPath: string | RegExp)
   await expect(page.locator('.terminal-titlebar span').nth(1)).toHaveText(expectedPath);
   await expect(page.locator('.terminal-document-nav')).toHaveCount(0);
   await expect(page.locator('.terminal-path')).toHaveCount(0);
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
 }
 
 interface WorkflowPaths {
@@ -160,7 +160,7 @@ test('lab index is a JavaScript-free semantic catalog with native navigation', a
   await expectNoHorizontalOverflow(page);
 });
 
-test('post deep link uses the firefly default with a reader fragment', async ({ page }) => {
+test('post deep link uses the firefly default with a document navigator fragment', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
 
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/$/);
@@ -280,7 +280,7 @@ test('firefly article remains complete and exposes one canonical route', async (
   await expect(article.locator('.terminal-path')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await expect(
-    article.locator('[data-terminal-reader-region] input, [data-terminal-reader-region] textarea, [data-terminal-reader-region] [role="textbox"]')
+    article.locator('[data-document-navigator-region] input, [data-document-navigator-region] textarea, [data-document-navigator-region] [role="textbox"]')
   ).toHaveCount(0);
   await expectHeadingLevels(page, [1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 3, 4, 4, 3, 4, 4, 4, 4, 4]);
   await expectNoHorizontalOverflow(page);
@@ -349,12 +349,12 @@ test('document fragment deep link resolves without browser JavaScript', async ({
   await expectNoHorizontalOverflow(page);
 });
 
-test('reader entry fragment remains a native location without browser JavaScript', async ({ page }) => {
+test('document navigator fragment remains a native location without browser JavaScript', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
 
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#terminal-reader$/u);
   await expect(page.locator('#terminal-reader')).toBeVisible();
-  await expect(page.locator('[data-terminal-reader-status]')).toHaveCount(1);
+  await expect(page.locator('[data-document-navigator-status]')).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

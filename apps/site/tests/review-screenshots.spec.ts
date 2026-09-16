@@ -37,25 +37,25 @@ test('capture the approved M5 Terminal review states', async ({ page }, testInfo
   await capture('nested-directory');
 
   await page.goto('/pages/about/');
-  const reader = page.getByRole('region', { name: /Read-only Vim reader/u });
+  const navigator = page.getByRole('region', { name: /Document navigator/u });
   await expect(page.locator('.terminal-titlebar span').nth(1)).toHaveText('~/blog/pages/about.md');
   await expect(page.locator('.terminal-path')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Document path' })).toHaveCount(0);
   await capture('header-path');
 
-  await reader.focus();
-  await reader.press('j');
-  await expect(page.locator('[data-reader-position]')).toHaveText(/^2\//u);
-  await capture('reader-normal');
+  await navigator.focus();
+  await navigator.press('j');
+  await expect(page.locator('[data-navigation-position]')).toHaveText(/^2\//u);
+  await capture('document-navigator-normal');
 
-  await reader.press('/');
+  await navigator.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await search.fill('reader');
-  await capture('reader-search');
+  await capture('document-navigator-search');
   await search.press('Escape');
 
-  await reader.press('v');
-  await reader.press('j');
-  await expect(page.locator('[data-reader-mode]')).toHaveText('-- VISUAL --');
-  await capture('reader-visual');
+  await navigator.press('v');
+  await navigator.press('j');
+  await expect(page.locator('[data-navigation-mode]')).toHaveText('-- VISUAL --');
+  await capture('document-navigator-visual');
 });

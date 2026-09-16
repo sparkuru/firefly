@@ -1,25 +1,25 @@
 import { expect, test, type Page } from '@playwright/test';
 import { terminalPromptName } from './terminal-prompt';
 
-async function openReader(page: Page) {
+async function openDocumentNavigator(page: Page) {
   await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
+  const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await region.focus();
   await expect(region).toBeFocused();
   return region;
 }
 
-async function readerSearchMetrics(page: Page) {
+async function documentNavigatorSearchMetrics(page: Page) {
   return page.evaluate(() => {
-    const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-    const form = document.querySelector<HTMLFormElement>('[data-reader-search-form]');
-    const prefix = document.querySelector<HTMLElement>('[data-reader-search-prefix]');
-    const input = document.querySelector<HTMLInputElement>('#terminal-reader-search');
+    const status = document.querySelector<HTMLElement>('[data-document-navigator-status]');
+    const form = document.querySelector<HTMLFormElement>('[data-navigation-search-form]');
+    const prefix = document.querySelector<HTMLElement>('[data-navigation-search-prefix]');
+    const input = document.querySelector<HTMLInputElement>('#document-navigation-search');
     if (status === null || form === null || prefix === null || input === null) {
-      throw new Error('Missing reader search controls.');
+      throw new Error('Missing document navigation search controls.');
     }
     const article = document.querySelector<HTMLElement>('.terminal-document, .semantic-document');
-    if (article === null) throw new Error('Missing reader article.');
+    if (article === null) throw new Error('Missing document navigator article.');
     const formStyle = getComputedStyle(form);
     const inputStyle = getComputedStyle(input);
     const statusStyle = getComputedStyle(status);
@@ -56,7 +56,7 @@ async function readerSearchMetrics(page: Page) {
       statusBottom: statusRect.bottom,
       statusHeight: statusRect.height,
       articlePaddingBottom: Number.parseFloat(articleStyle.paddingBlockEnd),
-      statusReserve: articleStyle.getPropertyValue('--reader-status-reserve').trim(),
+      statusReserve: articleStyle.getPropertyValue('--navigation-status-reserve').trim(),
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight
@@ -64,10 +64,10 @@ async function readerSearchMetrics(page: Page) {
   });
 }
 
-test('reader moves by semantic units and honors reduced motion', async ({ page }) => {
+test('document navigator moves by semantic units and honors reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  const region = await openReader(page);
-  const position = page.locator('[data-reader-position]');
+  const region = await openDocumentNavigator(page);
+  const position = page.locator('[data-navigation-position]');
   await expect(position).toHaveText(/^1\//u);
   await region.press('j');
   await expect(position).toHaveText(/^2\//u);
@@ -79,14 +79,14 @@ test('reader moves by semantic units and honors reduced motion', async ({ page }
   await expect(position).toHaveText(/^1\//u);
 });
 
-test('reader status stays fixed at the viewport bottom, opaque, contained, and reports reader actions', async ({ page }) => {
-  const region = await openReader(page);
-  const statusSection = page.locator('[data-terminal-reader-status]');
-  const mode = page.locator('[data-reader-mode]');
-  const message = page.locator('[data-reader-message]');
+test('document navigator status stays fixed at the viewport bottom, opaque, contained, and reports navigation actions', async ({ page }) => {
+  const region = await openDocumentNavigator(page);
+  const statusSection = page.locator('[data-document-navigator-status]');
+  const mode = page.locator('[data-navigation-mode]');
+  const message = page.locator('[data-navigation-message]');
   await expect(statusSection).toBeVisible();
 
-  const metrics = await readerSearchMetrics(page);
+  const metrics = await documentNavigatorSearchMetrics(page);
   expect(metrics.statusPosition).toBe('fixed');
   expect(metrics.statusZIndex).not.toBe('auto');
   expect(metrics.statusBackground).not.toBe('rgba(0, 0, 0, 0)');
@@ -138,24 +138,24 @@ test('reader status stays fixed at the viewport bottom, opaque, contained, and r
   await expect(message).toHaveText('Cancelled.');
 
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Reader command' });
-  await expect(message).toHaveText('Reader command mode. Type q to exit.');
+  const command = page.getByRole('textbox', { name: 'Navigation command' });
+  await expect(message).toHaveText('Document navigation command mode. Type q to exit.');
   await command.fill('write');
   await command.press('Enter');
-  await expect(message).toHaveText('Unsupported reader command: :write. Only :q is available.');
+  await expect(message).toHaveText('Unsupported navigation command: :write. Only :q is available.');
   await command.press('Escape');
   await expect(mode).toHaveText('-- NORMAL --');
   await expect(message).toHaveText('Cancelled.');
 });
 
-test('reader keeps the active unit visible above the fixed status after movement', async ({ page }) => {
-  const region = await openReader(page);
+test('document navigator keeps the active unit visible above the fixed status after movement', async ({ page }) => {
+  const region = await openDocumentNavigator(page);
   await region.press('G');
 
   await expect.poll(
     () => page.evaluate(() => {
-      const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-      const active = document.querySelector<HTMLElement>('[data-reader-active]');
+      const status = document.querySelector<HTMLElement>('[data-document-navigator-status]');
+      const active = document.querySelector<HTMLElement>('[data-navigation-active]');
       if (status === null || active === null) return false;
       return active.getBoundingClientRect().bottom <= status.getBoundingClientRect().top + 1;
     }),
@@ -163,9 +163,9 @@ test('reader keeps the active unit visible above the fixed status after movement
   ).toBe(true);
 
   const geometry = await page.evaluate(() => {
-    const status = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-    const active = document.querySelector<HTMLElement>('[data-reader-active]');
-    if (status === null || active === null) throw new Error('Missing reader geometry nodes.');
+    const status = document.querySelector<HTMLElement>('[data-document-navigator-status]');
+    const active = document.querySelector<HTMLElement>('[data-navigation-active]');
+    if (status === null || active === null) throw new Error('Missing document navigation geometry nodes.');
     const statusRect = status.getBoundingClientRect();
     const activeRect = active.getBoundingClientRect();
     return {
@@ -185,17 +185,17 @@ test('reader keeps the active unit visible above the fixed status after movement
   expect(geometry.activeBottom).toBeLessThanOrEqual(geometry.statusTop + 1);
 });
 
-test('reader search, repeat, visual Range, Escape, and unsupported commands are bounded', async ({ page }) => {
-  const region = await openReader(page);
+test('document navigation search, repeat, visual Range, Escape, and unsupported commands are bounded', async ({ page }) => {
+  const region = await openDocumentNavigator(page);
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await expect(search).toBeFocused();
   await search.fill('trellis');
   await search.press('Enter');
-  await expect(page.locator('[data-reader-search-status]')).toContainText('matches for “trellis”');
-  await expect(page.locator('[data-reader-message]')).toBeHidden();
-  await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
-  expect(await page.evaluate(() => !('highlights' in CSS) || CSS.highlights.has('terminal-reader-search'))).toBe(true);
+  await expect(page.locator('[data-navigation-search-status]')).toContainText('matches for “trellis”');
+  await expect(page.locator('[data-navigation-message]')).toBeHidden();
+  await expect(page.locator('[data-navigation-announcer]')).toHaveAttribute('aria-live', 'polite');
+  expect(await page.evaluate(() => !('highlights' in CSS) || CSS.highlights.has('document-navigation-search'))).toBe(true);
   await region.press('n');
   await region.press('N');
   await region.press('?');
@@ -203,58 +203,58 @@ test('reader search, repeat, visual Range, Escape, and unsupported commands are 
   await expect(backwardSearch).toHaveAttribute('placeholder', 'Search backward…');
   await backwardSearch.fill('missing literal query');
   await backwardSearch.press('Enter');
-  await expect(page.locator('[data-reader-search-status]')).toHaveText('No results for “missing literal query”.');
-  await expect(page.locator('[data-reader-message]')).toBeHidden();
+  await expect(page.locator('[data-navigation-search-status]')).toHaveText('No results for “missing literal query”.');
+  await expect(page.locator('[data-navigation-message]')).toBeHidden();
 
   await region.press('v');
-  await expect(page.locator('[data-reader-mode]')).toHaveText('-- VISUAL --');
+  await expect(page.locator('[data-navigation-mode]')).toHaveText('-- VISUAL --');
   await region.press('j');
   expect(await page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(false);
   await region.press('Escape');
-  await expect(page.locator('[data-reader-mode]')).toHaveText('-- NORMAL --');
+  await expect(page.locator('[data-navigation-mode]')).toHaveText('-- NORMAL --');
   expect(await page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(true);
 
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Reader command' });
+  const command = page.getByRole('textbox', { name: 'Navigation command' });
   await command.fill('write');
   await command.press('Enter');
-  await expect(page.locator('[data-reader-message]')).toContainText('Only :q is available');
+  await expect(page.locator('[data-navigation-message]')).toContainText('Only :q is available');
   await command.press('Escape');
   await expect(region).toBeFocused();
 });
 
-test('reader searches exact repeated occurrences from the canonical fragment entry', async ({ page }) => {
+test('document navigation searches exact repeated occurrences from the canonical fragment entry', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
+  const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
 
   await region.press('?');
   const search = page.getByRole('searchbox', { name: /Search document backward/u });
   await expect(search).toHaveAttribute('placeholder', 'Search backward…');
-  await expect(page.locator('[data-reader-search-prefix]')).toHaveText('?');
+  await expect(page.locator('[data-navigation-search-prefix]')).toHaveText('?');
   await search.fill('the');
   await search.press('Enter');
 
-  const status = page.locator('[data-reader-search-status]');
-  const statusSection = page.locator('[data-terminal-reader-status]');
-  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  const status = page.locator('[data-navigation-search-status]');
+  const statusSection = page.locator('[data-document-navigator-status]');
+  await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
   await expect(status).toHaveText(/^\d+\/\d+ matches for “the”\.$/u);
   const state = await page.evaluate(() => {
-    const all = CSS.highlights.get('terminal-reader-search');
-    const active = CSS.highlights.get('terminal-reader-search-active');
+    const all = CSS.highlights.get('document-navigation-search');
+    const active = CSS.highlights.get('document-navigation-search-active');
     const ranges = [...(all ?? [])].map((range) => {
       const container = range.startContainer.nodeType === Node.ELEMENT_NODE
         ? range.startContainer as Element
         : range.startContainer.parentElement;
       return {
         text: range.toString(),
-        unit: container?.closest<HTMLElement>('[data-reader-unit]')?.dataset.readerUnit ?? ''
+        unit: container?.closest<HTMLElement>('[data-navigation-unit]')?.dataset.navigationUnit ?? ''
       };
     });
     return {
       ranges,
       activeText: [...(active ?? [])][0]?.toString() ?? '',
-      status: document.querySelector<HTMLElement>('[data-reader-search-status]')?.textContent ?? ''
+      status: document.querySelector<HTMLElement>('[data-navigation-search-status]')?.textContent ?? ''
     };
   });
   expect(state.ranges.length).toBeGreaterThan(1);
@@ -269,35 +269,35 @@ test('reader searches exact repeated occurrences from the canonical fragment ent
 
   await region.press('n');
   await expect(status).not.toHaveText(initialStatus);
-  const nextActiveText = await page.evaluate(() => [...(CSS.highlights.get('terminal-reader-search-active') ?? [])][0]?.toString() ?? '');
+  const nextActiveText = await page.evaluate(() => [...(CSS.highlights.get('document-navigation-search-active') ?? [])][0]?.toString() ?? '');
   expect(nextActiveText.toLocaleLowerCase()).toBe('the');
 
   await region.press('N');
   await expect(status).toHaveText(initialStatus);
 });
 
-test('reader keeps committed search status visible while scrolling and clears it on cancellation', async ({ page }) => {
+test('document navigator keeps committed search status visible while scrolling and clears it on cancellation', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
+  const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await region.focus();
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await search.fill('the');
   await search.press('Enter');
 
-  const statusSection = page.locator('[data-terminal-reader-status]');
-  const status = page.locator('[data-reader-search-status]');
-  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  const statusSection = page.locator('[data-document-navigator-status]');
+  const status = page.locator('[data-navigation-search-status]');
+  await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
   await expect(statusSection).toHaveCSS('position', 'fixed');
   const initialStatus = await status.textContent();
   await expect(status).toBeVisible();
-  await expect(page.locator('[data-reader-message]')).toBeHidden();
-  await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('[data-navigation-message]')).toBeHidden();
+  await expect(page.locator('[data-navigation-announcer]')).toHaveAttribute('aria-live', 'polite');
 
   const viewportStatus = await page.evaluate(() => {
     window.scrollTo(0, document.documentElement.scrollHeight / 2);
-    const section = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-    if (section === null) throw new Error('Missing reader status section.');
+    const section = document.querySelector<HTMLElement>('[data-document-navigator-status]');
+    if (section === null) throw new Error('Missing document navigation status section.');
     const rect = section.getBoundingClientRect();
     return {
       top: rect.top,
@@ -314,37 +314,37 @@ test('reader keeps committed search status visible while scrolling and clears it
 
   await page.keyboard.press('n');
   await expect(status).not.toHaveText(initialStatus ?? '');
-  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
   await page.keyboard.press('N');
   await expect(status).toHaveText(initialStatus ?? '');
 
   await page.keyboard.press('/');
-  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
   await expect(status).toHaveText(initialStatus ?? '');
   await page.keyboard.press('Enter');
-  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
   await expect(status).toBeHidden();
 
   await page.keyboard.press('/');
   const cancelledSearch = page.getByRole('searchbox', { name: /Search document forward/u });
   await cancelledSearch.fill('the');
   await cancelledSearch.press('Enter');
-  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
   await page.keyboard.press('/');
   await page.getByRole('searchbox', { name: /Search document forward/u }).press('Escape');
-  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
 });
 
-test('reader search cycles keep transient prompt chrome separate in both directions', async ({ page }) => {
+test('document navigation search cycles keep transient prompt chrome separate in both directions', async ({ page }) => {
   const routes = [
     {
       path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
-      regionName: /Read-only Vim reader for llm-workflow-with-trellis/u,
+      regionName: /Document navigator for llm-workflow-with-trellis/u,
       query: 'the'
     },
     {
       path: '/pages/about/#terminal-reader',
-      regionName: /Read-only Vim reader for About this foundation/u,
+      regionName: /Document navigator for About this foundation/u,
       query: 'the'
     }
   ];
@@ -353,8 +353,8 @@ test('reader search cycles keep transient prompt chrome separate in both directi
     await page.goto(route.path);
     const region = page.getByRole('region', { name: route.regionName });
     await region.focus();
-    const statusSection = page.locator('[data-terminal-reader-status]');
-    const status = page.locator('[data-reader-search-status]');
+    const statusSection = page.locator('[data-document-navigator-status]');
+    const status = page.locator('[data-navigation-search-status]');
     let committedStatus: string | null = null;
 
     for (const direction of [
@@ -364,7 +364,7 @@ test('reader search cycles keep transient prompt chrome separate in both directi
       await region.press(direction.key);
       const input = page.getByRole('searchbox', { name: direction.label });
       await expect(input).toBeFocused();
-      const metrics = await readerSearchMetrics(page);
+      const metrics = await documentNavigatorSearchMetrics(page);
       expect(metrics.formDisplay).toBe('flex');
       expect(metrics.formWidth).toBeGreaterThan(0);
       expect(metrics.formHeight).toBeGreaterThanOrEqual(44);
@@ -377,20 +377,20 @@ test('reader search cycles keep transient prompt chrome separate in both directi
       expect(metrics.formBoxShadow).not.toBe('none');
       expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
       expect(metrics.statusBorder).not.toBe('rgba(0, 0, 0, 0)');
-      await expect(page.locator('[data-reader-search-prefix]')).toHaveText(direction.prefix);
+      await expect(page.locator('[data-navigation-search-prefix]')).toHaveText(direction.prefix);
       await expect(input).toHaveAttribute('placeholder', direction.placeholder);
-      await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+      await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
       if (committedStatus === null) await expect(status).toBeHidden();
       else await expect(status).toHaveText(committedStatus);
 
       await input.fill(route.query);
       await input.press('Enter');
-      await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+      await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
       await expect(status).toContainText(`matches for “${route.query}”.`);
       await expect(statusSection).toHaveCSS('position', 'fixed');
       const activeMetrics = await page.evaluate(() => {
-        const statusNode = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-        if (statusNode === null) throw new Error('Missing reader status section.');
+        const statusNode = document.querySelector<HTMLElement>('[data-document-navigator-status]');
+        if (statusNode === null) throw new Error('Missing document navigation status section.');
         const style = getComputedStyle(statusNode);
         const terminalRoot = document.querySelector<HTMLElement>('.terminal-root');
         const canvas = terminalRoot === null
@@ -410,9 +410,9 @@ test('reader search cycles keep transient prompt chrome separate in both directi
       await region.press(direction.key);
       const reopened = page.getByRole('searchbox', { name: direction.label });
       await expect(reopened).toBeFocused();
-      await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+      await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
       await expect(status).toHaveText(committedStatus ?? '');
-      const reopenedMetrics = await readerSearchMetrics(page);
+      const reopenedMetrics = await documentNavigatorSearchMetrics(page);
       expect(reopenedMetrics.formDisplay).toBe('flex');
       expect(reopenedMetrics.gap).toBeGreaterThanOrEqual(8);
       expect(reopenedMetrics.inputHeight).toBeGreaterThanOrEqual(44);
@@ -420,19 +420,19 @@ test('reader search cycles keep transient prompt chrome separate in both directi
       expect(reopenedMetrics.documentWidth).toBeLessThanOrEqual(reopenedMetrics.viewportWidth);
       await reopened.press('Escape');
       await expect(region).toBeFocused();
-      await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+      await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
       await expect(status).toBeHidden();
       committedStatus = null;
     }
 
     await region.press(':');
-    const command = page.getByRole('textbox', { name: 'Reader command' });
+    const command = page.getByRole('textbox', { name: 'Navigation command' });
     await expect(command).toBeFocused();
     const commandMetrics = await page.evaluate(() => {
-      const form = document.querySelector<HTMLFormElement>('[data-reader-command-form]');
+      const form = document.querySelector<HTMLFormElement>('[data-navigation-command-form]');
       const prefix = form === null ? null : form.querySelector<HTMLElement>(':scope > span');
-      const input = document.querySelector<HTMLInputElement>('#terminal-reader-command');
-      if (form === null || prefix === null || input === null) throw new Error('Missing reader command controls.');
+      const input = document.querySelector<HTMLInputElement>('#document-navigation-command');
+      if (form === null || prefix === null || input === null) throw new Error('Missing document navigation command controls.');
       const formRect = form.getBoundingClientRect();
       const prefixRect = prefix.getBoundingClientRect();
       const inputRect = input.getBoundingClientRect();
@@ -459,38 +459,38 @@ test('reader search cycles keep transient prompt chrome separate in both directi
   }
 });
 
-test('reader command input also leaves committed search chrome while editing', async ({ page }) => {
-  const region = await openReader(page);
+test('document navigator command input also leaves committed search chrome while editing', async ({ page }) => {
+  const region = await openDocumentNavigator(page);
   await region.press('/');
   const search = page.getByRole('searchbox', { name: /Search document forward/u });
   await search.fill('reader');
   await search.press('Enter');
 
-  const statusSection = page.locator('[data-terminal-reader-status]');
-  const status = page.locator('[data-reader-search-status]');
-  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  const statusSection = page.locator('[data-document-navigator-status]');
+  const status = page.locator('[data-navigation-search-status]');
+  await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
   const committedStatus = await status.textContent();
 
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Reader command' });
+  const command = page.getByRole('textbox', { name: 'Navigation command' });
   await expect(command).toBeFocused();
-  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
   await expect(status).toHaveText(committedStatus ?? '');
   await command.press('Escape');
   await expect(region).toBeFocused();
-  await expect(statusSection).not.toHaveAttribute('data-reader-search-active');
+  await expect(statusSection).not.toHaveAttribute('data-navigation-search-active');
   await expect(status).toBeHidden();
 });
 
-test('reader search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
+test('document navigation search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
   const routes = [
     {
       path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
-      regionName: /Read-only Vim reader for llm-workflow-with-trellis/u
+      regionName: /Document navigator for llm-workflow-with-trellis/u
     },
     {
       path: '/pages/about/#terminal-reader',
-      regionName: /Read-only Vim reader for About this foundation/u
+      regionName: /Document navigator for About this foundation/u
     }
   ];
 
@@ -506,9 +506,9 @@ test('reader search prefixes keep native labels, direction text, spacing, and ta
       await region.press(direction.key);
       const input = page.getByRole('searchbox', { name: direction.label });
       const metrics = await page.evaluate(() => {
-        const prefix = document.querySelector<HTMLElement>('[data-reader-search-prefix]');
-        const searchInput = document.querySelector<HTMLInputElement>('#terminal-reader-search');
-        if (prefix === null || searchInput === null) throw new Error('Missing reader search controls.');
+        const prefix = document.querySelector<HTMLElement>('[data-navigation-search-prefix]');
+        const searchInput = document.querySelector<HTMLInputElement>('#document-navigation-search');
+        if (prefix === null || searchInput === null) throw new Error('Missing document navigation search controls.');
         const prefixRect = prefix.getBoundingClientRect();
         const inputRect = searchInput.getBoundingClientRect();
         return {
@@ -562,18 +562,18 @@ test('Terminal document frame keeps its baseline, grows fluidly, and contains th
     if (width === 3840) expect(metrics.shellWidth).toBeGreaterThan(oldFrameCap);
     if (width === 3840 && testInfo.project.name === 'chromium-desktop-interactive') {
       await page.screenshot({
-        path: testInfo.outputPath('reader-frame-3840.png'),
+        path: testInfo.outputPath('document-navigator-frame-3840.png'),
         animations: 'disabled'
       });
     }
   }
 });
 
-test('Terminal reader keeps committed search status visible while scrolling', async ({ page }) => {
+test('Terminal document navigator keeps committed search status visible while scrolling', async ({ page }) => {
   await page.goto('/pages/about/#terminal-reader');
-  const region = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
+  const region = page.getByRole('region', { name: /Document navigator for About this foundation/u });
   await expect(region).toBeFocused();
-  const initialMetrics = await readerSearchMetrics(page);
+  const initialMetrics = await documentNavigatorSearchMetrics(page);
   expect(initialMetrics.statusPosition).toBe('fixed');
   expect(initialMetrics.statusBackground).not.toBe(initialMetrics.canvasBackground);
   expect(initialMetrics.statusColor).not.toBe(initialMetrics.statusBackground);
@@ -588,18 +588,18 @@ test('Terminal reader keeps committed search status visible while scrolling', as
   await search.fill('foundation');
   await search.press('Enter');
 
-  const statusSection = page.locator('[data-terminal-reader-status]');
-  const status = page.locator('[data-reader-search-status]');
-  await expect(statusSection).toHaveAttribute('data-reader-search-active', '');
+  const statusSection = page.locator('[data-document-navigator-status]');
+  const status = page.locator('[data-navigation-search-status]');
+  await expect(statusSection).toHaveAttribute('data-navigation-search-active', '');
   await expect(statusSection).toHaveCSS('position', 'fixed');
   await expect(status).toBeVisible();
-  await expect(page.locator('[data-reader-message]')).toBeHidden();
-  await expect(page.locator('[data-reader-announcer]')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('[data-navigation-message]')).toBeHidden();
+  await expect(page.locator('[data-navigation-announcer]')).toHaveAttribute('aria-live', 'polite');
 
   const viewportStatus = await page.evaluate(() => {
     window.scrollTo(0, document.documentElement.scrollHeight / 2);
-    const section = document.querySelector<HTMLElement>('[data-terminal-reader-status]');
-    if (section === null) throw new Error('Missing Terminal reader status section.');
+    const section = document.querySelector<HTMLElement>('[data-document-navigator-status]');
+    if (section === null) throw new Error('Missing Terminal navigation status section.');
     const rect = section.getBoundingClientRect();
     return {
       top: rect.top,
@@ -615,9 +615,9 @@ test('Terminal reader keeps committed search status visible while scrolling', as
   expect(viewportStatus.height).toBeGreaterThan(0);
 });
 
-test('reader preserves links, local-scroll regions, modifier keys, IME, and manual selection', async ({ page }) => {
-  const region = await openReader(page);
-  const initialPosition = await page.locator('[data-reader-position]').textContent();
+test('document navigator preserves links, local-scroll regions, modifier keys, IME, and manual selection', async ({ page }) => {
+  const region = await openDocumentNavigator(page);
+  const initialPosition = await page.locator('[data-navigation-position]').textContent();
   const link = page.getByRole('link', { name: 'Trellis repository' });
   await link.focus();
   await page.keyboard.press('j');
@@ -628,12 +628,12 @@ test('reader preserves links, local-scroll regions, modifier keys, IME, and manu
   await expect(code).toBeFocused();
   await region.focus();
   await region.press('Control+j');
-  await expect(page.locator('[data-reader-position]')).toHaveText(initialPosition ?? '');
+  await expect(page.locator('[data-navigation-position]')).toHaveText(initialPosition ?? '');
 
-  const ariaControl = page.locator('[data-reader-aria-control]');
+  const ariaControl = page.locator('[data-navigation-aria-control]');
   await region.evaluate((element) => {
     const control = document.createElement('div');
-    control.dataset.readerAriaControl = '';
+    control.dataset.navigationAriaControl = '';
     control.setAttribute('role', 'checkbox');
     control.setAttribute('aria-checked', 'false');
     control.tabIndex = 0;
@@ -642,7 +642,7 @@ test('reader preserves links, local-scroll regions, modifier keys, IME, and manu
   await ariaControl.focus();
   await page.keyboard.press('j');
   await expect(ariaControl).toBeFocused();
-  await expect(page.locator('[data-reader-position]')).toHaveText(initialPosition ?? '');
+  await expect(page.locator('[data-navigation-position]')).toHaveText(initialPosition ?? '');
 
   const imeResult = await region.evaluate((element) => element.dispatchEvent(new KeyboardEvent('keydown', {
     bubbles: true,
@@ -653,7 +653,7 @@ test('reader preserves links, local-scroll regions, modifier keys, IME, and manu
   expect(imeResult).toBe(true);
 
   await page.evaluate(() => {
-    const paragraph = document.querySelector<HTMLElement>('[data-terminal-reader-region] p');
+    const paragraph = document.querySelector<HTMLElement>('[data-document-navigator-region] p');
     const selection = window.getSelection();
     if (paragraph === null || selection === null) throw new Error('Missing manual selection fixture.');
     const range = document.createRange();
@@ -662,18 +662,18 @@ test('reader preserves links, local-scroll regions, modifier keys, IME, and manu
     selection.addRange(range);
   });
   await region.press('j');
-  await expect(page.locator('[data-reader-position]')).toHaveText(initialPosition ?? '');
+  await expect(page.locator('[data-navigation-position]')).toHaveText(initialPosition ?? '');
 });
 
-test('reader never treats a user-replaced visual Range as its owned selection', async ({ page }) => {
-  const region = await openReader(page);
-  const position = page.locator('[data-reader-position]');
+test('document navigator never treats a user-replaced visual Range as its owned selection', async ({ page }) => {
+  const region = await openDocumentNavigator(page);
+  const position = page.locator('[data-navigation-position]');
   await region.press('v');
   await region.press('j');
   const visualPosition = await position.textContent();
 
   await page.evaluate(() => {
-    const paragraph = document.querySelector<HTMLElement>('[data-terminal-reader-region] p');
+    const paragraph = document.querySelector<HTMLElement>('[data-document-navigator-region] p');
     const selection = window.getSelection();
     if (paragraph === null || selection === null) throw new Error('Missing replacement selection fixture.');
     const replacement = document.createRange();
@@ -693,22 +693,27 @@ test('reader never treats a user-replaced visual Range as its owned selection', 
 
 test('vim resolves a closed canonical destination and :q exits directly to home', async ({ page }) => {
   await page.goto('/');
+  const workflowEntry = page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/llm-workflow-with-trellis/"]');
+  const workflowRelativePath = await workflowEntry.getAttribute('data-terminal-entry-relative-path');
+  if (workflowRelativePath === null) {
+    throw new Error('Workflow document entry does not expose a relative path.');
+  }
   const input = page.getByRole('textbox', { name: terminalPromptName() });
-  await input.fill('vim ./ai/llm-workflow-with-trellis.md');
+  await input.fill(`vim ./${workflowRelativePath}`);
   await input.press('Enter');
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#terminal-reader$/u);
-  const region = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
+  const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
   await region.press('G');
-  await expect(page.locator('[data-reader-position]')).not.toHaveText(/^1\//u);
+  await expect(page.locator('[data-navigation-position]')).not.toHaveText(/^1\//u);
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Reader command' });
+  const command = page.getByRole('textbox', { name: 'Navigation command' });
   await command.fill('q');
   await command.press('Enter');
   await expect(page).toHaveURL(/\/$/u);
 });
 
-test('vim opens a Terminal document reader with the unified presentation', async ({ page }) => {
+test('vim opens a Terminal document navigator with the unified presentation', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill('vim ~/blog/pages/about.md');
@@ -717,25 +722,25 @@ test('vim opens a Terminal document reader with the unified presentation', async
   await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
   await expect(page.locator('.terminal-document')).toHaveCount(1);
   await expect(page.locator('.semantic-document')).toHaveCount(0);
-  const region = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
+  const region = page.getByRole('region', { name: /Document navigator for About this foundation/u });
   await expect(region).toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
   await region.press('G');
-  await expect(page.locator('[data-reader-position]')).not.toHaveText(/^1\//u);
+  await expect(page.locator('[data-navigation-position]')).not.toHaveText(/^1\//u);
 
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Reader command' });
+  const command = page.getByRole('textbox', { name: 'Navigation command' });
   await command.fill('q');
   await command.press('Enter');
   await expect(page).toHaveURL(/\/$/u);
 });
 
-test('reader fragment focus does not perform a second programmatic scroll', async ({ page }) => {
+test('document navigator fragment focus does not perform a second programmatic scroll', async ({ page }) => {
   await page.addInitScript(() => {
     const nativeScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = function (...args: Parameters<typeof nativeScrollIntoView>) {
-      const windowWithCounter = window as typeof window & { __readerScrollCount?: number };
-      windowWithCounter.__readerScrollCount = (windowWithCounter.__readerScrollCount ?? 0) + 1;
+      const windowWithCounter = window as typeof window & { __documentNavigatorScrollCount?: number };
+      windowWithCounter.__documentNavigatorScrollCount = (windowWithCounter.__documentNavigatorScrollCount ?? 0) + 1;
       return nativeScrollIntoView.apply(this, args);
     };
   });
@@ -745,35 +750,35 @@ test('reader fragment focus does not perform a second programmatic scroll', asyn
   const result = await page.evaluate(() => ({
     active: document.activeElement?.id,
     hash: window.location.hash,
-    scrollCount: (window as typeof window & { __readerScrollCount?: number }).__readerScrollCount ?? 0
+    scrollCount: (window as typeof window & { __documentNavigatorScrollCount?: number }).__documentNavigatorScrollCount ?? 0
   }));
   expect(result.active).toBe('terminal-reader');
   expect(result.hash).toBe('#terminal-reader');
   expect(result.scrollCount).toBe(0);
 });
 
-test('direct canonical permalinks keep reader focus and key ownership idle', async ({ page }) => {
+test('direct canonical permalinks keep document navigator focus and key ownership idle', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
-  const foundationRegion = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
+  const foundationRegion = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(foundationRegion).not.toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
-  const foundationPosition = page.locator('[data-reader-position]');
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  const foundationPosition = page.locator('[data-navigation-position]');
   await page.keyboard.press('G');
   await expect(foundationPosition).toHaveText(/^1\//u);
 
   await page.goto('/pages/about/');
-  const terminalRegion = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
+  const terminalRegion = page.getByRole('region', { name: /Document navigator for About this foundation/u });
   await expect(terminalRegion).not.toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
-  const terminalPosition = page.locator('[data-reader-position]');
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  const terminalPosition = page.locator('[data-navigation-position]');
   await page.keyboard.press('G');
   await expect(terminalPosition).toHaveText(/^1\//u);
 
   await page.goto('/pages/about/#terminal-reader');
-  await expect(page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u })).toBeFocused();
+  await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
 });
 
-test('reader entry keeps native Back and Forward route boundaries', async ({ page }) => {
+test('document navigator entry keeps native Back and Forward route boundaries', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill('vim ~/blog/pages/about.md');
@@ -786,5 +791,5 @@ test('reader entry keeps native Back and Forward route boundaries', async ({ pag
 
   await page.goForward();
   await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
-  await expect(page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u })).toBeFocused();
+  await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
 });

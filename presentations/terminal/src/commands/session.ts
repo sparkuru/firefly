@@ -17,7 +17,7 @@ import type { CommandSpec } from './contracts.js';
 export const OPEN_USAGE = 'open <path>';
 export const VIM_USAGE = 'vim <path>';
 export const OPEN_SUMMARY = 'open a listed experiment';
-export const VIM_SUMMARY = 'open a public document in the reader';
+export const VIM_SUMMARY = 'open a public document with the document navigator';
 export const CLEAR_USAGE = 'clear';
 export const CLEAR_SUMMARY = 'clear the screen';
 export const PWD_USAGE = 'pwd';

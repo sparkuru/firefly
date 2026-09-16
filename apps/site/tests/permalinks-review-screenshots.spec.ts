@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const screenshotRoot = '../../.trellis/tasks/08-17-permalinks-vim-single-page/research/screenshots';
 
-test('capture canonical reader entry and idle states', async ({ page }, testInfo) => {
+test('capture canonical document navigator entry and idle states', async ({ page }, testInfo) => {
   const viewport = testInfo.project.name;
   const capture = (name: string) => page.screenshot({
     path: `${screenshotRoot}/${name}-${viewport}.png`,
@@ -10,22 +10,22 @@ test('capture canonical reader entry and idle states', async ({ page }, testInfo
   });
 
   await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
-  const semanticReader = page.getByRole('region', { name: /Read-only Vim reader for llm-workflow-with-trellis/u });
-  await expect(semanticReader).toBeFocused();
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
-  await capture('semantic-reader-entry');
+  const semanticNavigator = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
+  await expect(semanticNavigator).toBeFocused();
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  await capture('semantic-document-navigator-entry');
 
-  await semanticReader.press('/');
+  await semanticNavigator.press('/');
   await page.getByRole('searchbox', { name: /Search document forward/u }).fill('reader');
-  await capture('semantic-reader-search');
+  await capture('semantic-document-navigator-search');
 
   await page.goto('/pages/about/');
-  const terminalReader = page.getByRole('region', { name: /Read-only Vim reader for About this foundation/u });
-  await expect(page.locator('[data-terminal-reader-status]')).toBeVisible();
-  await expect(terminalReader).not.toBeFocused();
-  await capture('terminal-reader-idle');
+  const terminalNavigator = page.getByRole('region', { name: /Document navigator for About this foundation/u });
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  await expect(terminalNavigator).not.toBeFocused();
+  await capture('terminal-document-navigator-idle');
 
   await page.goto('/pages/about/#terminal-reader');
-  await expect(terminalReader).toBeFocused();
-  await capture('terminal-reader-entry');
+  await expect(terminalNavigator).toBeFocused();
+  await capture('terminal-document-navigator-entry');
 });

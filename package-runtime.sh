@@ -95,14 +95,14 @@ main() {
 	local port_binding
 	local root_headers
 	local runtime_user
-	local reader_asset
+	local navigation_asset
 	local asset
 	local expected_type
 	local attempt
 	local -a manifest_inventory=()
 	local -a release_inventory=()
 	local -a runtime_inventory=()
-	local -a reader_assets=()
+	local -a navigation_assets=()
 	local -a site_assets=()
 	local -a nerv_assets=()
 	local -A manifest_files=()
@@ -237,12 +237,12 @@ main() {
 		printf '[package-runtime] HTML headers expose a server version or immutable cache policy\n' >&2
 		return 1
 	fi
-	mapfile -t reader_assets < <(find dist/_astro -maxdepth 1 -type f -name 'ReaderStatus*.js' -printf '%f\n' | sort)
-	[[ "${#reader_assets[@]}" -eq 1 ]] || {
-		printf '[package-runtime] expected exactly one ReaderStatus asset\n' >&2
+	mapfile -t navigation_assets < <(find dist/_astro -maxdepth 1 -type f -name 'DocumentNavigationStatus*.js' -printf '%f\n' | sort)
+	[[ "${#navigation_assets[@]}" -eq 1 ]] || {
+		printf '[package-runtime] expected exactly one DocumentNavigationStatus asset\n' >&2
 		return 1
 	}
-	reader_asset=${reader_assets[0]}
+	navigation_asset=${navigation_assets[0]}
 	mapfile -t site_assets < <(find dist/_astro -maxdepth 1 -type f -printf '%f\n' | sort)
 	mapfile -t nerv_assets < <(find dist/lab/nerv/_astro -type f -printf '%P\n' | sort)
 	[[ "${#site_assets[@]}" -gt 0 && "${#nerv_assets[@]}" -gt 0 ]] || {
@@ -251,7 +251,7 @@ main() {
 	}
 	assert_header "/posts/ai/llm-workflow-with-trellis/" '^content-type: text/html'
 	assert_no_header "/posts/ai/llm-workflow-with-trellis/" '^cache-control: .*immutable'
-	assert_header "/_astro/${reader_asset}" '^content-type: application/javascript'
+	assert_header "/_astro/${navigation_asset}" '^content-type: application/javascript'
 	for asset in "${site_assets[@]}"; do
 		assert_header "/_astro/${asset}" '^cache-control: public, max-age=31536000, immutable'
 	done

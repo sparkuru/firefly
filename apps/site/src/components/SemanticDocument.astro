@@ -1,14 +1,17 @@
 ---
 import type { CanonicalDocument } from '../lib/content';
+import type { DocumentNavigatorProfile } from '../lib/document-navigation.ts';
+import { navigationInitialState } from '../lib/document-navigation.ts';
 import type { renderDocument } from '../lib/render-document';
 import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
 import CommentSection from '../plugins/comments/CommentSection.astro';
 import ContentMarkers from './ContentMarkers.astro';
-import ReaderStatus from './ReaderStatus.astro';
+import DocumentNavigationStatus from './DocumentNavigationStatus.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface Props {
+  navigatorProfile: DocumentNavigatorProfile;
   articleTheme: string;
   canonical: CanonicalDocument;
   document: RenderedDocument;
@@ -18,14 +21,15 @@ interface Props {
   commentsEnabled: boolean;
 }
 
-const { articleTheme, canonical, document, comments, commentsPostPath, commentsConfig, commentsEnabled } = Astro.props;
+const { navigatorProfile, articleTheme, canonical, document, comments, commentsPostPath, commentsConfig, commentsEnabled } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
+const { regionTabIndex } = navigationInitialState(navigatorProfile);
 const showOutline = metadata.outline.length >= 2;
 const kind = entry.collection === 'posts' ? 'Post' : 'Page';
 ---
 
-<article class="semantic-document" data-terminal-reader data-terminal-reader-entry="fragment">
+<article class="semantic-document" data-document-navigator data-document-navigator-entry={navigatorProfile.entry}>
   <header class="article-header">
     <p class="eyebrow">{kind}</p>
     <ContentMarkers markers={canonical.markers} />
@@ -66,10 +70,10 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
     class="prose"
     data-article-content
     data-article-theme={articleTheme}
-    data-terminal-reader-region
-    tabindex="-1"
+    data-document-navigator-region
+    tabindex={regionTabIndex}
     role="region"
-    aria-label={`Read-only Vim reader for ${entry.data.title}`}
+    aria-label={`Document navigator for ${entry.data.title}`}
   >
     <Content />
   </div>
@@ -78,5 +82,5 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
     <CommentSection variant="semantic" postPath={commentsPostPath} comments={comments} config={commentsConfig} />
   )}
 
-  <ReaderStatus variant="semantic" />
+  <DocumentNavigationStatus profile={navigatorProfile} variant="semantic" />
 </article>

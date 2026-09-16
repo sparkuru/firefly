@@ -4,6 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mjs';
+import { ARTICLE_THEME_IDS } from '../src/lib/article-theme.mjs';
 import {
   resolveContentMarkers,
   supportedContentMarkerIds
@@ -30,16 +31,13 @@ function assertArticleThemeBoundary(html, route) {
   const contentRootMarkup = contentRoots.join('\n');
 
   assert.equal(contentRoots.length, 1, `${route}: expected one article-content root`);
-  assert.match(contentRoots[0], /\bdata-article-theme="default"/u, route);
+  const themeMatch = /\bdata-article-theme="([^"]+)"/u.exec(contentRoots[0]);
+  assert.ok(themeMatch, `${route}: expected a registered article theme`);
+  assert.ok(ARTICLE_THEME_IDS.includes(themeMatch[1]), `${route}: unknown article theme ${themeMatch[1]}`);
   assert.equal(
     (contentRootMarkup.match(/\bdata-article-theme\s*=/gu) ?? []).length,
     1,
     `${route}: expected one article theme attribute`
-  );
-  assert.equal(
-    (contentRootMarkup.match(/\bdata-article-theme="default"/gu) ?? []).length,
-    1,
-    `${route}: theme metadata must stay on the article-content root`
   );
 }
 
@@ -218,9 +216,10 @@ test('static build emits only the implemented route surface', async () => {
 
   assert.deepEqual(htmlFiles, expectedHtmlFiles);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
-  assert.equal(scripts.length, 2);
+  assert.equal(scripts.length, 3);
   assert.equal(scripts.filter((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
-  assert.equal(scripts.filter((file) => /^_astro\/ReaderStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/DocumentNavigationStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/document-navigation\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 1);
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
@@ -463,10 +462,10 @@ test('semantic and Terminal presentation packages remain bidirectionally isolate
 test('route closures keep public documents in Terminal styles and isolate home JavaScript', async () => {
   const files = await listFiles(distRoot);
   const homeScript = files.find((file) => /TerminalHome.*\.js$/u.test(file));
-  const readerScript = files.find((file) => /ReaderStatus.*\.js$/u.test(file));
+  const navigationScript = files.find((file) => /DocumentNavigationStatus.*\.js$/u.test(file));
   const stylesheet = files.find((file) => file.endsWith('.css'));
   assert.ok(homeScript);
-  assert.ok(readerScript);
+  assert.ok(navigationScript);
   assert.ok(stylesheet);
 
   const routes = {
@@ -513,7 +512,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
   assert.match(routes.home, /url\('\/fonts\/JetBrainsMono-Medium-v2\.304\.woff2'\)/u);
   assert.match(routes.home, /--terminal-boot-delay:\s*1100ms/u);
   assert.match(routes.home, new RegExp(`src="/${homeScript.replaceAll('.', '\\.')}`));
-  assert.doesNotMatch(routes.home, new RegExp(readerScript.replaceAll('.', '\\.')));
+  assert.doesNotMatch(routes.home, new RegExp(navigationScript.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, new RegExp(stylesheet.replaceAll('.', '\\.')));
   assert.doesNotMatch(routes.home, /class="terminal-titlebar"/u);
   for (const html of terminalDocumentRoutes) {
@@ -525,8 +524,8 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assertArticleThemeBoundary(html, 'Terminal document');
     assert.doesNotMatch(html, /class="terminal-path"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
-    assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
-    assert.match(html, new RegExp(readerScript.replaceAll('.', '\\.')));
+    assert.match(html, new RegExp(`src="/${navigationScript.replaceAll('.', '\\.')}`));
+    assert.match(html, new RegExp(navigationScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
   }
@@ -534,7 +533,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, /class="semantic-document"/u);
     assert.doesNotMatch(html, /class="terminal-root"/u);
     assert.match(html, new RegExp(`href="/${stylesheet.replaceAll('.', '\\.')}`));
-    assert.match(html, new RegExp(`src="/${readerScript.replaceAll('.', '\\.')}`));
+    assert.match(html, new RegExp(`src="/${navigationScript.replaceAll('.', '\\.')}`));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
     assertArticleThemeBoundary(html, 'semantic document');
@@ -557,7 +556,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, /--terminal-color-canvas/u);
     assert.doesNotMatch(html, /<script\b/iu);
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
-    assert.doesNotMatch(html, new RegExp(readerScript.replaceAll('.', '\\.')));
+    assert.doesNotMatch(html, new RegExp(navigationScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-(?:home|startup|boot-log|startup-marker)/u);
   }
 });
@@ -700,10 +699,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /<h1>About this foundation<\/h1>/u);
   assert.match(terminalArticle, /<span>~\/blog\/pages\/about\.md<\/span>/u);
   assert.doesNotMatch(terminalArticle, /class="terminal-path"/u);
-  assert.match(terminalArticle, /data-terminal-reader-region/u);
+  assert.match(terminalArticle, /data-document-navigator-region/u);
   assert.equal((terminalArticle.match(/id="terminal-reader"/gu) ?? []).length, 1);
-  assert.match(terminalArticle, /<p data-reader-search-status hidden><\/p>/u);
-  assert.match(terminalArticle, /data-reader-search-form/u);
+  assert.match(terminalArticle, /<p data-navigation-search-status hidden><\/p>/u);
+  assert.match(terminalArticle, /data-navigation-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
   assert.match(article, /<h1>llm-workflow-with-trellis<\/h1>/u);
   assert.match(article, /data-language="mermaid"/u);
@@ -750,21 +749,21 @@ test('home controller avoids browser content loading, parsing, and unsafe insert
   }
 });
 
-test('default firefly output contains reader boundaries and localized wide regions', async () => {
+test('default firefly output contains document navigator boundaries and localized wide regions', async () => {
   const workflow = await findWorkflowDocument();
   const post = await readFile(
     path.join(distRoot, workflowRoute),
     'utf8'
   );
 
-  const statusIndex = post.indexOf('data-terminal-reader-status');
-  const readerIndex = post.indexOf('data-terminal-reader-region');
+  const statusIndex = post.indexOf('data-document-navigator-status');
+  const navigatorIndex = post.indexOf('data-document-navigator-region');
   assert.ok(statusIndex >= 0);
-  assert.ok(statusIndex > readerIndex);
+  assert.ok(statusIndex > navigatorIndex);
   assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
-  assert.match(post, /data-terminal-reader-entry="always"/u);
+  assert.match(post, /data-document-navigator-entry="always"/u);
   assert.match(post, /data-article-content/u);
-  assert.doesNotMatch(post, /data-terminal-reader-status[^>]*hidden/u);
+  assert.doesNotMatch(post, /data-document-navigator-status[^>]*hidden/u);
   assert.match(post, /class="terminal-outline"/u);
   assert.match(post, /<ul\b/u);
   assert.doesNotMatch(post, /class="document-outline"/u);
@@ -803,7 +802,7 @@ test('paper article theme is content-scoped and delivered through both static st
   assert.doesNotMatch(paperStyles, /\burl\s*\(|\$\{|\/themes\//u);
   assert.doesNotMatch(
     paperStyles,
-    /(?:^|\n)\s*(?:html|body|:root|\.site-|\.terminal-root|\.terminal-body|\.terminal-shell|\.terminal-titlebar|\.terminal-main|\.terminal-document|\.reader-status|\.comment)/mu
+    /(?:^|\n)\s*(?:html|body|:root|\.site-|\.terminal-root|\.terminal-body|\.terminal-shell|\.terminal-titlebar|\.terminal-main|\.terminal-document|\.document-navigation-status|\.comment)/mu
   );
 
   const contentImport = semanticStyles.indexOf("@import './article-content.css';");
@@ -817,7 +816,7 @@ test('paper article theme is content-scoped and delivered through both static st
   assert.match(terminalLayout, /\$\{articleContentCss\}\\n\$\{paperCss\}/u);
 });
 
-test('both reader presentations keep status after content and fixed to the viewport bottom', async () => {
+test('both document navigator presentations keep status after content and fixed to the viewport bottom', async () => {
   const semanticComponent = await readFile(
     path.join(sourceRoot, 'components/SemanticDocument.astro'),
     'utf8'
@@ -835,10 +834,11 @@ test('both reader presentations keep status after content and fixed to the viewp
     [semanticComponent, 'semantic'],
     [terminalComponent, 'terminal']
   ]) {
-    const readerIndex = component.indexOf('data-terminal-reader-region');
-    const statusIndex = component.indexOf(`<ReaderStatus variant="${variant}"`);
-    assert.ok(readerIndex >= 0);
-    assert.ok(statusIndex > readerIndex);
+    const navigatorIndex = component.indexOf('data-document-navigator-region');
+    const statusIndex = component.indexOf('<DocumentNavigationStatus ');
+    assert.ok(navigatorIndex >= 0);
+    assert.ok(statusIndex > navigatorIndex);
+    assert.match(component, new RegExp(`<DocumentNavigationStatus profile=\\{navigatorProfile\\} variant="${variant}"`, 'u'));
     assert.match(component, /data-article-content/u);
     assert.equal((component.match(/data-article-theme=\{articleTheme\}/gu) ?? []).length, 1);
   }
@@ -852,8 +852,8 @@ test('both reader presentations keep status after content and fixed to the viewp
   assert.doesNotMatch(articleStyles, /\.prose|\.terminal-prose|\.site-|\.terminal-/u);
 
   for (const [styles, selector] of [
-    [semanticStyles, '.reader-status'],
-    [terminalStyles, '.terminal-reader-status']
+    [semanticStyles, '.document-navigation-status'],
+    [terminalStyles, '.terminal-navigation-status']
   ]) {
     const block = new RegExp(`${selector.replace('.', '\\.')}\\s*\\{([\\s\\S]*?)\\n\\}`, 'u').exec(styles)?.[1] ?? '';
     assert.match(block, /position:\s*fixed;/u);

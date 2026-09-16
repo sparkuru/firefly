@@ -21,6 +21,7 @@ import {
   type TerminalState,
   type TerminalTextDocument
 } from '@firefly/presentation-terminal/runtime';
+import { DOCUMENT_NAVIGATOR_FRAGMENT } from '../lib/document-navigation.ts';
 
 interface TerminalNodes {
   readonly root: HTMLElement;
@@ -123,16 +124,16 @@ const protectedTypingTargetSelector = [
   '[data-wide-content]'
 ].join(',');
 
-function readerDestinationHref(href: string): string {
+function documentNavigatorDestinationHref(href: string): string {
   const destination = new URL(href, window.location.href);
   if (
     destination.origin !== window.location.origin ||
     destination.pathname.length === 0 ||
     !destination.pathname.startsWith('/')
   ) {
-    throw new TypeError('Reader destinations must be same-origin canonical routes.');
+    throw new TypeError('Document navigator destinations must be same-origin canonical routes.');
   }
-  destination.hash = 'terminal-reader';
+  destination.hash = DOCUMENT_NAVIGATOR_FRAGMENT.slice(1);
   return `${destination.pathname}${destination.search}${destination.hash}`;
 }
 
@@ -805,10 +806,10 @@ function renderEffect(
       return { focusTarget: null, navigationHref: effect.experiment.href };
     }
     case 'document-navigation': {
-      const navigationHref = readerDestinationHref(effect.entry.href);
+      const navigationHref = documentNavigatorDestinationHref(effect.entry.href);
       const link = document.createElement('a');
       link.href = navigationHref;
-      link.textContent = `Open ${effect.entry.title} in the reader`;
+      link.textContent = `Open ${effect.entry.title} with the document navigator`;
       record.append(link);
       return { focusTarget: null, navigationHref };
     }

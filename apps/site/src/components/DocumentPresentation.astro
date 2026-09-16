@@ -1,7 +1,7 @@
 ---
-import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import { formatResourcePath } from '@firefly/presentation-terminal/runtime';
 import type { CanonicalDocument } from '../lib/content';
+import { resolvePresentationExperience } from '../lib/presentation-experiences';
 import { SITE_CONFIG } from '../lib/site-config.mjs';
 import { resolveArticleThemeId } from '../lib/article-theme.mjs';
 import type { renderDocument } from '../lib/render-document';
@@ -25,14 +25,12 @@ const comments = commentsExtension?.comments ?? [];
 const commentsPostPath = commentsExtension?.postPath ?? null;
 const { entry } = canonical;
 const presentation = document.metadata.presentation;
-if (presentation !== 'semantic' && presentation !== DEFAULT_PRESENTATION_ID) {
-  throw new Error(`Unsupported site presentation "${presentation}".`);
-}
+const experience = resolvePresentationExperience(presentation);
 const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
 ---
 
 {
-  presentation === 'semantic' ? (
+  experience.documentKind === 'semantic' ? (
     <DocumentLayout
       title={entry.data.title}
       description={entry.data.description}
@@ -45,7 +43,7 @@ const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
       date={entry.data.date}
       updated={entry.data.updated}
     >
-      <SemanticDocument articleTheme={articleTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
+      <SemanticDocument navigatorProfile={experience.documentNavigator} articleTheme={articleTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
     </DocumentLayout>
   ) : (
     <TerminalLayout
@@ -61,7 +59,7 @@ const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
       date={entry.data.date}
       updated={entry.data.updated}
     >
-      <TerminalDocument articleTheme={articleTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
+      <TerminalDocument navigatorProfile={experience.documentNavigator} articleTheme={articleTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
     </TerminalLayout>
   )
 }

@@ -1,7 +1,9 @@
-type ReaderMode = 'normal' | 'visual' | 'search' | 'command';
+import { DOCUMENT_NAVIGATOR_FRAGMENT } from '../lib/document-navigation.ts';
+
+type NavigationMode = 'normal' | 'visual' | 'search' | 'command';
 type SearchDirection = 1 | -1;
-const searchHighlightName = 'terminal-reader-search';
-const activeSearchHighlightName = 'terminal-reader-search-active';
+const searchHighlightName = 'document-navigation-search';
+const activeSearchHighlightName = 'document-navigation-search-active';
 
 type SearchMatch = {
   readonly unitIndex: number;
@@ -31,7 +33,7 @@ const readingUnitSelector = [
   ':scope > .terminal-wide'
 ].join(',');
 
-const protectedReaderTargetSelector = [
+const protectedNavigationTargetSelector = [
   'a',
   'button',
   'input',
@@ -81,7 +83,7 @@ const protectedReaderTargetSelector = [
 
 function requireOne<T extends Element>(root: ParentNode, selector: string, constructor: new (...args: never[]) => T): T {
   const nodes = root.querySelectorAll(selector);
-  if (nodes.length !== 1 || !(nodes[0] instanceof constructor)) throw new TypeError(`Expected one reader node: ${selector}`);
+  if (nodes.length !== 1 || !(nodes[0] instanceof constructor)) throw new TypeError(`Expected one document navigation node: ${selector}`);
   return nodes[0];
 }
 
@@ -139,23 +141,23 @@ function collectSearchMatches(units: readonly HTMLElement[], query: string): Sea
   });
 }
 
-export function startTerminalReader(root: HTMLElement): void {
-  const region = requireOne(root, '[data-terminal-reader-region]', HTMLElement);
-  const status = requireOne(root, '[data-terminal-reader-status]', HTMLElement);
-  const modeNode = requireOne(root, '[data-reader-mode]', HTMLElement);
-  const positionNode = requireOne(root, '[data-reader-position]', HTMLElement);
-  const searchStatus = requireOne(root, '[data-reader-search-status]', HTMLElement);
-  const messageNode = requireOne(root, '[data-reader-message]', HTMLElement);
-  const announcer = requireOne(root, '[data-reader-announcer]', HTMLElement);
-  const searchForm = requireOne(root, '[data-reader-search-form]', HTMLFormElement);
-  const searchInput = requireOne(root, '#terminal-reader-search', HTMLInputElement);
-  const searchLabel = requireOne(root, '[data-reader-search-label]', HTMLLabelElement);
-  const searchPrefix = requireOne(root, '[data-reader-search-prefix]', HTMLElement);
-  const commandForm = requireOne(root, '[data-reader-command-form]', HTMLFormElement);
-  const commandInput = requireOne(root, '#terminal-reader-command', HTMLInputElement);
-  const fragmentEntry = root.dataset.terminalReaderEntry === 'fragment';
-  const readerFragment = window.location.hash === '#terminal-reader';
-  if (fragmentEntry && !readerFragment) return;
+export function startDocumentNavigator(root: HTMLElement): void {
+  const region = requireOne(root, '[data-document-navigator-region]', HTMLElement);
+  const status = requireOne(root, '[data-document-navigator-status]', HTMLElement);
+  const modeNode = requireOne(root, '[data-navigation-mode]', HTMLElement);
+  const positionNode = requireOne(root, '[data-navigation-position]', HTMLElement);
+  const searchStatus = requireOne(root, '[data-navigation-search-status]', HTMLElement);
+  const messageNode = requireOne(root, '[data-navigation-message]', HTMLElement);
+  const announcer = requireOne(root, '[data-navigation-announcer]', HTMLElement);
+  const searchForm = requireOne(root, '[data-navigation-search-form]', HTMLFormElement);
+  const searchInput = requireOne(root, '#document-navigation-search', HTMLInputElement);
+  const searchLabel = requireOne(root, '[data-navigation-search-label]', HTMLLabelElement);
+  const searchPrefix = requireOne(root, '[data-navigation-search-prefix]', HTMLElement);
+  const commandForm = requireOne(root, '[data-navigation-command-form]', HTMLFormElement);
+  const commandInput = requireOne(root, '#document-navigation-command', HTMLInputElement);
+  const fragmentEntry = root.dataset.documentNavigatorEntry === 'fragment';
+  const documentNavigatorFragment = window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT;
+  if (fragmentEntry && !documentNavigatorFragment) return;
   status.hidden = false;
   region.tabIndex = 0;
   const units = [...region.querySelectorAll<HTMLElement>(readingUnitSelector)].filter((unit) => unit.textContent?.trim());
@@ -164,7 +166,7 @@ export function startTerminalReader(root: HTMLElement): void {
   const occupiedIds = new Set([...document.querySelectorAll<HTMLElement>('[id]')].map(({ id }) => id));
   units.forEach((unit, index) => {
     if (unit.id.length === 0) {
-      const base = `terminal-reader-unit-${index + 1}`;
+      const base = `document-navigation-unit-${index + 1}`;
       let candidate = base;
       let suffix = 2;
       while (occupiedIds.has(candidate)) {
@@ -174,10 +176,10 @@ export function startTerminalReader(root: HTMLElement): void {
       unit.id = candidate;
       occupiedIds.add(candidate);
     }
-    unit.dataset.readerUnit = String(index + 1);
+    unit.dataset.navigationUnit = String(index + 1);
   });
 
-  let mode: ReaderMode = 'normal';
+  let mode: NavigationMode = 'normal';
   let activeIndex = 0;
   let visualAnchor: number | null = null;
   let ownedRange: Range | null = null;
@@ -197,7 +199,7 @@ export function startTerminalReader(root: HTMLElement): void {
 
   const updateStatusReserve = () => {
     const height = Math.ceil(status.getBoundingClientRect().height);
-    if (height > 0) root.style.setProperty('--reader-status-reserve', `${height}px`);
+    if (height > 0) root.style.setProperty('--navigation-status-reserve', `${height}px`);
   };
 
   const statusResizeObserver = typeof ResizeObserver === 'undefined'
@@ -219,7 +221,7 @@ export function startTerminalReader(root: HTMLElement): void {
 
   const updateSearchStatus = () => {
     status.toggleAttribute(
-      'data-reader-search-active',
+      'data-navigation-search-active',
       searchQuery.length > 0 && mode !== 'search' && mode !== 'command'
     );
     if (searchQuery.length === 0) {
@@ -242,7 +244,7 @@ export function startTerminalReader(root: HTMLElement): void {
     modeNode.textContent = `-- ${mode.toUpperCase()} --`;
     positionNode.textContent = `${activeIndex + 1}/${units.length}`;
     region.setAttribute('aria-activedescendant', units[activeIndex]!.id);
-    units.forEach((unit, index) => unit.toggleAttribute('data-reader-active', index === activeIndex));
+    units.forEach((unit, index) => unit.toggleAttribute('data-navigation-active', index === activeIndex));
     updateSearchStatus();
   };
 
@@ -415,7 +417,7 @@ export function startTerminalReader(root: HTMLElement): void {
       window.location.assign('/');
       return;
     }
-    announce(`Unsupported reader command: :${commandInput.value}. Only :q is available.`);
+    announce(`Unsupported navigation command: :${commandInput.value}. Only :q is available.`);
     commandInput.select();
   });
 
@@ -431,7 +433,7 @@ export function startTerminalReader(root: HTMLElement): void {
   region.addEventListener('keydown', (event) => {
     if (event.defaultPrevented || event.isComposing || composing || event.ctrlKey || event.altKey || event.metaKey || hasUnownedSelection()) return;
     const target = event.target;
-    if (target instanceof Element && target.closest(protectedReaderTargetSelector) !== null) return;
+    if (target instanceof Element && target.closest(protectedNavigationTargetSelector) !== null) return;
     const key = event.key;
     const handled = ['j', 'k', 'g', 'G', 'v', '/', '?', 'n', 'N', ':', 'Escape'].includes(key);
     if (!handled || (event.shiftKey && !['G', '?', 'N', ':'].includes(key))) return;
@@ -458,14 +460,14 @@ export function startTerminalReader(root: HTMLElement): void {
     searchForm.hidden = true;
     commandInput.value = '';
     updateStatus();
-    announce('Reader command mode. Type q to exit.');
+    announce('Document navigation command mode. Type q to exit.');
     commandInput.focus();
   });
 
   updateStatus();
-  if (readerFragment) {
+  if (documentNavigatorFragment) {
     window.requestAnimationFrame(() => {
-      if (window.location.hash === '#terminal-reader') {
+      if (window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT) {
         region.focus({ preventScroll: true });
       }
     });
