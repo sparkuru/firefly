@@ -945,7 +945,7 @@ function isEligibleTypingTarget(event: KeyboardEvent): boolean {
   return isCollapsedSelection();
 }
 
-function isEligibleInlineClearTarget(event: KeyboardEvent, transcript: HTMLElement): boolean {
+function isEligibleTerminalClearTarget(event: KeyboardEvent, root: HTMLElement): boolean {
   if (
     event.defaultPrevented ||
     !event.cancelable ||
@@ -955,11 +955,14 @@ function isEligibleInlineClearTarget(event: KeyboardEvent, transcript: HTMLEleme
     return false;
   }
   const target = event.target;
-  if (!(target instanceof Element) || !transcript.contains(target)) {
+  if (!(target instanceof Element)) {
     return false;
   }
-  const streamDocument = target.closest('[data-terminal-stream-document]');
-  if (streamDocument === null || !transcript.contains(streamDocument)) {
+  if (
+    target !== document.body &&
+    target !== document.documentElement &&
+    !root.contains(target)
+  ) {
     return false;
   }
   if (target.closest(protectedTypingTargetSelector) !== null) {
@@ -1354,7 +1357,7 @@ export function startTerminalHome(
     if (failed || !interactiveReady || composing) {
       return;
     }
-    if (isEligibleInlineClearTarget(event, nodes.transcript)) {
+    if (isEligibleTerminalClearTarget(event, nodes.root)) {
       event.preventDefault();
       clearCommandTranscript();
       return;
@@ -1380,6 +1383,11 @@ export function startTerminalHome(
       updatePrompt();
       interactiveReady = true;
       setStartupState(nodes.root, 'ready');
+      const pendingClear = nodes.root.hasAttribute('data-terminal-pending-clear');
+      nodes.root.removeAttribute('data-terminal-pending-clear');
+      if (pendingClear) {
+        clearCommandTranscript();
+      }
     } catch {
       fail();
     }

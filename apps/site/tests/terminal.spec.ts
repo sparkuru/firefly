@@ -346,6 +346,67 @@ test('connecting startup prevents Escape from stopping the home controller load'
   })).toEqual([true, true, true, false]);
 });
 
+test('connecting startup captures delivered Ctrl+L and clears after the shell is ready', async ({ page }) => {
+  await page.addInitScript(() => {
+    const tracker = window as Window & { __terminalCtrlLDefaultPrevented?: boolean[] };
+    tracker.__terminalCtrlLDefaultPrevented = [];
+    document.addEventListener('keydown', (event) => {
+      if (event.key.toLocaleLowerCase('en-US') === 'l' && event.ctrlKey) {
+        tracker.__terminalCtrlLDefaultPrevented?.push(event.defaultPrevented);
+      }
+    });
+  });
+  await page.route(/TerminalHome.*\.js$/u, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+
+  const root = page.locator('[data-terminal-home]');
+  const transcript = page.locator('[data-terminal-transcript]');
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'connecting');
+  await page.keyboard.press('Control+L');
+  await expect.poll(() => page.evaluate(() => {
+    const tracker = window as Window & { __terminalCtrlLDefaultPrevented?: boolean[] };
+    return tracker.__terminalCtrlLDefaultPrevented ?? [];
+  })).toEqual([true]);
+  await expect(root).toHaveAttribute('data-terminal-pending-clear', '');
+
+  await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
+  await expect(root).not.toHaveAttribute('data-terminal-pending-clear');
+  await expect(transcript).toBeEmpty();
+  await expect(page.locator('#terminal-command')).toHaveValue('');
+  await expect(page.locator('#terminal-command')).toBeFocused();
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command transcript cleared.');
+  await expect(page.locator('[data-terminal-session]')).toHaveAttribute('data-terminal-session-empty', '');
+});
+
+test('ready initial Terminal surface owns Ctrl+L without prompt focus', async ({ page }) => {
+  await page.goto('/');
+  const input = page.locator('#terminal-command');
+  const transcript = page.locator('[data-terminal-transcript]');
+  const session = page.locator('[data-terminal-session]');
+  await expect(input).not.toBeFocused();
+  await expect(transcript.locator('.terminal-boot-record')).toHaveCount(1);
+
+  const cancellation = await page.evaluate(() => {
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: 'l'
+    });
+    const dispatchResult = document.body.dispatchEvent(event);
+    return { dispatchResult, defaultPrevented: event.defaultPrevented };
+  });
+  expect(cancellation).toEqual({ dispatchResult: false, defaultPrevented: true });
+  await expect(transcript).toBeEmpty();
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await expect(session).toHaveAttribute('data-terminal-session-empty', '');
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command transcript cleared.');
+});
+
 test('pending startup exposes the direct boot log before the shell is ready', async ({ page }) => {
   await page.setViewportSize({ width: 2048, height: 1244 });
   await page.route(/TerminalHome.*\.js$/u, async (route) => {

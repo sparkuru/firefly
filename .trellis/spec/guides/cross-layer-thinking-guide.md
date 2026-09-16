@@ -100,6 +100,27 @@ create one owner for:
 
 Rendering code may format fields, but it must not redefine the payload contract.
 
+### Mistake 5: Treating a Browser-Reserved Shortcut as a Page Event
+
+**Problem**: A page-level handler is added for a shortcut, but the browser or
+operating system consumes the shortcut before DOM dispatch. A ready-state test
+may pass while the same key during startup still falls through to browser UI.
+
+**Prevention checklist**:
+
+- Trace the earliest event owner and lifecycle states (inline marker, startup,
+  ready controller, and native controls) before changing the handler.
+- Verify `cancelable` and `defaultPrevented` at the event boundary; only claim
+  page interception for events that reach the DOM.
+- Test both startup and ready states with the actual focused/non-focused
+  surface, plus controls, composition, selection, and modified variants.
+- Keep browser/OS pre-DOM reservation as an explicit contract boundary; do not
+  introduce fullscreen or keyboard-lock permissions as a silent workaround.
+
+The executable frontend contract belongs in
+`frontend/content-workspace-contract.md`; this guide only prevents the
+cross-layer event/state/test coverage gap from recurring.
+
 ---
 
 ## Checklist for Cross-Layer Features

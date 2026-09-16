@@ -82,13 +82,14 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
 
       root.dataset.terminalStartupState = 'connecting';
       let startupObserver;
-      const releaseEscapeGuard = () => {
+      const releaseStartupGuards = () => {
         document.removeEventListener('keydown', guardEscape, true);
+        document.removeEventListener('keydown', guardCtrlL, true);
         startupObserver?.disconnect();
       };
       const guardEscape = (event) => {
         if (root.dataset.terminalStartupState !== 'connecting') {
-          releaseEscapeGuard();
+          releaseStartupGuards();
           return;
         }
         if (
@@ -103,10 +104,38 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
           event.preventDefault();
         }
       };
+      const guardCtrlL = (event) => {
+        if (root.dataset.terminalStartupState !== 'connecting') {
+          releaseStartupGuards();
+          return;
+        }
+        const target = event.target;
+        const startupSurface = target instanceof Element &&
+          target.closest('[data-terminal-startup]') !== null;
+        const pageSurface = target === document.body || target === document.documentElement;
+        const selection = window.getSelection();
+        if (
+          event.defaultPrevented ||
+          !event.cancelable ||
+          event.isComposing ||
+          event.key.toLocaleLowerCase('en-US') !== 'l' ||
+          !event.ctrlKey ||
+          event.altKey ||
+          event.metaKey ||
+          event.shiftKey ||
+          (!startupSurface && !pageSurface) ||
+          (selection !== null && !selection.isCollapsed)
+        ) {
+          return;
+        }
+        event.preventDefault();
+        root.dataset.terminalPendingClear = '';
+      };
       document.addEventListener('keydown', guardEscape, true);
+      document.addEventListener('keydown', guardCtrlL, true);
       startupObserver = new MutationObserver(() => {
         if (root.dataset.terminalStartupState !== 'connecting') {
-          releaseEscapeGuard();
+          releaseStartupGuards();
         }
       });
       startupObserver.observe(root, {

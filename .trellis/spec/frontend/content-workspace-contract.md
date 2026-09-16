@@ -998,10 +998,20 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   prompt. Links, native/ARIA controls, editables, local-scroll code/table
   widgets, composing input, modified variants, and non-collapsed user text
   selections remain native; the standalone `vim` reader route is unchanged.
+- During the home startup `connecting` state, the inline startup marker also
+  owns an exact unmodified, cancelable, non-composing `Ctrl+L` delivered to
+  the visible startup/page surface. It prevents the default and records one
+  pending clear; once the shell becomes interactive, the controller consumes
+  that marker through the same clear transition. In the ready state, the home
+  controller owns the same shortcut from the initial boot/transcript surface
+  or an unfocused home-page body without requiring prompt focus. Native
+  controls, selections, modified variants, and events outside the home remain
+  native.
 - Browser/OS shortcuts remain best-effort: page code can prevent the default
   only when the browser delivers a cancelable key event to the document. It
   cannot override an address-bar/search reservation consumed before DOM event
-  dispatch.
+  dispatch. Fullscreen or Keyboard Lock is not requested silently as a
+  workaround for that pre-DOM boundary.
 - The `ls` command definition owns the built-in `l` and `ll` aliases, and the
   `clear` definition owns `cls`; `help`, `alias`, command resolution, and
   completion derive these mappings from the same frozen registry metadata.
