@@ -1540,3 +1540,24 @@ Closed the initial-page Ctrl+L lifecycle gap with an early startup guard, pendin
 ### Status
 
 [OK] **Completed**
+
+
+## Session 69: Compose document navigator per presentation
+
+**Date**: 2026-09-16
+**Task**: Compose document navigator per presentation
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Centralized presentation experience definitions and document navigator entry profiles, renamed the site-owned reader implementation while preserving vim and #terminal-reader compatibility, and validated focused desktop/mobile navigation, M4 checks/tests/build, publication E2E, and package-runtime probes.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `174f325` | (see git log) |
+
+### Status
+
+[OK] **Completed**
