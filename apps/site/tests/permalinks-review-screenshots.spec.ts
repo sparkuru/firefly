@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const screenshotRoot = '../../.trellis/tasks/08-17-permalinks-vim-single-page/research/screenshots';
+const screenshotRoot = 'test-results/review-screenshots/permalinks';
 
 test('capture canonical document navigator entry and idle states', async ({ page }, testInfo) => {
   const viewport = testInfo.project.name;

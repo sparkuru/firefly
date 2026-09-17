@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { terminalPromptName } from './terminal-prompt';
 
-const screenshotRoot = '../../.trellis/tasks/08-13-m5-content-filesystem-vim-reader/research/screenshots';
+const screenshotRoot = 'test-results/review-screenshots/m5';
 
 test('capture the approved M5 Terminal review states', async ({ page }, testInfo) => {
   const viewport = testInfo.project.name;
