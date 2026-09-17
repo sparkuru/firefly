@@ -1561,3 +1561,24 @@ Centralized presentation experience definitions and document navigator entry pro
 ### Status
 
 [OK] **Completed**
+
+
+## Session 70: Adopt document navigator contract
+
+**Date**: 2026-09-17
+**Task**: Adopt document navigator contract
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Removed the legacy page-level terminal-reader fragment and DOM ID. The site now uses #document-navigator and document-navigator as the single live contract while retaining vim as the Terminal command. Updated source assertions and frontend specs. Focused browser, screenshot, package, publication, runtime, and full m4 quality gates passed; task archived.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `78d9c5d` | (see git log) |
+
+### Status
+
+[OK] **Completed**
