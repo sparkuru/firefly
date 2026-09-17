@@ -1189,19 +1189,19 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - Canonical document routes load `document-navigator.ts` as progressive
   enhancement. Terminal documents support document navigation when focused; semantic
   documents keep the document navigation status hidden and activate it only for the explicit
-  `#terminal-reader` entry fragment. Static HTML remains complete and
+  `#document-navigator` entry fragment. Static HTML remains complete and
   navigable without JavaScript; directory indexes, home, lab, and NERV do not
   load the document navigator asset.
 - The pure `document-navigation` effect remains fragment-free and carries the
   validated canonical `entry.href`. The browser controller owns the only
   document-navigator intent decoration: `documentNavigatorDestinationHref(href: string)` must accept a
   same-origin absolute or path-like canonical URL, set exactly
-  `#terminal-reader`, and return only its path/query/hash form. Raw `vim`
+  `#document-navigator`, and return only its path/query/hash form. Raw `vim`
   operands never reach this helper, and ordinary breadcrumbs, directory links,
   permalinks, and inline `cat` output remain fragment-free.
 - A semantic document uses `data-document-navigator-entry="fragment"`; its status
   stays hidden and its region is not focusable until `window.location.hash ===
-  '#terminal-reader'`. A Terminal document uses
+  '#document-navigator'`. A Terminal document uses
   `data-document-navigator-entry="always"`; its status is visible on direct entry,
   but it only steals focus for the exact document navigator fragment. Fragment entry waits
   one animation frame after native hash settlement, then calls

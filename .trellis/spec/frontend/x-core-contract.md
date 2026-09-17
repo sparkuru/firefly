@@ -157,7 +157,7 @@ that context exists. Do not let native `TypeError` escape an adapter boundary.
   one canonical-document reader JS, zero maps/unknown files,
   JavaScript-free directory routes, and bidirectional presentation-package/
   style closure. Semantic document HTML remains complete without JavaScript and
-  activates the reader only for the explicit `#terminal-reader` fragment. Home
+  activates the reader only for the explicit `#document-navigator` fragment. Home
   template bodies must be `renderDocument()` output while remaining absent from
   JavaScript/index data.
 - Focused then full Playwright: static semantic/Terminal heading/outline and

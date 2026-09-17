@@ -76,7 +76,7 @@ test('experience creation rejects adapter identity drift and duplicate IDs', () 
 });
 
 test('document navigator initial state is derived from the pure profile', () => {
-  assert.equal(DOCUMENT_NAVIGATOR_FRAGMENT, '#terminal-reader');
+  assert.equal(DOCUMENT_NAVIGATOR_FRAGMENT, '#document-navigator');
   assert.deepEqual(
     navigationInitialState({ kind: 'document-navigator', entry: 'always' }),
     { regionTabIndex: 0, statusHidden: false }

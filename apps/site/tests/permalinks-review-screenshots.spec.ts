@@ -9,7 +9,7 @@ test('capture canonical document navigator entry and idle states', async ({ page
     animations: 'disabled'
   });
 
-  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
   const semanticNavigator = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(semanticNavigator).toBeFocused();
   await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
@@ -25,7 +25,7 @@ test('capture canonical document navigator entry and idle states', async ({ page
   await expect(terminalNavigator).not.toBeFocused();
   await capture('terminal-document-navigator-idle');
 
-  await page.goto('/pages/about/#terminal-reader');
+  await page.goto('/pages/about/#document-navigator');
   await expect(terminalNavigator).toBeFocused();
   await capture('terminal-document-navigator-entry');
 });

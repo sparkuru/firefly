@@ -350,10 +350,10 @@ test('document fragment deep link resolves without browser JavaScript', async ({
 });
 
 test('document navigator fragment remains a native location without browser JavaScript', async ({ page }) => {
-  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
 
-  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#terminal-reader$/u);
-  await expect(page.locator('#terminal-reader')).toBeVisible();
+  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#document-navigator$/u);
+  await expect(page.locator('#document-navigator')).toBeVisible();
   await expect(page.locator('[data-document-navigator-status]')).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
   await expectNoHorizontalOverflow(page);

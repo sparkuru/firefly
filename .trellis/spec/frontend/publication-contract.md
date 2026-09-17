@@ -265,7 +265,7 @@ commands, and only then assembles the release.
   explicitly selected immutable fixture/workspace; JavaScript-free directory
   indexes and `/lab/`; reader JS on canonical document routes only,
   with semantic documents activating it only for the explicit
-  `#terminal-reader` fragment; no Experiment asset edge on ordinary pages; lab
+  `#document-navigator` fragment; no Experiment asset edge on ordinary pages; lab
   recovery; nested tree/cat/vim; all existing recovery/content behavior.
 - NERV and publication Playwright: mounted assets, entry, distinct 404, native
   return, desktop/mobile overflow, and reduced motion. Serve the already built

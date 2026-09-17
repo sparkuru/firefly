@@ -1,4 +1,4 @@
-export const DOCUMENT_NAVIGATOR_FRAGMENT = '#terminal-reader' as const;
+export const DOCUMENT_NAVIGATOR_FRAGMENT = '#document-navigator' as const;
 
 export type DocumentNavigatorEntry = 'always' | 'fragment';
 

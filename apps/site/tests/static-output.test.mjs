@@ -700,7 +700,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /<span>~\/blog\/pages\/about\.md<\/span>/u);
   assert.doesNotMatch(terminalArticle, /class="terminal-path"/u);
   assert.match(terminalArticle, /data-document-navigator-region/u);
-  assert.equal((terminalArticle.match(/id="terminal-reader"/gu) ?? []).length, 1);
+  assert.equal((terminalArticle.match(/id="document-navigator"/gu) ?? []).length, 1);
   assert.match(terminalArticle, /<p data-navigation-search-status hidden><\/p>/u);
   assert.match(terminalArticle, /data-navigation-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
@@ -760,7 +760,7 @@ test('default firefly output contains document navigator boundaries and localize
   const navigatorIndex = post.indexOf('data-document-navigator-region');
   assert.ok(statusIndex >= 0);
   assert.ok(statusIndex > navigatorIndex);
-  assert.equal((post.match(/id="terminal-reader"/gu) ?? []).length, 1);
+  assert.equal((post.match(/id="document-navigator"/gu) ?? []).length, 1);
   assert.match(post, /data-document-navigator-entry="always"/u);
   assert.match(post, /data-article-content/u);
   assert.doesNotMatch(post, /data-document-navigator-status[^>]*hidden/u);

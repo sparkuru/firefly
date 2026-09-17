@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { terminalPromptName } from './terminal-prompt';
 
 async function openDocumentNavigator(page: Page) {
-  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
   const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await region.focus();
   await expect(region).toBeFocused();
@@ -224,7 +224,7 @@ test('document navigation search, repeat, visual Range, Escape, and unsupported 
 });
 
 test('document navigation searches exact repeated occurrences from the canonical fragment entry', async ({ page }) => {
-  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
   const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
 
@@ -277,7 +277,7 @@ test('document navigation searches exact repeated occurrences from the canonical
 });
 
 test('document navigator keeps committed search status visible while scrolling and clears it on cancellation', async ({ page }) => {
-  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
   const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await region.focus();
   await region.press('/');
@@ -338,12 +338,12 @@ test('document navigator keeps committed search status visible while scrolling a
 test('document navigation search cycles keep transient prompt chrome separate in both directions', async ({ page }) => {
   const routes = [
     {
-      path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
+      path: '/posts/ai/llm-workflow-with-trellis/#document-navigator',
       regionName: /Document navigator for llm-workflow-with-trellis/u,
       query: 'the'
     },
     {
-      path: '/pages/about/#terminal-reader',
+      path: '/pages/about/#document-navigator',
       regionName: /Document navigator for About this foundation/u,
       query: 'the'
     }
@@ -485,11 +485,11 @@ test('document navigator command input also leaves committed search chrome while
 test('document navigation search prefixes keep native labels, direction text, spacing, and target size', async ({ page }) => {
   const routes = [
     {
-      path: '/posts/ai/llm-workflow-with-trellis/#terminal-reader',
+      path: '/posts/ai/llm-workflow-with-trellis/#document-navigator',
       regionName: /Document navigator for llm-workflow-with-trellis/u
     },
     {
-      path: '/pages/about/#terminal-reader',
+      path: '/pages/about/#document-navigator',
       regionName: /Document navigator for About this foundation/u
     }
   ];
@@ -570,7 +570,7 @@ test('Terminal document frame keeps its baseline, grows fluidly, and contains th
 });
 
 test('Terminal document navigator keeps committed search status visible while scrolling', async ({ page }) => {
-  await page.goto('/pages/about/#terminal-reader');
+  await page.goto('/pages/about/#document-navigator');
   const region = page.getByRole('region', { name: /Document navigator for About this foundation/u });
   await expect(region).toBeFocused();
   const initialMetrics = await documentNavigatorSearchMetrics(page);
@@ -701,7 +701,7 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill(`vim ./${workflowRelativePath}`);
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#document-navigator$/u);
   const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
   await region.press('G');
@@ -719,7 +719,7 @@ test('vim opens a Terminal document navigator with the unified presentation', as
   await input.fill('vim ~/blog/pages/about.md');
   await input.press('Enter');
 
-  await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
   await expect(page.locator('.terminal-document')).toHaveCount(1);
   await expect(page.locator('.semantic-document')).toHaveCount(0);
   const region = page.getByRole('region', { name: /Document navigator for About this foundation/u });
@@ -745,15 +745,15 @@ test('document navigator fragment focus does not perform a second programmatic s
     };
   });
 
-  await page.goto('/posts/ai/llm-workflow-with-trellis/#terminal-reader');
-  await expect.poll(() => page.evaluate(() => document.activeElement?.id ?? '')).toBe('terminal-reader');
+  await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id ?? '')).toBe('document-navigator');
   const result = await page.evaluate(() => ({
     active: document.activeElement?.id,
     hash: window.location.hash,
     scrollCount: (window as typeof window & { __documentNavigatorScrollCount?: number }).__documentNavigatorScrollCount ?? 0
   }));
-  expect(result.active).toBe('terminal-reader');
-  expect(result.hash).toBe('#terminal-reader');
+  expect(result.active).toBe('document-navigator');
+  expect(result.hash).toBe('#document-navigator');
   expect(result.scrollCount).toBe(0);
 });
 
@@ -774,7 +774,7 @@ test('direct canonical permalinks keep document navigator focus and key ownershi
   await page.keyboard.press('G');
   await expect(terminalPosition).toHaveText(/^1\//u);
 
-  await page.goto('/pages/about/#terminal-reader');
+  await page.goto('/pages/about/#document-navigator');
   await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
 });
 
@@ -783,13 +783,13 @@ test('document navigator entry keeps native Back and Forward route boundaries', 
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill('vim ~/blog/pages/about.md');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
 
   await page.goBack();
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.getByRole('textbox', { name: terminalPromptName() })).toBeVisible();
 
   await page.goForward();
-  await expect(page).toHaveURL(/\/pages\/about\/#terminal-reader$/u);
+  await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
   await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
 });
