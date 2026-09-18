@@ -95,7 +95,7 @@ wide content
   assert.deepEqual(metadata.outline.map(({ id }) => id), ['duplicate', 'duplicate-1']);
   assert.equal(metadata.presentation, 'semantic');
   assert.deepEqual(metadata.enhancements, []);
-  assert.equal(Object.hasOwn(metadata, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(metadata, 'contentTheme'), false);
   assert.deepEqual(Object.keys(metadata).sort(), [
     'enhancements',
     'outline',
@@ -113,13 +113,13 @@ test('paper article metadata stays outside X Core while headings and sanitizatio
   const processor = await createProcessor();
   const markdown = `## Stable heading
 
-<div class="firefly-content-callout" data-article-theme="future" style="color: red" onclick="alert(1)">Safe callout.</div>
+<div class="firefly-content-callout" data-content-theme="future" style="color: red" onclick="alert(1)">Safe callout.</div>
 
 <script>alert('unsafe')</script>
 
 A body with a [safe link](https://example.test/paper).`;
   const baseFrontmatter = { ...validFrontmatter, slug: 'paper-boundary' };
-  const paperFrontmatter = { ...baseFrontmatter, articleTheme: 'paper' };
+  const paperFrontmatter = { ...baseFrontmatter, contentTheme: 'paper' };
   const baseSemantic = await processor.render(markdown, {
     fileURL: new URL('file:///repo/content/posts/paper-boundary.md'),
     frontmatter: baseFrontmatter
@@ -141,13 +141,13 @@ A body with a [safe link](https://example.test/paper).`;
   assert.deepEqual(paperTerminalMetadata.outline, paperSemanticMetadata.outline);
   assert.equal(paperSemanticMetadata.presentation, 'semantic');
   assert.equal(paperTerminalMetadata.presentation, DEFAULT_PRESENTATION_ID);
-  assert.equal(Object.hasOwn(paperSemanticMetadata, 'articleTheme'), false);
-  assert.equal(Object.hasOwn(paperTerminalMetadata, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(paperSemanticMetadata, 'contentTheme'), false);
+  assert.equal(Object.hasOwn(paperTerminalMetadata, 'contentTheme'), false);
   assert.deepEqual(nodeIds(paperSemantic.code), nodeIds(baseSemantic.code));
   assert.deepEqual(nodeIds(paperSemantic.code), nodeIds(paperTerminal.code));
   for (const rendered of [paperSemantic, paperTerminal]) {
     assert.match(rendered.code, /<div class="firefly-content-callout">Safe callout\.<\/div>/u);
-    assert.doesNotMatch(rendered.code, /<script|data-article-theme|onclick=|style=/u);
+    assert.doesNotMatch(rendered.code, /<script|data-content-theme|onclick=|style=/u);
   }
 
   const context = contextResolver({
@@ -155,7 +155,7 @@ A body with a [safe link](https://example.test/paper).`;
     data: { astro: { frontmatter: paperFrontmatter } }
   });
   assert.equal(context.presentation, 'semantic');
-  assert.equal(Object.hasOwn(context, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(context, 'contentTheme'), false);
 });
 
 test('omitted presentation selects firefly while explicit semantic remains available', async () => {
@@ -175,7 +175,7 @@ test('omitted presentation selects firefly while explicit semantic remains avail
   const metadata = parseXCoreMetadata(rendered.metadata.frontmatter.xCore);
 
   assert.equal(metadata.presentation, DEFAULT_PRESENTATION_ID);
-  assert.equal(Object.hasOwn(metadata, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(metadata, 'contentTheme'), false);
   assert.match(rendered.code, /data-terminal-wide/u);
 });
 
@@ -265,7 +265,7 @@ test('Astro sanitizes authored HTML before X Core metadata and presentation tran
   const processor = await createProcessor();
   const markdown = `## Safe HTML
 
-<div class="firefly-content-callout arbitrary-author-class" data-article-theme="future" style="color: red" onclick="alert(1)">A safe callout.</div>
+<div class="firefly-content-callout arbitrary-author-class" data-content-theme="future" style="color: red" onclick="alert(1)">A safe callout.</div>
 
 <script>alert('script')</script>
 <style>body { color: red; }</style>
@@ -304,7 +304,7 @@ A paragraph remains in the normalized document.`;
     assert.match(rendered.code, /<div class="firefly-content-callout">A safe callout\.<\/div>/u);
     assert.match(rendered.code, /<center>\s+Legacy center heading\s+<\/center>/u);
     assert.match(rendered.code, /data-node-id="posts-integration-fixture-p-1"/u);
-    assert.doesNotMatch(rendered.code, /<script|<style|<iframe|<form|<input|javascript:|data:text|data-article-theme|onmouseover|onerror|style=/iu);
+    assert.doesNotMatch(rendered.code, /<script|<style|<iframe|<form|<input|javascript:|data:text|data-content-theme|onmouseover|onerror|style=/iu);
     assert.doesNotMatch(rendered.code, /arbitrary-author-class|unsafe-protocol-relative/u);
   }
 

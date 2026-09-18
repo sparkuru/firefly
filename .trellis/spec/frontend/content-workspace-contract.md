@@ -195,18 +195,62 @@ interface DocumentNavigatorProfile {
   readonly entry: DocumentNavigatorEntry;
 }
 
+interface DocumentNavigatorAssets {
+  readonly runtime: string;
+  readonly semanticStyles: string;
+  readonly terminalStyles: string;
+}
+
+interface DocumentNavigatorDefinition {
+  readonly id: string;
+  readonly kind: 'document-navigator';
+  readonly assets: DocumentNavigatorAssets;
+}
+
 interface PresentationExperience {
   readonly id: string;
   readonly adapter: PresentationAdapter;
   readonly documentKind: 'semantic' | 'terminal';
+  readonly documentNavigatorId: string;
   readonly documentNavigator: DocumentNavigatorProfile;
+  readonly documentNavigatorExit: 'home' | 'local';
 }
+
+type DocumentNavigationComposition =
+  | { readonly kind: 'none' }
+  | {
+    readonly kind: 'document-navigator';
+    readonly navigator: DocumentNavigatorDefinition;
+    readonly profile: DocumentNavigatorProfile;
+    readonly exitPolicy: 'home' | 'local';
+    readonly assets: DocumentNavigatorAssets;
+  };
+
+createDocumentNavigatorRegistry(
+  definitions: readonly DocumentNavigatorDefinition[]
+): readonly DocumentNavigatorDefinition[]
+
+resolveDocumentNavigator(
+  id: string,
+  registry?: readonly DocumentNavigatorDefinition[]
+): DocumentNavigatorDefinition
 
 createPresentationExperienceRegistry(
   definitions: readonly PresentationExperience[]
 ): readonly PresentationExperience[]
 
 resolvePresentationExperience(id: string): PresentationExperience
+
+resolveDocumentNavigation(
+  presentationId: string,
+  config?: SiteConfig,
+  options?: { readonly navigatorRegistry?: readonly DocumentNavigatorDefinition[] }
+): DocumentNavigationComposition
+
+createDocumentNavigationLookup(
+  documents: readonly CanonicalDocument[],
+  config?: SiteConfig
+): DocumentNavigationCapabilityLookup
 ```
 
 ### 3. Contracts
@@ -215,22 +259,36 @@ resolvePresentationExperience(id: string): PresentationExperience
 
 - `PRESENTATION_EXPERIENCES` is the single site-owned definition consumed by
   both X Core registration and Astro document dispatch. Its initial entries
-  are `firefly -> terminal + { kind: 'document-navigator', entry: 'always' }`
-  and `semantic -> semantic + { kind: 'document-navigator', entry:
-  'fragment' }`.
+  are `firefly -> terminal + document-navigator/always/home` and
+  `semantic -> semantic + document-navigator/fragment/local`.
 - The adapter ID is authoritative. `createPresentationExperienceRegistry`
   rejects an empty experience ID, an adapter identity mismatch, an unsupported
-  document kind, an invalid navigator kind/entry, or duplicate IDs. It returns
-  a frozen array containing frozen experience/profile records.
+  document kind, an invalid navigator ID/kind/entry/exit policy, or duplicate
+  IDs. It returns a frozen array containing frozen experience/profile records.
 - `resolvePresentationExperience` returns the registered experience or throws
   `Unsupported site presentation "<id>"`. Document components receive the
-  resolved profile; they must derive entry attributes, initial region
-  `tabindex`, and initial status visibility from that profile rather than
-  repeating presentation-specific literals.
+  resolved composition; they must derive entry attributes, initial region
+  `tabindex`, status visibility, and asset handles from it rather than repeating
+  presentation-specific literals.
+- `DOCUMENT_NAVIGATORS` is a separate immutable registry. A composition
+  resolver accepts the optional site-owned `documentNavigation.<presentation>`
+  override, resolves one registered navigator or the explicit `none`
+  discriminator, and never duplicates presentation-to-navigator dispatch in a
+  renderer. The production registry currently contains only
+  `document-navigator` with its runtime and semantic/Terminal style handles.
+- Omitted configuration preserves the two enabled defaults. `none` omits the
+  navigator region, status, entry, navigator-only data hooks, and navigator-only
+  JS/CSS asset edges while retaining the ordinary content, body links, outline,
+  comments, and content-theme styling.
+- `createDocumentNavigationLookup` includes only public canonical documents and
+  carries the resolved capability (`document-navigator` or `none`) to Terminal
+  home. A missing lookup record is a fragment-free canonical fallback; a known
+  disabled record is also fragment-free. Enabled destinations preserve the
+  same-origin path/query and append exactly `#document-navigator`.
 - The front-matter contract remains `presentation` plus optional
-  `articleTheme`. Navigator profiles are site-owned DOM/runtime data and must
+  `contentTheme`. Navigator profiles are site-owned DOM/runtime data and must
   not enter X Core metadata, content schema, route identity, comments payloads,
-  or article-theme resolution.
+  or content-theme resolution.
 
 #### Workspace transport and materialization
 
@@ -347,10 +405,7 @@ resolvePresentationExperience(id: string): PresentationExperience
   `characters/` remain structural directory labels. Directory ordering remains
   based on the physical virtual path, so an `index-*` filename can remain an
   ordering key without becoming the visible title.
-- The legacy optional `source` field is accepted only as a safe relative Markdown
-  reference with an optional safe fragment. It is provenance metadata only and
-  never contributes to a route, public link, or rendered body. New content omits
-  it. A legacy slug run containing whitespace is normalized to `-` before the
+- A legacy slug run containing whitespace is normalized to `-` before the
   existing safe-segment checks; new authored slugs and source filenames use
   the no-whitespace convention. A legacy physical Markdown filename may retain
   whitespace as source identity; its canonical route comes from the normalized
@@ -383,15 +438,18 @@ resolvePresentationExperience(id: string): PresentationExperience
   `--article-content-*` tokens are mapped from each presentation's existing
   website tokens, and its initial class vocabulary is independent of
   `.site-*`, `.terminal-*`, `.prose`, and `.terminal-prose` selectors. The
-  shared post/page schema accepts optional `articleTheme` metadata, which
+  shared post/page schema accepts optional `contentTheme` metadata, which
   defaults to the site-owned registry ID `default`; the shipped IDs are
   `default` and `paper`. Malformed, unsafe, unknown, and wrong-type values fail
-  before rendering. The validated ID is emitted as
-  `data-article-theme="<id>"` only on that content root. The `paper` ID selects
+  before rendering; the retired `articleTheme` key is an ordinary unknown
+  field and is rejected by strict schema validation. The retired authored
+  `source` key is likewise not a migration input and is rejected as an ordinary
+  unknown field. The validated ID is emitted as `data-content-theme="<id>"` only
+  on that content root. The `paper` ID selects
   a warm, serif reading surface with monospace code and restrained
   terracotta/ochre accents inside the content boundary only. This release
   ships no picker, browser switcher, dynamic stylesheet, or theme-specific
-  Markdown syntax, and the article theme remains separate from website
+  Markdown syntax, and the content theme remains separate from website
   `presentation` selection and Terminal chrome.
 - Terminal permalinks render the exact token order
   `guest@firefly:~/blog $ / posts / characters / nahida.md` for the nested
@@ -433,7 +491,7 @@ resolvePresentationExperience(id: string): PresentationExperience
   original closing delimiter are preserved exactly; absent front matter is
   treated as an empty mapping.
 - The output uses ordinary Markdown/YAML syntax. Validated site metadata,
-  including the optional `articleTheme` ID and its `default` fallback, is
+  including the optional `contentTheme` ID and its `default` fallback, is
   retained; the shipped `paper` value is retained without changing workspace
   materialization, routes, or body semantics. Firefly-specific values stay
   under the validated `firefly` mapping.
@@ -676,7 +734,7 @@ publicDocumentSearchRoots(path: VirtualPath): readonly VirtualPath[] | undefined
 - Results are sorted by canonical virtual path and use the plain-text row format
   `<title> — <date> — ~/blog/<virtualPath>`. The shell-visible resource path is
   the same for posts and pages, remains available to pipelines and scratch
-  redirects, and can be passed directly to `cat` or `vim`.
+  redirects, and can be passed directly to `cat` or `open`.
 - A successful direct search also carries a closed neutral `document-search`
   value with the bounded keyword and validated public documents. The runtime
   adapter maps it by exact virtual path to a closed `find` effect containing
@@ -918,8 +976,8 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   absolute shell root. A user-entered operand is either relative to the current
   cwd or `~/blog` / `~/blog/<path>`; reject `/...`, bare `~`, and bare `~/`
   before resolution. Thus `lab/nerv` is valid from the root cwd, but is not a
-  cross-cwd alias once the cwd is `~/blog/lab`; there the experiment is opened
-  as `open nerv`, `open ./nerv`, or `open ~/blog/lab/nerv`. Internal VFS paths,
+  cross-cwd alias once the cwd is `~/blog/lab`; there the experiment is launched
+  as `launch nerv`, `launch ./nerv`, or `launch ~/blog/lab/nerv`. Internal VFS paths,
   decoded metadata, and browser hrefs remain slash-rooted. Every displayed
   document/resource identity uses the shared `~/blog/<virtualPath>` projection
   (with `/` displayed as `~/blog` and `-` retained for stdin); directory/tree
@@ -986,7 +1044,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   optional trailing slash and resolve relative to the current cwd. The lab mount
   lists only the decoded Experiment
   catalog; a listed `/lab/<id>` path does not expose an experiment's host/build
-  files and instead reports the cwd-correct `open` form, such as `open nerv`
+  files and instead reports the cwd-correct `launch` form, such as `launch nerv`
   from `~/blog/lab`. The browser renders lab entries with the same flat,
   no-marker terminal row treatment as public document listings. Other ambiguous
   command/list completion leaves the input unchanged; prompt Tab is still
@@ -997,21 +1055,21 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   normalized directory candidates `pages/` and `posts/`, while prompt Tab is
   still prevented by the controller. A unique prefix such as `ls pa` completes
   to `ls pages/`.
-- `cat` and `vim` share one resolver and segment-aware completer. Bare
+- `cat` and `open` share one resolver and segment-aware completer. Bare
   relative paths resolve from the current cwd; `~/blog/<path>` is the explicit
   cross-cwd form. Experiments use the same resolver and an exact listed leaf:
-  for example, `open nerv` from `~/blog/lab`, not a special `open lab/<id>`
+  for example, `launch nerv` from `~/blog/lab`, not a special `launch lab/<id>`
   compatibility form. Hidden/dot/traversal/percent/
   backslash/URL/control/non-NFC/unknown-root operands never resolve or consume
   Tab, and directory/experiment operands return actionable command errors.
 - `cat` returns a validated `document` effect for trusted template cloning.
-  `vim` returns `document-navigation` containing the decoded canonical entry;
+  `open` returns `document-navigation` containing the decoded canonical entry;
   the DOM controller uses `entry.href` directly and never concatenates raw input.
 - An inline `cat` stream ends after its trusted document content. It does not
   append a `Return to prompt` control because the active prompt remains directly
   below the stream and receives focus according to the normal document-settlement
   contract.
-- Syntactically safe `cat`/`vim` path completion owns the rewrite decision for
+- Syntactically safe `cat`/`open` path completion owns the rewrite decision for
   every result count. Unique completion inserts the next segment; ambiguity
   keeps prompt focus and shows candidates with the user's `./` or `~/blog/`
   prefix;
@@ -1038,7 +1096,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   including its focused title. It uses the same clear transition as the active
   prompt. Links, native/ARIA controls, editables, local-scroll code/table
   widgets, composing input, modified variants, and non-collapsed user text
-  selections remain native; the standalone `vim` document navigator route is unchanged.
+  selections remain native; the standalone document navigator route is unchanged.
 - During the home startup `connecting` state, the inline startup marker also
   owns an exact unmodified, cancelable, non-composing `Ctrl+L` delivered to
   the visible startup/page surface. It prevents the default and records one
@@ -1194,22 +1252,32 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   load the document navigator asset.
 - The pure `document-navigation` effect remains fragment-free and carries the
   validated canonical `entry.href`. The browser controller owns the only
-  document-navigator intent decoration: `documentNavigatorDestinationHref(href: string)` must accept a
-  same-origin absolute or path-like canonical URL, set exactly
-  `#document-navigator`, and return only its path/query/hash form. Raw `vim`
-  operands never reach this helper, and ordinary breadcrumbs, directory links,
-  permalinks, and inline `cat` output remain fragment-free.
+  document-navigator intent decoration: `documentNavigatorDestinationHref(href: string, lookup: DocumentNavigationCapabilityLookup)` must accept a
+  same-origin absolute or path-like canonical URL, consult the destination
+  capability, and set exactly
+  `#document-navigator` only when the destination capability is enabled, and
+  return only its path/query/hash form. Raw `open` operands never reach this
+  helper, and ordinary breadcrumbs, directory links, permalinks, and inline
+  `cat` output remain fragment-free.
 - A semantic document uses `data-document-navigator-entry="fragment"`; its status
   stays hidden and its region is not focusable until `window.location.hash ===
-  '#document-navigator'`. A Terminal document uses
+  '#document-navigator'`. It exposes a visible native `Read document` anchor
+  even when its outline is absent. A Terminal document uses
   `data-document-navigator-entry="always"`; its status is visible on direct entry,
   but it only steals focus for the exact document navigator fragment. Fragment entry waits
   one animation frame after native hash settlement, then calls
   `focus({ preventScroll: true })`; direct canonical routes, other fragments,
   Back/Forward, and JavaScript-disabled pages retain native browser ownership.
-- `:q` assigns `/` directly and does not use `history` APIs. Document navigator mode,
-  search, selection, active-unit, and generated-unit state remain route-local
-  and ephemeral; a route change discards them.
+- An unmodified same-page semantic entry click replaces only the fragment with
+  `#document-navigator`, preserves path/query/history state, and focuses the
+  region without scrolling. Repeated entry focuses the active region without
+  resetting the active unit. Semantic local exit replaces the fragment with the
+  remembered ordinary heading fragment (or clears it for direct entry), restores
+  native focus/visibility, and never uses `history.back()`. Browser-driven
+  deactivation follows the resulting URL without stealing ordinary heading
+  focus. Firefly `:q` assigns `/`; semantic `:q` uses the same local exit policy.
+- Document navigator mode, search, selection, active-unit, and generated-unit
+  state remain route-local and ephemeral; a route change discards them.
 - The document navigator owns local `normal`, `visual`, `search`, and `command` modes. Its
   bounded keys are `j`, `k`, `g`, `G`, `/`, `?`, `n`, `N`, `v`, `Escape`, and
   `:q`. It is a navigator, not an editor.
@@ -1261,8 +1329,10 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   continuous inset bottom rule and `:focus-within` focus treatment; its fixed
   `1ch` prefix and native input keep an explicit gap at mobile width without
   weakening the 44px target or visible focus.
-  Command mode accepts only `q`; successful `:q` navigates deterministically to
-  `/` and does not depend on history.
+  Command mode accepts only `q`; successful Firefly `:q` navigates
+  deterministically to `/`, while semantic `:q` restores the ordinary local
+  fragment and returns focus to `Read document`; neither policy depends on
+  history.
 - Key handling preserves composition/IME, modifiers, unsupported keys, native
   controls, links, editables, media controls, standard ARIA widgets/containers,
   local-scroll regions, and user-owned selections. Generated reading-unit IDs
@@ -1287,13 +1357,14 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 | permalink breadcrumb contains `cd`, duplicate/glued slash, dead parent, or current self-link | static/browser failure |
 | breadcrumb normalized text is correct but gap boxes collapse to zero | browser geometry failure at both viewports |
 | accessor, sparse input, unknown field, unsafe Terminal path | decoder `TypeError` before shell reveal |
-| experience ID differs from its adapter ID, navigator profile is invalid, or an experience ID is duplicated | experience registry rejects the definition before Astro registration or document dispatch |
-| authored presentation is omitted, `firefly`, or `semantic` | X Core keeps the existing default/metadata behavior; site dispatch selects the matching terminal/semantic experience and its always/fragment profile |
+| experience/navigator ID differs from its adapter/definition, a navigator asset handle or profile/exit policy is invalid, or an ID is duplicated | the corresponding immutable registry rejects the definition before Astro registration or document dispatch |
+| authored presentation is omitted, `firefly`, or `semantic` | X Core keeps the existing default/metadata behavior; site dispatch selects the matching terminal/semantic experience and its configured always/fragment profile |
 | unknown site presentation ID | `resolvePresentationExperience` throws `Unsupported site presentation "<id>"` with no fallback experience |
+| unknown/invalid `documentNavigation.<presentation>` override or `navigator = "none"` | invalid configuration fails before rendering; explicit `none` omits navigator DOM/hooks/assets while retaining ordinary document rendering |
 | command token/alias collision or invalid metadata/handler | registry `TypeError` at creation |
 | missing command argv parser or unsafe option definition | neutral registry rejects the command before execution |
 | duplicate hardcoded command dispatch or help metadata | implementation review failure; definitions must be the single execution/help source |
-| slash-rooted, bare-tilde, invalid `tree`, `cat`, or `vim` operand | usage/not-found effect or no completion; no host access/navigation |
+| slash-rooted, bare-tilde, invalid `tree`, `cat`, or `open` operand | usage/not-found effect or no completion; no host access/navigation |
 | direct-child `ls` projection | root and public mounts expose only immediate directory names and documents; descendant documents appear only after entering the child directory |
 | structured `tree` metadata drift | `root`, `lines`, and `nodes` stay aligned; stdout remains the exact text tree while browser links consume only validated node metadata |
 | unmodified public directory link activation | submit safe `cd ~/blog<virtual-path>/`, update cwd/prompt, retain the transcript, and keep the URL on the Terminal home |
@@ -1302,18 +1373,18 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 | `ls` option, visible-path prefix, or empty-operand Tab | `-h`/`--help` show usage; a unique safe directory prefix adds `/`, a unique document prefix does not, and either completion retains focus; every Tab is prevented in the focused prompt, while ordinary ambiguous `ls p` leaves input unchanged |
 | option ordering/cluster/terminator | the command parser accepts options before or after operands, short clusters such as `-inF`, and `--` for dash-prefixed operands; invalid options stop before execution |
 | no-operand directory command at virtual root | `.` resolves internally to `/` exactly once; `ls` equals `ls ~/blog` and never reports a `//.` path error |
-| nested cwd command | after `cd`, prompt focus remains usable; `ls` renders entries relative to the resolved directory and `cat`/`vim` completion and execution resolve relative operands under that cwd |
+| nested cwd command | after `cd`, prompt focus remains usable; `ls` renders entries relative to the resolved directory and `cat`/`open` completion and execution resolve relative operands under that cwd |
 | safe ambiguous `cd` completion | leave input unchanged, show immediate child directories only, and retain prompt focus at the virtual root and nested cwd; the focused prompt prevents Tab |
 | `ls` wildcard | only bounded `*` matching against known public directory or document paths at the requested segment depth; no match gives a clear bounded diagnostic, while multiple same-directory matches produce one deterministic direct-child listing |
-| listed experiment leaf | resolves by cwd; `open nerv` works in `~/blog/lab`, root-relative intent uses `open ~/blog/lab/nerv`, and no compatibility alias bypasses cwd semantics |
+| listed experiment leaf | resolves by cwd; `launch nerv` works in `~/blog/lab`, root-relative intent uses `launch ~/blog/lab/nerv`, and no compatibility alias bypasses cwd semantics |
 | `ls` question mark or unsafe/document path | reject `?` and unsafe paths; visible document prefixes and wildcard matches use the same bounded public-path model as directory candidates |
 | invalid grep flags/pattern/resource or mixed stdin and operands | bounded error-line effect; no partial grep effect or host access |
 | safe grep with no matches | structured `grep` effect with `noResults: true`, empty matches, and a bounded announcement |
 | grep match | structured canonical path/line/range data; preserve the original source line |
 | final grep stage consumed stdin | retain structured grep rendering; downstream stages still receive deterministic plain stdout |
 | source template block with multiple lines | one matchable resource line per source line; indentation/blank lines remain observable |
-| safe ambiguous `cat`/`vim` completion | prevent native Tab traversal, retain prompt focus, render prefixed candidates |
-| safe zero-result `cat`/`vim` completion | typed `no-match`; prevent traversal, retain exact input/focus, show `No matches.` |
+| safe ambiguous `cat`/`open` completion | prevent native Tab traversal, retain prompt focus, render prefixed candidates |
+| safe zero-result `cat`/`open` completion | typed `no-match`; prevent traversal, retain exact input/focus, show `No matches.` |
 | prompt Tab, including list/command ambiguity, unsafe/control/non-NFC, modifiers, or composition | prevent the default action; only safe unmodified non-composing completion may rewrite input; Tab outside the prompt remains native |
 | exact unmodified prompt `Ctrl+C` | clear current input/completion and traversal draft; preserve transcript/history |
 | exact unmodified prompt `Ctrl+L` | clear the visible transcript through the `clear` presentation path, reset input/completion, preserve command history, and refocus the prompt |
@@ -1329,12 +1400,12 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 | CSS Highlights unavailable | retain occurrence count, active unit, keyboard navigation, and page settlement without DOM wrappers or selection mutation |
 | protected document navigator target, IME, modifier, or user-owned selection | preserve native behavior; no document navigator movement/mode takeover |
 | unsupported ex command | stay on document and announce bounded error |
-| `:q` | navigate to `/` exactly |
+| Firefly `:q` | navigate to `/` exactly; semantic `:q` performs its local fragment exit |
 
 ### 5. Good / Base / Bad Cases
 
 - Good: an authored `characters/nahida.md` or linked Markdown subtree is copied
-  as ordinary files, guest-projected, listed by `tree`, completed by `cat`/`vim`,
+  as ordinary files, guest-projected, listed by `tree`, completed by `cat`/`open`,
   routed under `/posts/characters/`, and published without a host path.
 - Good: a test-only custom command with alias is visible in active-registry help,
   executes through either token, and completes without changing default logic.
@@ -1353,9 +1424,9 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - Good: `cd charac` completes to `cd characters/` and keeps focus; after
   entering that directory, `ls` renders `nahida.md` under `/` with its date and
   title, and `cat n` completes and reads `nahida.md` relative to the cwd.
-- Good: from `~/blog/lab`, `ls nerv/`, `open nerv`, and `open ./nerv` resolve
-  the listed experiment; `open lab/nerv` fails rather than acting as a hidden
-  root alias, while `open ~/blog/lab/nerv` remains explicit. The catalog row has no
+- Good: from `~/blog/lab`, `ls nerv/`, `launch nerv`, and `launch ./nerv` resolve
+  the listed experiment; `launch lab/nerv` fails rather than acting as a hidden
+  root alias, while `launch ~/blog/lab/nerv` remains explicit. The catalog row has no
   default list marker while following the document-list alignment language.
 - Good: `grep -i a`, `grep a -i`, `grep -inF a`, and `grep -Ew a` share one
   argv parser; `grep -- -pattern` keeps the dash-prefixed value as an operand.
@@ -1368,11 +1439,12 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - Base: omitted `FIREFLY_CONTENT_ROOT` and `config.dev` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
 - Good: one frozen `PresentationExperience` record supplies the adapter used by
-  `PresentationRegistry` and the document component's navigator profile; the
-  same record yields terminal/always for `firefly` and semantic/fragment for
+  `PresentationRegistry`, while the composition resolver supplies the
+  document component's navigator/none branch; omission yields terminal/always
+  with home exit for `firefly` and semantic/fragment with local exit for
   `semantic`.
 - Bad: mount `$HOME`, let Astro follow the authored link directly, serialize all
-  documents then hide private ones in the browser, derive a URL from a `vim`
+  documents then hide private ones in the browser, derive a URL from an `open`
   operand, flatten a `<pre>` block before grep sees it, add an author-facing
   `reader` field, or keep a second presentation-to-entry-policy map beside the
   experience definitions.
@@ -1397,7 +1469,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   formatting, flat mixed-depth `ls` rendering plus flat pipeline stdout,
   direct-child list projections and recursive grep discovery, ls prefix/option/
   wildcard execution and empty-operand completion/focus ownership,
-  final-pipeline grep effects plus downstream plain stdout, shared nested `cat`/`vim` resolver/completion ownership,
+  final-pipeline grep effects plus downstream plain stdout, shared nested `cat`/`open` resolver/completion ownership,
   cwd-relative `cd`/`ls`/`cat`/`open` behavior, `~/blog` absolute paths,
   slash/bare-tilde rejection, structured tree node paths/kinds with
   unchanged line/stdout projections, and safe directory-link path derivation,
@@ -1414,7 +1486,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   maps/symlinks/unknown files; experience definitions reject identity drift and
   duplicate IDs, and built routes keep the profile-specific entry/status shape.
 - Site Playwright at `1440x900` and `375x812`: static/no-JS route and breadcrumb
-  coverage; tree/cat/vim plus native document/experiment links and directory
+  coverage; tree/cat/open plus native document/experiment links and directory
   link-to-`cd` prompt/cwd updates; grouped-help usage readability; root ambiguous `cd`
   Tab focus; inline `cat` prompt adjacency; Ctrl+C and modifier/IME exclusions;
   safe ambiguous and zero-result path Tab focus plus prompt-wide Tab prevention;
@@ -1438,7 +1510,7 @@ docker run -v "$HOME:$HOME:ro" ...
 ```
 
 ```ts
-window.location.assign(`/posts/${rawVimOperand.replace('.md', '')}/`);
+window.location.assign(`/posts/${rawOpenOperand.replace('.md', '')}/`);
 const publicDocuments = allDocuments; // hide private entries later with CSS
 ```
 
@@ -1453,18 +1525,23 @@ Astro/browser/publication: ordinary guest-projected files and virtual paths only
 ```ts
 const result = executeCommand({ state, input, entries, registry });
 if (result.effect?.kind === 'document-navigation') {
-  window.location.assign(result.effect.entry.href);
+  window.location.assign(documentNavigatorDestinationHref(
+    result.effect.entry.href,
+    documentNavigationLookup
+  ));
 }
 ```
 
 ```ts
-// Wrong: registration and dispatch can silently disagree about entry policy.
+// Wrong: registration and dispatch can silently disagree about the configured
+// navigator or entry/exit policy.
 const readerByPresentation = { firefly: 'always', semantic: 'fragment' };
 
-// Correct: one experience owns adapter identity, document kind, and navigator profile.
+// Correct: one resolver owns the site composition and its capability payload.
 const experience = resolvePresentationExperience(document.metadata.presentation);
+const navigation = resolveDocumentNavigation(experience.id, SITE_CONFIG);
 presentationRegistry.register(experience.adapter);
-renderDocument(experience.documentKind, experience.documentNavigator);
+renderDocument(experience.documentKind, navigation);
 
 // Correct: make structured effects the browser boundary; do not split a whole
 // source block into a whitespace-normalized string or inject command text.
@@ -1549,7 +1626,7 @@ native-link boundary, unit tests, and browser tests together.
 
 ### 1. Scope / Trigger
 
-Use this contract whenever changing `cat`, `vim`, or `ls` completion for public
+Use this contract whenever changing `cat`, `open`, or `ls` completion for public
 Markdown documents, document display titles, or the browser completion panel.
 The Terminal may expose a metadata title as the user-facing label, but command
 resolution and execution must continue to use the canonical virtual path.
@@ -1581,7 +1658,7 @@ completeCommand(
 
 ### 3. Contracts
 
-- `cat`, `vim`, and `ls` document completion search both the canonical physical
+- `cat`, `open`, and `ls` document completion search both the canonical physical
   operand and the document display name returned by `documentDisplayName()`.
 - Display-name matching is case-insensitive. Physical path matching remains
   case-sensitive and preserves the existing relative, `./`, and `~/blog/`
@@ -1613,7 +1690,7 @@ completeCommand(
 
 - Good: `cat do` in `~/blog/posts/infra` matches a document titled `Docker
   Handbook` and inserts `cat 07-docker-handbook.md`.
-- Base: `vim 07-do` still completes from the physical filename exactly as it
+- Base: `open 07-do` still completes from the physical filename exactly as it
   did before metadata aliases were added.
 - Bad: render `Docker Handbook` as the command candidate and insert that title,
   or use a title alias as a VFS path during execution.

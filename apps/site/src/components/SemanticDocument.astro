@@ -1,7 +1,7 @@
 ---
 import type { CanonicalDocument } from '../lib/content';
-import type { DocumentNavigatorProfile } from '../lib/document-navigation.ts';
 import { navigationInitialState } from '../lib/document-navigation.ts';
+import type { DocumentNavigationComposition } from '../lib/document-navigation-composition.ts';
 import type { renderDocument } from '../lib/render-document';
 import type { CommentsSiteConfig, PublicComment } from '../lib/comments';
 import CommentSection from '../plugins/comments/CommentSection.astro';
@@ -11,8 +11,8 @@ import DocumentNavigationStatus from './DocumentNavigationStatus.astro';
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
 interface Props {
-  navigatorProfile: DocumentNavigatorProfile;
-  articleTheme: string;
+  documentNavigation: DocumentNavigationComposition;
+  contentTheme: string;
   canonical: CanonicalDocument;
   document: RenderedDocument;
   comments: readonly PublicComment[];
@@ -21,15 +21,22 @@ interface Props {
   commentsEnabled: boolean;
 }
 
-const { navigatorProfile, articleTheme, canonical, document, comments, commentsPostPath, commentsConfig, commentsEnabled } = Astro.props;
+const { documentNavigation, contentTheme, canonical, document, comments, commentsPostPath, commentsConfig, commentsEnabled } = Astro.props;
 const { entry } = canonical;
 const { Content, metadata } = document;
-const { regionTabIndex } = navigationInitialState(navigatorProfile);
+const enabled = documentNavigation.kind === 'document-navigator';
+const navigationState = enabled ? navigationInitialState(documentNavigation.profile) : null;
+const navigatorProfile = enabled ? documentNavigation.profile : null;
 const showOutline = metadata.outline.length >= 2;
 const kind = entry.collection === 'posts' ? 'Post' : 'Page';
 ---
 
-<article class="semantic-document" data-document-navigator data-document-navigator-entry={navigatorProfile.entry}>
+<article
+  class="semantic-document"
+  data-document-navigator={enabled ? '' : undefined}
+  data-document-navigator-entry={navigatorProfile?.entry}
+  data-document-navigator-exit={enabled ? documentNavigation.exitPolicy : undefined}
+>
   <header class="article-header">
     <p class="eyebrow">{kind}</p>
     <ContentMarkers markers={canonical.markers} />
@@ -43,6 +50,13 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
               timeZone: 'UTC'
             })}
           </time>
+        </p>
+      )
+    }
+    {
+      enabled && navigatorProfile?.entry === 'fragment' && (
+        <p class="document-navigation-entry">
+          <a href="#document-navigator" data-document-navigator-entry-control>Read document</a>
         </p>
       )
     }
@@ -66,14 +80,14 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
   }
 
   <div
-    id="document-navigator"
+    id={enabled ? 'document-navigator' : undefined}
     class="prose"
     data-article-content
-    data-article-theme={articleTheme}
-    data-document-navigator-region
-    tabindex={regionTabIndex}
-    role="region"
-    aria-label={`Document navigator for ${entry.data.title}`}
+    data-content-theme={contentTheme}
+    data-document-navigator-region={enabled ? '' : undefined}
+    tabindex={navigationState?.regionTabIndex}
+    role={enabled ? 'region' : undefined}
+    aria-label={enabled ? `Document navigator for ${entry.data.title}` : undefined}
   >
     <Content />
   </div>
@@ -82,5 +96,7 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
     <CommentSection variant="semantic" postPath={commentsPostPath} comments={comments} config={commentsConfig} />
   )}
 
-  <DocumentNavigationStatus profile={navigatorProfile} variant="semantic" />
+  {enabled && navigatorProfile && (
+    <DocumentNavigationStatus profile={navigatorProfile} variant="semantic" exitPolicy={documentNavigation.exitPolicy} assets={documentNavigation.assets} />
+  )}
 </article>

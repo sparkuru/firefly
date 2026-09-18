@@ -21,7 +21,12 @@ import {
   type TerminalState,
   type TerminalTextDocument
 } from '@firefly/presentation-terminal/runtime';
-import { DOCUMENT_NAVIGATOR_FRAGMENT } from '../lib/document-navigation.ts';
+import {
+  decodeDocumentNavigationCapabilityLookup,
+  documentNavigationCapabilityForPath,
+  DOCUMENT_NAVIGATOR_FRAGMENT,
+  type DocumentNavigationCapabilityLookup
+} from '../lib/document-navigation.ts';
 
 interface TerminalNodes {
   readonly root: HTMLElement;
@@ -50,6 +55,7 @@ interface TerminalTemplates {
 
 interface RenderContext {
   readonly templates: TerminalTemplates;
+  readonly documentNavigationLookup: DocumentNavigationCapabilityLookup;
   readonly instance: number;
 }
 
@@ -124,7 +130,10 @@ const protectedTypingTargetSelector = [
   '[data-wide-content]'
 ].join(',');
 
-function documentNavigatorDestinationHref(href: string): string {
+function documentNavigatorDestinationHref(
+  href: string,
+  documentNavigationLookup: DocumentNavigationCapabilityLookup
+): string {
   const destination = new URL(href, window.location.href);
   if (
     destination.origin !== window.location.origin ||
@@ -133,7 +142,13 @@ function documentNavigatorDestinationHref(href: string): string {
   ) {
     throw new TypeError('Document navigator destinations must be same-origin canonical routes.');
   }
-  destination.hash = DOCUMENT_NAVIGATOR_FRAGMENT.slice(1);
+  const capability = documentNavigationCapabilityForPath(
+    documentNavigationLookup,
+    destination.pathname
+  );
+  destination.hash = capability === 'document-navigator'
+    ? DOCUMENT_NAVIGATOR_FRAGMENT.slice(1)
+    : '';
   return `${destination.pathname}${destination.search}${destination.hash}`;
 }
 
@@ -336,6 +351,11 @@ function readFriendLinks(root: HTMLElement): readonly TerminalFriendLink[] {
     url: element.dataset.terminalFriendUrl
   }));
   return decodeTerminalFriendLinks(raw);
+}
+
+function readDocumentNavigationLookup(root: HTMLElement): DocumentNavigationCapabilityLookup {
+  const serialized = root.dataset.terminalDocumentNavigation;
+  return decodeDocumentNavigationCapabilityLookup(serialized ?? {});
 }
 
 function readTemplateTextLines(node: HTMLElement): readonly string[] {
@@ -806,7 +826,10 @@ function renderEffect(
       return { focusTarget: null, navigationHref: effect.experiment.href };
     }
     case 'document-navigation': {
-      const navigationHref = documentNavigatorDestinationHref(effect.entry.href);
+      const navigationHref = documentNavigatorDestinationHref(
+        effect.entry.href,
+        context.documentNavigationLookup
+      );
       const link = document.createElement('a');
       link.href = navigationHref;
       link.textContent = `Open ${effect.entry.title} with the document navigator`;
@@ -1042,6 +1065,7 @@ export function startTerminalHome(
   let experiments: readonly TerminalExperiment[];
   let friendLinks: readonly TerminalFriendLink[];
   let templates: TerminalTemplates;
+  let documentNavigationLookup: DocumentNavigationCapabilityLookup;
   let identity: TerminalIdentity;
   try {
     nodes = readNodes(root);
@@ -1050,6 +1074,7 @@ export function startTerminalHome(
     experiments = readExperiments(root);
     friendLinks = readFriendLinks(root);
     templates = readTemplates(root, entries);
+    documentNavigationLookup = readDocumentNavigationLookup(root);
   } catch {
     setStartupState(root, 'failed');
     return;
@@ -1121,6 +1146,7 @@ export function startTerminalHome(
       outputInstance += 1;
       const rendered = render(result.effect, record, {
         templates,
+        documentNavigationLookup,
         instance: outputInstance
       });
       nodes.transcript.append(record);

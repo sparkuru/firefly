@@ -45,6 +45,13 @@ twitterCard = "summary_large_image"
 # Optional absolute URL or root-relative public path for social cards.
 # image = "/social-card.png"
 
+# Document navigation is selected independently for each registered
+# presentation. Omit the table or an entry to keep its enabled default.
+# [documentNavigation.firefly]
+# navigator = "document-navigator"
+# [documentNavigation.semantic]
+# navigator = "none"
+
 [plugins.comments]
 # Enable only after the private runtime, edge, SMTP, backup, and public smoke
 # gates are accepted. This is the only comments enable flag.

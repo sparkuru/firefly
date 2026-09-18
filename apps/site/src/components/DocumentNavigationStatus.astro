@@ -1,16 +1,29 @@
 ---
 import type { DocumentNavigatorProfile } from '../lib/document-navigation.ts';
 import { navigationInitialState } from '../lib/document-navigation.ts';
+import type { DocumentNavigatorAssets } from '../lib/presentation-experiences.ts';
+import type { DocumentNavigatorExitPolicy } from '../lib/presentation-experiences.ts';
+import semanticNavigationCss from '../styles/document-navigation-semantic.css?raw';
+import terminalNavigationCss from '../styles/document-navigation-terminal.css?raw';
 
 interface Props {
   variant: 'semantic' | 'terminal';
   profile: DocumentNavigatorProfile;
+  exitPolicy: DocumentNavigatorExitPolicy;
+  assets: DocumentNavigatorAssets;
 }
 
-const { variant, profile } = Astro.props;
+const { variant, profile, exitPolicy, assets } = Astro.props;
+const navigationCss = variant === 'terminal' ? terminalNavigationCss : semanticNavigationCss;
+const expectedStyles = variant === 'terminal' ? assets.terminalStyles : assets.semanticStyles;
+if (assets.runtime !== 'document-navigator' || expectedStyles !== `document-navigation-${variant}`) {
+  throw new Error(`Unsupported document navigator assets for ${variant} presentation.`);
+}
 const className = variant === 'terminal' ? 'terminal-navigation-status' : 'document-navigation-status';
 const { statusHidden: initiallyHidden } = navigationInitialState(profile);
 ---
+
+<style is:inline set:html={navigationCss}></style>
 
 <section
   class={className}
@@ -18,7 +31,13 @@ const { statusHidden: initiallyHidden } = navigationInitialState(profile);
   aria-label="Document navigation status"
   hidden={initiallyHidden}
 >
-  <p><span data-navigation-mode>-- NORMAL --</span><span data-navigation-position>1/1</span></p>
+  <p>
+    <span data-navigation-mode>-- NORMAL --</span>
+    <span data-navigation-position>1/1</span>
+    {exitPolicy === 'local' && (
+      <button type="button" data-navigation-exit-control hidden>Exit navigation</button>
+    )}
+  </p>
   <p data-navigation-search-status hidden></p>
   <form data-navigation-search-form hidden>
     <label data-navigation-search-label for="document-navigation-search">Search document forward</label>

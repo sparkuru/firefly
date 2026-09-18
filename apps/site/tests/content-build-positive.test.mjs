@@ -15,7 +15,7 @@ const siteRoot = path.resolve(import.meta.dirname, '..');
 const testResultsRoot = path.join(siteRoot, 'test-results');
 const generatedContentRoot = path.join(siteRoot, '.generated-content');
 const prerenderRoot = path.join(siteRoot, '.astro', '.prerender');
-const paperSelector = /\[data-article-content\]\[data-article-theme=(?:['"]?paper['"]?)\]/u;
+const paperSelector = /\[data-article-content\]\[data-content-theme=(?:['"]?paper['"]?)\]/u;
 
 async function listFiles(directory, prefix = '') {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -40,11 +40,11 @@ function assertPaperRoot(html, route) {
   const rootMarkup = roots.join('\n');
 
   assert.equal(roots.length, 1, `${route}: expected one article-content root`);
-  assert.match(roots[0], /\bdata-article-theme="paper"/u, route);
+  assert.match(roots[0], /\bdata-content-theme="paper"/u, route);
   assert.equal(
-    (rootMarkup.match(/\bdata-article-theme\s*=/gu) ?? []).length,
+    (rootMarkup.match(/\bdata-content-theme\s*=/gu) ?? []).length,
     1,
-    `${route}: expected one article theme attribute`
+    `${route}: expected one content theme attribute`
   );
 }
 
@@ -62,7 +62,7 @@ test('paper front matter builds to semantic and Terminal routes with shared cont
 
 The same Markdown body reaches both presentations with a [safe link](https://example.test/paper).
 
-<div class="firefly-content-callout" data-article-theme="future" style="color: red">A paper callout.</div>
+<div class="firefly-content-callout" data-content-theme="future" style="color: red">A paper callout.</div>
 
 <script>alert('unsafe')</script>
 
@@ -84,7 +84,7 @@ description: A semantic paper fixture.
 draft: false
 layout: post
 presentation: semantic
-articleTheme: paper
+contentTheme: paper
 ---
 ${body}`;
   const terminalSource = `---
@@ -94,7 +94,7 @@ date: 2026-08-12
 description: A Terminal paper fixture.
 draft: false
 layout: page
-articleTheme: paper
+contentTheme: paper
 ---
 ${body}`;
 
@@ -149,12 +149,12 @@ ${body}`;
     assert.match(semanticHeadingId, /^posts-paper-semantic-md-h2-1$/u);
     assert.match(terminalHeadingId, /^pages-paper-terminal-md-h2-1$/u);
     assert.equal(
-      (semanticRoute.match(/articleTheme/gu) ?? []).length,
+      (semanticRoute.match(/contentTheme/gu) ?? []).length,
       0,
       'site metadata must not be serialized into semantic output'
     );
     assert.equal(
-      (terminalRoute.match(/articleTheme/gu) ?? []).length,
+      (terminalRoute.match(/contentTheme/gu) ?? []).length,
       0,
       'site metadata must not be serialized into Terminal output'
     );

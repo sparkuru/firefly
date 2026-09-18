@@ -18,7 +18,6 @@ const {
   DEFAULT_COMMENTS_CONFIG_PATH,
   parseCommentsActivation,
   parseCommentsConfig,
-  parseCommentsNamespace,
   resolveCommentsConfigPath,
   resolveCommentsRuntimeOptions
 } = await import(pathToFileURL(pluginConfigPath).href) as CommentsConfigModule;
@@ -172,15 +171,11 @@ interface RuntimeSource {
   readonly value: unknown;
 }
 
-function legacyActivation(value: ReturnType<typeof parseCommentsNamespace>, source: string): CommentsActivationConfig {
-  if (!('activation' in value)) {
-    throw new Error(`Invalid legacy comments configuration in ${source}: activation is missing.`);
-  }
-  return value.activation;
-}
-
 function sourceFromSiteConfig(siteConfigPath: string): RuntimeSource {
   const siteValue = readTomlFile(siteConfigPath);
+  if (siteValue.comments !== undefined) {
+    throw new Error(`Invalid comments configuration in ${siteConfigPath}: unsupported key "comments".`);
+  }
   const rawPlugins = siteValue.plugins;
   if (rawPlugins !== undefined && (rawPlugins === null || typeof rawPlugins !== 'object' || Array.isArray(rawPlugins))) {
     throw new Error(`Invalid comments configuration in ${siteConfigPath}: plugins must be a plain object.`);
@@ -188,13 +183,6 @@ function sourceFromSiteConfig(siteConfigPath: string): RuntimeSource {
   const pluginValue = rawPlugins && Object.hasOwn(rawPlugins, 'comments') ? (rawPlugins as Record<string, unknown>).comments : undefined;
   if (rawPlugins !== undefined && pluginValue === undefined && Object.keys(rawPlugins as object).length > 0) {
     throw new Error(`Invalid comments configuration in ${siteConfigPath}: plugins must declare comments.`);
-  }
-  if (siteValue.comments !== undefined && rawPlugins !== undefined) {
-    throw new Error(`Invalid comments configuration in ${siteConfigPath}: the legacy [comments] namespace cannot be combined with [plugins.comments].`);
-  }
-  if (siteValue.comments !== undefined) {
-    const legacy = parseCommentsNamespace(siteValue.comments, siteConfigPath);
-    return { configPath: siteConfigPath, siteConfigPath, activation: legacyActivation(legacy, siteConfigPath), value: siteValue.comments };
   }
   const activation = parseCommentsActivation(pluginValue, siteConfigPath);
   const repositoryRoot = repositoryRootForSiteConfig(siteConfigPath);
@@ -213,10 +201,6 @@ function sourceFromSiteConfig(siteConfigPath: string): RuntimeSource {
 
 function sourceFromExplicitConfig(configPath: string): RuntimeSource {
   const value = readTomlFile(configPath);
-  if (value.comments !== undefined && value.public === undefined && value.runtime === undefined) {
-    const legacy = parseCommentsNamespace(value.comments, configPath);
-    return { configPath, siteConfigPath: configPath, activation: legacyActivation(legacy, configPath), value: value.comments };
-  }
   return {
     configPath,
     siteConfigPath: null,

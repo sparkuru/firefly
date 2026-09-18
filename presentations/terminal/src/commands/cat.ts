@@ -21,7 +21,7 @@ export function executeCat(context: ProcessContext, args: ParsedCommandArguments
   if (!resolution.ok) return unreadableResource(operand);
   const node = context.fs.stat(resolution.path);
   if (node?.kind === 'experiment') {
-    return failureResult(`Cannot read rshell experiment "${operand}" as a document. Try "open ${operand}".`);
+    return failureResult(`Cannot read rshell experiment "${operand}" as a document. Try "launch ${operand}".`);
   }
   if (node?.kind === 'directory') {
     return failureResult(`Cannot read rshell directory "${operand}" as a document. Try "ls ${operand}".`);

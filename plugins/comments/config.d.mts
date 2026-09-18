@@ -38,11 +38,6 @@ export interface CommentsConfig {
   readonly runtime: CommentsRuntimeOptions;
 }
 
-export interface LegacyCommentsNamespace extends CommentsConfig {
-  readonly activation: CommentsActivationConfig;
-  readonly public: CommentsPublicConfig & { readonly enabled: boolean };
-}
-
 export interface ResolvedCommentsRuntimeOptions extends CommentsConfig {
   readonly smtpEnvironment: Readonly<Record<string, string | undefined>>;
 }
@@ -53,10 +48,9 @@ export function isCanonicalCommentsPostRoute(value: unknown): value is string;
 export function commentsPostPathFromSiteHref(value: unknown): string | null;
 export function parseCommentsActivation(value: unknown, source?: string): CommentsActivationConfig;
 export function parseCommentsConfig(value: unknown, source?: string, options?: { readonly enabled?: boolean }): CommentsConfig;
-export function parseCommentsNamespace(value: unknown, source?: string): CommentsConfig | LegacyCommentsNamespace;
 export function resolveCommentsConfigPath(configPath?: string, repositoryRoot?: string): string;
 export function resolveCommentsRuntimeOptions(
   value: unknown,
   env?: Readonly<Record<string, string | undefined>>,
   source?: string
-): ResolvedCommentsRuntimeOptions | (LegacyCommentsNamespace & { readonly smtpEnvironment: Readonly<Record<string, string | undefined>> });
+): ResolvedCommentsRuntimeOptions;

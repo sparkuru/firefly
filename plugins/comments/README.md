@@ -68,10 +68,10 @@ The local `config/plugins/comments/` files are build inputs/templates; an
 operator copies reviewed values into the plugin-owned production directory
 without copying secrets into this repository.
 
-For one migration window, an old `[comments]` namespace is accepted only when
-`[plugins.comments]` is absent. It is projected into the same activation and
-public/runtime objects; configuring both namespaces is rejected, so there are
-never two independent enable flags.
+The canonical configuration vocabulary is the only accepted one: site
+activation belongs under `[plugins.comments]`, and the plugin-owned config
+file contains `[public]` and `[runtime]` sections. A top-level `[comments]`
+namespace is unsupported and is rejected as an unknown configuration field.
 
 The service writes a private notification outbox. The optional delivery worker
 consumes that queue through a provider-neutral transport. Zoho Mail can be

@@ -1,9 +1,9 @@
 import { z } from 'astro/zod';
 import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import {
-  DEFAULT_ARTICLE_THEME_ID,
-  isArticleThemeId
-} from './article-theme.mjs';
+  DEFAULT_CONTENT_THEME_ID,
+  isContentThemeId
+} from './content-theme.mjs';
 import { isSafeHttpUrl, isSafeImageReference } from './site-config.mjs';
 
 const requiredText = z.string().trim().min(1);
@@ -30,20 +30,6 @@ const slug = requiredText.transform((value) => value.replace(/\s+/gu, '-')).refi
   isSafeRouteSegment,
   'Slug must be one canonical safe URL segment'
 );
-const isSafeSourceReference = (value) => {
-  if (value.normalize('NFC') !== value || value.startsWith('/') || value.includes('\\')) return false;
-  const [sourcePath, fragment, ...extraFragments] = value.split('#');
-  if (extraFragments.length > 0 || sourcePath.length === 0 || !sourcePath.endsWith('.md')) return false;
-  if (sourcePath.split('/').some((segment) => segment.length === 0 || segment === '.' || segment === '..' || segment.startsWith('.') || /:/u.test(segment) || unsafeRouteSegment.test(segment))) {
-    return false;
-  }
-  if (fragment !== undefined && (fragment.length === 0 || unsafeRouteSegment.test(fragment) || fragment.includes('/'))) return false;
-  return true;
-};
-const source = requiredText.refine(
-  isSafeSourceReference,
-  'Source must be a safe relative Markdown reference with an optional fragment'
-);
 const alias = requiredText.refine(
   (value) => value.startsWith('/') && value.endsWith('/') &&
     (value === '/' || value.slice(1, -1).split('/').every(isSafeRouteSegment)),
@@ -54,9 +40,9 @@ const presentation = requiredText.regex(
   /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u,
   'Presentation must be a lowercase kebab-case adapter ID'
 );
-const articleTheme = z.string().refine(
-  isArticleThemeId,
-  'Article theme must be a registered site-owned ID'
+const contentTheme = z.string().refine(
+  isContentThemeId,
+  'Content theme must be a registered site-owned ID'
 );
 const fireflyMarker = requiredText
   .refine((value) => value.normalize('NFC') === value, 'Firefly marker must be NFC-normalized')
@@ -89,9 +75,8 @@ const sharedMetadata = {
   firefly: fireflyMetadata,
   draft: z.boolean(),
   presentation: presentation.optional().default(DEFAULT_PRESENTATION_ID),
-  articleTheme: articleTheme.optional().default(DEFAULT_ARTICLE_THEME_ID),
+  contentTheme: contentTheme.optional().default(DEFAULT_CONTENT_THEME_ID),
   aliases: z.array(alias).optional(),
-  source: source.optional(),
   access: access.optional().default({ visibility: 'public' })
 };
 

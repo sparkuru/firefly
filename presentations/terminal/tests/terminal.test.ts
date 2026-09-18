@@ -308,7 +308,8 @@ test('every command has deterministic output and strict usage errors', () => {
   );
   assert.match(help, /cat \[path\]/u);
   assert.match(help, /render a document or stream text/u);
-  assert.match(help, /vim <path>/u);
+  assert.match(help, /open <path>/u);
+  assert.match(help, /launch <path>/u);
   assert.match(help, /tree \[path\]/u);
   assert.match(help, /clear/u);
   assert.match(help, /clear the screen/u);
@@ -317,7 +318,6 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.match(help, /ls \[path\|pattern\]/u);
   assert.match(help, /find \[--path <directory>\] \[--after YYYY-MM-DD\] \[--before YYYY-MM-DD\] \[path\] <keyword>/u);
   assert.match(help, /find public documents by filename substring/u);
-  assert.match(help, /open <path>/u);
   assert.match(help, /list curated friend links/u);
   const grepHelp = run('help grep');
   assert.deepEqual(grepHelp.effect?.kind === 'help' ? grepHelp.effect.detail : undefined, {
@@ -425,14 +425,17 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.equal(run('cat alpha.md', charactersState).effect?.kind, 'document');
   assert.match(JSON.stringify(run('cat missing.md').effect), /No readable rshell resource/u);
   const vimMissing = run('vim missing.md').effect;
-  assert.equal(vimMissing?.kind, 'lines');
-  assert.match(vimMissing?.kind === 'lines' ? vimMissing.lines[0] ?? '' : '', /Try "tree" or "tree ~\/blog"/u);
+  assert.deepEqual(vimMissing, {
+    kind: 'lines',
+    tone: 'error',
+    lines: ['Unknown command: vim. Type "help" for commands.']
+  });
   assert.doesNotMatch(JSON.stringify(run('cat missing.md').effect), /absolute/u);
   assert.equal(run('cat ~/blog/posts/characters/alpha.md').effect?.kind, 'document');
   assert.equal(run('cat ~/blog/pages/about.md').effect?.kind, 'document');
-  const vimNavigation = run('vim ./characters/alpha.md').effect;
-  assert.equal(vimNavigation?.kind, 'document-navigation');
-  assert.equal(vimNavigation?.kind === 'document-navigation' ? vimNavigation.entry.href : null, '/posts/characters/alpha/');
+  const openNavigation = run('open ./characters/alpha.md').effect;
+  assert.equal(openNavigation?.kind, 'document-navigation');
+  assert.equal(openNavigation?.kind === 'document-navigation' ? openNavigation.entry.href : null, '/posts/characters/alpha/');
   for (const operand of ['pages/about.md', './pages/about.md']) {
     const page = run(`cat ${operand}`, workspaceState).effect;
     assert.equal(page?.kind, 'document', operand);
@@ -441,12 +444,12 @@ test('every command has deterministic output and strict usage errors', () => {
   assert.equal(run('cat posts/characters/alpha.md', workspaceState).effect?.kind, 'document');
   assert.equal(run('cat ./posts/characters/alpha.md', workspaceState).effect?.kind, 'document');
   for (const operand of ['pages/about.md', './pages/about.md']) {
-    assert.equal(run(`vim ${operand}`, workspaceState).effect?.kind, 'document-navigation', operand);
+    assert.equal(run(`open ${operand}`, workspaceState).effect?.kind, 'document-navigation', operand);
     const rootGrep = runShell(`grep -i about ${operand}`, workspaceState).effect;
     assert.equal(rootGrep?.kind, 'grep', operand);
     assert.deepEqual(rootGrep?.kind === 'grep' ? rootGrep.matches.map(({ path }) => path) : [], ['/pages/about.md'], operand);
   }
-  assert.equal(run('vim ./posts/characters/alpha.md', workspaceState).effect?.kind, 'document-navigation');
+  assert.equal(run('open ./posts/characters/alpha.md', workspaceState).effect?.kind, 'document-navigation');
   const postGrep = runShell('grep -i nahida ./posts/characters/alpha.md', workspaceState).effect;
   assert.equal(postGrep?.kind, 'grep');
   assert.deepEqual(postGrep?.kind === 'grep' ? postGrep.matches.map(({ path }) => path) : [], ['/posts/characters/alpha.md']);
@@ -454,7 +457,7 @@ test('every command has deterministic output and strict usage errors', () => {
     assert.deepEqual(run(`cat ${operand}`, workspaceState).effect, {
       kind: 'lines',
       tone: 'error',
-      lines: [`Cannot read rshell experiment "${operand}" as a document. Try "open ${operand}".`]
+      lines: [`Cannot read rshell experiment "${operand}" as a document. Try "launch ${operand}".`]
     }, operand);
   }
   for (const operand of ['../pages/about.md', './pages/../posts/characters/alpha.md']) {
@@ -560,7 +563,7 @@ test('every command has deterministic output and strict usage errors', () => {
       ]
     }, option);
   }
-  for (const command of ['help extra more', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'find', 'vim', 'tree /private', 'open', 'open lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
+  for (const command of ['help extra more', 'ls posts extra', 'ls lab extra', 'cat', 'cat alpha.md extra', 'find', 'tree /private', 'open', 'open lab/nerv extra', 'launch', 'launch lab/nerv extra', 'about extra', 'friends extra', 'pwd extra', 'whoami extra', 'date extra', 'history extra', 'clear extra']) {
     assert.match(JSON.stringify(run(command).effect), /Usage:/u, command);
   }
   assert.match(JSON.stringify(run('wat').effect), /Unknown command: wat/u);
@@ -608,21 +611,21 @@ test('every command has deterministic output and strict usage errors', () => {
     assert.deepEqual(run(`ls ${operand}`).effect, {
       kind: 'lines',
       tone: 'normal',
-      lines: ['nerv/ — NERV', 'Use "open ~/blog/lab/nerv" to enter this experiment.']
+      lines: ['nerv/ — NERV', 'Use "launch ~/blog/lab/nerv" to enter this experiment.']
     }, operand);
   }
-  const experimentNavigation = run('open lab/nerv', workspaceState);
+  const experimentNavigation = run('launch lab/nerv', workspaceState);
   assert.equal(experimentNavigation.effect?.kind, 'navigation');
   assert.deepEqual(experimentNavigation.effect?.kind === 'navigation' ? experimentNavigation.effect.experiment : null, experiments[0]);
   assert.equal(experimentNavigation.announcement, 'Opening NERV.');
-  assert.match(JSON.stringify(run('open lab/unlisted', workspaceState).effect), /No listed experiment/u);
+  assert.match(JSON.stringify(run('launch lab/unlisted', workspaceState).effect), /No listed experiment/u);
   const labState = run('cd lab', workspaceState).state;
   assert.equal(labState.cwd, '~/blog/lab');
-  assert.equal(run('open nerv', labState).effect?.kind, 'navigation');
-  assert.equal(run('open ./nerv', labState).effect?.kind, 'navigation');
-  assert.equal(run('open ~/blog/lab/nerv', labState).effect?.kind, 'navigation');
-  assert.match(JSON.stringify(run('open lab/nerv', labState).effect), /No listed experiment/u);
-  assert.match(JSON.stringify(run('open \/lab\/nerv', labState).effect), /No listed experiment/u);
+  assert.equal(run('launch nerv', labState).effect?.kind, 'navigation');
+  assert.equal(run('launch ./nerv', labState).effect?.kind, 'navigation');
+  assert.equal(run('launch ~/blog/lab/nerv', labState).effect?.kind, 'navigation');
+  assert.match(JSON.stringify(run('launch lab/nerv', labState).effect), /No listed experiment/u);
+  assert.match(JSON.stringify(run('launch \/lab\/nerv', labState).effect), /No listed experiment/u);
 });
 
 test('terminal adapter keeps search defaults scoped and exposes explicit broader scopes', () => {
@@ -908,8 +911,8 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('', entries, experiments), {
     kind: 'ambiguous',
     value: '',
-    candidates: ['?', 'about', 'alias', 'cat', 'cd', 'clear', 'cls', 'date', 'find', 'friends', 'grep', 'help', 'history', 'id', 'l', 'll', 'ls', 'open', 'pwd', 'tree', 'vim', 'whoami'],
-    candidateValues: ['? ', 'about ', 'alias ', 'cat ', 'cd ', 'clear ', 'cls ', 'date ', 'find ', 'friends ', 'grep ', 'help ', 'history ', 'id ', 'l ', 'll ', 'ls ', 'open ', 'pwd ', 'tree ', 'vim ', 'whoami '],
+    candidates: ['?', 'about', 'alias', 'cat', 'cd', 'clear', 'cls', 'date', 'find', 'friends', 'grep', 'help', 'history', 'id', 'l', 'launch', 'll', 'ls', 'open', 'pwd', 'tree', 'whoami'],
+    candidateValues: ['? ', 'about ', 'alias ', 'cat ', 'cd ', 'clear ', 'cls ', 'date ', 'find ', 'friends ', 'grep ', 'help ', 'history ', 'id ', 'l ', 'launch ', 'll ', 'ls ', 'open ', 'pwd ', 'tree ', 'whoami '],
     ownsTab: false
   });
   const listCompletion = completeCommand('ls p', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog');
@@ -960,8 +963,8 @@ test('completion consumes only unique contextual document and lab matches', () =
   assert.deepEqual(completeCommand('cat pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat pages/about.md', candidates: ['pages/about.md'] });
   assert.deepEqual(completeCommand('cat ./pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat ./pages/about.md', candidates: ['pages/about.md'] });
   assert.deepEqual(completeCommand('cat posts/charac', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'cat posts/characters/', candidates: ['posts/characters/'] });
-  assert.deepEqual(completeCommand('vim pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'vim pages/about.md', candidates: ['pages/about.md'] });
-  assert.deepEqual(completeCommand('vim ~/blog/pages/abo', entries, experiments), { kind: 'unique', value: 'vim ~/blog/pages/about.md', candidates: ['pages/about.md'] });
+  assert.deepEqual(completeCommand('open pages/abo', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'open pages/about.md', candidates: ['pages/about.md'] });
+  assert.deepEqual(completeCommand('open ~/blog/pages/abo', entries, experiments), { kind: 'unique', value: 'open ~/blog/pages/about.md', candidates: ['pages/about.md'] });
   const metadataEntries = decodeTerminalEntries([
     ...rawEntries,
     { kind: 'post', virtualPath: 'posts/infra/07-docker-image-to-vm.md', relativePath: 'infra/07-docker-image-to-vm.md', filename: '07-docker-image-to-vm.md', title: 'Docker Handbook', href: '/posts/infra/07-docker-image-to-vm/', date: '2026-06-02' }
@@ -971,9 +974,9 @@ test('completion consumes only unique contextual document and lab matches', () =
     value: 'cat 07-docker-image-to-vm.md',
     candidates: ['07-docker-image-to-vm.md']
   });
-  assert.deepEqual(completeCommand('vim DOC', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/infra'), {
+  assert.deepEqual(completeCommand('open DOC', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/posts/infra'), {
     kind: 'unique',
-    value: 'vim 07-docker-image-to-vm.md',
+    value: 'open 07-docker-image-to-vm.md',
     candidates: ['07-docker-image-to-vm.md']
   });
   assert.deepEqual(completeCommand('cat infra/doc', metadataEntries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), {
@@ -1084,14 +1087,14 @@ test('completion consumes only unique contextual document and lab matches', () =
     candidateValues: ['cat ./beta.md', 'cat ./characters/'],
     ownsTab: true
   });
-  assert.deepEqual(completeCommand('vim ~/blog/', pathEntries, experiments), {
+  assert.deepEqual(completeCommand('open ~/blog/', pathEntries, experiments), {
     kind: 'ambiguous',
-    value: 'vim ~/blog/p',
+    value: 'open ~/blog/p',
     candidates: ['~/blog/pages/', '~/blog/posts/'],
-    candidateValues: ['vim ~/blog/pages/', 'vim ~/blog/posts/'],
+    candidateValues: ['open ~/blog/pages/', 'open ~/blog/posts/'],
     ownsTab: true
   });
-  for (const input of ['cat 1', 'vim ./does-not-exist']) {
+  for (const input of ['cat 1', 'open ./does-not-exist']) {
     assert.deepEqual(completeCommand(input, entries, experiments), {
       kind: 'no-match',
       candidates: [],
@@ -1101,12 +1104,12 @@ test('completion consumes only unique contextual document and lab matches', () =
   for (const input of ['cat ../alp', 'cat ./nested/../alp', 'cat /alp', 'cat /posts/does-not-exist', 'cat https://example.com/alp', 'cat /etc/pass', 'cat ~', 'cat ~/', 'cat cafe\u0301.md', 'cat control\u0001path']) {
     assert.equal(completeCommand(input, entries, experiments).kind, 'none', input);
   }
-  assert.deepEqual(completeCommand('open lab/n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'open lab/nerv', candidates: ['lab/nerv'] });
-  assert.equal(completeCommand('open lab/', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog').kind, 'ambiguous');
-  assert.deepEqual(completeCommand('open n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/lab'), { kind: 'unique', value: 'open nerv', candidates: ['nerv'] });
-  assert.deepEqual(completeCommand('open ./n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/lab'), { kind: 'unique', value: 'open ./nerv', candidates: ['nerv'] });
-  assert.deepEqual(completeCommand('open ~/blog/lab/n', entries, experiments), { kind: 'unique', value: 'open ~/blog/lab/nerv', candidates: ['lab/nerv'] });
-  assert.equal(completeCommand('open /lab/n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/lab').kind, 'none');
+  assert.deepEqual(completeCommand('launch lab/n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), { kind: 'unique', value: 'launch lab/nerv', candidates: ['lab/nerv'] });
+  assert.equal(completeCommand('launch lab/', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog').kind, 'ambiguous');
+  assert.deepEqual(completeCommand('launch n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/lab'), { kind: 'unique', value: 'launch nerv', candidates: ['nerv'] });
+  assert.deepEqual(completeCommand('launch ./n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/lab'), { kind: 'unique', value: 'launch ./nerv', candidates: ['nerv'] });
+  assert.deepEqual(completeCommand('launch ~/blog/lab/n', entries, experiments), { kind: 'unique', value: 'launch ~/blog/lab/nerv', candidates: ['lab/nerv'] });
+  assert.equal(completeCommand('launch /lab/n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog/lab').kind, 'none');
   assert.deepEqual(completeCommand('tree ~/blog', entries, experiments), { kind: 'unique', value: 'tree ~/blog', candidates: ['~/blog'] });
   assert.deepEqual(completeCommand('tree lab/n', entries, experiments, DEFAULT_TERMINAL_COMMAND_REGISTRY, '~/blog'), {
     kind: 'no-match',

@@ -10,14 +10,14 @@ import type {
 } from '../shell/contracts.js';
 import { failureResult, successResult } from '../shell/streams.js';
 import type { ParsedCommandArguments } from './arguments.js';
-import { completeOpen, completePath } from './completion.js';
+import { completeLaunch, completePath } from './completion.js';
 import { noArguments, optionalPath, requiredPath, standalonePolicy, textPolicy, structuredTextPolicy } from './descriptors.js';
 import type { CommandSpec } from './contracts.js';
 
 export const OPEN_USAGE = 'open <path>';
-export const VIM_USAGE = 'vim <path>';
-export const OPEN_SUMMARY = 'open a listed experiment';
-export const VIM_SUMMARY = 'open a public document with the document navigator';
+export const LAUNCH_USAGE = 'launch <path>';
+export const OPEN_SUMMARY = 'open a public document';
+export const LAUNCH_SUMMARY = 'launch a listed experiment';
 export const CLEAR_USAGE = 'clear';
 export const CLEAR_SUMMARY = 'clear the screen';
 export const PWD_USAGE = 'pwd';
@@ -222,19 +222,27 @@ export function executeOpen(context: ProcessContext, args: ParsedCommandArgument
   if (operands.length !== 1) return failureResult(`Usage: ${OPEN_USAGE}`);
   const resolution = context.fs.resolve(operands[0]!, context.cwd, 'resource');
   const node = resolution.ok ? context.fs.stat(resolution.path) : undefined;
-  if (node?.kind !== 'experiment') return failureResult(`No listed experiment named "${operands[0]}". Try "ls".`);
-  return successResult([], { controls: [{ kind: 'open-experiment', id: node.experiment.id }] });
-}
-
-export function executeVim(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
-  const { operands } = args;
-  if (operands.length !== 1) return failureResult(`Usage: ${VIM_USAGE}`);
-  const resolution = context.fs.resolve(operands[0]!, context.cwd, 'resource');
-  const node = resolution.ok ? context.fs.stat(resolution.path) : undefined;
+  if (node?.kind === 'experiment') {
+    return failureResult(`Cannot open rshell experiment "${operands[0]}" as a document. Try "launch ${operands[0]}".`);
+  }
   if (node?.kind !== 'document') {
     return failureResult(`No public document named "${operands[0]}". Try "tree" or "tree ~/blog".`);
   }
   return successResult([], { controls: [{ kind: 'open-document', path: node.document.path }] });
+}
+
+export function executeLaunch(context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
+  const { operands } = args;
+  if (operands.length !== 1) return failureResult(`Usage: ${LAUNCH_USAGE}`);
+  const resolution = context.fs.resolve(operands[0]!, context.cwd, 'resource');
+  const node = resolution.ok ? context.fs.stat(resolution.path) : undefined;
+  if (node?.kind === 'document') {
+    return failureResult(`Cannot launch rshell document "${operands[0]}" as an experiment. Try "open ${operands[0]}".`);
+  }
+  if (node?.kind !== 'experiment') {
+    return failureResult(`No listed experiment named "${operands[0]}". Try "ls lab".`);
+  }
+  return successResult([], { controls: [{ kind: 'open-experiment', id: node.experiment.id }] });
 }
 
 export function executeClear(_context: ProcessContext, args: ParsedCommandArguments): ProcessResult {
@@ -254,20 +262,20 @@ export const OPEN_COMMAND_SPEC: CommandSpec = {
   policy: standalonePolicy,
   parse: requiredPath(OPEN_USAGE),
   execute: executeOpen,
-  complete: completeOpen
+  complete: completePath
 };
 
-export const VIM_COMMAND_SPEC: CommandSpec = {
-  name: 'vim',
+export const LAUNCH_COMMAND_SPEC: CommandSpec = {
+  name: 'launch',
   aliases: Object.freeze([]),
-  usage: VIM_USAGE,
-  summary: VIM_SUMMARY,
+  usage: LAUNCH_USAGE,
+  summary: LAUNCH_SUMMARY,
   group: 'Read & navigate',
   order: 20,
   policy: standalonePolicy,
-  parse: requiredPath(VIM_USAGE),
-  execute: executeVim,
-  complete: completePath
+  parse: requiredPath(LAUNCH_USAGE),
+  execute: executeLaunch,
+  complete: completeLaunch
 };
 
 export const CLEAR_COMMAND_SPEC: CommandSpec = {

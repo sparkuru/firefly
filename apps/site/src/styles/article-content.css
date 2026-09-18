@@ -1,7 +1,7 @@
 /*
  * Generic article-content contract. Website layouts map these variables to
  * their own tokens; this layer does not depend on a presentation or chrome
- * selector. The content root is also the future article-theme seam.
+ * selector. The content root is also the future content-theme seam.
  */
 [data-article-content] {
   color: var(--article-content-text);

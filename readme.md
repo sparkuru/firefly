@@ -213,10 +213,7 @@ layout: page
 Do not use whitespace, percent escapes, dot segments, slashes, backslashes, or
 control characters in new path segments or slugs. A legacy slug containing a
 run of whitespace is normalized to `-` before route validation; this migration
-compatibility does not change the new-file convention. The legacy `source`
-field is optional provenance only: when present it must be a safe relative
-Markdown reference with an optional fragment, and it never controls routing or
-public output. Omit it for new content.
+compatibility does not change the new-file convention.
 
 The site also provides a single-file metadata organizer for authoring Markdown
 outside the build container:
@@ -315,32 +312,32 @@ All configuration and Markdown values are embedded at build time. No runtime
 configuration service, client-side config fetch, credentials, or private
 author data is supported.
 
-<p align = "center" style="font-size: 26px;" > <strong> Article theme implementation and references </strong> </p>
+<p align = "center" style="font-size: 26px;" > <strong> Content theme implementation and references </strong> </p>
 
 Theme implementation and paths
 
-Article themes are site-owned, build-time content styles. The current
-implementation registers `default` and `paper`; omitted `articleTheme`
+Content themes are site-owned, build-time content styles. The current
+implementation registers `default` and `paper`; omitted `contentTheme`
 metadata still resolves to `default`. The `paper` variant provides a warm paper
 reading surface with serif text, monospace code, and restrained accents. Theme
 selection is applied only to the rendered Markdown content and does not change
 the outer presentation, route, comments, website chrome, or authored Markdown.
 
-- Registry and fail-closed resolver: `apps/site/src/lib/article-theme.mjs`
+- Registry and fail-closed resolver: `apps/site/src/lib/content-theme.mjs`
 - Front matter validation and default: `apps/site/src/lib/content-schema.mjs`,
   consumed by `apps/site/src/content.config.ts`
 - Theme resolution and handoff: `apps/site/src/components/DocumentPresentation.astro`
 - Semantic content boundary: `apps/site/src/components/SemanticDocument.astro`
 - Terminal content boundary: `apps/site/src/components/TerminalDocument.astro`
 - Shared article-content style contract: `apps/site/src/styles/article-content.css`
-- Paper theme stylesheet: `apps/site/src/styles/article-themes/paper.css`
+- Paper theme stylesheet: `apps/site/src/styles/content-themes/paper.css`
 - Presentation token mappings: `apps/site/src/styles/global.css` and
   `apps/site/src/styles/terminal.css`
 - Front matter normalization: `apps/site/scripts/blog-meta.mjs`
 
-The extension point for additional alternate article themes is
-`apps/site/src/styles/article-themes/<theme-id>.css`. Its selectors should stay
-below `[data-article-content][data-article-theme="<theme-id>"]`; theme IDs are
+The extension point for additional alternate content themes is
+`apps/site/src/styles/content-themes/<theme-id>.css`. Its selectors should stay
+below `[data-article-content][data-content-theme="<theme-id>"]`; theme IDs are
 validated before rendering and never become dynamic stylesheet URLs.
 
 Other references:

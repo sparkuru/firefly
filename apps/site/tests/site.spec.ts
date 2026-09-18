@@ -217,7 +217,7 @@ test('paper theme stays readable inside the Terminal content boundary', async ({
 
   const content = page.locator('[data-article-content]');
   await expect(content).toHaveCount(1);
-  await content.evaluate((element) => element.setAttribute('data-article-theme', 'paper'));
+  await content.evaluate((element) => element.setAttribute('data-content-theme', 'paper'));
 
   const rootStyles = await content.evaluate((element) => {
     const styles = getComputedStyle(element);
@@ -356,6 +356,26 @@ test('document navigator fragment remains a native location without browser Java
   await expect(page.locator('#document-navigator')).toBeVisible();
   await expect(page.locator('[data-document-navigator-status]')).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1, name: 'llm-workflow-with-trellis' })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
+
+test('semantic document entry remains a complete native anchor without browser JavaScript', async ({ page }) => {
+  await page.goto('/posts/infra/connect-to-windows-via-terminal/');
+
+  const article = page.locator('.semantic-document');
+  const entry = page.getByRole('link', { name: 'Read document', exact: true });
+  await expect(entry).toHaveAttribute('href', '#document-navigator');
+  await expect(entry).toBeVisible();
+  await expect(article.getByRole('heading', { level: 1, name: 'Connect to windows via terminal' })).toBeVisible();
+  await expect(article.locator('.document-outline')).toBeVisible();
+  await expect(article.locator('[data-document-navigator-status]')).toHaveAttribute('hidden', '');
+  await expect(article.locator('[data-navigation-exit-control]')).toHaveAttribute('hidden', '');
+
+  await entry.click();
+  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/#document-navigator$/u);
+  await expect(page.locator('#document-navigator')).toBeVisible();
+  await expect(page.locator('[data-document-navigator-status]')).toHaveAttribute('hidden', '');
+  await expect(article).toContainText('OpenSSH Server');
   await expectNoHorizontalOverflow(page);
 });
 

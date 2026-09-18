@@ -4,7 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mjs';
-import { ARTICLE_THEME_IDS } from '../src/lib/article-theme.mjs';
+import { CONTENT_THEME_IDS } from '../src/lib/content-theme.mjs';
 import {
   resolveContentMarkers,
   supportedContentMarkerIds
@@ -24,20 +24,20 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
-function assertArticleThemeBoundary(html, route) {
+function assertContentThemeBoundary(html, route) {
   const contentRoots = [...html.matchAll(
     /<div\b[^>]*\bdata-article-content(?:\s|>)[^>]*>/gu
   )].map(([openingTag]) => openingTag);
   const contentRootMarkup = contentRoots.join('\n');
 
   assert.equal(contentRoots.length, 1, `${route}: expected one article-content root`);
-  const themeMatch = /\bdata-article-theme="([^"]+)"/u.exec(contentRoots[0]);
-  assert.ok(themeMatch, `${route}: expected a registered article theme`);
-  assert.ok(ARTICLE_THEME_IDS.includes(themeMatch[1]), `${route}: unknown article theme ${themeMatch[1]}`);
+  const themeMatch = /\bdata-content-theme="([^"]+)"/u.exec(contentRoots[0]);
+  assert.ok(themeMatch, `${route}: expected a registered content theme`);
+  assert.ok(CONTENT_THEME_IDS.includes(themeMatch[1]), `${route}: unknown content theme ${themeMatch[1]}`);
   assert.equal(
-    (contentRootMarkup.match(/\bdata-article-theme\s*=/gu) ?? []).length,
+    (contentRootMarkup.match(/\bdata-content-theme\s*=/gu) ?? []).length,
     1,
-    `${route}: expected one article theme attribute`
+    `${route}: expected one content theme attribute`
   );
 }
 
@@ -61,7 +61,7 @@ function splitCssSelectors(selectorList) {
 }
 
 function assertPaperCssScope(css) {
-  const paperScope = /^\[data-article-content\]\[data-article-theme=['"]paper['"]\]/u;
+  const paperScope = /^\[data-article-content\]\[data-content-theme=['"]paper['"]\]/u;
   const rules = [...css.replace(/\/\*[\s\S]*?\*\//gu, '').matchAll(/([^{}]+)\{/gu)]
     .map(([selector]) => selector.trim())
     .filter((selector) => !selector.startsWith('@'));
@@ -521,7 +521,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, /class="terminal-titlebar"/u);
     assert.match(html, /class="terminal-document"/u);
     assert.match(html, /data-article-content/u);
-    assertArticleThemeBoundary(html, 'Terminal document');
+    assertContentThemeBoundary(html, 'Terminal document');
     assert.doesNotMatch(html, /class="terminal-path"/u);
     assert.doesNotMatch(html, /class="semantic-document"/u);
     assert.match(html, new RegExp(`src="/${navigationScript.replaceAll('.', '\\.')}`));
@@ -536,14 +536,14 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, new RegExp(`src="/${navigationScript.replaceAll('.', '\\.')}`));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
-    assertArticleThemeBoundary(html, 'semantic document');
+    assertContentThemeBoundary(html, 'semantic document');
   }
   for (const [route, html] of Object.entries({
     home: routes.home,
     lab: routes.lab,
     notFound: routes.notFound
   })) {
-    assert.doesNotMatch(stripStyleBlocks(html), /\bdata-article-theme=/u, route);
+    assert.doesNotMatch(stripStyleBlocks(html), /\bdata-content-theme=/u, route);
   }
   assert.match(routes.lab, /<h1[^>]*>Experiments<\/h1>/u);
   assert.match(routes.lab, /href="\/lab\/majo\/"/u);
@@ -775,9 +775,9 @@ test('default firefly output contains document navigator boundaries and localize
   assert.doesNotMatch(post, /class="terminal-path"/u);
 });
 
-test('paper article theme is content-scoped and delivered through both static style paths', async () => {
+test('paper content theme is content-scoped and delivered through both static style paths', async () => {
   const paperStyles = await readFile(
-    path.join(sourceRoot, 'styles/article-themes/paper.css'),
+    path.join(sourceRoot, 'styles/content-themes/paper.css'),
     'utf8'
   );
   const semanticStyles = await readFile(path.join(sourceRoot, 'styles/global.css'), 'utf8');
@@ -806,12 +806,12 @@ test('paper article theme is content-scoped and delivered through both static st
   );
 
   const contentImport = semanticStyles.indexOf("@import './article-content.css';");
-  const paperImport = semanticStyles.indexOf("@import './article-themes/paper.css';");
+  const paperImport = semanticStyles.indexOf("@import './content-themes/paper.css';");
   assert.ok(contentImport >= 0);
   assert.ok(paperImport > contentImport);
   assert.match(
     terminalLayout,
-    /import paperCss from ['"]\.\.\/styles\/article-themes\/paper\.css\?raw['"]/u
+    /import paperCss from ['"]\.\.\/styles\/content-themes\/paper\.css\?raw['"]/u
   );
   assert.match(terminalLayout, /\$\{articleContentCss\}\\n\$\{paperCss\}/u);
 });
@@ -825,8 +825,14 @@ test('both document navigator presentations keep status after content and fixed 
     path.join(sourceRoot, 'components/TerminalDocument.astro'),
     'utf8'
   );
-  const semanticStyles = await readFile(path.join(sourceRoot, 'styles/global.css'), 'utf8');
-  const terminalStyles = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
+  const semanticStyles = await readFile(
+    path.join(sourceRoot, 'styles/document-navigation-semantic.css'),
+    'utf8'
+  );
+  const terminalStyles = await readFile(
+    path.join(sourceRoot, 'styles/document-navigation-terminal.css'),
+    'utf8'
+  );
   const articleStyles = await readFile(path.join(sourceRoot, 'styles/article-content.css'), 'utf8');
   const terminalLayout = await readFile(path.join(sourceRoot, 'layouts/TerminalLayout.astro'), 'utf8');
 
@@ -838,12 +844,12 @@ test('both document navigator presentations keep status after content and fixed 
     const statusIndex = component.indexOf('<DocumentNavigationStatus ');
     assert.ok(navigatorIndex >= 0);
     assert.ok(statusIndex > navigatorIndex);
-    assert.match(component, new RegExp(`<DocumentNavigationStatus profile=\\{navigatorProfile\\} variant="${variant}"`, 'u'));
+    assert.match(component, new RegExp(`<DocumentNavigationStatus profile=\\{navigatorProfile\\} variant="${variant}" exitPolicy=\\{documentNavigation\\.exitPolicy\\} assets=`, 'u'));
     assert.match(component, /data-article-content/u);
-    assert.equal((component.match(/data-article-theme=\{articleTheme\}/gu) ?? []).length, 1);
+    assert.equal((component.match(/data-content-theme=\{contentTheme\}/gu) ?? []).length, 1);
   }
 
-  assert.match(semanticStyles, /@import ['"]\.\/article-content\.css['"]/u);
+  assert.match(semanticStyles, /\[data-document-navigator-region\]/u);
   assert.match(terminalLayout, /articleContentCss/u);
   assert.match(articleStyles, /\[data-article-content\]/u);
   assert.match(articleStyles, /\.firefly-content-callout/u);

@@ -157,8 +157,8 @@ Unicode routes correctly.
   `config/plugins/comments/config.toml`. Its `[public]` section is projected
   to `config.comments` as `writeOrigin`, `exportPath`, and `consentVersion`;
   `[runtime]` and `[runtime.smtp]` remain service-only. The site never exposes
-  the runtime projection. A legacy `[comments]` namespace is accepted only
-  during migration and cannot coexist with `[plugins.comments]`.
+  the runtime projection. A top-level `[comments]` namespace is unsupported
+  and fails strict validation as an unknown field.
 - `config/plugins/comments/secrets.env` is the owner-only secret boundary.
   It contains only secret values, while `passwordEnv` refers to a named
   value there. Literal SMTP passwords and non-secret `COMMENTS_*` settings are
@@ -307,11 +307,6 @@ deliverNotificationOutbox(
 
 parseSmtpConfig(env?: NodeJS.ProcessEnv): SmtpConfig | null
 
-parseCommentsNamespace(
-  value: unknown,
-  source?: string
-): CommentsConfig | LegacyCommentsNamespace
-
 parseCommentsActivation(value: unknown, source?: string): CommentsActivationConfig
 parseCommentsConfig(value: unknown, source?: string, options?: { enabled?: boolean }): CommentsConfig
 resolveCommentsConfigPath(configPath?: string, repositoryRoot?: string): string
@@ -373,14 +368,14 @@ loadCommentsRuntimeConfig(env?: NodeJS.ProcessEnv): {
 | Condition | Required result |
 | --- | --- |
 | comments disabled | do not load export, service data, or plugin post extension |
-| both `[comments]` and `[plugins.comments]` are present | reject before projection; there is one activation source |
+| top-level `[comments]` is present | reject before projection as an unknown field; `[plugins.comments]` is the sole activation source |
 | missing/absolute/traversal/symlink-escaping plugin `configPath` | reject before site or service startup |
 | literal password or non-secret `COMMENTS_*` key in `secrets.env` | reject without exposing the value |
 | page/index/experiment/404/inline Terminal output | no comments extension |
 | partial SMTP configuration | fail with `SmtpConfigurationError` before connection |
 | unsafe host, sender, recipient, origin, port, or boolean mode | reject configuration without logging secrets |
 | runtime outbox path contains traversal, backslash, whitespace, control, or empty interior segment | reject the comments namespace before service startup |
-| file and legacy/named environment values configure the same field | reject the namespace; explicit environment overrides apply only at the service boundary |
+| file and explicit environment values configure the same field | reject the namespace; explicit environment overrides apply only at the service boundary |
 | SMTP environment value has leading/trailing whitespace or controls | reject the raw value before normalization |
 | missing outbox | return an empty delivery summary |
 | malformed outbox/state record | fail closed with private file context |

@@ -43,14 +43,16 @@ test('compiled runtime loader resolves the shared plugin decoder from the reposi
   await access(pluginPath);
 });
 
-test('comments runtime config reads the plugin namespace and resolves only the named secret', async () => {
+test('comments runtime config reads the canonical plugin file and resolves only the named secret', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-config-'));
   const configPath = path.join(directory, 'site.toml');
   await writeFile(configPath, [
-    '[comments]',
-    'enabled = false',
+    '[public]',
+    'writeOrigin = "https://comments.example.test"',
+    'exportPath = "artifacts/comments/comments.public.v1.json"',
+    'consentVersion = "m51-v1"',
     '',
-    '[comments.smtp]',
+    '[runtime.smtp]',
     'host = "smtp.example.test"',
     'port = 465',
     'secure = true',
@@ -59,7 +61,7 @@ test('comments runtime config reads the plugin namespace and resolves only the n
     'passwordEnv = "COMMENTS_TEST_PASSWORD"',
     'publicOrigin = "https://comments.example.test"',
     '',
-    '[comments.runtime]',
+    '[runtime]',
     'outboxPath = "/private/comments/outbox.jsonl"',
     'outboxStatePath = "/private/comments/outbox.state.json"',
     ''
@@ -87,7 +89,7 @@ test('environment values override non-secret values from the unified config', as
   const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-config-'));
   const configPath = path.join(directory, 'site.toml');
   await writeFile(configPath, [
-    '[comments.smtp]',
+    '[runtime.smtp]',
     'host = "smtp.file.example.test"',
     'port = 465',
     'secure = true',
@@ -115,11 +117,43 @@ test('environment values override non-secret values from the unified config', as
   }
 });
 
+test('comments runtime config rejects legacy namespaces at site and explicit config boundaries', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-legacy-config-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+
+  const siteConfigPath = path.join(directory, 'site.toml');
+  const mixedSiteConfigPath = path.join(directory, 'mixed-site.toml');
+  const explicitConfigPath = path.join(directory, 'plugin.toml');
+  await writeFile(siteConfigPath, '[comments]\nenabled = false\n');
+  await writeFile(mixedSiteConfigPath, [
+    '[comments]',
+    'enabled = false',
+    '',
+    '[plugins.comments]',
+    'enabled = false',
+    'configPath = "config/plugins/comments/config.toml"',
+    ''
+  ].join('\n'));
+  await writeFile(explicitConfigPath, '[comments]\nenabled = false\n');
+
+  const assertUnsupported = (options: NodeJS.ProcessEnv) => {
+    assert.throws(() => loadCommentsRuntimeConfig(options), (error: unknown) => {
+      assert.match(error instanceof Error ? error.message : String(error), /unsupported key "comments"/u);
+      assert.doesNotMatch(error instanceof Error ? error.message : String(error), /legacy \[comments\]|cannot be combined|two activation/u);
+      return true;
+    });
+  };
+
+  assertUnsupported({ COMMENTS_SITE_CONFIG_PATH: siteConfigPath });
+  assertUnsupported({ COMMENTS_SITE_CONFIG_PATH: mixedSiteConfigPath });
+  assertUnsupported({ COMMENTS_CONFIG_PATH: explicitConfigPath });
+});
+
 test('runtime outbox paths reject traversal and empty path segments', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'firefly-comments-config-'));
   const configPath = path.join(directory, 'site.toml');
   await writeFile(configPath, [
-    '[comments.runtime]',
+    '[runtime]',
     'outboxPath = "../outside/notifications.jsonl"',
     ''
   ].join('\n'));

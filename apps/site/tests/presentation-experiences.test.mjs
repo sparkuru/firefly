@@ -4,8 +4,11 @@ import { semanticPresentation } from '@firefly/presentation-semantic';
 import { terminalPresentation } from '@firefly/presentation-terminal';
 import { PresentationRegistry } from '@firefly/x-core';
 import {
+  createDocumentNavigatorRegistry,
   createPresentationExperienceRegistry,
+  DOCUMENT_NAVIGATORS,
   PRESENTATION_EXPERIENCES,
+  resolveDocumentNavigator,
   resolvePresentationExperience
 } from '../src/lib/presentation-experiences.ts';
 import {
@@ -15,10 +18,11 @@ import {
 
 test('presentation experiences keep adapter registration and document dispatch together', () => {
   assert.deepEqual(
-    PRESENTATION_EXPERIENCES.map(({ id, adapter, documentKind, documentNavigator }) => ({
+    PRESENTATION_EXPERIENCES.map(({ id, adapter, documentKind, documentNavigatorId, documentNavigator }) => ({
       id,
       adapterId: adapter.id,
       documentKind,
+      documentNavigatorId,
       documentNavigator
     })),
     [
@@ -26,12 +30,14 @@ test('presentation experiences keep adapter registration and document dispatch t
         id: 'firefly',
         adapterId: 'firefly',
         documentKind: 'terminal',
+        documentNavigatorId: 'document-navigator',
         documentNavigator: { kind: 'document-navigator', entry: 'always' }
       },
       {
         id: 'semantic',
         adapterId: 'semantic',
         documentKind: 'semantic',
+        documentNavigatorId: 'document-navigator',
         documentNavigator: { kind: 'document-navigator', entry: 'fragment' }
       }
     ]
@@ -60,6 +66,7 @@ test('experience creation rejects adapter identity drift and duplicate IDs', () 
     id: 'firefly',
     adapter: terminalPresentation,
     documentKind: 'terminal',
+    documentNavigatorId: 'document-navigator',
     documentNavigator: profile
   };
   assert.throws(
@@ -88,5 +95,28 @@ test('document navigator initial state is derived from the pure profile', () => 
   assert.throws(
     () => navigationInitialState({ kind: 'wrong', entry: 'always' }),
     /document-navigator/iu
+  );
+});
+
+test('navigator registry validates identities independently from presentation profiles', () => {
+  const alternate = {
+    id: 'alternate-navigator',
+    kind: 'document-navigator',
+    assets: {
+      runtime: 'alternate-navigator',
+      semanticStyles: 'alternate-navigator-semantic',
+      terminalStyles: 'alternate-navigator-terminal'
+    }
+  };
+  const registry = createDocumentNavigatorRegistry([alternate]);
+  assert.equal(resolveDocumentNavigator('alternate-navigator', registry).id, 'alternate-navigator');
+  assert.equal(DOCUMENT_NAVIGATORS[0].id, 'document-navigator');
+  assert.throws(
+    () => createDocumentNavigatorRegistry([alternate, alternate]),
+    /Duplicate document navigator/iu
+  );
+  assert.throws(
+    () => createDocumentNavigatorRegistry([{ ...alternate, id: 'unsafe ID' }]),
+    /safe ID/iu
   );
 });

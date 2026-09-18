@@ -21,8 +21,8 @@ readonly -a SHARED_FIELDS=(
 	firefly
 	draft
 	presentation
+	contentTheme
 	aliases
-	source
 	access
 )
 readonly -a POST_REQUIRED_FIELDS=(title description date draft layout)

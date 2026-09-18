@@ -1,9 +1,13 @@
 ---
 import { formatResourcePath } from '@firefly/presentation-terminal/runtime';
 import type { CanonicalDocument } from '../lib/content';
+import {
+  resolveDocumentNavigation,
+  type DocumentNavigationComposition
+} from '../lib/document-navigation-composition.ts';
 import { resolvePresentationExperience } from '../lib/presentation-experiences';
 import { SITE_CONFIG } from '../lib/site-config.mjs';
-import { resolveArticleThemeId } from '../lib/article-theme.mjs';
+import { resolveContentThemeId } from '../lib/content-theme.mjs';
 import type { renderDocument } from '../lib/render-document';
 import { commentsPresentationFromPostExtensions } from '../lib/site-plugins';
 import SemanticDocument from './SemanticDocument.astro';
@@ -17,16 +21,18 @@ interface Props {
   canonical: CanonicalDocument;
   document: RenderedDocument;
   pluginExtensions?: readonly unknown[];
+  documentNavigation?: DocumentNavigationComposition;
 }
 
-const { canonical, document, pluginExtensions = [] } = Astro.props;
+const { canonical, document, pluginExtensions = [], documentNavigation: providedDocumentNavigation } = Astro.props;
 const commentsExtension = commentsPresentationFromPostExtensions(pluginExtensions);
 const comments = commentsExtension?.comments ?? [];
 const commentsPostPath = commentsExtension?.postPath ?? null;
 const { entry } = canonical;
 const presentation = document.metadata.presentation;
 const experience = resolvePresentationExperience(presentation);
-const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
+const documentNavigation = providedDocumentNavigation ?? resolveDocumentNavigation(presentation, SITE_CONFIG);
+const contentTheme = resolveContentThemeId(entry.data.contentTheme);
 ---
 
 {
@@ -43,7 +49,7 @@ const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
       date={entry.data.date}
       updated={entry.data.updated}
     >
-      <SemanticDocument navigatorProfile={experience.documentNavigator} articleTheme={articleTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
+      <SemanticDocument documentNavigation={documentNavigation} contentTheme={contentTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
     </DocumentLayout>
   ) : (
     <TerminalLayout
@@ -59,7 +65,7 @@ const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
       date={entry.data.date}
       updated={entry.data.updated}
     >
-      <TerminalDocument navigatorProfile={experience.documentNavigator} articleTheme={articleTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
+      <TerminalDocument documentNavigation={documentNavigation} contentTheme={contentTheme} canonical={canonical} document={document} comments={comments} commentsPostPath={commentsPostPath} commentsConfig={SITE_CONFIG.comments} commentsEnabled={SITE_CONFIG.plugins.comments.enabled} />
     </TerminalLayout>
   )
 }

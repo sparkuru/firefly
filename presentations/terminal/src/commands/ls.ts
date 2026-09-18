@@ -137,7 +137,7 @@ export function executeLs(context: ProcessContext, args: ParsedCommandArguments)
       : `~/blog${node.path}`;
     return successResult([
       `${node.experiment.id}/ — ${node.experiment.title}`,
-      `Use "open ${operand}" to enter this experiment.`
+      `Use "launch ${operand}" to enter this experiment.`
     ]);
   }
   const listing = node?.kind === 'directory' ? context.fs.list(path) : undefined;

@@ -691,7 +691,7 @@ test('document navigator never treats a user-replaced visual Range as its owned 
   expect(await page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(false);
 });
 
-test('vim resolves a closed canonical destination and :q exits directly to home', async ({ page }) => {
+test('open resolves a canonical destination and :q exits directly to home', async ({ page }) => {
   await page.goto('/');
   const workflowEntry = page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/llm-workflow-with-trellis/"]');
   const workflowRelativePath = await workflowEntry.getAttribute('data-terminal-entry-relative-path');
@@ -699,7 +699,7 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
     throw new Error('Workflow document entry does not expose a relative path.');
   }
   const input = page.getByRole('textbox', { name: terminalPromptName() });
-  await input.fill(`vim ./${workflowRelativePath}`);
+  await input.fill(`open ./${workflowRelativePath}`);
   await input.press('Enter');
   await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#document-navigator$/u);
   const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
@@ -713,10 +713,10 @@ test('vim resolves a closed canonical destination and :q exits directly to home'
   await expect(page).toHaveURL(/\/$/u);
 });
 
-test('vim opens a Terminal document navigator with the unified presentation', async ({ page }) => {
+test('open opens a Terminal document navigator with the unified presentation', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
-  await input.fill('vim ~/blog/pages/about.md');
+  await input.fill('open ~/blog/pages/about.md');
   await input.press('Enter');
 
   await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
@@ -778,10 +778,153 @@ test('direct canonical permalinks keep document navigator focus and key ownershi
   await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
 });
 
+const semanticDocumentPath = '/posts/infra/connect-to-windows-via-terminal/';
+const semanticDocumentName = /Document navigator for Connect to windows via terminal/u;
+
+test('semantic document navigation stays inactive until its visible native entry is used', async ({ page }) => {
+  await page.goto(semanticDocumentPath);
+
+  const article = page.locator('.semantic-document');
+  const entry = page.getByRole('link', { name: 'Read document', exact: true });
+  const region = page.getByRole('region', { name: semanticDocumentName });
+  const status = page.locator('[data-document-navigator-status]');
+
+  await expect(article).toHaveAttribute('data-document-navigator-entry', 'fragment');
+  await expect(entry).toHaveAttribute('href', '#document-navigator');
+  await expect(entry).toBeVisible();
+  await expect(region).toHaveAttribute('tabindex', '-1');
+  await expect(region).not.toBeFocused();
+  await expect(region).not.toHaveAttribute('aria-activedescendant');
+  await expect(status).toBeHidden();
+  await expect(page.locator('[data-navigation-active]')).toHaveCount(0);
+  await expect(article.getByRole('heading', { level: 1, name: 'Connect to windows via terminal' })).toBeVisible();
+  await expect(article.locator('.document-outline')).toBeVisible();
+});
+
+test('semantic document entry replaces only the fragment, preserves viewport/history, and is repeat-safe', async ({ page }) => {
+  await page.goto(`${semanticDocumentPath}?source=entry`);
+  const entry = page.getByRole('link', { name: 'Read document', exact: true });
+  const region = page.getByRole('region', { name: semanticDocumentName });
+  const status = page.locator('[data-document-navigator-status]');
+  const before = await page.evaluate(() => ({
+    historyLength: window.history.length,
+    historyState: window.history.state,
+    scrollY: window.scrollY
+  }));
+
+  await page.evaluate(() => window.scrollTo(0, 240));
+  const scrollBeforeEntry = await page.evaluate(() => window.scrollY);
+  await entry.evaluate((element) => (element as HTMLAnchorElement).click());
+
+  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/\?source=entry#document-navigator$/u);
+  await expect(region).toBeFocused();
+  await expect(status).toBeVisible();
+  await expect(page.locator('[data-navigation-exit-control]')).toBeVisible();
+  await expect(region).toHaveAttribute('tabindex', '0');
+  const afterEntry = await page.evaluate(() => ({
+    historyLength: window.history.length,
+    historyState: window.history.state,
+    scrollY: window.scrollY
+  }));
+  expect(afterEntry.historyLength).toBe(before.historyLength);
+  expect(afterEntry.historyState).toEqual(before.historyState);
+  expect(afterEntry.scrollY).toBe(scrollBeforeEntry);
+
+  const position = page.locator('[data-navigation-position]');
+  await region.press('j');
+  const positionAfterMove = await position.textContent();
+  await entry.evaluate((element) => (element as HTMLAnchorElement).click());
+  await expect(region).toBeFocused();
+  await expect(position).toHaveText(positionAfterMove ?? '');
+  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/\?source=entry#document-navigator$/u);
+  expect(await page.evaluate(() => window.history.length)).toBe(before.historyLength);
+});
+
+test('semantic local exit restores the remembered heading fragment without scrolling or creating history', async ({ page }) => {
+  await page.goto(`${semanticDocumentPath}#openssh-server`);
+  await expect(page.locator('#openssh-server')).toBeVisible();
+  await page.evaluate(() => (document.querySelector('[data-document-navigator-entry-control]') as HTMLAnchorElement).click());
+  const region = page.getByRole('region', { name: semanticDocumentName });
+  await expect(region).toBeFocused();
+  const beforeExit = await page.evaluate(() => ({
+    historyLength: window.history.length,
+    scrollY: window.scrollY
+  }));
+
+  await page.getByRole('button', { name: 'Exit navigation', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/#openssh-server$/u);
+  await expect(page.getByRole('link', { name: 'Read document', exact: true })).toBeFocused();
+  await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
+  await expect(region).toHaveAttribute('tabindex', '-1');
+  await expect(page.locator('[data-navigation-active]')).toHaveCount(0);
+  const afterExit = await page.evaluate(() => ({
+    historyLength: window.history.length,
+    scrollY: window.scrollY
+  }));
+  expect(afterExit.historyLength).toBe(beforeExit.historyLength);
+  expect(afterExit.scrollY).toBe(beforeExit.scrollY);
+});
+
+test('semantic direct fragment exit clears the fragment and semantic q stays local', async ({ page }) => {
+  await page.goto(`${semanticDocumentPath}#document-navigator`);
+  const region = page.getByRole('region', { name: semanticDocumentName });
+  await expect(region).toBeFocused();
+  await region.press(':');
+  const command = page.getByRole('textbox', { name: 'Navigation command' });
+  await command.fill('q');
+  await command.press('Enter');
+
+  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/$/u);
+  await expect(page.getByRole('link', { name: 'Read document', exact: true })).toBeFocused();
+  await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
+});
+
+test('semantic browser fragment changes synchronize without stealing ordinary heading focus', async ({ page }) => {
+  await page.goto(`${semanticDocumentPath}#document-navigator`);
+  const region = page.getByRole('region', { name: semanticDocumentName });
+  await expect(region).toBeFocused();
+  const headingLink = page.getByRole('link', { name: 'OpenSSH Server', exact: true }).first();
+  await headingLink.click();
+
+  await expect(page).toHaveURL(/#openssh-server$/u);
+  await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
+  expect(await page.evaluate(() => document.activeElement?.matches('[data-document-navigator-entry-control], [data-document-navigator-region], [data-navigation-exit-control]') ?? false)).toBe(false);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/#document-navigator$/u);
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  await expect(region).toBeFocused();
+
+  await page.goForward();
+  await expect(page).toHaveURL(/#openssh-server$/u);
+  await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Read document', exact: true })).not.toBeFocused();
+});
+
+test('semantic entry leaves modified clicks native', async ({ page }) => {
+  await page.goto(semanticDocumentPath);
+  const entry = page.locator('[data-document-navigator-entry-control]');
+  const result = await entry.evaluate((element) => {
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: true
+    });
+    const allowed = element.dispatchEvent(event);
+    return { allowed, defaultPrevented: event.defaultPrevented, hash: window.location.hash };
+  });
+  expect(result.allowed).toBe(true);
+  expect(result.defaultPrevented).toBe(false);
+  expect(result.hash).toBe('');
+  await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
+});
+
 test('document navigator entry keeps native Back and Forward route boundaries', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
-  await input.fill('vim ~/blog/pages/about.md');
+  await input.fill('open ~/blog/pages/about.md');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
 

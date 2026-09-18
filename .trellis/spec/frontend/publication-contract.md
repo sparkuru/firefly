@@ -194,7 +194,7 @@ commands, and only then assembles the release.
   do not request or preload Experiment assets.
 - `decodeTerminalExperiments()` accepts only exact `{ id, title, href }` records
   whose href is `/lab/<id>/`. Terminal path operands are cwd-relative or use the
-  explicit `~/blog` absolute root. `open <path>` returns a navigation effect only
+  explicit `~/blog` absolute root. `launch <path>` returns an experiment navigation effect only
   after that resolver identifies an exact decoded experiment entry. The DOM
   controller navigates to that effect's href and never constructs a URL from raw
   command input.
@@ -266,7 +266,7 @@ commands, and only then assembles the release.
   indexes and `/lab/`; reader JS on canonical document routes only,
   with semantic documents activating it only for the explicit
   `#document-navigator` fragment; no Experiment asset edge on ordinary pages; lab
-  recovery; nested tree/cat/vim; all existing recovery/content behavior.
+  recovery; nested tree/cat/open; all existing recovery/content behavior.
 - NERV and publication Playwright: mounted assets, entry, distinct 404, native
   return, desktop/mobile overflow, and reduced motion. Serve the already built
   artifact; do not substitute `astro dev` for publication evidence.
@@ -289,7 +289,7 @@ await requireRealContained(manifest.directory, sourceOutput, `${manifest.id} out
 
 ```ts
 // Wrong: raw command text becomes a destination.
-window.location.assign(`/lab/${input.slice('open lab/'.length)}/`);
+window.location.assign(`/lab/${input.slice('launch lab/'.length)}/`);
 
 // Correct: the pure engine resolves one decoded catalog item first.
 if (effect.kind === 'navigation') window.location.assign(effect.experiment.href);

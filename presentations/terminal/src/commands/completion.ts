@@ -299,7 +299,7 @@ export function completeDirectory(context: CompletionContext, operand: string): 
   );
 }
 
-export function completeOpen(context: CompletionContext, operand: string): CompletionResult {
+export function completeLaunch(context: CompletionContext, operand: string): CompletionResult {
   return completeVirtualPaths(operand, completionPaths(context).experiments, context.invokedName, context.cwd);
 }
 

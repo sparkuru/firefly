@@ -102,7 +102,7 @@ test('empty and existing front matter are normalized without losing authored fie
     '  - retained',
     'draft: true',
     'layout: post',
-    'articleTheme: default',
+    'contentTheme: default',
     'firefly:',
     '  markers:',
     '    - featured',
@@ -116,7 +116,7 @@ test('empty and existing front matter are normalized without losing authored fie
   assert.equal(existingOutput.metadata.title, 'Existing title');
   assert.deepEqual(existingOutput.metadata.tags, ['retained']);
   assert.deepEqual(existingOutput.metadata.firefly, { markers: ['featured'] });
-  assert.equal(existingOutput.metadata.articleTheme, 'default');
+  assert.equal(existingOutput.metadata.contentTheme, 'default');
   assert.equal(existingOutput.body.toString('utf8'), '\nExisting body.\n');
 });
 
@@ -142,7 +142,7 @@ test('write-back is explicit, preview does not write, and save-as refuses an exi
   assert.equal(updated.body.toString('utf8'), '# Existing\n');
 });
 
-test('schema, source-link, and output-containment failures do not write a destination', async (t) => {
+test('schema and output-containment failures do not write a destination', async (t) => {
   const { root, blog } = await blogFixture(t);
   const source = path.join(root, 'bad.md');
   await writeFile(source, '---\ntitle: valid\nunsupported: true\n---\nbody\n');
@@ -169,4 +169,34 @@ test('schema, source-link, and output-containment failures do not write a destin
   const escape = await runCli([valid, '--blog-root', blog, '--output', '../outside.md']);
   assert.notEqual(escape.status, 0);
   assert.match(escape.stderr, /output|unsafe|root/iu);
+});
+
+test('retired articleTheme and source front matter fail as ordinary unknown fields without writing', async (t) => {
+  const { root, blog } = await blogFixture(t);
+  for (const [name, field, fieldLine] of [
+    ['legacy-theme', 'articleTheme', 'articleTheme: paper'],
+    ['legacy-source', 'source', 'source: legacy/file.md#section']
+  ]) {
+    const source = path.join(root, `${name}.md`);
+    const original = [
+      '---',
+      'title: Legacy metadata',
+      'date: 2026-01-01',
+      'description: Legacy metadata fixture',
+      'draft: true',
+      'layout: post',
+      fieldLine,
+      '---',
+      '',
+      'Legacy body.\n'
+    ].join('\n');
+    await writeFile(source, original);
+
+    const result = await runCli([source, '--blog-root', blog]);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, new RegExp(`${field}|unknown`, 'iu'));
+    assert.doesNotMatch(result.stderr, /migrat|no longer supported/iu);
+    assert.equal(await readFile(source, 'utf8'), original);
+    await assert.rejects(readFile(path.join(blog, 'posts', `${name}.md`)));
+  }
 });

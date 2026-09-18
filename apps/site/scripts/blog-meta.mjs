@@ -36,9 +36,8 @@ const outputKeys = Object.freeze([
   'draft',
   'layout',
   'presentation',
-  'articleTheme',
+  'contentTheme',
   'aliases',
-  'source',
   'access'
 ]);
 const unsafePathSegment = /[\\/?#%:\u0000-\u001f\u007f]/u;

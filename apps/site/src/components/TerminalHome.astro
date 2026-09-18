@@ -23,6 +23,7 @@ interface HomeDocument {
 interface Props {
   documents: readonly HomeDocument[];
   experiments: readonly TerminalExperiment[];
+  documentNavigationLookup: string;
 }
 
 interface FriendLink {
@@ -31,7 +32,7 @@ interface FriendLink {
   readonly url: string;
 }
 
-const { documents, experiments } = Astro.props;
+const { documents, experiments, documentNavigationLookup } = Astro.props;
 const identity = terminalIdentityFromConfig();
 const prompt = formatTerminalPrompt(identity, { cwd: identity.workingDirectory });
 const encodedAbout = encodeURIComponent(identity.about);
@@ -71,6 +72,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
   data-terminal-identity-cwd={identity.workingDirectory}
   data-terminal-identity-about={encodedAbout}
   data-terminal-identity-prompt-marker={identity.promptMarker}
+  data-terminal-document-navigation={documentNavigationLookup}
   data-terminal-boot-duration={TERMINAL_HOME_STARTUP_DURATION_MS}
 >
   <script is:inline data-terminal-startup-marker>

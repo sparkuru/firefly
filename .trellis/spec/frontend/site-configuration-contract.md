@@ -60,6 +60,10 @@ robots = "index, follow"
 twitterCard = "summary"
 # image = "/social-card.png"
 
+# Optional site-owned document-navigation composition overrides.
+# [documentNavigation.semantic]
+# navigator = "none"
+
 [plugins.comments]
 enabled = false
 configPath = "config/plugins/comments/config.toml"
@@ -86,6 +90,15 @@ configPath = "config/plugins/comments/config.toml"
   URLs without credentials, fragments, whitespace, or controls, and must be
   unique.
   The omitted and empty forms both normalize to a deeply frozen empty list.
+- `documentNavigation` is an optional strict table keyed only by registered
+  presentation IDs. Each entry contains exactly one trimmed `navigator` ID;
+  omission preserves the enabled Firefly/`always` and semantic/`fragment`
+  defaults, while `navigator = "none"` is an explicit disabled composition.
+  Navigator IDs are resolved by the site-owned registry before document
+  rendering; unknown presentations, unknown navigators, malformed entries, and
+  extra keys fail early. This setting controls navigator composition only and
+  never enters X Core metadata, content front matter, routes, comments, or
+  plugin payloads.
 - TOML optional values use omission rather than a null literal: omitted
   `site.url`, `site.author`, or `seo.image` normalize to `null`.
 - Parsed values are normalized where specified and deeply frozen before they
@@ -108,8 +121,10 @@ configPath = "config/plugins/comments/config.toml"
   `config/plugins/comments/config.toml` contains `[public]` and `[runtime]`;
   the site parser projects only `writeOrigin`, `exportPath`, and
   `consentVersion` into `config.comments`. The private service reads the full
-  validated runtime projection. A legacy `[comments]` namespace is accepted
-  only during the migration window and cannot coexist with `[plugins.comments]`.
+  validated runtime projection. A top-level `[comments]` namespace is
+  unsupported and fails strict validation as an unknown field. The core site
+  table is validated before the comments projection, so an old top-level
+  namespace cannot be masked by a missing or malformed canonical plugin file.
 - `config/plugins/comments/config.toml.example` and
   `config/plugins/comments/secrets.env.example` are tracked templates. The
   owner-local `config.toml` is non-secret plugin configuration and is ignored;
@@ -186,12 +201,12 @@ the framework-neutral fallback for package consumers and tests.
   `article:author` when `site.author` is configured.
 
 Supported strict optional Markdown front matter is `htmlTitle`, `canonical`,
-`seoImage`, `noindex`, and the site-owned `articleTheme` ID. Omitted
-`articleTheme` defaults to the registered ID `default`; the exact registered
+`seoImage`, `noindex`, and the site-owned `contentTheme` ID. Omitted
+`contentTheme` defaults to the registered ID `default`; the exact registered
 IDs are `default` and `paper`. Explicit `default` and `paper` are accepted and
 every other or malformed value is rejected by the shared post/page schema. The
 theme is a content-boundary styling seam only: it is emitted as
-`data-article-theme="<id>"` on the existing `[data-article-content]` root,
+`data-content-theme="<id>"` on the existing `[data-article-content]` root,
 never as a stylesheet URL, arbitrary selector, class, or website-chrome
 setting. The shipped `paper` variant provides a warm paper reading surface,
 serif editorial text, monospace code, muted brown text, and restrained
@@ -199,7 +214,7 @@ terracotta/ochre accents inside that root only; there is no picker or runtime
 switcher. Unknown keys remain schema errors. These fields do not change route
 ownership or draft/private filtering.
 
-#### Article theme registry contract
+#### content theme registry contract
 
 ##### 1. Scope / Trigger
 
@@ -210,25 +225,25 @@ ownership or draft/private filtering.
 
 ##### 2. Signatures
 
-`apps/site/src/lib/article-theme.mjs` owns these interfaces:
+`apps/site/src/lib/content-theme.mjs` owns these interfaces:
 
 ```js
-DEFAULT_ARTICLE_THEME_ID: 'default'
-ARTICLE_THEME_IDS: readonly ArticleThemeId[]
-isArticleThemeId(value: unknown): value is ArticleThemeId
-resolveArticleThemeId(value: unknown): ArticleThemeId
+DEFAULT_CONTENT_THEME_ID: 'default'
+CONTENT_THEME_IDS: readonly ContentThemeId[]
+isContentThemeId(value: unknown): value is ContentThemeId
+resolveContentThemeId(value: unknown): ContentThemeId
 ```
 
-The post and page schemas expose `articleTheme?: ArticleThemeId`; omitted
-values are normalized to `DEFAULT_ARTICLE_THEME_ID`. The current registry is
+The post and page schemas expose `contentTheme?: ContentThemeId`; omitted
+values are normalized to `DEFAULT_CONTENT_THEME_ID`. The current registry is
 `['default', 'paper']` in that order.
 
 ##### 3. Contracts
 
-- Author input: optional front matter `articleTheme`, matching an exact ID in
+- Author input: optional front matter `contentTheme`, matching an exact ID in
   the frozen site registry.
 - Render output: the normalized ID is passed independently of `presentation`
-  and emitted as `data-article-theme="<id>"` only on the existing
+  and emitted as `data-content-theme="<id>"` only on the existing
   `[data-article-content]` root.
 - Forbidden outputs: no theme ID becomes a CSS selector, class name,
   stylesheet URL, executable configuration, website chrome setting, X Core
@@ -243,18 +258,19 @@ values are normalized to `DEFAULT_ARTICLE_THEME_ID`. The current registry is
 | --- | --- |
 | field omitted or explicitly `default` | normalize to `default` |
 | exact registered ID | accept and emit that ID at the content boundary |
+| legacy `articleTheme`, alone or alongside `contentTheme` | reject before rendering as an ordinary unknown field |
 | unknown, empty, whitespace-padded, traversal-like, URL-like, or selector-like string | schema/resolver failure before rendering |
 | non-string, `null`, array, object, boolean, or number | schema/resolver failure before rendering |
 | attempted dynamic stylesheet, selector, or arbitrary class derived from input | forbidden; no dynamic asset or chrome styling is emitted |
 
 ##### 5. Good / Base / Bad Cases
 
-- Good: `articleTheme: default` or `articleTheme: paper` is accepted and
+- Good: `contentTheme: default` or `contentTheme: paper` is accepted and
   appears once on the content root in both document presentations.
-- Base: omitting `articleTheme` for legacy content is accepted and renders as
+- Base: omitting `contentTheme` for legacy content is accepted and renders as
   the same `default` output.
-- Bad: `articleTheme: ../default` or
-  `articleTheme: https://example.test/theme.css` fails closed and never reaches
+- Bad: `contentTheme: ../default` or
+  `contentTheme: https://example.test/theme.css` fails closed and never reaches
   the renderer.
 
 ##### 6. Tests Required
@@ -264,12 +280,12 @@ values are normalized to `DEFAULT_ARTICLE_THEME_ID`. The current registry is
   behavior.
 - Static source/build tests assert that the paper CSS is present in the
   semantic compiled stylesheet and Terminal inline style, with every rule
-  rooted at `[data-article-content][data-article-theme='paper']` and no
+  rooted at `[data-article-content][data-content-theme='paper']` and no
   website-chrome selectors.
 - Static-output tests assert exactly one theme attribute on semantic and
   Terminal content roots and none on home, lab, 404, comments, or other
   website chrome.
-- X Core context/integration tests assert that `articleTheme` is absent from
+- X Core context/integration tests assert that `contentTheme` is absent from
   context and exact metadata while presentation, headings, node IDs, and
   sanitizer behavior remain unchanged.
 - The external workspace build must pass through `./sam` with no authored
@@ -280,15 +296,15 @@ values are normalized to `DEFAULT_ARTICLE_THEME_ID`. The current registry is
 Wrong:
 
 ```js
-const stylesheet = `/themes/${frontmatter.articleTheme}.css`;
+const stylesheet = `/themes/${frontmatter.contentTheme}.css`;
 ```
 
 Correct:
 
 ```js
-const articleTheme = resolveArticleThemeId(entry.data.articleTheme);
-// Pass articleTheme to the document component; scope styling to
-// [data-article-content][data-article-theme="default"] in site-owned CSS.
+const contentTheme = resolveContentThemeId(entry.data.contentTheme);
+// Pass contentTheme to the document component; scope styling to
+// [data-article-content][data-content-theme="default"] in site-owned CSS.
 ```
 
 #### Public discovery files

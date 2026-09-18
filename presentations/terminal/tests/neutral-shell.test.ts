@@ -6,7 +6,7 @@ import { executeFind } from '../src/commands/find.js';
 import { executeGrep } from '../src/commands/grep.js';
 import { executeLs } from '../src/commands/ls.js';
 import { executeTree } from '../src/commands/tree.js';
-import { executeOpen, executeVim } from '../src/commands/session.js';
+import { executeLaunch, executeOpen } from '../src/commands/session.js';
 import { commandArguments } from '../src/commands/arguments.js';
 import { GREP_COMMAND_SPEC } from '../src/commands/grep.js';
 import { createCommandSpecRegistry, NEUTRAL_COMMAND_REGISTRY } from '../src/commands/registry.js';
@@ -454,15 +454,15 @@ test('root resource mounts resolve for reads, search, and navigation without cha
     assert.deepEqual(grep.stdout.lines, ['~/blog/pages/about.md:About page'], operand);
     const wholeWordGrep = executeGrep(root, args(['about', operand], { 'ignore-case': true, 'word-regexp': true }));
     assert.deepEqual(wholeWordGrep.value?.kind === 'grep-report' ? wholeWordGrep.value.report.matches[0]?.ranges : [], [[0, 5]], operand);
-    assert.deepEqual(executeVim(root, args([operand])).controls, [{ kind: 'open-document', path: '/pages/about.md' }], operand);
+    assert.deepEqual(executeOpen(root, args([operand])).controls, [{ kind: 'open-document', path: '/pages/about.md' }], operand);
   }
   const postGrep = executeGrep(root, args(['Alpha', './posts/characters/alpha.md']));
   assert.deepEqual(postGrep.stdout.lines, ['~/blog/posts/characters/alpha.md:Alpha record']);
-  assert.deepEqual(executeVim(root, args(['./posts/characters/alpha.md'])).controls, [{ kind: 'open-document', path: '/posts/characters/alpha.md' }]);
+  assert.deepEqual(executeOpen(root, args(['./posts/characters/alpha.md'])).controls, [{ kind: 'open-document', path: '/posts/characters/alpha.md' }]);
 
   for (const operand of ['lab/nerv', './lab/nerv']) {
     const experiment = executeCat(root, args([operand]));
-    assert.deepEqual(experiment.stderr.lines, [`Cannot read rshell experiment "${operand}" as a document. Try "open ${operand}".`], operand);
+    assert.deepEqual(experiment.stderr.lines, [`Cannot read rshell experiment "${operand}" as a document. Try "launch ${operand}".`], operand);
   }
   const directory = executeCat(root, args(['pages']));
   assert.deepEqual(directory.stderr.lines, ['Cannot read rshell directory "pages" as a document. Try "ls pages".']);
@@ -498,13 +498,13 @@ test('grep and navigation use independent value/control channels', () => {
   const report = executeGrep(context({ stdin: textStream(['nahida keeps the archive']) }), args(['nahida'], { 'line-number': true }));
   assert.equal(report.value?.kind, 'grep-report');
   assert.deepEqual(report.stdout.lines, ['1:nahida keeps the archive']);
-  assert.deepEqual(executeOpen(context({ cwd: '/' }), args(['lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
-  assert.deepEqual(executeOpen(context({ cwd: '/lab' }), args(['nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
-  assert.deepEqual(executeOpen(context({ cwd: '/lab' }), args(['./nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
-  assert.deepEqual(executeOpen(context({ cwd: '/lab' }), args(['~/blog/lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
-  assert.equal(executeOpen(context({ cwd: '/lab' }), args(['lab/nerv'])).status, 1);
-  assert.equal(executeOpen(context({ cwd: '/lab' }), args(['/lab/nerv'])).status, 1);
-  assert.deepEqual(executeVim(context(), args(['~/blog/pages/about.md'])).controls, [{ kind: 'open-document', path: '/pages/about.md' }]);
+  assert.deepEqual(executeLaunch(context({ cwd: '/' }), args(['lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeLaunch(context({ cwd: '/lab' }), args(['nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeLaunch(context({ cwd: '/lab' }), args(['./nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.deepEqual(executeLaunch(context({ cwd: '/lab' }), args(['~/blog/lab/nerv'])).controls, [{ kind: 'open-experiment', id: 'nerv' }]);
+  assert.equal(executeLaunch(context({ cwd: '/lab' }), args(['lab/nerv'])).status, 1);
+  assert.equal(executeLaunch(context({ cwd: '/lab' }), args(['/lab/nerv'])).status, 1);
+  assert.deepEqual(executeOpen(context(), args(['~/blog/pages/about.md'])).controls, [{ kind: 'open-document', path: '/pages/about.md' }]);
 });
 
 test('named grep locations are directly reusable with cat while stdin stays line-oriented', () => {
@@ -535,7 +535,7 @@ test('neutral runner wires stdout only and keeps final values and controls separ
   assert.equal(findPiped.status, 0);
   assert.deepEqual(findPiped.stdout.lines, ['Alpha — 2026-05-28 — ~/blog/posts/characters/alpha.md']);
 
-  const opened = runRshellInput('open ~/blog/lab/nerv', runnerOptions());
+  const opened = runRshellInput('launch ~/blog/lab/nerv', runnerOptions());
   assert.deepEqual(opened.controls, [{ kind: 'open-experiment', id: 'nerv' }]);
   assert.deepEqual(opened.stdout.lines, []);
 

@@ -6,7 +6,6 @@ import { parse as parseToml } from 'smol-toml';
 import {
   parseCommentsActivation,
   parseCommentsConfig,
-  parseCommentsNamespace,
   resolveCommentsConfigPath
 } from '../../../../plugins/comments/config.mjs';
 
@@ -64,6 +63,7 @@ const unsafeSingleLineCharacters = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/u;
 const unsafeBrowserPayloadCharacters = /[<>"'`]/u;
 const safePathSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
 const safePromptToken = /^[^\\/?#%\s\u0000-\u001f\u007f]+$/u;
+const safeIdentifier = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 const defaultTerminalPromptMarker = '@';
 
 function safeText(message, { multiline = false, browserPayload = false } = {}) {
@@ -189,10 +189,27 @@ const seoSchema = z.object({
   image
 }).strict();
 
+const documentNavigationOverride = z.object({
+  navigator: z.string().trim().min(1).regex(safeIdentifier, 'documentNavigation.<presentation>.navigator must be a lowercase kebab-case ID')
+}).strict();
+
+const documentNavigation = z.record(z.string(), documentNavigationOverride).optional().default({}).superRefine((overrides, context) => {
+  for (const presentation of Object.keys(overrides)) {
+    if (!safeIdentifier.test(presentation)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'documentNavigation presentation IDs must be lowercase kebab-case IDs',
+        path: [presentation]
+      });
+    }
+  }
+});
+
 const siteConfigSchema = z.object({
   site: siteSchema,
   terminal: terminalSchema,
-  seo: seoSchema
+  seo: seoSchema,
+  documentNavigation
 }).strict();
 
 function freezeDeep(value, seen = new WeakSet()) {
@@ -213,53 +230,45 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function parseCoreSiteConfig(rawValue, source) {
+  const { plugins: _plugins, ...siteValue } = rawValue;
+  const result = siteConfigSchema.safeParse(siteValue);
+  if (!result.success) throw new Error(`Invalid site configuration in ${source}: ${formatIssues(result.error)}`);
+  return result.data;
+}
+
 function commentsSiteProjection(rawValue, source, commentsConfig) {
-  const rawComments = rawValue.comments;
   const rawPlugins = rawValue.plugins;
-  if (rawComments !== undefined && rawPlugins !== undefined) {
-    throw new TypeError('the legacy [comments] namespace cannot be combined with [plugins.comments].');
-  }
-
-  if (rawComments !== undefined) {
-    const legacy = parseCommentsNamespace(rawComments, source);
-    return {
-      activation: legacy.activation,
-      public: {
-        writeOrigin: legacy.public.writeOrigin,
-        exportPath: legacy.public.exportPath,
-        consentVersion: legacy.public.consentVersion
-      }
-    };
-  }
-
-  const rawPluginActivation = rawPlugins === undefined ? undefined : rawPlugins.comments;
   if (rawPlugins !== undefined) {
     if (!isRecord(rawPlugins)) throw new TypeError('plugins must be a plain object.');
     for (const key of Object.keys(rawPlugins)) {
       if (key !== 'comments') throw new TypeError(`plugins contains unsupported key "${key}".`);
     }
   }
+  const rawPluginActivation = rawPlugins === undefined ? undefined : rawPlugins.comments;
   const activation = parseCommentsActivation(rawPluginActivation, source);
   const parsed = parseCommentsConfig(commentsConfig, activation.configPath, { enabled: activation.enabled });
   return { activation, public: parsed.public };
 }
 
-export function parseSiteConfig(value, source = 'config/site.toml', options = {}) {
-  const rawValue = isRecord(value) ? value : {};
-  const { comments: _legacyComments, plugins: _plugins, ...siteValue } = rawValue;
+function assembleSiteConfig(rawValue, source, commentsConfig, siteData) {
   let commentsProjection;
   try {
-    commentsProjection = commentsSiteProjection(rawValue, source, options.commentsConfig);
+    commentsProjection = commentsSiteProjection(rawValue, source, commentsConfig);
   } catch (error) {
     throw new Error(`Invalid site configuration in ${source}: ${error instanceof Error ? error.message : String(error)}`);
   }
-  const result = siteConfigSchema.safeParse(siteValue);
-  if (!result.success) throw new Error(`Invalid site configuration in ${source}: ${formatIssues(result.error)}`);
   return freezeDeep({
-    ...result.data,
+    ...siteData,
     plugins: { comments: commentsProjection.activation },
     comments: commentsProjection.public
   });
+}
+
+export function parseSiteConfig(value, source = 'config/site.toml', options = {}) {
+  const rawValue = isRecord(value) ? value : {};
+  const siteData = parseCoreSiteConfig(rawValue, source);
+  return assembleSiteConfig(rawValue, source, options.commentsConfig, siteData);
 }
 
 function configRepositoryRoot(filePath) {
@@ -271,7 +280,6 @@ function configRepositoryRoot(filePath) {
 
 function readCommentsConfigForSite(value, filePath) {
   if (path.basename(filePath) === 'site.toml.example') return undefined;
-  if (isRecord(value.comments)) return undefined;
   const rawPlugins = isRecord(value.plugins) ? value.plugins : undefined;
   const activation = parseCommentsActivation(rawPlugins?.comments, filePath);
   const repositoryRoot = configRepositoryRoot(filePath);
@@ -318,8 +326,10 @@ export function loadSiteConfig(filePath = SITE_CONFIG_PATH) {
   } catch (error) {
     throw new Error(`Invalid TOML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
+  const rawValue = isRecord(value) ? value : {};
+  const siteData = parseCoreSiteConfig(rawValue, filePath);
   const commentsConfig = readCommentsConfigForSite(value, filePath);
-  return parseSiteConfig(value, filePath, { commentsConfig });
+  return assembleSiteConfig(rawValue, filePath, commentsConfig, siteData);
 }
 
 export const SITE_CONFIG = loadSiteConfig();

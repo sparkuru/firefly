@@ -39,10 +39,10 @@ test('X Core context routes agree with the site canonical projection', () => {
 
 test('X Core context excludes paper theme metadata and preserves presentation selection', () => {
   const context = resolveDocumentContext(
-    stagedFile('posts', 'default.md', { layout: 'post', articleTheme: 'paper' })
+    stagedFile('posts', 'default.md', { layout: 'post', contentTheme: 'paper' })
   );
   assert.equal(context.presentation, DEFAULT_PRESENTATION_ID);
-  assert.equal(Object.hasOwn(context, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(context, 'contentTheme'), false);
   assert.deepEqual(Object.keys(context).sort(), [
     'collection',
     'documentId',
@@ -57,11 +57,11 @@ test('X Core context excludes paper theme metadata and preserves presentation se
     stagedFile('posts', 'paper-semantic.md', {
       layout: 'post',
       presentation: 'semantic',
-      articleTheme: 'paper'
+      contentTheme: 'paper'
     })
   );
   assert.equal(semanticContext.presentation, 'semantic');
-  assert.equal(Object.hasOwn(semanticContext, 'articleTheme'), false);
+  assert.equal(Object.hasOwn(semanticContext, 'contentTheme'), false);
 
   assert.throws(
     () => resolveDocumentContext({

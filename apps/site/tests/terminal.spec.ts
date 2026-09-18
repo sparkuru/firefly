@@ -545,7 +545,8 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await expect(transcript.getByText('list a public or session virtual directory')).toBeVisible();
   await expect(transcript.getByText('filter stdin or public text')).toBeVisible();
   await expect(transcript.getByText('change the virtual directory')).toBeVisible();
-  await expect(transcript.getByText('open a listed experiment')).toBeVisible();
+  await expect(transcript.getByText('open a public document')).toBeVisible();
+  await expect(transcript.getByText('launch a listed experiment')).toBeVisible();
   await expect(transcript.getByText('list curated friend links')).toBeVisible();
   await expect(transcript.getByText('clear the screen')).toBeVisible();
   await expect(transcript).toContainText('alias l, ll');
@@ -611,7 +612,7 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'ls ~/blog');
   await expect(transcript.locator('.terminal-record').last()).toContainText('lab/');
   await submit(page, 'ls ~/blog/lab/nerv/');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Use "open ~/blog/lab/nerv" to enter this experiment.');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Use "launch ~/blog/lab/nerv" to enter this experiment.');
 
   await input.fill('cd ai');
   await input.press('Tab');
@@ -692,14 +693,14 @@ test('commands render continuous typed results, lab discovery, and latest announ
   await submit(page, 'cat ~/blog/pages/about.md');
   await expect(transcript.locator('.terminal-record').last().getByRole('heading', { level: 2, name: 'About' })).toBeVisible();
   await submit(page, 'cat lab/nerv');
-  await expect(transcript.locator('.terminal-record').last()).toContainText('Try "open lab/nerv".');
+  await expect(transcript.locator('.terminal-record').last()).toContainText('Try "launch lab/nerv".');
 
   await submit(page, 'ls lab');
   await expect(transcript.locator('.terminal-record').last().getByRole('link', { name: 'majo/' })).toHaveAttribute('href', '/lab/majo/');
   await expect(transcript.locator('.terminal-record').last().getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
   await expect(transcript).toContainText('NERV');
   await expect(announcer).toHaveText('2 experiments listed.');
-  await submit(page, 'open lab/unlisted');
+  await submit(page, 'launch lab/unlisted');
   await expect(transcript).toContainText('No listed experiment named "lab/unlisted"');
   await expect(page.locator('[data-terminal-failure]')).toBeHidden();
   await expect(rootInput).toBeFocused();
@@ -937,35 +938,35 @@ test('user aliases are session-local and disappear after refresh', async ({ page
   await expect(input).toBeFocused();
 });
 
-test('open navigates only to the validated listed experiment destination', async ({ page }) => {
+test('launch navigates only to the validated listed experiment destination', async ({ page }) => {
   await page.goto('/');
   const input = page.locator('#terminal-command');
   await submit(page, 'cd ~/blog/lab');
   await submit(page, 'ls');
-  await input.fill('open n');
+  await input.fill('launch n');
   await input.press('Tab');
-  await expect(input).toHaveValue('open nerv');
+  await expect(input).toHaveValue('launch nerv');
   await expect(input).toBeFocused();
-  await input.fill('open /lab/nerv');
+  await input.fill('launch /lab/nerv');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/$/u);
   await expect(input).toBeFocused();
-  await input.fill('open lab/nerv');
+  await input.fill('launch lab/nerv');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/$/u);
   await expect(input).toBeFocused();
-  await input.fill('open nerv');
+  await input.fill('launch nerv');
   await input.press('Enter');
   await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
 
   await page.goto('/');
   await submit(page, 'cd ~/blog/lab');
-  await submit(page, 'open ./nerv');
+  await submit(page, 'launch ./nerv');
   await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
 
   await page.goto('/');
   await submit(page, 'cd ~/blog/pages');
-  await submit(page, 'open ~/blog/lab/nerv');
+  await submit(page, 'launch ~/blog/lab/nerv');
   await expect(page).toHaveURL(/\/lab\/nerv\/$/u);
 });
 
@@ -1155,7 +1156,7 @@ test('inline cat Ctrl+L clears from its reading surface and preserves history', 
   const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
   await expect(title).toBeFocused();
 
-  await input.fill('vim ./');
+  await input.fill('open ./');
   await input.press('Tab');
   await expect(completion).not.toBeEmpty();
   await title.focus();
@@ -1303,9 +1304,9 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
   await input.fill('unfinished');
   await input.press('ArrowUp');
   await expect(input).toHaveValue('whoami');
-  await input.fill('vim ./');
+  await input.fill('open ./');
   await input.press('Tab');
-  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './app/', './dev/', './essays/', './infra/', './learning/', './security/']);
+  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './apps/', './dev/', './essays/', './infra/', './learning/', './security/']);
   await expect(input).toBeFocused();
   const modifiedVariants = await input.evaluate((element) => [
     { altKey: true, ctrlKey: true },
@@ -1318,8 +1319,8 @@ test('Control+C cancels only the current prompt and completion state', async ({ 
     ...modifiers
   }))));
   expect(modifiedVariants).toEqual([true, true, true]);
-  await expect(input).toHaveValue('vim ./');
-  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './app/', './dev/', './essays/', './infra/', './learning/', './security/']);
+  await expect(input).toHaveValue('open ./');
+  await expect(completion.getByRole('option')).toHaveText(['./acg/', './ai/', './android/', './apps/', './dev/', './essays/', './infra/', './learning/', './security/']);
   await input.press('Control+c');
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
@@ -1356,14 +1357,14 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   await expect(input).toBeFocused();
 
   await input.focus();
-  for (const ambiguous of ['cat ./', 'vim ./', 'cat ~/blog/', 'vim ~/blog/']) {
+  for (const ambiguous of ['cat ./', 'open ./', 'cat ~/blog/', 'open ~/blog/']) {
     await input.fill(ambiguous);
     await input.press('Tab');
     await expect(input).toBeFocused();
     await expect(page.getByRole('listbox', { name: 'Completion candidates' })).toBeVisible();
   }
 
-  for (const noMatch of ['cat 1', 'vim ./does-not-exist']) {
+  for (const noMatch of ['cat 1', 'open ./does-not-exist']) {
     await input.fill(noMatch);
     await input.press('Tab');
     await expect(input).toHaveValue(noMatch);
@@ -1378,9 +1379,9 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   await input.fill('cat ai');
   await input.press('Tab');
   await expect(input).toHaveValue('cat ai/');
-  await input.fill('vim ~/blog/pages/abo');
+  await input.fill('open ~/blog/pages/abo');
   await input.press('Tab');
-  await expect(input).toHaveValue('vim ~/blog/pages/about.md');
+  await expect(input).toHaveValue('open ~/blog/pages/about.md');
 
   await input.fill('cat ./ai/llm-w');
   await input.press('Tab');
@@ -1420,9 +1421,9 @@ test('the prompt owns unmodified Tab while completion only rewrites safe matches
   }))));
   expect(modifiedTabResults).toEqual([true, true, true, true]);
 
-  await input.fill('open ~/blog/lab/n');
+  await input.fill('launch ~/blog/lab/n');
   await input.press('Tab');
-  await expect(input).toHaveValue('open ~/blog/lab/nerv');
+  await expect(input).toHaveValue('launch ~/blog/lab/nerv');
 });
 
 test('ambiguous completion exposes a vertical active list and commits before submission', async ({ page }) => {

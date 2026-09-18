@@ -142,6 +142,8 @@ function collectSearchMatches(units: readonly HTMLElement[], query: string): Sea
 }
 
 export function startDocumentNavigator(root: HTMLElement): void {
+  if (root.dataset.documentNavigatorInitialized !== undefined) return;
+
   const region = requireOne(root, '[data-document-navigator-region]', HTMLElement);
   const status = requireOne(root, '[data-document-navigator-status]', HTMLElement);
   const modeNode = requireOne(root, '[data-navigation-mode]', HTMLElement);
@@ -156,10 +158,15 @@ export function startDocumentNavigator(root: HTMLElement): void {
   const commandForm = requireOne(root, '[data-navigation-command-form]', HTMLFormElement);
   const commandInput = requireOne(root, '#document-navigation-command', HTMLInputElement);
   const fragmentEntry = root.dataset.documentNavigatorEntry === 'fragment';
-  const documentNavigatorFragment = window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT;
-  if (fragmentEntry && !documentNavigatorFragment) return;
-  status.hidden = false;
-  region.tabIndex = 0;
+  const entryControl = fragmentEntry
+    ? requireOne(root, '[data-document-navigator-entry-control]', HTMLAnchorElement)
+    : null;
+  const exitControl = fragmentEntry
+    ? requireOne(root, '[data-navigation-exit-control]', HTMLButtonElement)
+    : null;
+  let active = !fragmentEntry || window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT;
+  let rememberedFragment: string | null = null;
+  let lastObservedHash = window.location.hash;
   const units = [...region.querySelectorAll<HTMLElement>(readingUnitSelector)].filter((unit) => unit.textContent?.trim());
   if (units.length === 0) return;
 
@@ -198,6 +205,10 @@ export function startDocumentNavigator(root: HTMLElement): void {
   const motionBehavior = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
   const updateStatusReserve = () => {
+    if (status.hidden) {
+      root.style.removeProperty('--navigation-status-reserve');
+      return;
+    }
     const height = Math.ceil(status.getBoundingClientRect().height);
     if (height > 0) root.style.setProperty('--navigation-status-reserve', `${height}px`);
   };
@@ -220,6 +231,12 @@ export function startDocumentNavigator(root: HTMLElement): void {
     : `${searchMatchIndex + 1}/${searchMatches.length} matches for “${searchQuery}”.`;
 
   const updateSearchStatus = () => {
+    if (!active) {
+      status.removeAttribute('data-navigation-search-active');
+      searchStatus.hidden = true;
+      searchStatus.textContent = '';
+      return;
+    }
     status.toggleAttribute(
       'data-navigation-search-active',
       searchQuery.length > 0 && mode !== 'search' && mode !== 'command'
@@ -243,9 +260,18 @@ export function startDocumentNavigator(root: HTMLElement): void {
   const updateStatus = () => {
     modeNode.textContent = `-- ${mode.toUpperCase()} --`;
     positionNode.textContent = `${activeIndex + 1}/${units.length}`;
-    region.setAttribute('aria-activedescendant', units[activeIndex]!.id);
-    units.forEach((unit, index) => unit.toggleAttribute('data-navigation-active', index === activeIndex));
+    status.hidden = !active;
+    region.tabIndex = active ? 0 : -1;
+    if (active) {
+      region.setAttribute('aria-activedescendant', units[activeIndex]!.id);
+      units.forEach((unit, index) => unit.toggleAttribute('data-navigation-active', index === activeIndex));
+    } else {
+      region.removeAttribute('aria-activedescendant');
+      units.forEach((unit) => unit.removeAttribute('data-navigation-active'));
+    }
     updateSearchStatus();
+    if (exitControl !== null) exitControl.hidden = !active;
+    updateStatusReserve();
   };
 
   const settleActive = () => {
@@ -306,6 +332,65 @@ export function startDocumentNavigator(root: HTMLElement): void {
     selection.addRange(range);
     ownedRange = range.cloneRange();
     announce(`Visual selection: units ${Math.min(visualAnchor, activeIndex) + 1} through ${Math.max(visualAnchor, activeIndex) + 1}.`);
+  };
+
+  const replaceFragment = (fragment: string | null) => {
+    const url = new URL(window.location.href);
+    url.hash = fragment ?? '';
+    window.history.replaceState(window.history.state, '', url.href);
+  };
+
+  const currentNonNavigatorFragment = () => {
+    const hash = window.location.hash;
+    return hash !== '' && hash !== DOCUMENT_NAVIGATOR_FRAGMENT ? hash : null;
+  };
+
+  const activate = (focusRegion: boolean) => {
+    active = true;
+    mode = 'normal';
+    searchForm.hidden = true;
+    commandForm.hidden = true;
+    updateStatus();
+    if (focusRegion) region.focus({ preventScroll: true });
+  };
+
+  const deactivate = (focusEntry: boolean) => {
+    active = false;
+    clearOwnedSelection();
+    clearSearch();
+    mode = 'normal';
+    searchForm.hidden = true;
+    commandForm.hidden = true;
+    searchInput.value = '';
+    commandInput.value = '';
+    updateStatus();
+    if (focusEntry) entryControl?.focus({ preventScroll: true });
+  };
+
+  const synchronizeWithLocation = (focusRegion: boolean, rememberPreviousFragment: boolean) => {
+    const wantsActive = !fragmentEntry || window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT;
+    if (wantsActive && !active) {
+      if (rememberPreviousFragment) rememberedFragment = lastObservedHash !== DOCUMENT_NAVIGATOR_FRAGMENT
+        ? lastObservedHash || null
+        : null;
+      activate(focusRegion);
+    } else if (wantsActive && active && focusRegion) {
+      region.focus({ preventScroll: true });
+    } else if (!wantsActive && active && fragmentEntry) {
+      const focusEntry = status.contains(document.activeElement);
+      deactivate(focusEntry);
+      rememberedFragment = null;
+    }
+    lastObservedHash = window.location.hash;
+  };
+
+  const exitLocally = () => {
+    if (!fragmentEntry || !active) return;
+    const fragment = rememberedFragment;
+    rememberedFragment = null;
+    replaceFragment(fragment);
+    synchronizeWithLocation(false, false);
+    entryControl?.focus({ preventScroll: true });
   };
 
   const moveTo = (nextIndex: number) => {
@@ -414,7 +499,11 @@ export function startDocumentNavigator(root: HTMLElement): void {
     event.preventDefault();
     if (composing) return;
     if (commandInput.value === 'q') {
-      window.location.assign('/');
+      if (fragmentEntry) {
+        exitLocally();
+      } else {
+        window.location.assign('/');
+      }
       return;
     }
     announce(`Unsupported navigation command: :${commandInput.value}. Only :q is available.`);
@@ -430,7 +519,37 @@ export function startDocumentNavigator(root: HTMLElement): void {
     });
   }
 
+  const isUnmodifiedPrimaryClick = (event: MouseEvent) => (
+    event.button === 0 &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey
+  );
+
+  entryControl?.addEventListener('click', (event) => {
+    if (event.defaultPrevented || !isUnmodifiedPrimaryClick(event)) return;
+    event.preventDefault();
+    if (active) {
+      region.focus({ preventScroll: true });
+      return;
+    }
+    rememberedFragment = currentNonNavigatorFragment();
+    replaceFragment(DOCUMENT_NAVIGATOR_FRAGMENT);
+    synchronizeWithLocation(true, false);
+  });
+
+  exitControl?.addEventListener('click', (event) => {
+    if (event.defaultPrevented) return;
+    event.preventDefault();
+    exitLocally();
+  });
+
+  window.addEventListener('hashchange', () => synchronizeWithLocation(false, true));
+  window.addEventListener('popstate', () => synchronizeWithLocation(false, true));
+
   region.addEventListener('keydown', (event) => {
+    if (!active) return;
     if (event.defaultPrevented || event.isComposing || composing || event.ctrlKey || event.altKey || event.metaKey || hasUnownedSelection()) return;
     const target = event.target;
     if (target instanceof Element && target.closest(protectedNavigationTargetSelector) !== null) return;
@@ -464,8 +583,9 @@ export function startDocumentNavigator(root: HTMLElement): void {
     commandInput.focus();
   });
 
+  root.dataset.documentNavigatorInitialized = 'true';
   updateStatus();
-  if (documentNavigatorFragment) {
+  if (active && window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT) {
     window.requestAnimationFrame(() => {
       if (window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT) {
         region.focus({ preventScroll: true });

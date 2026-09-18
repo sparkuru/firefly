@@ -3,11 +3,11 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { DEFAULT_PRESENTATION_ID } from '@firefly/x-core';
 import {
-  ARTICLE_THEME_IDS,
-  DEFAULT_ARTICLE_THEME_ID,
-  isArticleThemeId,
-  resolveArticleThemeId
-} from '../src/lib/article-theme.mjs';
+  CONTENT_THEME_IDS,
+  DEFAULT_CONTENT_THEME_ID,
+  isContentThemeId,
+  resolveContentThemeId
+} from '../src/lib/content-theme.mjs';
 import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
 
 const validPost = {
@@ -24,8 +24,7 @@ const validPost = {
   draft: false,
   layout: 'post',
   presentation: 'semantic',
-  aliases: ['/posts/main/379-alias/'],
-  source: 'legacy/379.md#workflow'
+  aliases: ['/posts/main/379-alias/']
 };
 
 const validPage = {
@@ -47,18 +46,17 @@ test('valid metadata parses and coerces dates', () => {
   assert.ok(page.date instanceof Date);
   assert.deepEqual(post.access, { visibility: 'public' });
   assert.deepEqual(post.firefly, { markers: [] });
-  assert.equal(post.articleTheme, DEFAULT_ARTICLE_THEME_ID);
-  assert.equal(page.articleTheme, DEFAULT_ARTICLE_THEME_ID);
+  assert.equal(post.contentTheme, DEFAULT_CONTENT_THEME_ID);
+  assert.equal(page.contentTheme, DEFAULT_CONTENT_THEME_ID);
   assert.deepEqual(post.tags, ['trellis']);
-  assert.equal(post.source, 'legacy/379.md#workflow');
   assert.equal(postSchema.safeParse({ ...validPost, slug: undefined }).success, true);
 });
 
-test('the article theme registry is frozen, ID-only, and defaults safely', () => {
-  assert.deepEqual(ARTICLE_THEME_IDS, [DEFAULT_ARTICLE_THEME_ID, 'paper']);
-  assert.ok(Object.isFrozen(ARTICLE_THEME_IDS));
-  assert.equal(isArticleThemeId(DEFAULT_ARTICLE_THEME_ID), true);
-  assert.equal(isArticleThemeId('paper'), true);
+test('the content theme registry is frozen, ID-only, and defaults safely', () => {
+  assert.deepEqual(CONTENT_THEME_IDS, [DEFAULT_CONTENT_THEME_ID, 'paper']);
+  assert.ok(Object.isFrozen(CONTENT_THEME_IDS));
+  assert.equal(isContentThemeId(DEFAULT_CONTENT_THEME_ID), true);
+  assert.equal(isContentThemeId('paper'), true);
   for (const value of [
     'future',
     'Future',
@@ -72,27 +70,27 @@ test('the article theme registry is frozen, ID-only, and defaults safely', () =>
     {},
     []
   ]) {
-    assert.equal(isArticleThemeId(value), false, value);
-    assert.throws(() => resolveArticleThemeId(value), /Invalid article theme ID/u);
+    assert.equal(isContentThemeId(value), false, value);
+    assert.throws(() => resolveContentThemeId(value), /Invalid content theme ID/u);
   }
-  assert.equal(resolveArticleThemeId(undefined), DEFAULT_ARTICLE_THEME_ID);
-  assert.equal(resolveArticleThemeId(DEFAULT_ARTICLE_THEME_ID), DEFAULT_ARTICLE_THEME_ID);
-  assert.equal(resolveArticleThemeId('paper'), 'paper');
+  assert.equal(resolveContentThemeId(undefined), DEFAULT_CONTENT_THEME_ID);
+  assert.equal(resolveContentThemeId(DEFAULT_CONTENT_THEME_ID), DEFAULT_CONTENT_THEME_ID);
+  assert.equal(resolveContentThemeId('paper'), 'paper');
 });
 
-test('article theme front matter defaults, accepts registered IDs, and rejects unsafe or unknown IDs', () => {
+test('content theme front matter defaults, accepts registered IDs, and rejects unsafe or unknown IDs', () => {
   assert.equal(
-    postSchema.parse({ ...validPost, articleTheme: undefined }).articleTheme,
-    DEFAULT_ARTICLE_THEME_ID
+    postSchema.parse({ ...validPost, contentTheme: undefined }).contentTheme,
+    DEFAULT_CONTENT_THEME_ID
   );
   assert.equal(
-    postSchema.parse({ ...validPost, articleTheme: DEFAULT_ARTICLE_THEME_ID }).articleTheme,
-    DEFAULT_ARTICLE_THEME_ID
+    postSchema.parse({ ...validPost, contentTheme: DEFAULT_CONTENT_THEME_ID }).contentTheme,
+    DEFAULT_CONTENT_THEME_ID
   );
-  assert.equal(postSchema.parse({ ...validPost, articleTheme: 'paper' }).articleTheme, 'paper');
-  assert.equal(pageSchema.parse({ ...validPage, articleTheme: 'paper' }).articleTheme, 'paper');
+  assert.equal(postSchema.parse({ ...validPost, contentTheme: 'paper' }).contentTheme, 'paper');
+  assert.equal(pageSchema.parse({ ...validPage, contentTheme: 'paper' }).contentTheme, 'paper');
 
-  for (const articleTheme of [
+  for (const contentTheme of [
     'future',
     'Future',
     'default selector',
@@ -109,9 +107,28 @@ test('article theme front matter defaults, accepts registered IDs, and rejects u
     []
   ]) {
     assert.equal(
-      postSchema.safeParse({ ...validPost, articleTheme }).success,
+      postSchema.safeParse({ ...validPost, contentTheme }).success,
       false,
-      articleTheme
+      contentTheme
+    );
+  }
+});
+
+test('retired articleTheme and source metadata use ordinary strict unknown-field errors', () => {
+  for (const [field, metadata] of [
+    ['articleTheme', { ...validPost, articleTheme: 'default' }],
+    ['articleTheme', { ...validPost, contentTheme: 'paper', articleTheme: 'paper' }],
+    ['source', { ...validPost, source: 'legacy/file.md#section' }]
+  ]) {
+    const result = postSchema.safeParse(metadata);
+    assert.equal(result.success, false);
+    assert.ok(
+      result.error.issues.some((issue) => issue.code === 'unrecognized_keys' && issue.keys.includes(field)),
+      `${field} should be reported as an unknown key`
+    );
+    assert.doesNotMatch(
+      result.error.issues.map(({ message }) => message).join('; '),
+      /migrat|no longer supported/iu
     );
   }
 });
@@ -179,26 +196,6 @@ test('invalid slug is rejected', () => {
   }
   assert.equal(postSchema.parse({ ...validPost, slug: 'legacy title' }).slug, 'legacy-title');
   assert.equal(postSchema.parse({ ...validPost, slug: '  legacy\ttitle  ' }).slug, 'legacy-title');
-});
-
-test('legacy source metadata is a safe relative Markdown reference and never a route input', () => {
-  for (const source of [
-    '/absolute.md',
-    '../outside.md',
-    'legacy/../outside.md',
-    'legacy/private.txt',
-    'https:legacy.md',
-    'legacy/unsafe%2f.md',
-    'legacy/unsafe path.md',
-    'legacy/file.md#',
-    'legacy/file.md#unsafe fragment',
-    'legacy/file.md#section/child'
-  ]) {
-    assert.equal(postSchema.safeParse({ ...validPost, source }).success, false, source);
-  }
-  const parsed = postSchema.parse({ ...validPost, slug: 'canonical title', source: 'legacy/file.md#section' });
-  assert.equal(parsed.slug, 'canonical-title');
-  assert.equal(parsed.source, 'legacy/file.md#section');
 });
 
 test('SEO front matter is strict and safe', () => {
@@ -276,7 +273,7 @@ test('the real Terminal page keeps strict metadata and representative Markdown',
   assert.match(page, /Future presentations can change how the site looks/u);
 });
 
-test('the tracked demo article keeps compatibility metadata and authored Markdown content', async () => {
+test('the tracked demo article keeps canonical metadata and authored Markdown content', async () => {
   const article = await readFile(
     new URL('../../../content/posts/ai/llm-workflow-with-trellis.md', import.meta.url),
     'utf8'

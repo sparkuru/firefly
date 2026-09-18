@@ -48,29 +48,6 @@ const RUNTIME_KEYS = new Set([
   'outboxStatePath',
   'smtp'
 ]);
-const LEGACY_KEYS = new Set([
-  'enabled',
-  'writeOrigin',
-  'exportPath',
-  'consentVersion',
-  'smtp',
-  'runtime',
-  'COMMENTS_POST_ROUTES',
-  'COMMENTS_ALLOWED_ORIGINS',
-  'COMMENTS_SMTP_HOST',
-  'COMMENTS_SMTP_PORT',
-  'COMMENTS_SMTP_SECURE',
-  'COMMENTS_SMTP_USER',
-  'COMMENTS_SMTP_FROM',
-  'COMMENTS_SMTP_FROM_NAME',
-  'COMMENTS_SMTP_PASSWORD',
-  'COMMENTS_PUBLIC_ORIGIN',
-  'COMMENTS_DATA_ROOT',
-  'COMMENTS_DATABASE_PATH',
-  'COMMENTS_OUTBOX_PATH',
-  'COMMENTS_OUTBOX_STATE_PATH',
-  'COMMENTS_CONSENT_VERSION'
-]);
 
 function isRecord(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -342,68 +319,6 @@ export function parseCommentsConfig(value, source = DEFAULT_COMMENTS_CONFIG_PATH
   });
 }
 
-function getLegacyValue(value, nested, field, legacyKey, source) {
-  const nestedPresent = Object.hasOwn(nested, field);
-  const legacyPresent = Object.hasOwn(value, legacyKey);
-  if (nestedPresent && legacyPresent) invalid(source, `${field} and ${legacyKey} must not both be configured.`);
-  if (nestedPresent) return nested[field];
-  if (legacyPresent) return value[legacyKey];
-  return undefined;
-}
-
-function parseLegacyCommentsNamespace(value, source) {
-  const raw = value === undefined ? {} : value;
-  assertExactKeys(raw, LEGACY_KEYS, source, 'comments');
-  const smtp = raw.smtp === undefined ? {} : raw.smtp;
-  const runtime = raw.runtime === undefined ? {} : raw.runtime;
-  assertExactKeys(smtp, SMTP_KEYS, source, 'comments.smtp');
-  assertExactKeys(runtime, RUNTIME_KEYS, source, 'comments.runtime');
-  if (Object.hasOwn(smtp, 'password') || Object.hasOwn(raw, 'COMMENTS_SMTP_PASSWORD')) {
-    invalid(source, 'a literal SMTP password must not be stored in config; use passwordEnv and the protected secret file.');
-  }
-
-  const enabled = raw.enabled === undefined ? false : raw.enabled;
-  if (typeof enabled !== 'boolean') invalid(source, 'comments.enabled must be boolean.');
-  const publicConfig = parsePublic({
-    writeOrigin: raw.writeOrigin,
-    exportPath: raw.exportPath,
-    consentVersion: raw.consentVersion
-  }, source, enabled);
-  const canonicalRuntime = {
-    postRoutes: getLegacyValue(raw, runtime, 'postRoutes', 'COMMENTS_POST_ROUTES', source),
-    allowedOrigins: getLegacyValue(raw, runtime, 'allowedOrigins', 'COMMENTS_ALLOWED_ORIGINS', source),
-    publicOrigin: getLegacyValue(raw, runtime, 'publicOrigin', 'COMMENTS_PUBLIC_ORIGIN', source),
-    dataRoot: getLegacyValue(raw, runtime, 'dataRoot', 'COMMENTS_DATA_ROOT', source),
-    databasePath: getLegacyValue(raw, runtime, 'databasePath', 'COMMENTS_DATABASE_PATH', source),
-    outboxPath: getLegacyValue(raw, runtime, 'outboxPath', 'COMMENTS_OUTBOX_PATH', source),
-    outboxStatePath: getLegacyValue(raw, runtime, 'outboxStatePath', 'COMMENTS_OUTBOX_STATE_PATH', source),
-    smtp: {
-      host: getLegacyValue(raw, smtp, 'host', 'COMMENTS_SMTP_HOST', source),
-      port: getLegacyValue(raw, smtp, 'port', 'COMMENTS_SMTP_PORT', source),
-      secure: getLegacyValue(raw, smtp, 'secure', 'COMMENTS_SMTP_SECURE', source),
-      user: getLegacyValue(raw, smtp, 'user', 'COMMENTS_SMTP_USER', source),
-      from: getLegacyValue(raw, smtp, 'from', 'COMMENTS_SMTP_FROM', source),
-      fromName: getLegacyValue(raw, smtp, 'fromName', 'COMMENTS_SMTP_FROM_NAME', source),
-      passwordEnv: smtp.passwordEnv,
-      publicOrigin: getLegacyValue(raw, smtp, 'publicOrigin', 'COMMENTS_PUBLIC_ORIGIN', source),
-      connectionTimeoutMs: smtp.connectionTimeoutMs,
-      commandTimeoutMs: smtp.commandTimeoutMs
-    }
-  };
-  if (canonicalRuntime.smtp.publicOrigin === undefined) delete canonicalRuntime.smtp.publicOrigin;
-  const parsed = parseCommentsConfig({ public: publicConfig, runtime: canonicalRuntime }, source, { enabled });
-  return Object.freeze({
-    activation: Object.freeze({ enabled, configPath: DEFAULT_COMMENTS_CONFIG_PATH }),
-    public: Object.freeze({ enabled, ...parsed.public }),
-    runtime: parsed.runtime
-  });
-}
-
-export function parseCommentsNamespace(value, source = 'config/site.toml') {
-  if (isRecord(value) && Object.hasOwn(value, 'public')) return parseCommentsConfig(value, source);
-  return parseLegacyCommentsNamespace(value, source);
-}
-
 export function resolveCommentsConfigPath(configPath = DEFAULT_COMMENTS_CONFIG_PATH, repositoryRoot = process.cwd()) {
   const root = path.resolve(repositoryRoot);
   const relative = normalizeRepositoryPath(configPath, 'plugins.comments', 'plugins.comments.configPath');
@@ -460,8 +375,7 @@ function mapRuntimeToEnvironment(parsed, env) {
 }
 
 export function resolveCommentsRuntimeOptions(value, env = {}, source = DEFAULT_COMMENTS_CONFIG_PATH) {
-  const legacy = !(isRecord(value) && Object.hasOwn(value, 'public'));
-  const parsed = legacy ? parseLegacyCommentsNamespace(value, source) : parseCommentsConfig(value, source);
+  const parsed = parseCommentsConfig(value, source);
   return Object.freeze({
     public: parsed.public,
     runtime: parsed.runtime,

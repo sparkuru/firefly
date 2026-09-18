@@ -21,7 +21,7 @@ import {
   normalizePublicPath,
   publicSitemapPaths
 } from '../src/lib/site-seo.mjs';
-import { parseCommentsNamespace } from '../../../plugins/comments/config.mjs';
+import { parseCommentsConfig } from '../../../plugins/comments/config.mjs';
 
 const validConfig = {
   site: {
@@ -58,6 +58,8 @@ test('site config validates, normalizes, and deeply freezes public values', () =
   assert.equal(Object.hasOwn(config.terminal.friends[0], 'desc'), true);
   assert.equal(Object.hasOwn(config.terminal.friends[1], 'desc'), false);
   assert.equal(config.seo.robots, 'index, follow');
+  assert.deepEqual(config.documentNavigation, {});
+  assert.ok(Object.isFrozen(config.documentNavigation));
   assert.equal(config.plugins.comments.enabled, false);
   assert.equal(config.plugins.comments.configPath, 'config/plugins/comments/config.toml');
   assert.equal(config.comments.writeOrigin, null);
@@ -75,6 +77,34 @@ test('site config validates, normalizes, and deeply freezes public values', () =
     about: 'A public about line.\nAnother line.',
     promptMarker: '[firefly]'
   });
+});
+
+test('site config accepts strict per-presentation navigator selections', () => {
+  const config = parseSiteConfig({
+    ...validConfig,
+    documentNavigation: {
+      firefly: { navigator: 'document-navigator' },
+      semantic: { navigator: 'none' }
+    }
+  }, 'fixture');
+  assert.deepEqual(config.documentNavigation, {
+    firefly: { navigator: 'document-navigator' },
+    semantic: { navigator: 'none' }
+  });
+  assert.ok(Object.isFrozen(config.documentNavigation.firefly));
+  for (const documentNavigation of [
+    [],
+    { semantic: {} },
+    { semantic: { navigator: '' } },
+    { semantic: { navigator: 'Document Navigator' } },
+    { semantic: { navigator: 'document-navigator', extra: true } },
+    { Semantic: { navigator: 'none' } }
+  ]) {
+    assert.throws(
+      () => parseSiteConfig({ ...validConfig, documentNavigation }, 'fixture'),
+      /Invalid site configuration/u
+    );
+  }
 });
 
 test('comments plugin config projects runtime settings away from the site config', () => {
@@ -110,13 +140,38 @@ test('comments plugin config projects runtime settings away from the site config
       }
     }
   };
-  const namespace = parseCommentsNamespace(pluginConfig, 'fixture');
+  const namespace = parseCommentsConfig(pluginConfig, 'fixture');
   const config = parseSiteConfig(siteConfig, 'fixture', { commentsConfig: pluginConfig });
   assert.deepEqual(config.comments, namespace.public);
   assert.equal(Object.hasOwn(config.comments, 'smtp'), false);
   assert.equal(namespace.runtime.smtp?.passwordEnv, 'COMMENTS_SMTP_PASSWORD');
   assert.equal(config.plugins.comments.enabled, false);
   assert.equal(namespace.runtime.outboxPath, '/var/lib/firefly-comments/notifications.jsonl');
+});
+
+test('site config rejects legacy comments namespaces as ordinary unknown fields', () => {
+  const legacyNamespace = {
+    enabled: false,
+    exportPath: 'artifacts/comments/comments.public.v1.json',
+    consentVersion: 'm51-v1'
+  };
+  const canonicalActivation = {
+    comments: {
+      enabled: false,
+      configPath: 'config/plugins/comments/config.toml'
+    }
+  };
+
+  for (const value of [
+    { ...validConfig, comments: legacyNamespace },
+    { ...validConfig, comments: legacyNamespace, plugins: canonicalActivation }
+  ]) {
+    assert.throws(() => parseSiteConfig(value, 'fixture'), (error) => {
+      assert.match(error.message, /Invalid site configuration.*comments/u);
+      assert.doesNotMatch(error.message, /legacy \[comments\]|cannot be combined|two activation/u);
+      return true;
+    });
+  }
 });
 
 test('site config loader follows the plugin config path and emits only its public projection', async (context) => {
@@ -169,6 +224,46 @@ test('site config loader follows the plugin config path and emits only its publi
   assert.equal(config.comments.exportPath, 'artifacts/comments/comments.public.v1.json');
   assert.equal(Object.hasOwn(config.comments, 'smtp'), false);
   assert.equal(Object.hasOwn(config.comments, 'runtime'), false);
+});
+
+test('site config loader rejects legacy and mixed comments namespaces', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-site-legacy-config-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const configDirectory = path.join(root, 'config');
+  await mkdir(configDirectory, { recursive: true });
+  const sitePath = path.join(configDirectory, 'site.toml');
+  const base = [
+    '[site]',
+    'name = "Example notes"',
+    'description = "A public static notebook."',
+    'language = "en"',
+    '',
+    '[terminal]',
+    'user = "guest"',
+    'host = "notes"',
+    'cwd = "~/blog/posts"',
+    'about = "A public about line."',
+    'friends = []',
+    '',
+    '[seo]',
+    'titleSuffix = " | Example notes"',
+    'robots = "index, follow"',
+    'twitterCard = "summary"',
+    ''
+  ];
+
+  for (const commentsSource of [
+    ['[comments]', 'enabled = false', ''],
+    ['[comments]', 'enabled = false', '', '[plugins.comments]', 'enabled = true', 'configPath = "config/plugins/comments/config.toml"', '']
+  ]) {
+    await writeFile(sitePath, [...base, ...commentsSource].join('\n'));
+    assert.throws(() => loadSiteConfig(sitePath), (error) => {
+      assert.match(error.message, /Invalid site configuration.*comments/u);
+      assert.match(error.message, /Unrecognized key/u);
+      assert.doesNotMatch(error.message, /legacy \[comments\]|cannot be combined|two activation/u);
+      return true;
+    });
+  }
 });
 
 test('site config override accepts only a contained repository-relative TOML file', async (context) => {
