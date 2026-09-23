@@ -1582,3 +1582,40 @@ Removed the legacy page-level terminal-reader fragment and DOM ID. The site now 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 71: Terminal cat reading and static Mermaid diagrams
+
+**Date**: 2026-09-23
+**Task**: Terminal cat reading and static Mermaid diagrams
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed inline reading controls, bounded layout and table overflow cues, safe build-time Mermaid rendering, native full-size diagram entry, container integration, and real-source visual acceptance. Archived the parent and both child tasks.
+
+### Main Changes
+
+- Added per-output command return, collapse and canonical opening with draft/selection preservation, bounded typography, table wrapping and directional overflow cues.
+- Added deterministic isolated static SVG rendering, validated dimensions and native start-node fragments, source/failure disclosures, coherent Astro cache lifecycle and public-only asset packaging.
+- Updated executable specifications and retained redacted validation evidence in .trellis/tasks/archive/2026-09/09-23-terminal-cat-reading-experience/research/validation.md.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `14fc867` | (see git log) |
+
+### Testing
+
+- [OK] Package checks passed; test:m4 passed 179 cases, followed by the final 14-case renderer suite and 90-case content suite. Static artifact checks passed 18/18.
+- [OK] All 178 applicable site browser cases have passing evidence, including the corrected 24-case static rerun; final diagram browser checks passed 6 with 2 expected no-JS command skips. Publication checks passed 6/6.
+- [OK] Cold/warm asset hashes, development serving, local runtime packaging, and four real-source viewport reviews passed. Archive context manifests validate.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Physical mobile soft-keyboard behavior remains an explicitly unverified device follow-up; no remote publication was performed.
