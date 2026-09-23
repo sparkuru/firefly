@@ -1619,3 +1619,24 @@ Completed inline reading controls, bounded layout and table overflow cues, safe 
 ### Next Steps
 
 - Physical mobile soft-keyboard behavior remains an explicitly unverified device follow-up; no remote publication was performed.
+
+
+## Session 72: Expand terminal cat to terminal width
+
+**Date**: 2026-09-23
+**Task**: Expand terminal cat to terminal width
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Removed the 52rem inline cat cap, aligned article and wide content to the terminal command row, updated the frontend contract, and verified four focused desktop/mobile Playwright cases. The tracked-content build remains blocked by the pre-existing Mermaid xCore metadata issue; a temporary fixture build passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `37ad2ef` | (see git log) |
+
+### Status
+
+[OK] **Completed**
