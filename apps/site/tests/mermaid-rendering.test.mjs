@@ -13,7 +13,8 @@ import { terminalPresentation } from '@firefly/presentation-terminal';
 import { semanticPresentation } from '@firefly/presentation-semantic';
 import { markdownHtmlSchema } from '../src/lib/markdown-html-policy.mjs';
 import { renderDiagram, sourcePolicyError, validateSvg, normalizeSvgDimensions } from '../src/build/mermaid-renderer.mjs';
-import { diagramSyntaxHighlight, rehypeMermaid } from '../src/build/mermaid-markdown.mjs';
+import { rehypeMermaid } from '../src/build/mermaid-markdown.mjs';
+import { siteRehypeShiki, siteSyntaxHighlight } from '../src/build/code-highlighting.mjs';
 import { publishDiagramAssets } from '../src/build/mermaid-assets.mjs';
 
 const source = 'flowchart TD\naccTitle: Chinese workflow\nA[中文] --> B["First<br/>Second"]';
@@ -99,7 +100,7 @@ test('missing browser is an actionable infrastructure error, not a diagram fallb
 });
 
 
-test('site Shiki configuration preserves Mermaid source and original headings', async () => {
+test('post-sanitization Shiki preserves Mermaid source and original headings', async () => {
   let retainedSource;
   function inspectSource() {
     return (tree) => {
@@ -113,23 +114,77 @@ test('site Shiki configuration preserves Mermaid source and original headings', 
     };
   }
   const options = {
-    syntaxHighlight: diagramSyntaxHighlight,
-    rehypePlugins: [rehypeRaw, [rehypeSanitize, markdownHtmlSchema]],
+    syntaxHighlight: siteSyntaxHighlight,
+    rehypePlugins: [rehypeRaw, [rehypeSanitize, markdownHtmlSchema], siteRehypeShiki],
     remarkRehype: { allowDangerousHtml: true }
   };
   const configuredProcessor = unified({
     rehypePlugins: [...options.rehypePlugins, rehypeMermaid, inspectSource],
     remarkRehype: options.remarkRehype
   });
-  const processor = await configuredProcessor.createRenderer({ syntaxHighlight: diagramSyntaxHighlight });
+  const processor = await configuredProcessor.createRenderer({ syntaxHighlight: siteSyntaxHighlight });
   const originalProcessor = await createMarkdownProcessor(options);
   const markdown = `## Stable heading\n\n\`\`\`mermaid\n${source}\n\`\`\`\n\n### Next heading\n\n\`\`\`js\nconst value = 1;\n\`\`\``;
   const rendered = await processor.render(markdown);
   const original = await originalProcessor.render(markdown);
   assert.match(rendered.code, /data-diagram="rendered"/u);
   assert.match(rendered.code, /data-language="js"/u);
+  assert.match(rendered.code, /--shiki-dark:/u);
+  assert.match(rendered.code, /class="line"/u);
   assert.equal(retainedSource, `${source}\n`);
   assert.deepEqual(rendered.metadata.headings, original.metadata.headings);
+});
+
+test('post-sanitization highlighting preserves code text and rejects authored styles', async () => {
+  const processor = await createMarkdownProcessor({
+    syntaxHighlight: siteSyntaxHighlight,
+    rehypePlugins: [
+      rehypeRaw,
+      [rehypeSanitize, markdownHtmlSchema],
+      siteRehypeShiki
+    ],
+    remarkRehype: { allowDangerousHtml: true }
+  });
+  const markdown = [
+    '```js',
+    'const value = 1;',
+    '  console.log(value);',
+    '```',
+    '',
+    '```text',
+    '  exact  spacing',
+    '```',
+    '',
+    '```not-a-language',
+    '  unknown stays readable',
+    '```',
+    '',
+    '```',
+    '  unlabelled stays readable',
+    '```',
+    '',
+    '<span style="color:red" onclick="alert(1)">safe</span><script>alert(2)</script>'
+  ].join('\n');
+  const { code } = await processor.render(markdown);
+  assert.match(code, /data-language="js"/u);
+  assert.match(code, /--shiki-dark:/u);
+  assert.match(code, /  exact  spacing/u);
+  assert.match(code, /  unknown stays readable/u);
+  assert.match(code, /  unlabelled stays readable/u);
+  assert.doesNotMatch(code, /color:red|onclick|<script|alert\(2\)/u);
+
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<div class="terminal-root" data-terminal-theme="firefly"><div class="terminal-stream-prose"><div class="terminal-code-body">${code}</div></div></div><div class="canonical">${code}</div>`);
+    await page.addStyleTag({ content: await readFile(new URL('../src/styles/terminal.css', import.meta.url), 'utf8') });
+    const tokenColors = await page.locator('.terminal-stream-prose pre[data-language="js"] code .line span[style*="--shiki-dark"]').evaluateAll((tokens) =>
+      tokens.map((token) => getComputedStyle(token).color));
+    assert.ok(new Set(tokenColors).size >= 2, `Expected at least two terminal token colors, got ${tokenColors}`);
+    const canonicalColors = await page.locator('.canonical pre[data-language="js"] code .line span[style*="--shiki-dark"]').evaluateAll((tokens) =>
+      tokens.map((token) => getComputedStyle(token).color));
+    assert.equal(new Set(canonicalColors).size, 1);
+  } finally { await browser.close(); }
 });
 
 

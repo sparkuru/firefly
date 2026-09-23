@@ -1097,6 +1097,93 @@
   white-space: pre;
 }
 
+.terminal-stream-prose .terminal-code-block {
+  min-width: 0;
+  max-width: 100%;
+  margin-block: 0 1.25rem;
+}
+
+.terminal-stream-prose .terminal-code-toolbar {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-inline-start: 0.75rem;
+  border: 1px solid var(--terminal-color-border);
+  border-bottom: 0;
+  background: var(--terminal-color-surface-subtle);
+  color: var(--terminal-color-muted);
+  font-size: 0.8rem;
+}
+
+.terminal-stream-prose .terminal-code-toolbar button {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.8rem;
+  border: 0;
+  border-left: 1px solid var(--terminal-color-border);
+  background: transparent;
+  color: var(--terminal-color-link);
+  font: inherit;
+  cursor: pointer;
+}
+
+.terminal-stream-prose .terminal-code-toolbar button:focus-visible {
+  outline: 2px solid var(--terminal-color-focus);
+  outline-offset: -2px;
+}
+
+.terminal-stream-prose .terminal-code-block > .terminal-wide,
+.terminal-stream-prose .terminal-code-block > .wide-content {
+  margin: 0;
+}
+
+.terminal-stream-prose .terminal-code-body {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  align-items: stretch;
+}
+
+.terminal-stream-prose .terminal-code-gutter {
+  flex: 0 0 auto;
+  min-width: 3rem;
+  padding: 1rem 0.65rem 1rem 0.8rem;
+  border-right: 1px solid var(--terminal-color-border);
+  color: var(--terminal-color-muted);
+  font: inherit;
+  line-height: inherit;
+  text-align: right;
+  white-space: pre;
+  user-select: none;
+}
+
+.terminal-stream-prose .terminal-code-gutter span {
+  display: block;
+}
+
+.terminal-stream-prose .terminal-code-body pre {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 1rem;
+  line-height: inherit;
+  background: transparent;
+  /* Keep overflow and its direction hints on the surrounding wide region. */
+  overflow: visible !important;
+}
+
+.terminal-stream-prose .terminal-code-body .astro-code span[style*='--shiki-dark'] {
+  color: var(--shiki-dark);
+}
+
+.terminal-stream-prose .terminal-code-block--nested {
+  margin-block: 0;
+}
+
+.terminal-stream-prose .terminal-code-block--nested .terminal-code-body {
+  border: 1px solid var(--terminal-color-border);
+}
+
 .terminal-wide table,
 .terminal-stream-prose .wide-content table {
   width: max-content;

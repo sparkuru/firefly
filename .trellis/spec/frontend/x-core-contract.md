@@ -54,7 +54,12 @@ interface PresentationAdapter {
   authored HTML before the X Core rehype stage; the option does not parse,
   sanitize, or authorize HTML by itself.
 - The site-owned Markdown processor runs `rehypeRaw`, then its explicit
-  `rehype-sanitize` schema, then the X Core rehype plugin. The site schema keeps
+  `rehype-sanitize` schema, then trusted syntax highlighting and diagram
+  processing, then the X Core rehype plugin. Astro's earlier syntax-highlight
+  stage stays disabled because its token styles would be stripped by the
+  sanitizer. Highlighting must not relax the authored HTML schema or reparse
+  untrusted HTML. Mermaid source stays excluded from syntax highlighting so
+  the diagram processor receives unchanged source. The site schema keeps
   only structural/semantic HTML, `<center>` for legacy compatibility, safe
   relative/HTTP(S) URLs, and the documented `firefly-content-callout` and
   `firefly-content-center` classes. It removes style elements/attributes,

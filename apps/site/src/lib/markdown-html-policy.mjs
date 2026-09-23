@@ -10,7 +10,7 @@ export const MARKDOWN_HTML_CLASS_NAMES = Object.freeze([
 
 const contentClassPattern = /^firefly-content-(?:callout|center)$/u;
 const generatedCodeClassPattern = /^language-[a-z0-9][a-z0-9+._-]*$/iu;
-// Astro's built-in highlighter adds this inert language marker to <pre>.
+// Markdown fences may carry this inert language marker on <pre>.
 const generatedLanguagePattern = /^[a-z0-9][a-z0-9+._-]*$/iu;
 const generatedListClassNames = ['contains-task-list', 'task-list-item'];
 const generatedIdPattern = /^(?:footnote-label|user-content-(?:fn|fnref)-[a-z0-9][a-z0-9-]*)$/iu;

@@ -1107,8 +1107,35 @@ export function startTerminalHome(
   let cancelBootGate = (): void => {};
   let outputInstance = 0;
   const streamOverflow = createStreamOverflowController();
+  const copyFeedbackTimers = new Map<HTMLButtonElement, number>();
   const execute = seams.execute ?? executeCommand;
   const render = seams.render ?? renderEffect;
+  const clearCopyFeedback = (): void => {
+    for (const timer of copyFeedbackTimers.values()) window.clearTimeout(timer);
+    copyFeedbackTimers.clear();
+  };
+  const copyCode = async (button: HTMLButtonElement): Promise<void> => {
+    const code = button.closest('.terminal-code-block')?.querySelector('pre > code');
+    if (!(code instanceof HTMLElement)) return;
+    const previousTimer = copyFeedbackTimers.get(button);
+    if (previousTimer !== undefined) window.clearTimeout(previousTimer);
+    copyFeedbackTimers.delete(button);
+    let copied = false;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(code.textContent ?? '');
+      copied = true;
+    } catch {
+      // The source remains selectable when the Clipboard API is unavailable.
+    }
+    if (!button.isConnected || failed) return;
+    button.textContent = copied ? 'Copied' : 'Copy failed';
+    nodes.announcer.textContent = copied ? 'Code copied.' : 'Could not copy code. Select it manually.';
+    copyFeedbackTimers.set(button, window.setTimeout(() => {
+      button.textContent = 'Copy code';
+      copyFeedbackTimers.delete(button);
+    }, 2000));
+  };
   const updatePrompt = (): void => {
     const prompt = formatTerminalPrompt(identity, state);
     nodes.prompt.textContent = prompt;
@@ -1122,6 +1149,7 @@ export function startTerminalHome(
     failed = true;
     interactiveReady = false;
     cancelBootGate();
+    clearCopyFeedback();
     streamOverflow.clear();
     showFatalFailure(nodes);
   };
@@ -1135,6 +1163,7 @@ export function startTerminalHome(
     state = cancelCommandInput(state);
     updatePrompt();
     dismissCompletion();
+    clearCopyFeedback();
     streamOverflow.clear();
     clearTranscript(nodes, 'Command transcript cleared.');
   };
@@ -1158,6 +1187,7 @@ export function startTerminalHome(
         return;
       }
       if (result.effect.kind === 'clear') {
+        clearCopyFeedback();
         streamOverflow.clear();
         clearTranscript(nodes, result.announcement);
         return;
@@ -1203,6 +1233,11 @@ export function startTerminalHome(
     if (!isUnmodifiedPrimaryClick(event)) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const copyButton = target.closest('button[data-terminal-copy-code]');
+    if (copyButton instanceof HTMLButtonElement && nodes.transcript.contains(copyButton)) {
+      void copyCode(copyButton);
+      return;
+    }
     const button = target.closest('button[data-terminal-return], button[data-terminal-collapse]');
     if (button instanceof HTMLButtonElement && nodes.transcript.contains(button)) {
       if (button.hasAttribute('data-terminal-return')) {

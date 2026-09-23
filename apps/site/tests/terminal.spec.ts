@@ -2100,6 +2100,74 @@ test('inline reading controls preserve drafts, body identity and independent out
   await expect(articles.first()).not.toHaveAttribute('data-terminal-repeated-title', '');
 });
 
+test('inline code blocks number lines and copy exact source in repeated output', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          (window as Window & { copiedCode?: string }).copiedCode = value;
+        }
+      }
+    });
+  });
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const articles = page.locator('[data-terminal-stream-document]');
+  await expect(articles).toHaveCount(2);
+  for (const article of [articles.first(), articles.last()]) {
+    const blocks = article.locator('.terminal-code-block');
+    await expect(blocks).toHaveCount(2);
+    for (const block of [blocks.first(), blocks.last()]) {
+      const expected = await block.locator('pre > code').textContent();
+      const gutter = block.locator('.terminal-code-gutter');
+      await expect(gutter).toHaveAttribute('aria-hidden', 'true');
+      expect(await gutter.locator('span').allTextContents()).toEqual(
+        Array.from({ length: (expected ?? '').split('\n').length }, (_, index) => String(index + 1))
+      );
+      const alignment = await block.evaluate((element) => {
+        const codeLines = [...element.querySelectorAll<HTMLElement>('pre code > .line')];
+        const gutterLines = [...element.querySelectorAll<HTMLElement>('.terminal-code-gutter > span')];
+        return {
+          hasShiki: Boolean(element.querySelector('pre.astro-code')),
+          offsets: codeLines.map((line, index) =>
+            line.getBoundingClientRect().top - gutterLines[index]!.getBoundingClientRect().top)
+        };
+      });
+      if (alignment.hasShiki) expect(alignment.offsets.length).toBeGreaterThan(0);
+      expect(alignment.offsets.every((offset) => Math.abs(offset) <= 4), JSON.stringify(alignment)).toBe(true);
+      await block.getByRole('button', { name: 'Copy code' }).click();
+      expect(await page.evaluate(() => (window as Window & { copiedCode?: string }).copiedCode)).toBe(expected);
+      await expect(block.getByRole('button', { name: 'Copied' })).toBeFocused();
+    }
+  }
+  const nested = articles.first().locator('.terminal-code-block--nested');
+  expect(await nested.locator('pre > code').textContent()).toBe('  first  line\n    second   line');
+  await page.locator('#terminal-command').fill('draft');
+  await nested.getByRole('button', { name: 'Copied' }).press('Enter');
+  expect(await page.evaluate(() => (window as Window & { copiedCode?: string }).copiedCode)).toBe(
+    '  first  line\n    second   line'
+  );
+  await nested.getByRole('button', { name: 'Copied' }).press('x');
+  await expect(page.locator('#terminal-command')).toHaveValue('draft');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => { throw new Error('denied'); } }
+    });
+  });
+  await nested.getByRole('button', { name: 'Copied' }).click();
+  await expect(nested.getByRole('button', { name: 'Copy failed' })).toBeFocused();
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Could not copy code. Select it manually.');
+  await expectNoHorizontalOverflow(page);
+  await submit(page, 'clear');
+  await expect(page.locator('.terminal-code-block')).toHaveCount(0);
+  await page.goto('/pages/markdown-template/');
+  await expect(page.locator('.terminal-code-block')).toHaveCount(0);
+});
+
 test('inline wide content wraps prose, preserves code and exposes remaining scroll directions', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 375, height: 812 });

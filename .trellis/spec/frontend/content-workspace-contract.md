@@ -1075,8 +1075,20 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   chrome, prose and wide frames. Table prose and inline code wrap while
   preformatted code preserves whitespace.
   Remaining horizontal overflow has measured directional hints updated on
-  resize, scrolling and expansion. Only simple tables without spanning cells
+  resize, scrolling and expansion. Shiki adds inline overflow to generated
+  `<pre>` elements; keep the existing outer `.terminal-wide` or `.wide-content`
+  as the scroll owner so those hints and canonical wide regions still work.
+  Only simple tables without spanning cells
   and with a first column at most 40% of the scroll region pin that column.
+  Trusted post-sanitization syntax tokens may carry theme color variables, but
+  authored HTML still cannot inject styles. Only inline `cat` applies the
+  terminal color theme; canonical article code keeps its existing appearance.
+  Each cloned `pre > code` block has a separate `aria-hidden`, one-based line
+  number gutter and a native Copy code button. The gutter is presentation only:
+  copied text comes from the displayed code node's text, preserving whitespace
+  without adding numbers. A copy result is announced, and failed clipboard
+  access never reports success. These controls stay independent across repeated
+  `cat` output and preserve local code scrolling and typing protection.
   Metadata titles are demoted only when the validated first outline heading
   matches under case/whitespace/separator normalization and rendered HTML starts
   with that heading; authored headings and IDs are never removed or rewritten.

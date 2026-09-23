@@ -1,6 +1,7 @@
-import { diagramPipelineVersion, diagramSyntaxHighlight, rehypeMermaid } from './src/build/mermaid-markdown.mjs';
+import { diagramPipelineVersion, rehypeMermaid } from './src/build/mermaid-markdown.mjs';
 import { createMermaidIntegration } from './src/build/mermaid-assets.mjs';
 import { unified } from '@astrojs/markdown-remark';
+import { siteRehypeShiki, siteSyntaxHighlight } from './src/build/code-highlighting.mjs';
 import {
   createXCorePlugins,
   PresentationRegistry
@@ -32,12 +33,13 @@ export default defineConfig({
   trailingSlash: 'always',
   integrations: [createSiteSeoIntegration(), createMermaidIntegration()],
   markdown: {
-    syntaxHighlight: diagramSyntaxHighlight,
+    syntaxHighlight: siteSyntaxHighlight,
     processor: unified({
       remarkPlugins: [xCorePlugins.remarkPlugin],
       rehypePlugins: [
         rehypeRaw,
         [rehypeSanitize, markdownHtmlSchema],
+        siteRehypeShiki,
         [rehypeMermaid, { resolveContext: resolveDocumentContext, pipelineVersion: diagramPipelineVersion }],
         xCorePlugins.rehypePlugin
       ],

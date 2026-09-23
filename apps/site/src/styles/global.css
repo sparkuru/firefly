@@ -519,6 +519,11 @@ blockquote {
   overflow-wrap: normal;
 }
 
+/* Shiki sets inline scrolling; the existing wide region owns that scroll. */
+.wide-content pre.astro-code {
+  overflow: visible !important;
+}
+
 .wide-content code {
   white-space: pre;
 }

@@ -1,3 +1,5 @@
+import { decorateStreamCodeBlocks } from './terminal-stream-code';
+
 /** One observer owns every live stream region; clear releases all retained nodes. */
 export function createStreamOverflowController() {
   const regions = new Map<HTMLElement, HTMLElement>();
@@ -32,6 +34,7 @@ export function createStreamOverflowController() {
   };
   return {
     add(root: HTMLElement): void {
+      decorateStreamCodeBlocks(root);
       for (const article of root.querySelectorAll<HTMLElement>('[data-terminal-stream-document]')) {
         articles.add(article);
         const toolbar = article.querySelector('.terminal-stream-actions');
