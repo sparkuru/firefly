@@ -1640,3 +1640,33 @@ Removed the 52rem inline cat cap, aligned article and wide content to the termin
 ### Status
 
 [OK] **Completed**
+
+
+## Session 73: Terminal cat code blocks
+
+**Date**: 2026-09-23
+**Task**: Terminal cat code blocks
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added trusted post-sanitization Shiki highlighting, line numbers, and copy controls to inline terminal cat articles.
+
+### Main Changes
+
+- Preserved authored HTML sanitization, Mermaid processing, and canonical document styling.
+- Added accessible gutters, clipboard feedback, and outer-region scroll ownership for generated code.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6c53c23` | (see git log) |
+
+### Testing
+
+- [OK] Astro check: 0 diagnostics; diagram tests: 15/15; X Core tests: 8/8; focused desktop/mobile Playwright: 4/4.
+
+### Status
+
+[OK] **Completed**
