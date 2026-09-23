@@ -15,6 +15,7 @@
     "test:content": "node --experimental-strip-types --test --test-concurrency=1 tests/content-access.test.mjs tests/content-metadata.test.mjs tests/content-materializer.test.mjs tests/firefly-ignore.test.mjs tests/content-markers.test.mjs tests/content-schema.test.mjs tests/content-build-negatives.test.mjs tests/content-build-positive.test.mjs tests/site-config.test.mjs tests/canonical-route.test.mjs tests/x-core-context.test.mjs tests/presentation-experiences.test.mjs tests/document-navigation-composition.test.mjs tests/site-plugin-registry.test.mjs tests/comments.test.mjs tests/blog-meta-cli.test.mjs",
     "test:blog-meta": "node --test tests/blog-meta-cli.test.mjs",
     "test:unicode-comments-static": "node --test tests/unicode-comments-static.test.mjs",
+    "test:diagrams": "node --test tests/mermaid-rendering.test.mjs tests/renderer-timeout.test.mjs tests/renderer-policy.test.mjs tests/render-command.test.mjs",
     "test:x-core": "node --test tests/x-core-integration.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:unicode-comments": "playwright test --config playwright.unicode-comments.config.ts",
@@ -40,6 +41,8 @@
     "@astrojs/check": "0.9.10",
     "@playwright/test": "1.62.0",
     "@tailwindcss/vite": "4.3.3",
+    "mermaid": "12.0.0",
+    "playwright-core": "1.62.0",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3"
   }

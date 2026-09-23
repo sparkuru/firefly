@@ -25,7 +25,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop-static',
-      testMatch: 'site.spec.ts',
+      testMatch: /(?:site|mermaid)\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: false,
@@ -34,7 +34,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-static',
-      testMatch: 'site.spec.ts',
+      testMatch: /(?:site|mermaid)\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: false,
@@ -43,7 +43,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-desktop-interactive',
-      testMatch: /(?:terminal|document-navigator)\.spec\.ts/u,
+      testMatch: /(?:terminal|document-navigator|mermaid)\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: true,
@@ -52,7 +52,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-interactive',
-      testMatch: /(?:terminal|document-navigator)\.spec\.ts/u,
+      testMatch: /(?:terminal|document-navigator|mermaid)\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: true,

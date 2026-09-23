@@ -1,5 +1,25 @@
 import { expect, test } from '@playwright/test';
 
+test('assembled diagrams resolve as local SVG assets with their source disclosure', async ({ page }) => {
+  await page.goto('/pages/mermaid-diagrams/');
+  const figures = page.locator('[data-diagram="rendered"]');
+  await expect(figures).toHaveCount(2);
+  for (const figure of await figures.all()) {
+    const image = figure.locator('img');
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    const source = await image.getAttribute('src');
+    expect(source).toMatch(/^\/diagrams\/[a-f0-9]{64}\.svg$/u);
+    const asset = await page.request.get(source!);
+    expect(asset.status()).toBe(200);
+    expect(asset.headers()['content-type']).toContain('image/svg+xml');
+    const fullSizeHref = await figure.getByRole('link', { name: 'Open full-size diagram' }).getAttribute('href');
+    expect(new URL(fullSizeHref!, page.url()).pathname).toBe(source);
+    await figure.locator('summary').click();
+    await expect(figure.locator('pre')).toBeVisible();
+  }
+});
+
 test('assembled release preserves cross-application navigation and mounted 404 ownership', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('main')).toBeVisible();

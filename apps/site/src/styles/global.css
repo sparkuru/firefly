@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './article-content.css';
+@import './document-diagrams.css';
 @import './content-themes/paper.css';
 
 :root {

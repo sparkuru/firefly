@@ -109,7 +109,7 @@ ensure_publication_output() {
 	for file in "${required_files[@]}"; do
 		if [[ ! -f "${REPO_ROOT}/${file}" ]]; then
 			printf '[dev.sh] assembled publication is missing: %s\n' "${REPO_ROOT}/${file}" >&2
-			printf '[dev.sh] build it first with: ./sam npm run build:m4\n' >&2
+			printf '[dev.sh] build it first with: ./render.sh npm run build:m4\n' >&2
 			printf '[dev.sh] or run: ./dev.sh preview\n' >&2
 			return 1
 		fi
@@ -181,7 +181,7 @@ start_services() {
 
 	if [[ "${mode}" == publication-build ]]; then
 		printf '[dev.sh] building the assembled publication\n' >&2
-		FIREFLY_CONTENT_ROOT="${content_root}" SAM_SCOPE=dev.sh ./sam npm run build:m4
+		FIREFLY_CONTENT_ROOT="${content_root}" SAM_SCOPE=dev.sh ./render.sh npm run build:m4
 	fi
 
 	if [[ "${mode}" == publication || "${mode}" == publication-build ]]; then
@@ -193,7 +193,7 @@ start_services() {
 		printf '[dev.sh] starting Astro development server (no build)\n' >&2
 		printf '[dev.sh] development site: http://%s:%s/\n' "${SAM_BIND_HOST}" "${WEB_HOST_PORT}" >&2
 		run_service web \
-			./sam npm --prefix apps/site run dev -- \
+			./render.sh npm --prefix apps/site run dev -- \
 			--host 0.0.0.0 --port "${WEB_CONTAINER_PORT}"
 	fi
 

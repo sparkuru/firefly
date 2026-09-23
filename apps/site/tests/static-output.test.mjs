@@ -221,7 +221,17 @@ test('static build emits only the implemented route surface', async () => {
   assert.equal(scripts.filter((file) => /^_astro\/DocumentNavigationStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/document-navigation\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 1);
+  const diagrams = files.filter((file) => /^diagrams\/[a-f0-9]{64}\.svg$/u.test(file));
+  const diagramReferences = new Set();
+  for (const file of htmlFiles) {
+    const html = await readFile(path.join(distRoot, file), 'utf8');
+    for (const [, asset] of html.matchAll(/(?:src|href)="\/(diagrams\/[a-f0-9]{64}\.svg)"/gu)) {
+      diagramReferences.add(asset);
+    }
+  }
+  assert.deepEqual(diagrams, [...diagramReferences].sort(), 'publish exactly the diagrams referenced by public HTML');
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
+    ...diagrams,
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
     'fonts/JetBrainsMono-Regular-v2.304.woff2',
     'licenses/JetBrainsMono-OFL-1.1.txt',
@@ -360,7 +370,7 @@ test('only the exact generated Terminal home script bypasses asset inlining', ()
 
 test('static artifacts preserve runtime safety and dependency isolation', async () => {
   const files = await listFiles(distRoot);
-  const textFiles = files.filter((file) => /\.(?:css|html|js|json)$/u.test(file));
+  const textFiles = files.filter((file) => /\.(?:css|html|js|json|svg)$/u.test(file));
   const artifacts = (
     await Promise.all(
       textFiles.map(async (file) => `${file}\n${await readFile(path.join(distRoot, file), 'utf8')}`)
@@ -674,11 +684,11 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.ok(templatePaths.includes(workflow.virtualPath));
   const templateBodies = [...home.matchAll(/<template\b[^>]*data-terminal-template[^>]*>([\s\S]*?)<\/template>/gu)].map((match) => match[1] ?? '');
   assert.equal(templateBodies.length, entryPaths.length);
-  assert.match(templateBodies.join('\n'), /data-language="mermaid"/u);
+  assert.match(templateBodies.join('\n'), /data-diagram="rendered"/u);
   assert.match(templateBodies.join('\n'), /Future presentations can change how the site looks/u);
   const withoutTemplates = home.replace(/<template\b[^>]*>[\s\S]*?<\/template>/gu, '');
-  assert.doesNotMatch(withoutTemplates, /data-language="mermaid"|Future presentations can change how the site looks/u);
-  assert.doesNotMatch(script, /data-language="mermaid"|Future presentations can change how the site looks/u);
+  assert.doesNotMatch(withoutTemplates, /data-diagram="rendered"|Future presentations can change how the site looks/u);
+  assert.doesNotMatch(script, /data-diagram="rendered"|Future presentations can change how the site looks/u);
   assert.match(home, /<section\b[^>]*data-terminal-fallback[^>]*>/u);
   const marker = /<script\b[^>]*data-terminal-startup-marker[^>]*>[\s\S]*?<\/script>/u.exec(home)?.[0] ?? '';
   assert.match(marker, /terminalStartupState\s*=\s*['"]connecting['"]/u);
@@ -695,7 +705,12 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /<section\b[^>]*data-terminal-session[^>]*\bhidden\b[^>]*>/u);
   assert.match(home, new RegExp('<h1 class="terminal-visually-hidden">' + SITE_CONFIG.site.name + ' content terminal<\\/h1>', 'u'));
   assert.match(home, /enterkeyhint="send"/u);
-  assert.doesNotMatch(home, /<button\b/iu);
+  assert.doesNotMatch(withoutTemplates, /<button\b/iu);
+  for (const body of templateBodies) {
+    assert.match(body, /<button\b[^>]*data-terminal-return/u);
+    assert.match(body, /<button\b[^>]*data-terminal-collapse[^>]*aria-expanded="true"[^>]*aria-controls="[^"]+"/u);
+    assert.match(body, /<a\b[^>]*href="[^"#]+"[^>]*data-terminal-open/u);
+  }
   assert.match(terminalArticle, /<h1>About this foundation<\/h1>/u);
   assert.match(terminalArticle, /<span>~\/blog\/pages\/about\.md<\/span>/u);
   assert.doesNotMatch(terminalArticle, /class="terminal-path"/u);
@@ -705,7 +720,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(terminalArticle, /data-navigation-search-form/u);
   assert.doesNotMatch(terminalArticle, /id="terminal-command"/iu);
   assert.match(article, /<h1>llm-workflow-with-trellis<\/h1>/u);
-  assert.match(article, /data-language="mermaid"/u);
+  assert.match(article, /data-diagram="rendered"/u);
   assert.match(article, /class="terminal-document"/u);
   assert.match(article, /class="terminal-root"/u);
   assert.match(article, /published/u);
@@ -769,7 +784,7 @@ test('default firefly output contains document navigator boundaries and localize
   assert.doesNotMatch(post, /class="document-outline"/u);
   assert.match(post, /data-terminal-wide="code"/u);
   assert.match(post, /data-terminal-wide="table"/u);
-  assert.match(post, /data-language="mermaid"/u);
+  assert.match(post, /data-diagram="rendered"/u);
   assert.match(post, /<h1>llm-workflow-with-trellis<\/h1>/u);
   assert.match(post, new RegExp(`<span>${escapeRegExp(workflow.visiblePath)}<\\/span>`, 'u'));
   assert.doesNotMatch(post, /class="terminal-path"/u);

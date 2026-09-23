@@ -1,3 +1,5 @@
+import { diagramPipelineVersion, diagramSyntaxHighlight, rehypeMermaid } from './src/build/mermaid-markdown.mjs';
+import { createMermaidIntegration } from './src/build/mermaid-assets.mjs';
 import { unified } from '@astrojs/markdown-remark';
 import {
   createXCorePlugins,
@@ -25,14 +27,18 @@ const xCorePlugins = createXCorePlugins({
 
 export default defineConfig({
   output: 'static',
+  // Content HTML and generated diagrams share the same cold-cache boundary.
+  cacheDir: './.astro/cache/',
   trailingSlash: 'always',
-  integrations: [createSiteSeoIntegration()],
+  integrations: [createSiteSeoIntegration(), createMermaidIntegration()],
   markdown: {
+    syntaxHighlight: diagramSyntaxHighlight,
     processor: unified({
       remarkPlugins: [xCorePlugins.remarkPlugin],
       rehypePlugins: [
         rehypeRaw,
         [rehypeSanitize, markdownHtmlSchema],
+        [rehypeMermaid, { resolveContext: resolveDocumentContext, pipelineVersion: diagramPipelineVersion }],
         xCorePlugins.rehypePlugin
       ],
       remarkRehype: { allowDangerousHtml: true }

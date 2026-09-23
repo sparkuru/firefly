@@ -8,7 +8,14 @@
 
 firefly is a static Astro publication backed by Markdown and a small
 framework-neutral Terminal presentation. The build is intentionally
-Docker-only: the supported command boundary is ./sam.
+Docker-only: the supported command boundary is ./sam. Document rendering uses
+./render.sh, which selects the pinned Playwright browser image and delegates to
+./sam; ordinary commands retain the lightweight Node image. Mermaid diagrams
+are rendered locally at build time, never by a client bundle or remote service.
+Astro content cache and generated diagrams both live under `apps/site/.astro/`.
+If a generated diagram is missing, stop development servers, clear that complete
+directory, and rebuild through `./render.sh`; retain both subdirectories together
+for warm builds.
 
 <p align = "center" style="font-size: 26px;" > <strong> Clone and build </strong> </p>
 
@@ -24,8 +31,8 @@ For the full authoring workspace, point the same variable at its containing
 blog root (not at `posts/` alone):
 
 ~~~sh
-FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm --prefix apps/site run build:workspace
-FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./render.sh npm --prefix apps/site run build:workspace
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./render.sh npm run build:m4
 ~~~
 
 The external root is mounted read-only and only its `posts/` and `pages/`
@@ -80,7 +87,7 @@ The default clone path is:
 
 ~~~sh
 ./sam npm run install:m4
-./sam npm run build:m4
+./render.sh npm run build:m4
 ~~~
 
 The build recreates ignored generated directories, including
@@ -98,7 +105,7 @@ then start the default service definition:
 
 ~~~sh
 ./sam npm run install:m4
-./sam npm run build:m4
+./render.sh npm run build:m4
 docker compose up --build -d
 docker compose down
 ~~~

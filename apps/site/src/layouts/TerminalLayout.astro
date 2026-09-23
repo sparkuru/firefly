@@ -1,4 +1,5 @@
 ---
+import diagramCss from '../styles/document-diagrams.css?raw';
 import terminalCss from '../styles/terminal.css?raw';
 import articleContentCss from '../styles/article-content.css?raw';
 import paperCss from '../styles/content-themes/paper.css?raw';
@@ -41,7 +42,7 @@ const { title, description, path, home = false, ...headProps } = Astro.props;
       type="font/woff2"
       crossorigin="anonymous"
     />
-    <style is:inline set:html={`${terminalCss}\n${articleContentCss}\n${paperCss}`}></style>
+    <style is:inline set:html={`${terminalCss}\n${articleContentCss}\n${paperCss}\n${diagramCss}`}></style>
   </head>
   <body class:list={['terminal-body', { 'terminal-body--home': home }]}>
     <a class="terminal-skip" href="#main-content">Skip to main content</a>

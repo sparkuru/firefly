@@ -113,7 +113,7 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   }
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
-  await expect(page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/learning-with-llm/"] a')).toBeVisible();
+  await expect(page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/Learning-with-LLM/"] a')).toBeVisible();
   await expect(
     page.locator(`template[data-terminal-template][data-terminal-template-path="${workflow.virtual}"]`)
   ).toHaveCount(1);
@@ -147,10 +147,10 @@ test('lab index is a JavaScript-free semantic catalog with native navigation', a
   const main = page.getByRole('main');
   await expect(main.getByRole('heading', { level: 1, name: 'Experiments' })).toBeVisible();
   await expect(main.getByRole('heading', { level: 2, name: 'NERV' })).toBeVisible();
-  const nervEntry = main.locator('li').filter({ has: main.getByRole('heading', { level: 2, name: 'NERV' }) });
+  const nervEntry = main.locator('li').filter({ has: page.getByRole('heading', { level: 2, name: 'NERV' }) });
   await expect(nervEntry.locator('.content-meta')).toHaveText('landing · astro · fan-work');
   await expect(main.getByRole('link', { name: 'Open NERV' })).toHaveAttribute('href', '/lab/nerv/');
-  const majoEntry = main.locator('li').filter({ has: main.getByRole('heading', { level: 2, name: 'majo' }) });
+  const majoEntry = main.locator('li').filter({ has: page.getByRole('heading', { level: 2, name: 'majo' }) });
   await expect(majoEntry.locator('.content-meta')).toHaveText('landing · astro · carousel · music');
   await expect(main.getByRole('link', { name: 'Open majo' })).toHaveAttribute('href', '/lab/majo/');
   await expect(page.locator('script')).toHaveCount(0);
@@ -264,7 +264,11 @@ test('firefly article remains complete and exposes one canonical route', async (
     'https://github.com/mindfold-ai/Trellis.git'
   );
   await expect(article.getByRole('table').first()).toBeVisible();
-  await expect(article.getByText('flowchart TD')).toBeVisible();
+  const diagram = article.locator('[data-diagram="rendered"]');
+  await expect(diagram.locator('img')).toBeVisible();
+  await diagram.locator('summary').click();
+  await expect(diagram.locator('pre')).toContainText('flowchart TD');
+  await expect(diagram.locator('pre')).toBeVisible();
   const outline = page.getByRole('navigation', { name: 'Document outline' });
   await expect(outline.locator('li')).toHaveCount(21);
   await expect(outline.locator('ul')).toHaveCount(1);
@@ -274,6 +278,7 @@ test('firefly article remains complete and exposes one canonical route', async (
   await expect(tableRegion).toHaveAttribute('tabindex', '0');
   await expectContainedInViewport(page, codeRegion);
   await expectContainedInViewport(page, tableRegion);
+  await page.keyboard.press('Tab');
   await codeRegion.focus();
   await expect(codeRegion).toBeFocused();
   expect(await codeRegion.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none');
@@ -360,22 +365,22 @@ test('document navigator fragment remains a native location without browser Java
 });
 
 test('semantic document entry remains a complete native anchor without browser JavaScript', async ({ page }) => {
-  await page.goto('/posts/infra/connect-to-windows-via-terminal/');
+  await page.goto('/pages/inline-reading-semantic/');
 
   const article = page.locator('.semantic-document');
   const entry = page.getByRole('link', { name: 'Read document', exact: true });
   await expect(entry).toHaveAttribute('href', '#document-navigator');
   await expect(entry).toBeVisible();
-  await expect(article.getByRole('heading', { level: 1, name: 'Connect to windows via terminal' })).toBeVisible();
+  await expect(article.getByRole('heading', { level: 1, name: 'Semantic inline reading' })).toBeVisible();
   await expect(article.locator('.document-outline')).toBeVisible();
   await expect(article.locator('[data-document-navigator-status]')).toHaveAttribute('hidden', '');
   await expect(article.locator('[data-navigation-exit-control]')).toHaveAttribute('hidden', '');
 
   await entry.click();
-  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/#document-navigator$/u);
+  await expect(page).toHaveURL(/\/pages\/inline-reading-semantic\/#document-navigator$/u);
   await expect(page.locator('#document-navigator')).toBeVisible();
   await expect(page.locator('[data-document-navigator-status]')).toHaveAttribute('hidden', '');
-  await expect(article).toContainText('OpenSSH Server');
+  await expect(article).toContainText('Inline code');
   await expectNoHorizontalOverflow(page);
 });
 

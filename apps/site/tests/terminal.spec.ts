@@ -1826,7 +1826,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
     expect(id).not.toBeNull();
     expect(identityEvidence.ids).toContain(id ?? '');
   }
-  expect(identityEvidence.returnControls).toEqual([0, 0]);
+  expect(identityEvidence.returnControls).toEqual([1, 1]);
   expect(identityEvidence.permalinks).toEqual([
     '/posts/ai/llm-workflow-with-trellis/',
     '/posts/ai/llm-workflow-with-trellis/'
@@ -2041,4 +2041,163 @@ test('reduced motion and responsive checkpoints preserve full-page containment',
   }));
   expect(desktopWidth.actual).toBeGreaterThan(desktopWidth.viewport * 0.75);
   expect(desktopWidth.actual).toBeLessThanOrEqual(desktopWidth.viewport * 0.81);
+});
+
+test('inline reading controls preserve drafts, body identity and independent output state', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const articles = page.locator('[data-terminal-stream-document]');
+  const first = articles.nth(0);
+  const second = articles.nth(1);
+  const input = page.locator('#terminal-command');
+  await expect(first).toHaveAttribute('data-terminal-repeated-title', '');
+  await expect(first.locator('.terminal-stream-guidance')).toContainText('Typing resumes commands');
+  await expect(first.locator('[data-terminal-open]')).toHaveAttribute('href', '/pages/markdown-template/#document-navigator');
+  await expect(first.locator('.terminal-stream-permalink')).toHaveAttribute('href', '/pages/markdown-template/');
+  const controls = await articles.evaluateAll((nodes) => nodes.map((node) => ({
+    target: node.querySelector('[data-terminal-collapse]')?.getAttribute('aria-controls'),
+    body: node.querySelector('.terminal-stream-prose')?.id
+  })));
+  expect(controls[0]?.target).toBe(controls[0]?.body);
+  expect(controls[1]?.target).toBe(controls[1]?.body);
+  expect(controls[0]?.target).not.toBe(controls[1]?.target);
+  await input.fill('unfinished draft');
+  await input.evaluate((element: HTMLInputElement) => element.setSelectionRange(2, 8));
+  await first.locator('[data-terminal-return]').click();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue('unfinished draft');
+  expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])).toEqual([2, 8]);
+  await first.locator('.terminal-stream-prose').evaluate((body) => {
+    (window as unknown as { retainedBody: Element }).retainedBody = body;
+  });
+  await first.locator('.terminal-wide').first().focus();
+  await first.locator('[data-terminal-collapse]').evaluate((button: HTMLButtonElement) => button.click());
+  await expect(first.locator('[data-terminal-collapse]')).toBeFocused();
+  await expect(first.locator('.terminal-stream-prose')).toBeHidden();
+  await expect(first.locator('[data-terminal-collapse]')).toHaveAttribute('aria-expanded', 'false');
+  await expect(second.locator('.terminal-stream-prose')).toBeVisible();
+  await first.locator('[data-terminal-collapse]').click();
+  expect(await first.locator('.terminal-stream-prose').evaluate((body) =>
+    (window as unknown as { retainedBody: Element }).retainedBody === body)).toBe(true);
+  await expect(first.locator('.terminal-stream-prose')).toBeVisible();
+  await first.locator('[data-terminal-collapse]').focus();
+  await page.keyboard.press('Enter');
+  await expect(first.locator('.terminal-stream-prose')).toBeHidden();
+  await page.keyboard.press('Enter');
+  await expect(first.locator('.terminal-stream-prose')).toBeVisible();
+  await page.keyboard.press('j');
+  await expect(input).toHaveValue('unfinished draft');
+  await first.locator('[data-terminal-stream-title]').focus();
+  await page.keyboard.press('j');
+  await expect(input).toHaveValue('unjed draft');
+  await submit(page, 'clear');
+  await expect(articles).toHaveCount(0);
+  await expect(page.locator('.terminal-stream-scroll-hint')).toHaveCount(0);
+  await submit(page, 'cat ~/blog/pages/about.md');
+  await expect(articles).toHaveCount(1);
+  await expect(articles.first()).not.toHaveAttribute('data-terminal-repeated-title', '');
+});
+
+test('inline wide content wraps prose, preserves code and exposes remaining scroll directions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const article = page.locator('[data-terminal-stream-document]');
+  const region = article.locator('.terminal-wide').filter({ has: page.locator('pre') }).last();
+  await expect(region).toHaveAttribute('data-scroll-right', '');
+  await expect(region).not.toHaveAttribute('data-scroll-left', '');
+  await expect(region.locator('code')).toContainText('  exact  spacing\\tstays literal');
+  expect(await article.locator('td').first().evaluate((cell) => getComputedStyle(cell).whiteSpace)).toBe('normal');
+  const spanning = article.locator('.terminal-wide').filter({ has: page.locator('[colspan]') });
+  await expect(spanning).not.toHaveAttribute('data-sticky-column', '');
+  const table = article.locator('.terminal-wide').filter({ has: page.locator('table:not(:has([colspan]))') }).first();
+  await expect(table).toHaveAttribute('data-scroll-right', '');
+  await region.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+  await expect(region).toHaveAttribute('data-scroll-left', '');
+  await expect(region).not.toHaveAttribute('data-scroll-right', '');
+  await expectNoHorizontalOverflow(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  expect(await article.evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(832);
+  await expect(table).not.toHaveAttribute('data-scroll-right', '');
+  await expect(table).not.toHaveAttribute('data-scroll-left', '');
+  await expect(table.locator('..').locator('.terminal-stream-scroll-hint')).toBeHidden();
+  await expectNoHorizontalOverflow(page);
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await article.evaluate((element) => {
+    const prose = element.querySelector('.terminal-stream-prose');
+    if (prose) window.scrollTo(0, window.scrollY + prose.getBoundingClientRect().top + 80);
+  });
+  await expectInViewport(article.locator('.terminal-stream-actions'));
+  await page.setViewportSize({ width: 1440, height: 500 });
+  await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+  await expectNoHorizontalOverflow(page);
+});
+
+test('inline open intent respects destinations without a navigator and native new tabs', async ({ page }) => {
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      const root = document.querySelector<HTMLElement>('[data-terminal-home]');
+      if (root) {
+        const lookup = JSON.parse(root.dataset.terminalDocumentNavigation ?? '{}');
+        lookup['/pages/markdown-template/'] = 'none';
+        root.dataset.terminalDocumentNavigation = JSON.stringify(lookup);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const link = page.locator('[data-terminal-open]');
+  await expect(link).toHaveAttribute('href', '/pages/markdown-template/');
+  const popupPromise = page.context().waitForEvent('page');
+  await link.click({ modifiers: ['Control'] });
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(/\/pages\/markdown-template\/$/u);
+  await popup.close();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.locator('[data-terminal-stream-document]')).toHaveCount(1);
+});
+
+test('a collapse control pointing outside its document rejects the template', async ({ page }) => {
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      const template = document.querySelector<HTMLTemplateElement>('[data-terminal-template]');
+      const control = template?.content.querySelector('[data-terminal-collapse]');
+      if (control) {
+        control.setAttribute('aria-controls', 'terminal-command');
+        observer.disconnect();
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  });
+  await page.goto('/');
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
+  await expect(page.getByRole('heading', { name: 'Browse public documents' })).toBeVisible();
+  await expect(page.locator('#terminal-command')).toBeHidden();
+});
+
+test('inline tables wrap semantic inline code but preserve nested preformatted code', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await submit(page, 'cat ~/blog/pages/inline-reading-semantic.md');
+  const semantic = page.locator('[data-terminal-stream-document]').last();
+  const inlineCode = semantic.locator('.wide-content td code');
+  await expect(inlineCode).toHaveCSS('white-space', 'normal');
+  expect(await inlineCode.evaluate((code) => {
+    const range = document.createRange();
+    range.selectNodeContents(code);
+    return range.getClientRects().length;
+  })).toBeGreaterThan(1);
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const terminal = page.locator('[data-terminal-stream-document]').last();
+  const blockCode = terminal.locator('.terminal-wide td pre code');
+  await expect(blockCode).toHaveCSS('white-space', 'pre');
+  await expect(blockCode).toHaveCSS('overflow-wrap', 'normal');
+  expect(await blockCode.textContent()).toBe('  first  line\n    second   line');
+  await expectNoHorizontalOverflow(page);
 });

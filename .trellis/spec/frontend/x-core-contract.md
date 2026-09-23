@@ -201,3 +201,52 @@ executable and keep future presentations from weakening static content safety.
 - `apps/site/src/lib/x-core-context.ts`
 - `apps/site/src/lib/render-document.ts`
 - `apps/site/tests/x-core-integration.test.mjs`
+
+## Site-owned static diagrams
+
+The site processor runs its trusted async Mermaid stage after authored HTML
+sanitation and before X Core normalization. Authored policy does not admit SVG:
+Mermaid output is validated separately as isolated same-origin image assets.
+Set `markdown.syntaxHighlight` at the Astro configuration level to exclude
+Mermaid from Shiki; passing it inside `unified()` is silently ignored. Test the
+actual `unified().createRenderer()` path. Keep a serialized diagram pipeline
+version in plugin options so Astro invalidates cached HTML when the rendering
+contract changes.
+
+Both presentation adapters receive ordinary figure/image/details/source nodes;
+node identities, headings and the browser X Core boundary remain unchanged.
+
+`apps/site/src/build/mermaid-renderer.mjs` pins strict Mermaid configuration,
+64 KiB input and 15-second rendering limits, blocks network requests, rejects
+source configuration/callback/resource features, and validates SVG with XML DOM
+and CSSOM. Rendering is serial with a fresh browser/page per uncached source;
+all browser resources close even on failure. Invalid source is readable with a
+route-scoped diagnostic; unavailable renderer infrastructure fails the build.
+
+Astro content storage uses explicit `cacheDir: './.astro/cache/'`; generated
+diagrams live in the sibling `.astro/diagrams/`. Clearing the complete site
+`.astro/` directory invalidates both rendered HTML and its generated assets.
+Do not independently clear only the diagrams subdirectory. The old default
+`node_modules/.astro/` is no longer used by site builds.
+
+The ignored `.astro/diagrams/` cache is content/config/policy addressed and
+written atomically. `astro:build:done` scans current public HTML (including inert
+templates) and copies only referenced `/diagrams/<sha256>.svg` assets. Cached
+Astro HTML therefore still resolves assets, while unrelated/private cached
+images never enter publication. Missing referenced cache assets fail with a
+clear rebuild instruction. Development middleware serves the same immutable
+keys. No Mermaid script is shipped to the browser; full-size links and native
+source disclosure work without JavaScript. Generated SVGs retain explicit
+numeric intrinsic dimensions derived from a validated finite positive viewBox;
+remove Mermaid's root size constraints so a native full-size URL does not fit a
+long diagram into one unreadable viewport. The surrounding image CSS bounds
+inline previews. Validate SVG safety again after dimension normalization. For flowcharts, full-size links
+use the existing first node ID as a native SVG fragment so narrow viewports
+start on content rather than empty canvas. Store the encoded ID only on the
+SVG root, read only that root marker on cache hits, and keep preview image
+URLs fragment-free; labels must never be interpreted as navigation metadata.
+
+Run `./render.sh npm --prefix apps/site run test:diagrams` for renderer safety,
+fresh-render determinism, both adapter metadata, warm-cache and asset ownership
+checks; `mermaid.spec.ts` covers no-JS canonical images/disclosure and repeated
+Terminal `cat` isolation in the existing desktop/mobile browser projects.

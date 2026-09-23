@@ -27,8 +27,8 @@ cp config.dev.example config.dev
 ./sam npm --prefix apps/site ci
 ./sam npm --prefix apps/site run test:content
 ./sam npm --prefix apps/site run test:x-core
-./sam npm --prefix apps/site run check
-./sam npm --prefix apps/site run build
+./render.sh npm --prefix apps/site run check
+./render.sh npm --prefix apps/site run build
 
 ./sam npm --prefix tooling/validate-experiments ci
 ./sam npm --prefix tooling/validate-experiments run check
@@ -59,10 +59,10 @@ cp config.dev.example config.dev
 ./sam npm --prefix experiments/nerv run check
 ./sam npm --prefix experiments/nerv run build
 
-./sam npm run check:m4
-./sam npm run test:m4
-./sam npm run build:m4
-./sam npm run publication:m4
+./render.sh npm run check:m4
+./render.sh npm run test:m4
+./render.sh npm run build:m4
+./render.sh npm run publication:m4
 ./sam npm run install:m51
 ./verify.sh
 FIREFLY_CONTENT_ROOT="$PWD/content" \
@@ -88,7 +88,7 @@ syntax check.
 
 | Input / boundary | Contract |
 | --- | --- |
-| `SAM_IMAGE` | Defaults to `node:22-alpine`. Browser runs use `mcr.microsoft.com/playwright:v1.62.0-noble`. |
+| `SAM_IMAGE` | Defaults to `node:22-alpine`. Browser runs use `mcr.microsoft.com/playwright:v1.62.0-noble`. `render.sh` explicitly selects this image plus host IPC for diagram-bearing site build/check/dev commands and delegates to `sam`. |
 | `SAM_IPC` | Unset means `private`; accepted values are exactly `private` and `host`. Browser runs use `host`; explicit empty is invalid. |
 | `SAM_BIND_HOST` | `dev.sh` defaults to `0.0.0.0` for LAN-accessible development; direct `sam` defaults to `127.0.0.1`; override with a narrower address when needed. |
 | `WEB_HOST_PORT` / `WEB_CONTAINER_PORT` | `dev.sh` mapping, both default `4321`; adjust host port for parallel services. |
@@ -125,7 +125,7 @@ exact `sam.*` labels, TTY detection, and child exit behavior.
 | generated Astro dev lock is stale after a container stop | remove only `apps/site/.astro/dev.json` before starting and during teardown; do not pass `astro dev --force`, because a container PID can collide with the stale PID and terminate the new Astro process |
 | `dev.sh down` finds no labeled container | report none and succeed |
 | a required M4 package binary is missing in `preview`/`build` mode | fail before building and name the locked install delegate as recovery |
-| the assembled publication output is missing for default `dev.sh`/`start`/`up` | fail before stopping existing services and tell the developer to run `./sam npm run build:m4` or `./dev.sh preview` |
+| the assembled publication output is missing for default `dev.sh`/`start`/`up` | fail before stopping existing services and tell the developer to run `./render.sh npm run build:m4` or `./dev.sh preview` |
 | root publication build fails | preserve the wrapped failure, do not start the web service, and allow exact `sam.scope=dev.sh` cleanup |
 | a developer needs fast main-site hot reload | use `dev.sh dev`; the default `dev.sh` serves the existing assembled publication without rebuilding, while browser/static evidence still uses the dedicated build and Playwright gates |
 | dependency/image Playwright versions differ | browser validation unavailable until aligned |
@@ -149,7 +149,7 @@ so Playwright owns and terminates that preview process.
 
 - Good: the site build/static scan passes, then focused Playwright uses the
   matching Noble image, host IPC, and an owned preview of the unchanged artifact.
-- Good: after `./sam npm run build:m4`, `WEB_HOST_PORT=4322 ./dev.sh`
+- Good: after `./render.sh npm run build:m4`, `WEB_HOST_PORT=4322 ./dev.sh`
   validates the existing assembled output, does not rebuild it, and serves `/`,
   `/lab/`, and listed Experiment mounts including `/lab/majo/`.
 - Good: `FIREFLY_CONTENT_ROOT=/absolute/path/to/blog WEB_HOST_PORT=4322 ./dev.sh dev`
@@ -162,8 +162,9 @@ so Playwright owns and terminates that preview process.
   and port values configures both `./sam` and `./dev.sh`; explicit environment
   variables still override the file, and no config file preserves clone-safe
   repository defaults.
-- Base: site or NERV check/build uses plain `./sam`, private IPC, no published
-  port, UID mapping, and repository-local HOME.
+- Base: NERV-only check/build uses plain `./sam`, private IPC, no published
+  port, UID mapping, and repository-local HOME. Site and aggregate commands
+  that can render diagrams use `./render.sh`.
 - Bad: Alpine Playwright, mismatched image/package, host npm, raw Docker,
   using `astro dev` as static/browser-isolation evidence, build-inside-`start:e2e`,
   `reuseExistingServer: true`, an unmanaged server, or broad command approval.
@@ -189,13 +190,13 @@ and failure artifacts.
 When `sam`, `dev.sh`, or runtime packaging changes:
 
 ```bash
-bash -n sam dev.sh package-runtime.sh verify.sh
-shellcheck sam dev.sh package-runtime.sh verify.sh
-shfmt -d sam dev.sh package-runtime.sh verify.sh
+bash -n sam render.sh dev.sh package-runtime.sh verify.sh
+shellcheck sam render.sh dev.sh package-runtime.sh verify.sh
+shfmt -d sam render.sh dev.sh package-runtime.sh verify.sh
 ./verify.sh --help
 ./sam node --version
 # Build once, then serve the complete local publication without rebuilding.
-./sam npm run build:m4
+./render.sh npm run build:m4
 WEB_HOST_PORT=4322 ./dev.sh
 # Fast main-site-only hot reload; no publication build.
 WEB_HOST_PORT=4322 ./dev.sh dev
@@ -244,7 +245,7 @@ webServer: {
 #### Correct
 
 ```bash
-./sam npm --prefix apps/site run check
+./render.sh npm --prefix apps/site run check
 WEB_HOST_PORT=4322 ./dev.sh
 ./package-runtime.sh
 

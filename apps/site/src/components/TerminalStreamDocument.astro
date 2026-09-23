@@ -14,11 +14,18 @@ const { entry, terminalEntry, document } = Astro.props;
 const { Content } = document;
 const titleId = `terminal-stream-${terminalEntry.virtualPath.replaceAll('/', '-')}-title`;
 const kind = entry.collection === 'posts' ? 'post' : 'page';
+const bodyId = `${titleId}-body`;
+const normalizeTitle = (value: string) => value.toLocaleLowerCase('en-US').replace(/[\s_-]+/gu, ' ').trim();
+const firstHeading = document.metadata.outline[0];
+const startsWithHeading = /^\s*(?:<!--[\s\S]*?-->\s*)*<h[2-6]\b/u.test(entry.rendered?.html ?? '');
+const repeatedTitle = startsWithHeading && firstHeading !== undefined &&
+  normalizeTitle(firstHeading.text) === normalizeTitle(entry.data.title);
 ---
 
 <article
   class="terminal-stream-document"
   data-terminal-stream-document
+  data-terminal-repeated-title={repeatedTitle ? '' : undefined}
   aria-labelledby={titleId}
 >
   <header class="terminal-stream-header">
@@ -32,5 +39,11 @@ const kind = entry.collection === 'posts' ? 'post' : 'page';
     </h2>
     <a class="terminal-stream-permalink" href={terminalEntry.href}>permalink</a>
   </header>
-  <div class="terminal-stream-prose"><Content /></div>
+  <nav class="terminal-stream-actions" aria-label="Article reading actions">
+    <button type="button" data-terminal-return>Command</button>
+    <button type="button" data-terminal-collapse aria-expanded="true" aria-controls={bodyId}>Collapse</button>
+    <a href={terminalEntry.href} data-terminal-open>Open document</a>
+  </nav>
+  <p class="terminal-stream-guidance">Typing resumes commands. Open document for document navigation.</p>
+  <div id={bodyId} class="terminal-stream-prose"><Content /></div>
 </article>

@@ -778,8 +778,8 @@ test('direct canonical permalinks keep document navigator focus and key ownershi
   await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
 });
 
-const semanticDocumentPath = '/posts/infra/connect-to-windows-via-terminal/';
-const semanticDocumentName = /Document navigator for Connect to windows via terminal/u;
+const semanticDocumentPath = '/pages/inline-reading-semantic/';
+const semanticDocumentName = /Document navigator for Semantic inline reading/u;
 
 test('semantic document navigation stays inactive until its visible native entry is used', async ({ page }) => {
   await page.goto(semanticDocumentPath);
@@ -797,7 +797,7 @@ test('semantic document navigation stays inactive until its visible native entry
   await expect(region).not.toHaveAttribute('aria-activedescendant');
   await expect(status).toBeHidden();
   await expect(page.locator('[data-navigation-active]')).toHaveCount(0);
-  await expect(article.getByRole('heading', { level: 1, name: 'Connect to windows via terminal' })).toBeVisible();
+  await expect(article.getByRole('heading', { level: 1, name: 'Semantic inline reading' })).toBeVisible();
   await expect(article.locator('.document-outline')).toBeVisible();
 });
 
@@ -814,9 +814,10 @@ test('semantic document entry replaces only the fragment, preserves viewport/his
 
   await page.evaluate(() => window.scrollTo(0, 240));
   const scrollBeforeEntry = await page.evaluate(() => window.scrollY);
+  expect(scrollBeforeEntry).toBeGreaterThan(0);
   await entry.evaluate((element) => (element as HTMLAnchorElement).click());
 
-  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/\?source=entry#document-navigator$/u);
+  await expect(page).toHaveURL(/\/pages\/inline-reading-semantic\/\?source=entry#document-navigator$/u);
   await expect(region).toBeFocused();
   await expect(status).toBeVisible();
   await expect(page.locator('[data-navigation-exit-control]')).toBeVisible();
@@ -836,13 +837,13 @@ test('semantic document entry replaces only the fragment, preserves viewport/his
   await entry.evaluate((element) => (element as HTMLAnchorElement).click());
   await expect(region).toBeFocused();
   await expect(position).toHaveText(positionAfterMove ?? '');
-  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/\?source=entry#document-navigator$/u);
+  await expect(page).toHaveURL(/\/pages\/inline-reading-semantic\/\?source=entry#document-navigator$/u);
   expect(await page.evaluate(() => window.history.length)).toBe(before.historyLength);
 });
 
 test('semantic local exit restores the remembered heading fragment without scrolling or creating history', async ({ page }) => {
-  await page.goto(`${semanticDocumentPath}#openssh-server`);
-  await expect(page.locator('#openssh-server')).toBeVisible();
+  await page.goto(`${semanticDocumentPath}#reading-checkpoint`);
+  await expect(page.locator('#reading-checkpoint')).toBeVisible();
   await page.evaluate(() => (document.querySelector('[data-document-navigator-entry-control]') as HTMLAnchorElement).click());
   const region = page.getByRole('region', { name: semanticDocumentName });
   await expect(region).toBeFocused();
@@ -853,7 +854,7 @@ test('semantic local exit restores the remembered heading fragment without scrol
 
   await page.getByRole('button', { name: 'Exit navigation', exact: true }).click();
 
-  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/#openssh-server$/u);
+  await expect(page).toHaveURL(/\/pages\/inline-reading-semantic\/#reading-checkpoint$/u);
   await expect(page.getByRole('link', { name: 'Read document', exact: true })).toBeFocused();
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
   await expect(region).toHaveAttribute('tabindex', '-1');
@@ -875,7 +876,7 @@ test('semantic direct fragment exit clears the fragment and semantic q stays loc
   await command.fill('q');
   await command.press('Enter');
 
-  await expect(page).toHaveURL(/\/posts\/infra\/connect-to-windows-via-terminal\/$/u);
+  await expect(page).toHaveURL(/\/pages\/inline-reading-semantic\/$/u);
   await expect(page.getByRole('link', { name: 'Read document', exact: true })).toBeFocused();
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
 });
@@ -884,10 +885,10 @@ test('semantic browser fragment changes synchronize without stealing ordinary he
   await page.goto(`${semanticDocumentPath}#document-navigator`);
   const region = page.getByRole('region', { name: semanticDocumentName });
   await expect(region).toBeFocused();
-  const headingLink = page.getByRole('link', { name: 'OpenSSH Server', exact: true }).first();
+  const headingLink = page.getByRole('link', { name: 'Reading checkpoint', exact: true }).first();
   await headingLink.click();
 
-  await expect(page).toHaveURL(/#openssh-server$/u);
+  await expect(page).toHaveURL(/#reading-checkpoint$/u);
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
   expect(await page.evaluate(() => document.activeElement?.matches('[data-document-navigator-entry-control], [data-document-navigator-region], [data-navigation-exit-control]') ?? false)).toBe(false);
 
@@ -897,7 +898,7 @@ test('semantic browser fragment changes synchronize without stealing ordinary he
   await expect(region).toBeFocused();
 
   await page.goForward();
-  await expect(page).toHaveURL(/#openssh-server$/u);
+  await expect(page).toHaveURL(/#reading-checkpoint$/u);
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
   await expect(page.getByRole('link', { name: 'Read document', exact: true })).not.toBeFocused();
 });

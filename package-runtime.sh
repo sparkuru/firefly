@@ -109,7 +109,7 @@ main() {
 	local -A release_files=()
 	local -A runtime_files=()
 
-	for dependency in curl docker find jq mktemp rg sed sha256sum sort; do
+	for dependency in curl cut docker find jq mktemp rg sed sha256sum sort; do
 		require_command "${dependency}"
 	done
 	[[ -x "${REPO_ROOT}/sam" ]] || {
@@ -120,9 +120,9 @@ main() {
 	cd "${REPO_ROOT}"
 	trap cleanup EXIT INT TERM
 	if [[ -n "${FIREFLY_COMMENTS_EXPORT:-}" ]]; then
-		./sam npm run build:m51
+		./render.sh npm run build:m51
 	else
-		./sam npm run build:m4
+		./render.sh npm run build:m4
 	fi
 	[[ "$(jq -r '.schemaVersion' artifacts/publication.json)" == 1 ]]
 	jq -e '.comments.schemaVersion == 1 and (.comments.tombstoneEpoch | type == "number")' artifacts/publication.json >/dev/null
@@ -226,6 +226,12 @@ main() {
 	probe_status 200 /fonts/JetBrainsMono-Medium-v2.304.woff2
 	probe_status 200 /licenses/JetBrainsMono-OFL-1.1.txt
 	probe_status 200 /licenses/JetBrainsMono-PROVENANCE.txt
+	for file in "${manifest_inventory[@]}"; do
+		if [[ "${file}" =~ ^diagrams/[a-f0-9]{64}\.svg$ ]]; then
+			probe_status 200 "/${file}"
+			[[ "$(curl --fail --silent "${RUNTIME_ORIGIN}/${file}" | sha256sum | cut -d ' ' -f 1)" == "$(sha256sum "${REPO_ROOT}/dist/${file}" | cut -d ' ' -f 1)" ]]
+		fi
+	done
 	curl --silent "${RUNTIME_ORIGIN}/missing/" | rg --quiet 'Page not found'
 	curl --silent "${RUNTIME_ORIGIN}/lab/nerv/missing/" | rg --quiet 'MAGI records'
 	root_headers=$(curl --fail --silent --head "${RUNTIME_ORIGIN}/")

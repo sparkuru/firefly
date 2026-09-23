@@ -27,6 +27,7 @@ import {
   DOCUMENT_NAVIGATOR_FRAGMENT,
   type DocumentNavigationCapabilityLookup
 } from '../lib/document-navigation.ts';
+import { createStreamOverflowController } from './terminal-stream-overflow';
 
 interface TerminalNodes {
   readonly root: HTMLElement;
@@ -391,6 +392,9 @@ function readTemplates(
       ? streamDocument.querySelectorAll<HTMLElement>('.terminal-stream-prose')
       : [];
     const prose = proseNodes.length === 1 ? proseNodes[0] : null;
+    const returnControl = template.content.querySelectorAll('[data-terminal-return]');
+    const collapseControl = template.content.querySelectorAll('[data-terminal-collapse]');
+    const openControl = template.content.querySelectorAll('[data-terminal-open]');
     if (
       virtualPath === null ||
       !expected.has(virtualPath) ||
@@ -402,6 +406,18 @@ function readTemplates(
       prose === null ||
       streamTitle.id.length === 0 ||
       streamDocument.getAttribute('aria-labelledby') !== streamTitle.id ||
+      returnControl.length !== 1 ||
+      !(returnControl[0] instanceof HTMLButtonElement) ||
+      returnControl[0].type !== 'button' ||
+      collapseControl.length !== 1 ||
+      !(collapseControl[0] instanceof HTMLButtonElement) ||
+      collapseControl[0].type !== 'button' ||
+      prose.id.length === 0 ||
+      collapseControl[0].getAttribute('aria-controls') !== prose.id ||
+      collapseControl[0].getAttribute('aria-expanded') !== 'true' ||
+      openControl.length !== 1 ||
+      !(openControl[0] instanceof HTMLAnchorElement) ||
+      openControl[0].getAttribute('href') !== entries.find((entry) => entry.virtualPath === virtualPath)?.href ||
       template.content.querySelector('script') !== null
     ) {
       throw new TypeError('Terminal document templates must exactly match the public index.');
@@ -846,6 +862,9 @@ function renderEffect(
         throw new TypeError('Terminal template cloning did not produce a document fragment.');
       }
       scopeDocumentClone(fragment, context.instance);
+      for (const link of fragment.querySelectorAll<HTMLAnchorElement>('a[data-terminal-open]')) {
+        link.href = documentNavigatorDestinationHref(link.href, context.documentNavigationLookup);
+      }
       const title = requireElement(
         fragment,
         '[data-terminal-stream-title]',
@@ -1087,6 +1106,7 @@ export function startTerminalHome(
   let interactiveReady = false;
   let cancelBootGate = (): void => {};
   let outputInstance = 0;
+  const streamOverflow = createStreamOverflowController();
   const execute = seams.execute ?? executeCommand;
   const render = seams.render ?? renderEffect;
   const updatePrompt = (): void => {
@@ -1102,6 +1122,7 @@ export function startTerminalHome(
     failed = true;
     interactiveReady = false;
     cancelBootGate();
+    streamOverflow.clear();
     showFatalFailure(nodes);
   };
 
@@ -1114,6 +1135,7 @@ export function startTerminalHome(
     state = cancelCommandInput(state);
     updatePrompt();
     dismissCompletion();
+    streamOverflow.clear();
     clearTranscript(nodes, 'Command transcript cleared.');
   };
 
@@ -1136,6 +1158,7 @@ export function startTerminalHome(
         return;
       }
       if (result.effect.kind === 'clear') {
+        streamOverflow.clear();
         clearTranscript(nodes, result.announcement);
         return;
       }
@@ -1150,6 +1173,7 @@ export function startTerminalHome(
         instance: outputInstance
       });
       nodes.transcript.append(record);
+      streamOverflow.add(record);
       clearSessionEmpty(nodes);
       clearSessionInitial(nodes);
       nodes.input.value = '';
@@ -1179,6 +1203,24 @@ export function startTerminalHome(
     if (!isUnmodifiedPrimaryClick(event)) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const button = target.closest('button[data-terminal-return], button[data-terminal-collapse]');
+    if (button instanceof HTMLButtonElement && nodes.transcript.contains(button)) {
+      if (button.hasAttribute('data-terminal-return')) {
+        settleViewport(nodes.input, 'center');
+      } else {
+        const article = button.closest('[data-terminal-stream-document]');
+        const prose = article?.querySelector<HTMLElement>('.terminal-stream-prose');
+        if (!prose) return;
+        const collapsing = !prose.hidden;
+        if (collapsing && prose.contains(document.activeElement)) button.focus({ preventScroll: true });
+        prose.hidden = collapsing;
+        button.setAttribute('aria-expanded', String(!collapsing));
+        button.textContent = collapsing ? 'Expand' : 'Collapse';
+        streamOverflow.refresh();
+        if (collapsing) settleViewport(button, 'nearest');
+      }
+      return;
+    }
     const link = target.closest('a[data-terminal-cd-path]');
     if (!(link instanceof HTMLAnchorElement) || !nodes.transcript.contains(link)) return;
     const path = link.dataset.terminalCdPath;

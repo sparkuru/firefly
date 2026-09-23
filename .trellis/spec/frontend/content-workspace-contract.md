@@ -1065,10 +1065,22 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - `cat` returns a validated `document` effect for trusted template cloning.
   `open` returns `document-navigation` containing the decoded canonical entry;
   the DOM controller uses `entry.href` directly and never concatenates raw input.
-- An inline `cat` stream ends after its trusted document content. It does not
-  append a `Return to prompt` control because the active prompt remains directly
-  below the stream and receives focus according to the normal document-settlement
-  contract.
+- An inline `cat` stream ends after its trusted document content; the existing
+  prompt remains directly below it. A bounded sticky header action bar offers
+  Command, Collapse/Expand and Open document during long reads, without a
+  redundant footer or second input. Return preserves the draft and selection;
+  collapse retains the body DOM and scopes state and aria-controls per clone.
+  Clear and fatal recovery release all stream overflow observers/listeners.
+- Inline reading uses a 52rem maximum column shared by prose and wide frames.
+  Table prose and inline code wrap while preformatted code preserves whitespace.
+  Remaining horizontal overflow has measured directional hints updated on
+  resize, scrolling and expansion. Only simple tables without spanning cells
+  and with a first column at most 40% of the scroll region pin that column.
+  Metadata titles are demoted only when the validated first outline heading
+  matches under case/whitespace/separator normalization and rendered HTML starts
+  with that heading; authored headings and IDs are never removed or rewritten.
+  The title remains the output focus target, with a restrained visible outline.
+  Visible guidance explains typing-to-prompt and explicit document navigation.
 - Syntactically safe `cat`/`open` path completion owns the rewrite decision for
   every result count. Unique completion inserts the next segment; ambiguity
   keeps prompt focus and shows candidates with the user's `./` or `~/blog/`
@@ -1257,8 +1269,10 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   capability, and set exactly
   `#document-navigator` only when the destination capability is enabled, and
   return only its path/query/hash form. Raw `open` operands never reach this
-  helper, and ordinary breadcrumbs, directory links, permalinks, and inline
-  `cat` output remain fragment-free.
+  helper, and ordinary breadcrumbs, directory links, permalinks, and authored
+  `cat` body links remain fragment-free. The explicit inline Open document
+  action shares this destination-aware helper and retains native link behavior;
+  its static href remains canonical without a fragment.
 - A semantic document uses `data-document-navigator-entry="fragment"`; its status
   stays hidden and its region is not focusable until `window.location.hash ===
   '#document-navigator'`. It exposes a visible native `Read document` anchor
@@ -1895,3 +1909,14 @@ const label = match.path === '-' ? '-' : formatResourcePath(match.path);
 - `apps/site/src/components/ContentDirectoryIndex.astro`
 - `apps/site/src/components/TerminalDocument.astro`
 - `package-runtime.sh`
+
+### Inline zoom and fixture verification
+
+The Terminal home grid uses an explicit `minmax(0, 1fr)` column and the home
+container has `max-width: 100%`. Both are needed: viewport-based child sizing
+can otherwise expand an automatic grid track at 200% zoom. Preserve local wide
+content scrolling rather than clipping the page to hide overflow.
+
+Browser fixture gates run with the tracked content root. Use the synthetic
+semantic reading page for fragment/history/entry tests, not a machine-local
+owner article. Keep real-source visual review separate from fixture assertions.

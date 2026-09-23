@@ -113,6 +113,7 @@
   --terminal-home-padding-block-start: clamp(1.25rem, 5vw, 4rem);
   --terminal-home-padding-block-end: clamp(1.25rem, 5vw, 4rem);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
   align-items: start;
   padding-block-start: var(--terminal-home-padding-block-start);
@@ -198,6 +199,7 @@
 
 .terminal-home {
   width: var(--terminal-measure-home);
+  max-width: 100%;
   min-width: 0;
   margin-inline: auto;
 }
@@ -1224,4 +1226,124 @@
     visibility: visible;
     animation: none;
   }
+}
+
+/* Inline reading stays bounded without changing canonical document layout. */
+.terminal-stream-document {
+  --terminal-stream-reading-width: 52rem;
+  --terminal-stream-toolbar-height: 3.5rem;
+  max-width: min(100%, var(--terminal-stream-reading-width));
+}
+
+.terminal-stream-document [id] {
+  scroll-margin-block-start: calc(var(--terminal-stream-toolbar-height) + 1rem);
+}
+
+.terminal-stream-header [data-terminal-stream-title]:focus {
+  outline: 1px solid var(--terminal-color-focus);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.terminal-stream-document[data-terminal-repeated-title] .terminal-stream-header h2 {
+  max-width: 100%;
+  font-size: 0.95rem;
+  color: var(--terminal-color-muted);
+  text-wrap: wrap;
+}
+
+.terminal-stream-actions {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-block: 0.25rem;
+  border-block: 1px solid var(--terminal-color-border);
+  background: var(--terminal-color-canvas);
+}
+
+.terminal-stream-actions :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--terminal-color-link);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.terminal-stream-actions :is(button, a):hover {
+  background: var(--terminal-color-surface-subtle);
+}
+
+.terminal-stream-actions :is(button, a):focus-visible {
+  outline: 2px solid var(--terminal-color-focus);
+  outline-offset: -2px;
+}
+
+.terminal-stream-guidance {
+  margin-block: 0.65rem 1.25rem;
+  color: var(--terminal-color-muted);
+  font-size: 0.8rem;
+}
+
+.terminal-stream-prose :where(p, ul, ol, blockquote) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.terminal-stream-prose :is(.terminal-wide, .wide-content) :is(td, th) {
+  min-width: 8rem;
+  max-width: 22rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.terminal-stream-prose :is(.terminal-wide, .wide-content) table {
+  width: 100%;
+}
+
+.terminal-stream-prose :is(.terminal-wide, .wide-content) :is(td, th) code:not(pre code) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.terminal-stream-prose [data-sticky-column] tr > :first-child {
+  position: sticky;
+  left: 0;
+  background: var(--terminal-color-canvas);
+  box-shadow: 1px 0 var(--terminal-color-border);
+}
+
+.terminal-stream-prose [data-sticky-column] tr > th:first-child {
+  background: var(--terminal-color-surface-subtle);
+}
+
+.terminal-stream-wide-frame {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.terminal-stream-prose .terminal-stream-scroll-hint {
+  margin: 0;
+  color: var(--terminal-color-muted);
+  font-size: 0.75rem;
+  text-align: end;
+}
+
+.terminal-stream-prose [data-scroll-left] {
+  border-left-color: var(--terminal-color-command);
+}
+
+.terminal-stream-prose [data-scroll-right] {
+  border-right-color: var(--terminal-color-command);
 }
