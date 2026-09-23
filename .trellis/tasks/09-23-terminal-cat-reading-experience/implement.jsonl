@@ -1,7 +1,0 @@
-{"file":".trellis/spec/frontend/development-runtime.md","reason":"Container-only build and Playwright runtime contract"}
-{"file":".trellis/spec/frontend/x-core-contract.md","reason":"Trusted build rendering and heading/identity/static output invariants"}
-{"file":".trellis/tasks/09-23-terminal-cat-reading-experience/research/contracts.md","reason":"Targeted contract reading map and explicit proposed behavior deltas"}
-{"file":".trellis/spec/guides/project-record-privacy.md","reason":"Keep local source identity and screenshots out of tracked task records"}
-{"file":".trellis/tasks/09-23-terminal-cat-reading-experience/research/baseline.md","reason":"Verified issue evidence and reproducible review matrix"}
-{"file":".trellis/tasks/09-23-terminal-cat-reading-experience/prd.md","reason":"Requirements and acceptance criteria"}
-{"file":".trellis/tasks/09-23-terminal-cat-reading-experience/design.md","reason":"Proposed architecture and implementation approval gates"}
