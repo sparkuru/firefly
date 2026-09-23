@@ -2120,7 +2120,29 @@ test('inline wide content wraps prose, preserves code and exposes remaining scro
   await expect(region).not.toHaveAttribute('data-scroll-right', '');
   await expectNoHorizontalOverflow(page);
   await page.setViewportSize({ width: 1920, height: 1080 });
-  expect(await article.evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(832);
+  const wideLayout = await article.evaluate((element) => {
+    const bounds = (node: Element | null) => {
+      if (!node) return null;
+      const { left, right, width } = node.getBoundingClientRect();
+      return { left, right, width };
+    };
+    return {
+      article: bounds(element),
+      command: bounds(document.querySelector('.terminal-command-form .terminal-command-row')),
+      header: bounds(element.querySelector('.terminal-stream-header')),
+      toolbar: bounds(element.querySelector('.terminal-stream-actions')),
+      paragraph: bounds(element.querySelector('.terminal-stream-prose p')),
+      frame: bounds(element.querySelector('.terminal-wide'))
+    };
+  });
+  expect(wideLayout.command).not.toBeNull();
+  expect(wideLayout.article).not.toBeNull();
+  expect(wideLayout.article!.width).toBeGreaterThan(1000);
+  for (const part of [wideLayout.article, wideLayout.header, wideLayout.toolbar, wideLayout.paragraph, wideLayout.frame]) {
+    expect(part).not.toBeNull();
+    expect(part!.left).toBeCloseTo(wideLayout.command!.left, 0);
+    expect(part!.right).toBeCloseTo(wideLayout.command!.right, 0);
+  }
   await expect(table).not.toHaveAttribute('data-scroll-right', '');
   await expect(table).not.toHaveAttribute('data-scroll-left', '');
   await expect(table.locator('..').locator('.terminal-stream-scroll-hint')).toBeHidden();

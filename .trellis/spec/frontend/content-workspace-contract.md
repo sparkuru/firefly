@@ -1071,8 +1071,9 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   redundant footer or second input. Return preserves the draft and selection;
   collapse retains the body DOM and scopes state and aria-controls per clone.
   Clear and fatal recovery release all stream overflow observers/listeners.
-- Inline reading uses a 52rem maximum column shared by prose and wide frames.
-  Table prose and inline code wrap while preformatted code preserves whitespace.
+- Inline reading uses the terminal command row's available width for article
+  chrome, prose and wide frames. Table prose and inline code wrap while
+  preformatted code preserves whitespace.
   Remaining horizontal overflow has measured directional hints updated on
   resize, scrolling and expansion. Only simple tables without spanning cells
   and with a first column at most 40% of the scroll region pin that column.

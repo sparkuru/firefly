@@ -698,6 +698,7 @@
 }
 
 .terminal-stream-document {
+  --terminal-stream-toolbar-height: 3.5rem;
   width: 100%;
   max-width: var(--terminal-measure-stream);
   margin-block: 1.5rem 0;
@@ -1226,13 +1227,6 @@
     visibility: visible;
     animation: none;
   }
-}
-
-/* Inline reading stays bounded without changing canonical document layout. */
-.terminal-stream-document {
-  --terminal-stream-reading-width: 52rem;
-  --terminal-stream-toolbar-height: 3.5rem;
-  max-width: min(100%, var(--terminal-stream-reading-width));
 }
 
 .terminal-stream-document [id] {
