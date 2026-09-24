@@ -92,11 +92,13 @@ configPath = "config/plugins/comments/config.toml"
   The omitted and empty forms both normalize to a deeply frozen empty list.
 - `documentNavigation` is an optional strict table keyed only by registered
   presentation IDs. Each entry contains exactly one trimmed `navigator` ID;
-  omission preserves the enabled Firefly/`always` and semantic/`fragment`
-  defaults, while `navigator = "none"` is an explicit disabled composition.
+  omission preserves the desktop Firefly/`always` and semantic/`fragment`
+  defaults, while `navigator = "none"` is an explicit all-device disabled composition.
   Navigator IDs are resolved by the site-owned registry before document
   rendering; unknown presentations, unknown navigators, malformed entries, and
-  extra keys fail early. This setting controls navigator composition only and
+  extra keys fail early. The mobile opt-in is `supportsMobile` on the site-owned
+  presentation experience's navigator profile, defaults to `false`, and is not
+  a TOML field. This setting controls navigator composition only and
   never enters X Core metadata, content front matter, routes, comments, or
   plugin payloads.
 - TOML optional values use omission rather than a null literal: omitted

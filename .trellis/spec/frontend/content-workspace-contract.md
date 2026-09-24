@@ -260,7 +260,8 @@ createDocumentNavigationLookup(
 - `PRESENTATION_EXPERIENCES` is the single site-owned definition consumed by
   both X Core registration and Astro document dispatch. Its initial entries
   are `firefly -> terminal + document-navigator/always/home` and
-  `semantic -> semantic + document-navigator/fragment/local`.
+  `semantic -> semantic + document-navigator/fragment/local`; both default
+  `documentNavigator.supportsMobile` to `false`.
 - The adapter ID is authoritative. `createPresentationExperienceRegistry`
   rejects an empty experience ID, an adapter identity mismatch, an unsupported
   document kind, an invalid navigator ID/kind/entry/exit policy, or duplicate
@@ -279,12 +280,16 @@ createDocumentNavigationLookup(
 - Omitted configuration preserves the two enabled defaults. `none` omits the
   navigator region, status, entry, navigator-only data hooks, and navigator-only
   JS/CSS asset edges while retaining the ordinary content, body links, outline,
-  comments, and content-theme styling.
+  comments, and content-theme styling. The mobile default is a browser policy
+  on otherwise enabled pages, not the `none` composition: the static page still
+  carries desktop navigator assets.
 - `createDocumentNavigationLookup` includes only public canonical documents and
-  carries the resolved capability (`document-navigator` or `none`) to Terminal
-  home. A missing lookup record is a fragment-free canonical fallback; a known
-  disabled record is also fragment-free. Enabled destinations preserve the
-  same-origin path/query and append exactly `#document-navigator`.
+  carries a strict resolved capability record (`{kind:'document-navigator',
+  supportsMobile:boolean}` or `{kind:'none'}`) to Terminal home. A missing
+  lookup record is a fragment-free canonical fallback; a known disabled record
+  is also fragment-free. Enabled destinations preserve the same-origin
+  path/query and append exactly `#document-navigator` only when the current
+  input environment permits navigation.
 - The front-matter contract remains `presentation` plus optional
   `contentTheme`. Navigator profiles are site-owned DOM/runtime data and must
   not enter X Core metadata, content schema, route identity, comments payloads,
@@ -1270,27 +1275,29 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 #### Read-only document navigator
 
 - Canonical document routes load `document-navigator.ts` as progressive
-  enhancement. Terminal documents support document navigation when focused; semantic
-  documents keep the document navigation status hidden and activate it only for the explicit
+  enhancement when the current input environment permits it. Terminal documents
+  support document navigation when focused; semantic documents keep the document
+  navigation status hidden and activate it only for the explicit
   `#document-navigator` entry fragment. Static HTML remains complete and
   navigable without JavaScript; directory indexes, home, lab, and NERV do not
   load the document navigator asset.
 - The pure `document-navigation` effect remains fragment-free and carries the
   validated canonical `entry.href`. The browser controller owns the only
-  document-navigator intent decoration: `documentNavigatorDestinationHref(href: string, lookup: DocumentNavigationCapabilityLookup)` must accept a
-  same-origin absolute or path-like canonical URL, consult the destination
-  capability, and set exactly
-  `#document-navigator` only when the destination capability is enabled, and
-  return only its path/query/hash form. Raw `open` operands never reach this
+  document-navigator intent decoration: `documentDestination(href: string,
+  lookup: DocumentNavigationCapabilityLookup)` must accept a same-origin
+  absolute or path-like canonical URL, consult the destination capability and
+  current input policy, set exactly `#document-navigator` only when permitted,
+  and return the path/query/hash plus an accurate navigator-enabled flag. Raw
+  `open` operands never reach this
   helper, and ordinary breadcrumbs, directory links, permalinks, and authored
   `cat` body links remain fragment-free. The explicit inline Open document
   action shares this destination-aware helper and retains native link behavior;
   its static href remains canonical without a fragment.
 - A semantic document uses `data-document-navigator-entry="fragment"`; its status
   stays hidden and its region is not focusable until `window.location.hash ===
-  '#document-navigator'`. It exposes a visible native `Read document` anchor
-  even when its outline is absent. A Terminal document uses
-  `data-document-navigator-entry="always"`; its status is visible on direct entry,
+  '#document-navigator'`. When available, it exposes a visible native
+  `Read document` anchor even when its outline is absent. A Terminal document
+  uses `data-document-navigator-entry="always"`; its status is visible on direct entry when available,
   but it only steals focus for the exact document navigator fragment. Fragment entry waits
   one animation frame after native hash settlement, then calls
   `focus({ preventScroll: true })`; direct canonical routes, other fragments,
@@ -1365,6 +1372,92 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   local-scroll regions, and user-owned selections. Generated reading-unit IDs
   must avoid every existing document ID.
 
+##### Mobile document navigator availability
+
+###### 1. Scope / Trigger
+
+Use this contract when changing a presentation's document navigator policy,
+document route rendering, Terminal document destinations, or browser input-mode
+handling. The ordinary document remains readable on touch-primary clients even
+when desktop navigation is composed into the same static page.
+
+###### 2. Signatures
+
+```ts
+interface DocumentNavigatorProfile {
+  readonly kind: 'document-navigator';
+  readonly entry: 'always' | 'fragment';
+  readonly supportsMobile?: boolean;
+}
+interface ResolvedDocumentNavigatorProfile extends DocumentNavigatorProfile {
+  readonly supportsMobile: boolean;
+}
+type DocumentNavigationCapability =
+  | Readonly<{ readonly kind: 'none' }>
+  | Readonly<{ readonly kind: 'document-navigator'; readonly supportsMobile: boolean }>;
+const MOBILE_DOCUMENT_NAVIGATION_QUERY = '(hover: none) and (pointer: coarse)';
+```
+
+###### 3. Contracts
+
+- `createPresentationExperienceRegistry` rejects a non-boolean explicit
+  `supportsMobile` and freezes an omitted value as `false`. The enabled
+  composition and public-only capability lookup carry the resolved boolean.
+  `navigator = "none"` remains an all-device build-time disable and carries no
+  mobile profile. Neither field enters X Core, authored front matter, or the
+  content-theme contract.
+- The same exact media predicate controls navigator CSS and browser behavior.
+  With `supportsMobile=false` and a matching query, hide the semantic entry,
+  fixed status, and reserved bottom space before JavaScript runs; keep document
+  content, outline, links, comments, and themes. Controller startup and later
+  media changes cannot activate/focus the navigator, retain owned selection or
+  highlights, or handle navigator keys. Direct `#document-navigator` remains an
+  inert native content anchor without URL/history rewriting. An explicit `true`
+  retains the presentation's existing entry/exit lifecycle.
+- Terminal's strict canonical-path lookup serializes the capability record.
+  `open` and inline Open document use current media state: allowed destinations
+  receive exactly `#document-navigator`, while unavailable/unknown/`none`
+  destinations keep the path/query without that fragment. Generated link text
+  must describe ordinary opening when the navigator is unavailable.
+
+###### 4. Validation & Error Matrix
+
+| Input or condition | Required result |
+| --- | --- |
+| profile field omitted | frozen `supportsMobile=false` |
+| explicit non-boolean field | presentation registry `TypeError` |
+| malformed capability record or duplicate route | lookup validation failure before browser use |
+| touch-primary/no-hover and mobile support false | ordinary reading, no visible navigator chrome or runtime key/focus ownership |
+| support true or fine-pointer environment | existing presentation navigator policy |
+| site `navigator = "none"` | no navigator-only DOM or asset edges on any device |
+| direct navigator fragment on disallowed mobile | native content anchor; no mode activation or history rewrite |
+
+###### 5. Good / Base / Bad Cases
+
+- Good: an explicitly opted-in presentation keeps its navigator in portrait and
+  landscape touch contexts.
+- Base: the built-in Firefly and semantic presentations omit the field, so
+  touch-primary clients read normally while desktop behavior remains intact.
+- Bad: a width-only check reactivates the navigator on a landscape phone and
+  disables it in a narrow fine-pointer desktop window.
+
+###### 6. Tests Required
+
+Assert profile defaults/invalid values and exact lookup round trips in unit
+tests; emitted CSS and complete no-JavaScript content in static tests; and
+portrait/landscape phone, touch tablet, narrow fine-pointer desktop, direct
+fragment, media change, Terminal destinations, and opt-in behavior in browser
+tests. Recheck real-device ordinary reading when the device is available.
+
+###### 7. Wrong vs Correct
+
+```ts
+// Wrong: viewport width does not identify a touch-primary phone in landscape.
+const mobile = window.innerWidth < 768;
+// Correct: use the same approved predicate as navigator CSS and destination links.
+const mobile = window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY).matches;
+```
+
 ### 4. Validation & Error Matrix
 
 | Condition | Required result |
@@ -1388,6 +1481,8 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 | authored presentation is omitted, `firefly`, or `semantic` | X Core keeps the existing default/metadata behavior; site dispatch selects the matching terminal/semantic experience and its configured always/fragment profile |
 | unknown site presentation ID | `resolvePresentationExperience` throws `Unsupported site presentation "<id>"` with no fallback experience |
 | unknown/invalid `documentNavigation.<presentation>` override or `navigator = "none"` | invalid configuration fails before rendering; explicit `none` omits navigator DOM/hooks/assets while retaining ordinary document rendering |
+| omitted/invalid `supportsMobile` profile field | omission normalizes to `false`; an explicit non-boolean fails at experience registration |
+| touch-primary no-hover client and `supportsMobile=false` | complete ordinary document without visible navigator entry/status or navigator runtime ownership; terminal document destinations stay fragment-free |
 | command token/alias collision or invalid metadata/handler | registry `TypeError` at creation |
 | missing command argv parser or unsafe option definition | neutral registry rejects the command before execution |
 | duplicate hardcoded command dispatch or help metadata | implementation review failure; definitions must be the single execution/help source |
@@ -1552,10 +1647,10 @@ Astro/browser/publication: ordinary guest-projected files and virtual paths only
 ```ts
 const result = executeCommand({ state, input, entries, registry });
 if (result.effect?.kind === 'document-navigation') {
-  window.location.assign(documentNavigatorDestinationHref(
+  window.location.assign(documentDestination(
     result.effect.entry.href,
     documentNavigationLookup
-  ));
+  ).href);
 }
 ```
 

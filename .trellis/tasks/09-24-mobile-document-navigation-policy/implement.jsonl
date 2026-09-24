@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend guideline index and conventions entry point."}
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Presentation composition, navigator lifecycle, Terminal destinations, and document reading contracts."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Site-owned navigator override, strict lookup/config boundaries, and authored-data separation."}
+{"file":".trellis/spec/frontend/publication-contract.md","reason":"Static publication and browser verification boundaries for document assets."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"The policy crosses presentation resolution, static HTML/CSS, browser runtime, and Terminal capability transport."}
+{"file":".trellis/tasks/09-24-mobile-document-navigation-policy/research/evidence.md","reason":"Observed phone/Playwright behavior and exact affected code contracts."}
