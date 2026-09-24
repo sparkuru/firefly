@@ -1,6 +1,6 @@
 # Implementation and verification plan
 
-Status: implemented and verified in the pinned renderer; the optional PLR110/Via repeat is pending because `adb -d` currently finds no USB device.
+Status: implemented and verified in the pinned renderer and on the USB-connected PLR110 with Via.
 
 ## Ordered checklist
 
@@ -12,7 +12,7 @@ Status: implemented and verified in the pinned renderer; the optional PLR110/Via
 - [x] Update focused unit/static/browser tests for default, explicit opt-in, invalid fields, lookup serialization, both presentations, portrait/landscape/touch tablet/narrow desktop, direct fragments, Terminal destinations, and `none`.
 - [x] Update the executable frontend contracts to describe the new policy and its separation from X Core/front matter/content themes.
 - [x] Run focused checks and an integrated fixture gate; inspect emitted assets, desktop regressions, diff, and ignored artifacts.
-- [ ] Repeat the ordinary-reading check on the USB-connected PLR110 when available, restoring task-owned ADB/service state.
+- [x] Repeat the ordinary-reading check on the USB-connected PLR110 when available, restoring task-owned ADB/service state.
 
 ## Validation commands and evidence
 

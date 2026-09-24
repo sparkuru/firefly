@@ -28,7 +28,7 @@ Keep phone reading as an ordinary document page. A presentation may explicitly s
 - [x] Direct navigator fragments and Terminal `open` / inline Open document links on mobile lead to ordinary reading; native heading links remain usable.
 - [x] A test-only presentation profile with mobile support enabled demonstrates the opt-in path, and invalid field values fail validation.
 - [x] Site-level `none` still omits navigator assets and hooks for all devices; no navigator policy enters X Core or authored metadata.
-- [ ] Automated touch-viewport checks and a focused real-device pass cover the final behavior. Automated checks passed; PLR110 repeat awaits USB reconnection.
+- [x] Automated touch-viewport checks and a focused real-device pass cover the final behavior.
 
 ## Out of Scope
 
