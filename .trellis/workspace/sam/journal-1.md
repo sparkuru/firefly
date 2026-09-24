@@ -1691,3 +1691,26 @@ Fresh local build and Android 11 Via board acceptance covered Terminal cat, docu
 ### Status
 
 [OK] **Completed**
+
+
+## Session 75: Mobile document navigation policy
+
+**Date**: 2026-09-24
+**Task**: Mobile document navigation policy
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Defaulted presentation-owned mobile document navigation to off, kept touch-primary reading native, verified browser and PLR110 Via behavior, and archived the completed task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3977cea` | (see git log) |
+| `74f2d65` | (see git log) |
+| `fd34e18` | (see git log) |
+
+### Status
+
+[OK] **Completed**
