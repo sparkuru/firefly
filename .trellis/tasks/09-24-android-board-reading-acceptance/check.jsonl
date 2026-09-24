@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check observed focus, keyboard, and navigator behavior against the durable contract"}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Check build, browser validation, and cleanup use supported boundaries"}
+{"file":".trellis/tasks/09-24-android-board-reading-acceptance/research/device-baseline.md","reason":"Compare final board state to the planning baseline"}
