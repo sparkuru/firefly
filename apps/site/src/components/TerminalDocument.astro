@@ -52,6 +52,7 @@ function outlinePrefix(index: number, depth: number) {
   class="terminal-document"
   data-document-navigator={enabled ? '' : undefined}
   data-document-navigator-entry={navigatorProfile?.entry}
+  data-document-navigator-supports-mobile={enabled ? String(navigatorProfile?.supportsMobile) : undefined}
   data-document-navigator-exit={enabled ? documentNavigation.exitPolicy : undefined}
 >
   <header class="terminal-document-header">

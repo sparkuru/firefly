@@ -2054,7 +2054,11 @@ test('inline reading controls preserve drafts, body identity and independent out
   const input = page.locator('#terminal-command');
   await expect(first).toHaveAttribute('data-terminal-repeated-title', '');
   await expect(first.locator('.terminal-stream-guidance')).toContainText('Typing resumes commands');
-  await expect(first.locator('[data-terminal-open]')).toHaveAttribute('href', '/pages/markdown-template/#document-navigator');
+  const touchPrimary = await page.evaluate(() => matchMedia('(hover: none) and (pointer: coarse)').matches);
+  await expect(first.locator('[data-terminal-open]')).toHaveAttribute(
+    'href',
+    touchPrimary ? '/pages/markdown-template/' : '/pages/markdown-template/#document-navigator'
+  );
   await expect(first.locator('.terminal-stream-permalink')).toHaveAttribute('href', '/pages/markdown-template/');
   const controls = await articles.evaluateAll((nodes) => nodes.map((node) => ({
     target: node.querySelector('[data-terminal-collapse]')?.getAttribute('aria-controls'),
@@ -2232,7 +2236,7 @@ test('inline open intent respects destinations without a navigator and native ne
       const root = document.querySelector<HTMLElement>('[data-terminal-home]');
       if (root) {
         const lookup = JSON.parse(root.dataset.terminalDocumentNavigation ?? '{}');
-        lookup['/pages/markdown-template/'] = 'none';
+        lookup['/pages/markdown-template/'] = { kind: 'none' };
         root.dataset.terminalDocumentNavigation = JSON.stringify(lookup);
         observer.disconnect();
       }

@@ -25,6 +25,7 @@ import {
   decodeDocumentNavigationCapabilityLookup,
   documentNavigationCapabilityForPath,
   DOCUMENT_NAVIGATOR_FRAGMENT,
+  MOBILE_DOCUMENT_NAVIGATION_QUERY,
   type DocumentNavigationCapabilityLookup
 } from '../lib/document-navigation.ts';
 import { createStreamOverflowController } from './terminal-stream-overflow';
@@ -131,10 +132,10 @@ const protectedTypingTargetSelector = [
   '[data-wide-content]'
 ].join(',');
 
-function documentNavigatorDestinationHref(
+function documentDestination(
   href: string,
   documentNavigationLookup: DocumentNavigationCapabilityLookup
-): string {
+): { readonly href: string; readonly navigatorEnabled: boolean } {
   const destination = new URL(href, window.location.href);
   if (
     destination.origin !== window.location.origin ||
@@ -147,10 +148,12 @@ function documentNavigatorDestinationHref(
     documentNavigationLookup,
     destination.pathname
   );
-  destination.hash = capability === 'document-navigator'
+  const navigatorEnabled = capability?.kind === 'document-navigator' &&
+    (capability.supportsMobile || !window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY).matches);
+  destination.hash = navigatorEnabled
     ? DOCUMENT_NAVIGATOR_FRAGMENT.slice(1)
     : '';
-  return `${destination.pathname}${destination.search}${destination.hash}`;
+  return { href: `${destination.pathname}${destination.search}${destination.hash}`, navigatorEnabled };
 }
 
 export interface TerminalControllerSeams {
@@ -842,15 +845,17 @@ function renderEffect(
       return { focusTarget: null, navigationHref: effect.experiment.href };
     }
     case 'document-navigation': {
-      const navigationHref = documentNavigatorDestinationHref(
+      const destination = documentDestination(
         effect.entry.href,
         context.documentNavigationLookup
       );
       const link = document.createElement('a');
-      link.href = navigationHref;
-      link.textContent = `Open ${effect.entry.title} with the document navigator`;
+      link.href = destination.href;
+      link.textContent = destination.navigatorEnabled
+        ? `Open ${effect.entry.title} with the document navigator`
+        : `Open ${effect.entry.title}`;
       record.append(link);
-      return { focusTarget: null, navigationHref };
+      return { focusTarget: null, navigationHref: destination.href };
     }
     case 'document': {
       const template = context.templates.byPath.get(effect.entry.virtualPath);
@@ -863,7 +868,7 @@ function renderEffect(
       }
       scopeDocumentClone(fragment, context.instance);
       for (const link of fragment.querySelectorAll<HTMLAnchorElement>('a[data-terminal-open]')) {
-        link.href = documentNavigatorDestinationHref(link.href, context.documentNavigationLookup);
+        link.href = documentDestination(link.href, context.documentNavigationLookup).href;
       }
       const title = requireElement(
         fragment,
@@ -1110,6 +1115,12 @@ export function startTerminalHome(
   const copyFeedbackTimers = new Map<HTMLButtonElement, number>();
   const execute = seams.execute ?? executeCommand;
   const render = seams.render ?? renderEffect;
+  const refreshDocumentLinks = (): void => {
+    for (const link of nodes.transcript.querySelectorAll<HTMLAnchorElement>('a[data-terminal-open]')) {
+      link.href = documentDestination(link.href, documentNavigationLookup).href;
+    }
+  };
+  window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY).addEventListener('change', refreshDocumentLinks);
   const clearCopyFeedback = (): void => {
     for (const timer of copyFeedbackTimers.values()) window.clearTimeout(timer);
     copyFeedbackTimers.clear();
@@ -1230,9 +1241,13 @@ export function startTerminalHome(
   });
   nodes.transcript.addEventListener('click', (event) => {
     if (!interactiveReady) return;
-    if (!isUnmodifiedPrimaryClick(event)) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const openLink = target.closest('a[data-terminal-open]');
+    if (openLink instanceof HTMLAnchorElement && nodes.transcript.contains(openLink)) {
+      openLink.href = documentDestination(openLink.href, documentNavigationLookup).href;
+    }
+    if (!isUnmodifiedPrimaryClick(event)) return;
     const copyButton = target.closest('button[data-terminal-copy-code]');
     if (copyButton instanceof HTMLButtonElement && nodes.transcript.contains(copyButton)) {
       void copyCode(copyButton);

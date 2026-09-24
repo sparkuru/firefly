@@ -21,13 +21,13 @@ test('composition preserves the approved enabled defaults and resolves none inde
 
   assert.deepEqual(
     {
-      firefly: [firefly.kind, firefly.profile.entry, firefly.exitPolicy],
-      semantic: [semantic.kind, semantic.profile.entry, semantic.exitPolicy],
+      firefly: [firefly.kind, firefly.profile.entry, firefly.profile.supportsMobile, firefly.exitPolicy],
+      semantic: [semantic.kind, semantic.profile.entry, semantic.profile.supportsMobile, semantic.exitPolicy],
       disabled: [disabled.kind]
     },
     {
-      firefly: ['document-navigator', 'always', 'home'],
-      semantic: ['document-navigator', 'fragment', 'local'],
+      firefly: ['document-navigator', 'always', false, 'home'],
+      semantic: ['document-navigator', 'fragment', false, 'local'],
       disabled: ['none']
     }
   );
@@ -74,6 +74,7 @@ test('composition consumes a test-only alternate navigator definition through th
   assert.equal(composition.kind, 'document-navigator');
   assert.equal(composition.navigator.id, alternate.id);
   assert.equal(composition.profile.entry, 'fragment');
+  assert.equal(composition.profile.supportsMobile, false);
   assert.equal(composition.exitPolicy, 'local');
 });
 
@@ -95,24 +96,40 @@ test('destination capability lookup is public, canonical, frozen, and round-trip
     documentNavigation: { semantic: { navigator: 'none' } }
   });
   assert.deepEqual(lookup, {
-    '/posts/enabled/': 'document-navigator',
-    '/pages/disabled/': 'none'
+    '/posts/enabled/': { kind: 'document-navigator', supportsMobile: false },
+    '/pages/disabled/': { kind: 'none' }
   });
   assert.ok(Object.isFrozen(lookup));
-  assert.equal(documentNavigationCapabilityForPath(lookup, '/posts/enabled/'), 'document-navigator');
-  assert.equal(documentNavigationCapabilityForPath(lookup, '/pages/disabled/'), 'none');
+  assert.ok(Object.isFrozen(lookup['/posts/enabled/']));
+  assert.deepEqual(documentNavigationCapabilityForPath(lookup, '/posts/enabled/'), { kind: 'document-navigator', supportsMobile: false });
+  assert.deepEqual(documentNavigationCapabilityForPath(lookup, '/pages/disabled/'), { kind: 'none' });
   assert.equal(documentNavigationCapabilityForPath(lookup, '/posts/enabled/?mode=reader'), undefined);
   const serialized = serializeDocumentNavigationCapabilityLookup(lookup);
   assert.equal(
     serialized,
-    '{"/pages/disabled/":"none","/posts/enabled/":"document-navigator"}'
+    '{"/pages/disabled/":{"kind":"none"},"/posts/enabled/":{"kind":"document-navigator","supportsMobile":false}}'
   );
   assert.deepEqual(decodeDocumentNavigationCapabilityLookup(serialized), lookup);
+  const optedIn = createDocumentNavigationCapabilityLookup([
+    { href: '/pages/mobile/', capability: { kind: 'document-navigator', supportsMobile: true } }
+  ]);
+  assert.deepEqual(decodeDocumentNavigationCapabilityLookup(serializeDocumentNavigationCapabilityLookup(optedIn)), optedIn);
   assert.throws(
     () => createDocumentNavigationCapabilityLookup([
-      { href: '/posts/enabled/', capability: 'none' },
-      { href: '/posts/enabled/', capability: 'document-navigator' }
+      { href: '/posts/enabled/', capability: { kind: 'none' } },
+      { href: '/posts/enabled/', capability: { kind: 'document-navigator', supportsMobile: true } }
     ]),
     /Duplicate document navigation capability/iu
   );
+  for (const capability of [
+    { kind: 'document-navigator' },
+    { kind: 'document-navigator', supportsMobile: 'true' },
+    { kind: 'none', supportsMobile: false },
+    { kind: 'unknown' }
+  ]) {
+    assert.throws(
+      () => decodeDocumentNavigationCapabilityLookup({ '/posts/enabled/': capability }),
+      /Invalid document navigation capability entry/iu
+    );
+  }
 });

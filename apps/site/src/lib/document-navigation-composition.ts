@@ -2,8 +2,7 @@ import type { CanonicalDocument } from './content';
 import {
   createDocumentNavigationCapabilityLookup,
   type DocumentNavigationCapabilityLookup,
-  type DocumentNavigationCapabilityEntry,
-  type DocumentNavigationCapability
+  type DocumentNavigationCapabilityEntry
 } from './document-navigation.ts';
 import {
   DOCUMENT_NAVIGATORS,
@@ -33,6 +32,7 @@ export interface EnabledDocumentNavigation {
   readonly profile: Readonly<{
     readonly kind: 'document-navigator';
     readonly entry: 'always' | 'fragment';
+    readonly supportsMobile: boolean;
   }>;
   readonly exitPolicy: DocumentNavigatorExitPolicy;
   readonly assets: DocumentNavigatorDefinition['assets'];
@@ -164,7 +164,8 @@ export function resolveDocumentNavigation(
 
   const profile = Object.freeze({
     kind: navigator.kind,
-    entry: experience.documentNavigator.entry
+    entry: experience.documentNavigator.entry,
+    supportsMobile: experience.documentNavigator.supportsMobile ?? false
   });
   return Object.freeze({
     kind: 'document-navigator',
@@ -202,7 +203,9 @@ export function createDocumentNavigationLookup(
     );
     entries.push({
       href: document.href,
-      capability: composition.kind as DocumentNavigationCapability
+      capability: composition.kind === 'none'
+        ? { kind: 'none' }
+        : { kind: 'document-navigator', supportsMobile: composition.profile.supportsMobile }
     });
   }
   return createDocumentNavigationCapabilityLookup(entries);

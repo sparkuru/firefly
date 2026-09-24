@@ -2,7 +2,9 @@ export const DOCUMENT_NAVIGATOR_FRAGMENT = '#document-navigator' as const;
 
 export type DocumentNavigatorEntry = 'always' | 'fragment';
 
-export type DocumentNavigationCapability = 'document-navigator' | 'none';
+export type DocumentNavigationCapability =
+  | Readonly<{ readonly kind: 'document-navigator'; readonly supportsMobile: boolean }>
+  | Readonly<{ readonly kind: 'none' }>;
 
 export interface DocumentNavigationCapabilityEntry {
   readonly href: string;
@@ -10,6 +12,8 @@ export interface DocumentNavigationCapabilityEntry {
 }
 
 export type DocumentNavigationCapabilityLookup = Readonly<Record<string, DocumentNavigationCapability>>;
+
+export const MOBILE_DOCUMENT_NAVIGATION_QUERY = '(hover: none) and (pointer: coarse)' as const;
 
 const canonicalRouteSegment = /^[^\\/?#%\s\u0000-\u001f\u007f.][^\\/?#%\s\u0000-\u001f\u007f]*$/u;
 
@@ -44,12 +48,22 @@ function assertCapabilityEntry(value: unknown, index: number): asserts value is 
     !('value' in capability) ||
     !capability.enumerable ||
     typeof href.value !== 'string' ||
-    typeof capability.value !== 'string' ||
     !isCanonicalDocumentPath(href.value) ||
-    !(['document-navigator', 'none'] as const).includes(capability.value as DocumentNavigationCapability)
+    !isValidCapability(capability.value)
   ) {
     throw new TypeError(`Invalid document navigation capability entry at index ${index}.`);
   }
+}
+
+function isValidCapability(value: unknown): value is DocumentNavigationCapability {
+  if (!isPlainRecord(value)) return false;
+  const kind = Object.getOwnPropertyDescriptor(value, 'kind');
+  if (kind === undefined || !('value' in kind) || !kind.enumerable) return false;
+  if (kind.value === 'none') return Reflect.ownKeys(value).length === 1;
+  if (kind.value !== 'document-navigator' || Reflect.ownKeys(value).length !== 2) return false;
+  const supportsMobile = Object.getOwnPropertyDescriptor(value, 'supportsMobile');
+  return supportsMobile !== undefined && 'value' in supportsMobile && supportsMobile.enumerable === true &&
+    typeof supportsMobile.value === 'boolean';
 }
 
 export function createDocumentNavigationCapabilityLookup(
@@ -66,7 +80,7 @@ export function createDocumentNavigationCapabilityLookup(
     if (Object.hasOwn(lookup, href)) {
       throw new TypeError(`Duplicate document navigation capability for ${href}.`);
     }
-    lookup[href] = entry.capability;
+    lookup[href] = Object.freeze({ ...entry.capability });
   });
   return Object.freeze(lookup);
 }
@@ -84,7 +98,7 @@ export function serializeDocumentNavigationCapabilityLookup(
       throw new TypeError(`Invalid document navigation capability for ${href}.`);
     }
     const capability = descriptor.value;
-    if (!isCanonicalDocumentPath(href) || !(['document-navigator', 'none'] as const).includes(capability)) {
+    if (!isCanonicalDocumentPath(href) || !isValidCapability(capability)) {
       throw new TypeError(`Invalid document navigation capability for ${href}.`);
     }
     ordered[href] = capability;
@@ -139,6 +153,11 @@ export function documentNavigationCapabilityForPath(
 export interface DocumentNavigatorProfile {
   readonly kind: 'document-navigator';
   readonly entry: DocumentNavigatorEntry;
+  readonly supportsMobile?: boolean;
+}
+
+export interface ResolvedDocumentNavigatorProfile extends DocumentNavigatorProfile {
+  readonly supportsMobile: boolean;
 }
 
 export interface NavigationInitialState {

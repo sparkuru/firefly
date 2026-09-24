@@ -31,14 +31,14 @@ test('presentation experiences keep adapter registration and document dispatch t
         adapterId: 'firefly',
         documentKind: 'terminal',
         documentNavigatorId: 'document-navigator',
-        documentNavigator: { kind: 'document-navigator', entry: 'always' }
+        documentNavigator: { kind: 'document-navigator', entry: 'always', supportsMobile: false }
       },
       {
         id: 'semantic',
         adapterId: 'semantic',
         documentKind: 'semantic',
         documentNavigatorId: 'document-navigator',
-        documentNavigator: { kind: 'document-navigator', entry: 'fragment' }
+        documentNavigator: { kind: 'document-navigator', entry: 'fragment', supportsMobile: false }
       }
     ]
   );
@@ -80,6 +80,21 @@ test('experience creation rejects adapter identity drift and duplicate IDs', () 
   assert.equal(Object.isFrozen(PRESENTATION_EXPERIENCES), true);
   assert.equal(Object.isFrozen(PRESENTATION_EXPERIENCES[0]), true);
   assert.equal(Object.isFrozen(PRESENTATION_EXPERIENCES[0].documentNavigator), true);
+  const mobileEnabled = createPresentationExperienceRegistry([{
+    ...definition,
+    documentNavigator: { ...profile, supportsMobile: true }
+  }]);
+  assert.equal(mobileEnabled[0].documentNavigator.supportsMobile, true);
+  assert.equal(Object.isFrozen(mobileEnabled[0].documentNavigator), true);
+  for (const supportsMobile of ['true', 1, null]) {
+    assert.throws(
+      () => createPresentationExperienceRegistry([{
+        ...definition,
+        documentNavigator: { ...profile, supportsMobile }
+      }]),
+      /invalid document navigator profile/iu
+    );
+  }
 });
 
 test('document navigator initial state is derived from the pure profile', () => {

@@ -1,7 +1,7 @@
 import { semanticPresentation } from '@firefly/presentation-semantic';
 import { terminalPresentation } from '@firefly/presentation-terminal';
 import type { PresentationAdapter } from '@firefly/x-core';
-import type { DocumentNavigatorProfile } from './document-navigation.ts';
+import type { DocumentNavigatorProfile, ResolvedDocumentNavigatorProfile } from './document-navigation.ts';
 
 export type PresentationDocumentKind = 'semantic' | 'terminal';
 export type DocumentNavigatorExitPolicy = 'home' | 'local';
@@ -20,7 +20,7 @@ export interface PresentationExperience {
   readonly adapter: PresentationAdapter;
   readonly documentKind: PresentationDocumentKind;
   readonly documentNavigatorId: string;
-  readonly documentNavigator: DocumentNavigatorProfile;
+  readonly documentNavigator: ResolvedDocumentNavigatorProfile;
   readonly documentNavigatorExit: DocumentNavigatorExitPolicy;
 }
 
@@ -162,7 +162,8 @@ function freezeExperience(definition: PresentationExperienceDefinition): Present
     typeof profile !== 'object' ||
     profile === null ||
     profile.kind !== 'document-navigator' ||
-    (profile.entry !== 'always' && profile.entry !== 'fragment')
+    (profile.entry !== 'always' && profile.entry !== 'fragment') ||
+    (profile.supportsMobile !== undefined && typeof profile.supportsMobile !== 'boolean')
   ) {
     throw new TypeError(`Presentation experience "${definition.id}" has an invalid document navigator profile.`);
   }
@@ -175,7 +176,8 @@ function freezeExperience(definition: PresentationExperienceDefinition): Present
     documentNavigatorExit,
     documentNavigator: Object.freeze({
       kind: profile.kind,
-      entry: profile.entry
+      entry: profile.entry,
+      supportsMobile: profile.supportsMobile ?? false
     })
   });
 }

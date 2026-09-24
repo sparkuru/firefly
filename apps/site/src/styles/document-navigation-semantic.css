@@ -169,3 +169,14 @@
 .semantic-document[data-document-navigator] {
   padding-block-end: var(--navigation-status-reserve, 0px);
 }
+
+@media (hover: none) and (pointer: coarse) {
+  .semantic-document[data-document-navigator-supports-mobile="false"] {
+    padding-block-end: 0;
+  }
+
+  .semantic-document[data-document-navigator-supports-mobile="false"] .document-navigation-entry,
+  .semantic-document[data-document-navigator-supports-mobile="false"] .document-navigation-status {
+    display: none;
+  }
+}

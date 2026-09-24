@@ -1,6 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 import { terminalPromptName } from './terminal-prompt';
 
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name === 'chromium-mobile-interactive', 'Desktop navigator behavior is covered in the desktop project; mobile policy has dedicated tests.');
+});
+
+test('a narrow fine-pointer desktop keeps the semantic navigator available', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/pages/inline-reading-semantic/');
+  expect(await page.evaluate(() => matchMedia('(hover: none) and (pointer: coarse)').matches)).toBe(false);
+  const entry = page.locator('[data-document-navigator-entry-control]');
+  await expect(entry).toBeVisible();
+  await entry.click();
+  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+});
+
 async function openDocumentNavigator(page: Page) {
   await page.goto('/posts/ai/llm-workflow-with-trellis/#document-navigator');
   const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });

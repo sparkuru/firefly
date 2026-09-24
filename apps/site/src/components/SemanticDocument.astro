@@ -35,6 +35,7 @@ const kind = entry.collection === 'posts' ? 'Post' : 'Page';
   class="semantic-document"
   data-document-navigator={enabled ? '' : undefined}
   data-document-navigator-entry={navigatorProfile?.entry}
+  data-document-navigator-supports-mobile={enabled ? String(navigatorProfile?.supportsMobile) : undefined}
   data-document-navigator-exit={enabled ? documentNavigation.exitPolicy : undefined}
 >
   <header class="article-header">

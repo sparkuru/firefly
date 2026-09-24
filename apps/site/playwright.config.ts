@@ -43,7 +43,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-desktop-interactive',
-      testMatch: /(?:terminal|document-navigator|mermaid)\.spec\.ts/u,
+      testMatch: /(?:terminal|document-navigator(?:-mobile)?|mermaid)\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: true,
@@ -52,7 +52,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-interactive',
-      testMatch: /(?:terminal|document-navigator|mermaid)\.spec\.ts/u,
+      testMatch: /(?:terminal|document-navigator(?:-mobile)?|mermaid)\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: true,

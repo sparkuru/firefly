@@ -1,4 +1,4 @@
-import { DOCUMENT_NAVIGATOR_FRAGMENT } from '../lib/document-navigation.ts';
+import { DOCUMENT_NAVIGATOR_FRAGMENT, MOBILE_DOCUMENT_NAVIGATION_QUERY } from '../lib/document-navigation.ts';
 
 type NavigationMode = 'normal' | 'visual' | 'search' | 'command';
 type SearchDirection = 1 | -1;
@@ -164,27 +164,36 @@ export function startDocumentNavigator(root: HTMLElement): void {
   const exitControl = fragmentEntry
     ? requireOne(root, '[data-navigation-exit-control]', HTMLButtonElement)
     : null;
-  let active = !fragmentEntry || window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT;
+  const mobileMedia = window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY);
+  const supportsMobile = root.dataset.documentNavigatorSupportsMobile === 'true';
+  const isAvailable = () => supportsMobile || !mobileMedia.matches;
+  let active = isAvailable() && (!fragmentEntry || window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT);
   let rememberedFragment: string | null = null;
   let lastObservedHash = window.location.hash;
   const units = [...region.querySelectorAll<HTMLElement>(readingUnitSelector)].filter((unit) => unit.textContent?.trim());
   if (units.length === 0) return;
 
-  const occupiedIds = new Set([...document.querySelectorAll<HTMLElement>('[id]')].map(({ id }) => id));
-  units.forEach((unit, index) => {
-    if (unit.id.length === 0) {
-      const base = `document-navigation-unit-${index + 1}`;
-      let candidate = base;
-      let suffix = 2;
-      while (occupiedIds.has(candidate)) {
-        candidate = `${base}-${suffix}`;
-        suffix += 1;
+  let unitsPrepared = false;
+  const prepareUnits = () => {
+    if (unitsPrepared) return;
+    const occupiedIds = new Set([...document.querySelectorAll<HTMLElement>('[id]')].map(({ id }) => id));
+    units.forEach((unit, index) => {
+      if (unit.id.length === 0) {
+        const base = `document-navigation-unit-${index + 1}`;
+        let candidate = base;
+        let suffix = 2;
+        while (occupiedIds.has(candidate)) {
+          candidate = `${base}-${suffix}`;
+          suffix += 1;
+        }
+        unit.id = candidate;
+        occupiedIds.add(candidate);
       }
-      unit.id = candidate;
-      occupiedIds.add(candidate);
-    }
-    unit.dataset.navigationUnit = String(index + 1);
-  });
+      unit.dataset.navigationUnit = String(index + 1);
+    });
+    unitsPrepared = true;
+  };
+  if (isAvailable()) prepareUnits();
 
   let mode: NavigationMode = 'normal';
   let activeIndex = 0;
@@ -205,7 +214,7 @@ export function startDocumentNavigator(root: HTMLElement): void {
   const motionBehavior = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
   const updateStatusReserve = () => {
-    if (status.hidden) {
+    if (status.hidden || !isAvailable()) {
       root.style.removeProperty('--navigation-status-reserve');
       return;
     }
@@ -346,6 +355,8 @@ export function startDocumentNavigator(root: HTMLElement): void {
   };
 
   const activate = (focusRegion: boolean) => {
+    if (!isAvailable()) return;
+    prepareUnits();
     active = true;
     mode = 'normal';
     searchForm.hidden = true;
@@ -368,7 +379,7 @@ export function startDocumentNavigator(root: HTMLElement): void {
   };
 
   const synchronizeWithLocation = (focusRegion: boolean, rememberPreviousFragment: boolean) => {
-    const wantsActive = !fragmentEntry || window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT;
+    const wantsActive = isAvailable() && (!fragmentEntry || window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT);
     if (wantsActive && !active) {
       if (rememberPreviousFragment) rememberedFragment = lastObservedHash !== DOCUMENT_NAVIGATOR_FRAGMENT
         ? lastObservedHash || null
@@ -376,8 +387,8 @@ export function startDocumentNavigator(root: HTMLElement): void {
       activate(focusRegion);
     } else if (wantsActive && active && focusRegion) {
       region.focus({ preventScroll: true });
-    } else if (!wantsActive && active && fragmentEntry) {
-      const focusEntry = status.contains(document.activeElement);
+    } else if (!wantsActive && active) {
+      const focusEntry = isAvailable() && status.contains(document.activeElement);
       deactivate(focusEntry);
       rememberedFragment = null;
     }
@@ -468,7 +479,7 @@ export function startDocumentNavigator(root: HTMLElement): void {
 
   searchForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (composing) return;
+    if (composing || !isAvailable()) return;
     const query = searchInput.value;
     searchForm.hidden = true;
     mode = 'normal';
@@ -497,7 +508,7 @@ export function startDocumentNavigator(root: HTMLElement): void {
 
   commandForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (composing) return;
+    if (composing || !isAvailable()) return;
     if (commandInput.value === 'q') {
       if (fragmentEntry) {
         exitLocally();
@@ -528,7 +539,7 @@ export function startDocumentNavigator(root: HTMLElement): void {
   );
 
   entryControl?.addEventListener('click', (event) => {
-    if (event.defaultPrevented || !isUnmodifiedPrimaryClick(event)) return;
+    if (event.defaultPrevented || !isAvailable() || !isUnmodifiedPrimaryClick(event)) return;
     event.preventDefault();
     if (active) {
       region.focus({ preventScroll: true });
@@ -547,9 +558,18 @@ export function startDocumentNavigator(root: HTMLElement): void {
 
   window.addEventListener('hashchange', () => synchronizeWithLocation(false, true));
   window.addEventListener('popstate', () => synchronizeWithLocation(false, true));
+  mobileMedia.addEventListener('change', () => {
+    if (isAvailable()) {
+      prepareUnits();
+    } else if (region.contains(document.activeElement) || status.contains(document.activeElement)) {
+      (document.activeElement as HTMLElement).blur();
+    }
+    synchronizeWithLocation(false, false);
+    updateStatus();
+  });
 
   region.addEventListener('keydown', (event) => {
-    if (!active) return;
+    if (!active || !isAvailable()) return;
     if (event.defaultPrevented || event.isComposing || composing || event.ctrlKey || event.altKey || event.metaKey || hasUnownedSelection()) return;
     const target = event.target;
     if (target instanceof Element && target.closest(protectedNavigationTargetSelector) !== null) return;
@@ -587,7 +607,7 @@ export function startDocumentNavigator(root: HTMLElement): void {
   updateStatus();
   if (active && window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT) {
     window.requestAnimationFrame(() => {
-      if (window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT) {
+      if (isAvailable() && active && window.location.hash === DOCUMENT_NAVIGATOR_FRAGMENT) {
         region.focus({ preventScroll: true });
       }
     });

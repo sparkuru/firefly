@@ -132,3 +132,14 @@
   background-color: var(--terminal-color-warning);
   color: var(--terminal-color-canvas);
 }
+
+@media (hover: none) and (pointer: coarse) {
+  .terminal-document[data-document-navigator-supports-mobile="false"] {
+    --navigation-status-reserve: 0px;
+    padding-block-end: 0;
+  }
+
+  .terminal-document[data-document-navigator-supports-mobile="false"] .terminal-navigation-status {
+    display: none;
+  }
+}
