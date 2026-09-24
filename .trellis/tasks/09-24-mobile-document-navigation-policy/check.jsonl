@@ -1,5 +1,0 @@
-{"file":".trellis/spec/frontend/index.md","reason":"Frontend guideline entry point for review."}
-{"file":".trellis/spec/frontend/content-workspace-contract.md","reason":"Check navigator behavior, desktop preservation, and mobile ordinary-reading policy."}
-{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Check strict lookup/config handling and no X Core or authored-field leakage."}
-{"file":".trellis/spec/frontend/publication-contract.md","reason":"Check static/browser evidence and publication asset boundaries."}
-{"file":".trellis/tasks/09-24-mobile-document-navigation-policy/research/evidence.md","reason":"Compare implementation claims with observed phone and Playwright baseline."}
