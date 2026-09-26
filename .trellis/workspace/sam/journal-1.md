@@ -1714,3 +1714,24 @@ Defaulted presentation-owned mobile document navigation to off, kept touch-prima
 ### Status
 
 [OK] **Completed**
+
+
+## Session 76: Mobile homepage article search
+
+**Date**: 2026-09-26
+**Task**: Mobile homepage article search
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented touch-primary homepage search across public posts and pages, including title, path, description, tags and rendered body. Added safe local matching, IME handling, excerpts and native-link failure recovery. Reviewed and fixed startup key handling and remaining-viewport layout. Final content 96, X Core 8, build static 18, mobile 70 and static browser 26 passed; full desktop 77 plus affected final desktop 11 passed. Astro check had zero diagnostics. A 400-article roughly 4 MB fixture measured 120.9 ms first search and 53.4 ms cached. Required gates and viewport visual review passed; physical-device software-keyboard review remains optional. Updated frontend contracts and archived only this task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a464fb1` | (see git log) |
+
+### Status
+
+[OK] **Completed**
