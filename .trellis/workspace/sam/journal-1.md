@@ -1735,3 +1735,24 @@ Implemented touch-primary homepage search across public posts and pages, includi
 ### Status
 
 [OK] **Completed**
+
+
+## Session 77: Native mobile homepage without Terminal
+
+**Date**: 2026-09-26
+**Task**: Native mobile homepage without Terminal
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Fixed touch-primary mobile home to retain native article links and local search without Terminal startup, command UI or input ownership. Added lazy media-gated desktop controller lifecycle and blocked/delayed-module detour regressions. Updated indexed mobile experience, search, workspace startup and validation contracts. Final independent review: Astro 102 files zero diagnostics; build 18 static assertions; desktop 81, mobile 22 and static browser 27 passed without retries. Content 96 and X Core 8 gates passed. Inspected portrait/landscape captures; 400-article roughly 4 MB search measured 140.2 ms first and 50.0 ms cached. No unresolved required checks; physical software-keyboard review remains optional. Archived only this task.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d389039` | (see git log) |
+
+### Status
+
+[OK] **Completed**
