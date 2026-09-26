@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectMobileRootBrowsing } from './mobile-home-assertions';
 
 const root = '[data-terminal-home]';
 const mobileQuery = '(hover: none) and (pointer: coarse)';
@@ -8,9 +9,8 @@ async function expectNativeHome(page: Page) {
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
   expect(await page.locator('[data-terminal-entry] a').count()).toBe(16);
-  await expect(page.locator('[data-terminal-entry-href="/pages/about/"] a')).toBeVisible();
   expect(await page.locator('[data-terminal-entry-kind="post"] a').count()).toBe(12);
-  for (const link of await page.locator('[data-terminal-entry] a').all()) await expect(link).toBeVisible();
+  await expectMobileRootBrowsing(page);
   for (const framing of await page.locator('[data-home-shell-only]').all()) await expect(framing).toBeHidden();
   await expect(page.locator('#terminal-command')).not.toBeFocused();
 }
@@ -33,6 +33,15 @@ test('mobile first paint and later search retain native browsing without Termina
   await page.goto('/');
   expect(await page.evaluate((query) => matchMedia(query).matches, mobileQuery)).toBe(true);
   await expectNativeHome(page);
+  const headingStyles = await page.locator('#terminal-recovery-heading, #terminal-friends-heading').evaluateAll((headings) => headings.map((heading) => {
+    const style = getComputedStyle(heading);
+    return { color: style.color, fontSize: style.fontSize, fontWeight: style.fontWeight };
+  }));
+  expect(headingStyles[0]).toEqual(headingStyles[1]);
+  expect(headingStyles[0].fontWeight).toBe('500');
+  for (const link of await page.locator('[data-home-root-navigation] a').all()) {
+    expect(await link.evaluate((element) => getComputedStyle(element).borderWidth)).toBe('0px');
+  }
   await expect(page.locator(root)).not.toHaveAttribute('data-terminal-startup-state', /.+/);
   await expect(page.locator(root)).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
   await expect(page.locator('#home-search-query')).not.toBeFocused();
@@ -50,10 +59,55 @@ test('mobile first paint and later search retain native browsing without Termina
     await page.setViewportSize(size);
     await expectNativeHome(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    for (const link of await page.locator('[data-home-root-navigation] a, [data-home-friends] a').all()) {
+      const box = await link.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+    }
     await page.screenshot({ path: info.outputPath(`mobile-native-${size.width}.png`) });
   }
-  await page.locator('[data-terminal-entry-href="/pages/about/"] a').click();
+  await page.locator('[data-home-root-navigation] a[href="/pages/"]').click();
+  if (info.project.name.endsWith('interactive')) {
+    await expect(page).toHaveURL(/\/$/u);
+    await expect(page.locator('[data-home-browse-breadcrumbs]')).toHaveText('~/blogs/pages');
+    await page.locator('[data-home-browse-list] a[href="/pages/about/"]').click();
+  } else {
+    await expect(page).toHaveURL(/\/pages\/$/u);
+    await page.getByRole('link', { name: '~/blog/pages/about.md', exact: true }).click();
+  }
   await expect(page).toHaveURL(/\/pages\/about\/$/u);
+});
+
+test('mobile section entries browse native indexes and retain browser history', async ({ page }, info) => {
+  test.skip(info.project.name !== 'chromium-mobile-static');
+  await page.goto('/');
+  const friend = page.locator('[data-home-friends] a').first();
+  if (await friend.count() > 0) {
+    const href = (await friend.getAttribute('href'))!;
+    await page.route(href, (route) => route.fulfill({ contentType: 'text/html', body: '<h1>Friend destination fixture</h1>' }));
+    await friend.click();
+    await expect(page).toHaveURL(href);
+    await expect(page.getByRole('heading', { name: 'Friend destination fixture' })).toBeVisible();
+    await page.goBack();
+    await expectMobileRootBrowsing(page);
+    await page.unroute(href);
+  }
+  await page.locator('[data-home-root-navigation] a[href="/posts/"]').click();
+  await expect(page.getByRole('heading', { name: 'posts/', exact: true })).toBeVisible();
+  await expect(page.locator('.terminal-directory-list [data-kind="file"]')).toHaveCount(0);
+  await page.getByRole('link', { name: 'ai/', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'posts/ai/', exact: true })).toBeVisible();
+  await page.locator('.terminal-directory-list a[href="/posts/ai/llm-workflow-with-trellis/"]').click();
+  await expect(page.getByRole('heading', { name: 'llm-workflow-with-trellis', exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/posts\/ai\/$/u);
+  await page.getByRole('navigation', { name: 'Directory navigation' }).getByRole('link', { name: '..', exact: true }).click();
+  await expect(page).toHaveURL(/\/posts\/$/u);
+  await page.getByRole('navigation', { name: 'Directory navigation' }).getByRole('link', { name: '~/blog', exact: true }).click();
+  await expectMobileRootBrowsing(page);
+  await page.locator('[data-home-root-navigation] a[href="/lab/"]').click();
+  await expect(page.getByRole('heading', { name: 'Experiments', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open NERV', exact: true })).toHaveAttribute('href', '/lab/nerv/');
 });
 
 test('mobile delayed and missing modules never flash shell or install early guards', async ({ page }, info) => {

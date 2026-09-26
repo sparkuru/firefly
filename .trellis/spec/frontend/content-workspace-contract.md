@@ -1272,7 +1272,8 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   and ready boot session share a bounded tall-viewport offset so relocating the
   boot log does not change its geometry. This applies to available desktop
   Terminal sessions, including narrow fine-pointer windows.
-- A touch-primary, no-hover homepage keeps complete native article browsing and
+- A touch-primary, no-hover homepage keeps native `pages/`, `lab/`, `posts/`
+  section entries in that order, with configured friend links below, and
   independent [Homepage Search](./homepage-search-contract.md), with no Terminal
   boot/command UI or input ownership. Initially mobile does not initialize its
   session or boot gate. Desktop-to-mobile changes suspend input/startup and
@@ -1283,6 +1284,29 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   [Mobile Experience](./mobile-experience-contract.md) contract for eligibility,
   lifecycle, failures and regression assertions. Article presentation and its
   navigator `supportsMobile` profile remain distinct from homepage availability.
+  Section contents are not expanded on mobile home; existing native indexes and
+  immediate-child post directories provide article access with parent/home/Back.
+  Keep the full public entry/template projection for search and desktop recovery
+  separate from mobile visibility, without duplicate document/friend records.
+  Clear/failure/static mode preserve section navigation and friend links.
+  Eligible mobile clients progressively enhance section/post-folder navigation
+  into inline immediate-child lists from canonical guest build-time snapshots,
+  with clickable underlined `~/blogs/...` breadcrumbs and local Back/Forward
+  state. `blogs` links to root; each public directory segment links to its
+  registered canonical directory; current segment activation is a history no-op.
+  Mobile friends appear only at browse root and restore on root/Back/Clear/failure,
+  while search stays visible in directories. Preserve desktop friends and unique
+  friend metadata. Folder activation does not fetch,
+  reload or change theme. Final/modified links remain canonical native links;
+  no-JavaScript/browse failure keeps existing routes available. Do not duplicate
+  Terminal metadata or add a global router. Search stays global in every folder;
+  explicit Clear returns root. Mobile home/inline directory text shares the
+  existing base font size across headings, paths, rows, search and friends.
+  Root/inline browse sibling rows use decorative `├──` / final `└──` prefixes
+  rather than dots, with aligned wrapping and canonical names/hrefs unchanged;
+  shared child renderer changes apply only to homeBrowse. Search/friends are
+  not tree lists; native indexes and desktop keep their presentation. Directory
+  links are unboxed with accessible target/focus geometry.
 
 #### Read-only document navigator
 
@@ -1916,7 +1940,7 @@ data-terminal-home-mode?: 'mobile' | 'desktop'
 
 | Condition | Required result |
 | --- | --- |
-| initial touch-primary/no-hover home | hide boot/session, retain complete native browsing and independent search; no controller or gate initialization |
+| initial touch-primary/no-hover home | hide boot/session and expanded sections; retain native pages/lab/posts entries, friends and independent search; preserve complete data without controller or gate initialization |
 | desktop becomes mobile during connecting or ready | suspend startup/input, release shell-owned focus, expose native links; late callbacks cannot reveal/refocus shell |
 | desktop-origin startup switches to mobile before a module fails | mark uninitialized startup failed; returning desktop retains native recovery |
 | desktop-origin startup switches through mobile while module remains delayed | mobile keys stay native; desktop guards remain effective on return |

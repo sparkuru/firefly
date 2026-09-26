@@ -144,6 +144,7 @@ export function startHomeSearch(root: HTMLElement): void {
       input.value = '';
       resetResults();
       input.focus({ preventScroll: true });
+      root.dispatchEvent(new CustomEvent('firefly:home-search-clear'));
     });
     media.addEventListener('change', synchronize);
     section.dataset.homeSearchReady = 'true';

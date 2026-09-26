@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { MOBILE_DOCUMENT_NAVIGATION_QUERY } from '../src/lib/document-navigation';
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 import { terminalPromptName } from './terminal-prompt';
+import { expectMobileRootBrowsing } from './mobile-home-assertions';
 
 async function expectNoHorizontalOverflow(page: Page) {
   const documentWidth = await page.evaluate(() => ({
@@ -100,12 +101,16 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
     })
   ).toBeVisible();
   const workflow = await getWorkflowPaths(page);
-  await expect(page.getByRole('link', { name: workflow.shell, exact: true })).toHaveAttribute(
-    'href',
-    '/posts/ai/llm-workflow-with-trellis/'
-  );
-  await expect(page.getByRole('link', { name: '~/blog/pages/about.md', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
+  const mobile = await page.evaluate((query) => matchMedia(query).matches, MOBILE_DOCUMENT_NAVIGATION_QUERY);
+  if (mobile) {
+    await expectMobileRootBrowsing(page);
+  } else {
+    await expect(page.getByRole('link', { name: workflow.shell, exact: true })).toHaveAttribute('href', '/posts/ai/llm-workflow-with-trellis/');
+    await expect(page.getByRole('link', { name: '~/blog/pages/about.md', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'nerv/' })).toHaveAttribute('href', '/lab/nerv/');
+    await expect(page.locator('[data-home-root-navigation]')).toBeHidden();
+    await expect(page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/Learning-with-LLM/"] a')).toBeVisible();
+  }
   await expect(main.getByRole('heading', { level: 3, name: 'friend links' })).toBeVisible();
   if (SITE_CONFIG.terminal.friends.length === 0) {
     await expect(main.getByText('No friend links.')).toBeVisible();
@@ -118,7 +123,6 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   }
   await expect(page.locator('[data-terminal-session]')).toHaveAttribute('hidden', '');
   await expect(page.getByRole('textbox', { name: terminalPromptName() })).toHaveCount(0);
-  await expect(page.locator('[data-terminal-entry][data-terminal-entry-href="/posts/ai/Learning-with-LLM/"] a')).toBeVisible();
   await expect(
     page.locator(`template[data-terminal-template][data-terminal-template-path="${workflow.virtual}"]`)
   ).toHaveCount(1);

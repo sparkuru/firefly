@@ -52,7 +52,7 @@ function documentHeadingId(html) {
   return /<h2\b[^>]*\bid="([^"]+)"[^>]*>Shared paper heading<\/h2>/u.exec(html)?.[1] ?? null;
 }
 
-test('paper front matter builds to semantic and Terminal routes with shared content', async () => {
+test('paper routes and nested native directories build with shared content and empty friends', async () => {
   await mkdir(testResultsRoot, { recursive: true });
   const runRoot = await mkdtemp(path.join(testResultsRoot, 'paper-build-'));
   const contentRoot = path.join(runRoot, 'content');
@@ -102,6 +102,12 @@ ${body}`;
   await mkdir(path.join(contentRoot, 'pages'), { recursive: true });
   await writeFile(path.join(contentRoot, 'posts/paper-semantic.md'), semanticSource);
   await writeFile(path.join(contentRoot, 'pages/paper-terminal.md'), terminalSource);
+  await mkdir(path.join(contentRoot, 'posts/category/deeper'), { recursive: true });
+  await writeFile(path.join(contentRoot, 'posts/category/child.md'), semanticSource.replaceAll('paper-semantic', 'child'));
+  await writeFile(path.join(contentRoot, 'posts/category/deeper/leaf.md'), semanticSource.replaceAll('paper-semantic', 'leaf'));
+  const configPath = path.join(runRoot, 'site.toml');
+  const siteConfig = await readFile(path.resolve(siteRoot, '../../config/site.toml'), 'utf8');
+  await writeFile(configPath, siteConfig.replace(/\[\[terminal\.friends\]\][\s\S]*?(?=\n\[(?!\[terminal\.friends\])|$)/gu, ''));
 
   try {
     const result = spawnSync(
@@ -113,7 +119,8 @@ ${body}`;
         env: {
           ...process.env,
           ASTRO_TELEMETRY_DISABLED: '1',
-          FIREFLY_CONTENT_ROOT: contentRoot
+          FIREFLY_CONTENT_ROOT: contentRoot,
+          FIREFLY_SITE_CONFIG_PATH: path.relative(path.resolve(siteRoot, '../..'), configPath)
         },
         maxBuffer: 8 * 1024 * 1024
       }
@@ -122,6 +129,29 @@ ${body}`;
 
     assert.equal(result.error, undefined, output);
     assert.equal(result.status, 0, output);
+
+    const home = await readFile(path.join(outputRoot, 'index.html'), 'utf8');
+    assert.match(home, /data-home-root-navigation/u);
+    assert.match(home, /data-home-friends[\s\S]*?No friend links\./u);
+    assert.doesNotMatch(home, /data-terminal-friend-name=/u);
+    assert.match(home, /data-terminal-entry-href="\/posts\/paper-semantic\/"/u);
+    assert.match(home, /data-terminal-entry-href="\/posts\/category\/deeper\/leaf\/"/u);
+
+    for (const [directory, hrefs, parent] of [
+      ['posts', ['/posts/category/', '/posts/paper-semantic/'], '/'],
+      ['posts/category', ['/posts/category/deeper/', '/posts/category/child/'], '/posts/'],
+      ['posts/category/deeper', ['/posts/category/deeper/leaf/'], '/posts/category/']
+    ]) {
+      const html = await readFile(path.join(outputRoot, directory, 'index.html'), 'utf8');
+      const listing = /<ul class="terminal-directory-list">([\s\S]*?)<\/ul>/u.exec(html)?.[1] ?? '';
+      assert.deepEqual([...listing.matchAll(/<a href="([^"]+)"/gu)].map((match) => match[1]), hrefs);
+      const snapshot = new RegExp(`<template\\b[^>]*data-home-browse-href="/${directory}/"[^>]*>([\\s\\S]*?)<\\/template>`, 'u').exec(home)?.[1] ?? '';
+      assert.deepEqual([...snapshot.matchAll(/<a href="([^"]+)"/gu)].map((match) => match[1]), hrefs);
+      assert.doesNotMatch(snapshot, /data-terminal-entry|data-terminal-template|data-terminal-friend|<script\b/iu);
+      assert.match(html, new RegExp(`<a href="${parent}">\\.\\.<\\/a>`, 'u'));
+      assert.match(html, /<a href="\/">~\/blog<\/a>/u);
+      assert.doesNotMatch(html, /<script\b/iu);
+    }
 
     const semanticRoute = await readFile(
       path.join(outputRoot, 'posts/paper-semantic/index.html'),

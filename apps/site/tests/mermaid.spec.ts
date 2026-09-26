@@ -44,8 +44,8 @@ test('canonical diagrams and native source remain usable at every viewport', asy
   expect(testInfo.project.use.javaScriptEnabled).toBeDefined();
 });
 
-test('repeated cat keeps isolated SVG assets and disclosures intact', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.use.javaScriptEnabled === false, 'Terminal command interaction needs JavaScript.');
+test('desktop repeated cat keeps isolated SVG assets and disclosures intact', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop-interactive', 'Command rendering requires the available desktop Terminal; native diagrams are covered at every viewport.');
   await page.goto('/');
   const command = page.locator('#terminal-command');
   for (let index = 0; index < 2; index += 1) {

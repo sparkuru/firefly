@@ -819,9 +819,7 @@ test('friends renders validated configuration records as native anchors', async 
     url: 'https://plain.example.test/'
   };
   const friendLinks: Array<{ name: string; desc?: string; url: string }> = [friendWithDescription, friendWithoutDescription];
-  await page.locator('[data-terminal-fallback] nav').evaluate((nav, friends) => {
-    const group = nav.querySelector<HTMLElement>('[aria-labelledby="terminal-friends-heading"]');
-    if (group === null) throw new Error('friend recovery group is missing');
+  await page.locator('[data-terminal-fallback] [data-home-friends]').evaluate((group, friends) => {
     for (const existing of group.querySelectorAll('[data-terminal-friend]')) existing.remove();
     const list = document.createElement('ul');
     list.className = 'terminal-entry-list';

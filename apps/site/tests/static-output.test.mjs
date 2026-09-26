@@ -659,6 +659,23 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.ok(scriptPath);
   const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
+  const rootNavigation = /<nav\b[^>]*data-home-root-navigation[^>]*>[\s\S]*?<\/nav>/u.exec(home)?.[0] ?? '';
+  assert.deepEqual([...rootNavigation.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/gu)].map((match) => [match[1], match[2]]),
+    [['/pages/', 'pages/'], ['/lab/', 'lab/'], ['/posts/', 'posts/']]);
+  assert.deepEqual([...rootNavigation.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]), ['├──', '├──', '└──']);
+  for (const [, contents] of home.matchAll(/<template\b[^>]*data-home-browse-template[^>]*>([\s\S]*?)<\/template>/gu)) {
+    const prefixes = [...contents.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]);
+    const rowCount = (contents.match(/<li\b/gu) ?? []).length;
+    assert.equal(prefixes.length, rowCount);
+    assert.deepEqual(prefixes, Array.from({ length: rowCount }, (_, index) => index === rowCount - 1 ? '└──' : '├──'));
+    for (const [, anchorContents] of contents.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gu)) assert.doesNotMatch(anchorContents, /data-home-browse-tree-prefix/u);
+  }
+  assert.doesNotMatch(stripStyleBlocks(await readFile(path.join(distRoot, 'posts/ai/index.html'), 'utf8')), /home-browse-tree/u);
+  assert.equal((home.match(/<section\b[^>]*data-home-expanded-group/gu) ?? []).length, 3);
+  assert.equal((home.match(/<section\b[^>]*data-home-friends/gu) ?? []).length, 1);
+  assert.match(home, /<nav\b[^>]*data-home-browse-breadcrumbs[^>]*aria-label="Current directory path"[^>]*tabindex="-1"[^>]*><\/nav>/u);
+  assert.doesNotMatch(home, /data-home-browse-(?:home|parent-link|path-heading)/u);
+  assert.ok(home.search(/<nav\b[^>]*data-home-root-navigation/u) < home.search(/<section\b[^>]*data-home-friends/u));
   const terminalArticle = await readFile(path.join(distRoot, 'pages/about/index.html'), 'utf8');
   const article = await readFile(path.join(distRoot, workflowRoute), 'utf8');
   assert.match(home, new RegExp(`data-terminal-entry-virtual-path="${escapeRegExp(workflow.virtualPath)}"`, 'u'));

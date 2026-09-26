@@ -15,7 +15,7 @@ import {
 import { createDocumentNavigationLookup } from '../lib/document-navigation-composition.ts';
 import { SITE_CONFIG } from '../lib/site-config.mjs';
 
-const { documents: canonicalDocuments } = await getCanonicalContent();
+const { documents: canonicalDocuments, directories } = await getCanonicalContent();
 const publicExperiments = await getPublicExperiments();
 const entries = decodeTerminalEntries(canonicalDocuments.map((canonical) => ({
   kind: canonical.collection === 'posts' ? 'post' : 'page',
@@ -59,5 +59,5 @@ const documents = await Promise.all(
   path={formatResourcePath('/posts')}
   home
 >
-  <TerminalHome documents={documents} experiments={experiments} documentNavigationLookup={documentNavigationLookup} />
+  <TerminalHome documents={documents} experiments={experiments} browseDirectories={directories.filter((directory) => directory.virtualPath === 'pages' || directory.virtualPath === 'posts' || directory.virtualPath.startsWith('posts/'))} browseExperiments={publicExperiments.map((experiment) => ({ id: experiment.id, title: experiment.title, href: experiment.entryHref }))} documentNavigationLookup={documentNavigationLookup} />
 </TerminalLayout>

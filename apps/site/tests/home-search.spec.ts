@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectMobileRootBrowsing } from './mobile-home-assertions';
+import { syntheticDocument, withSyntheticArticles } from './home-search-fixtures';
 
 const search = '[data-home-search]';
 const input = '#home-search-query';
@@ -10,40 +12,21 @@ async function query(page: Page, value: string) {
   await page.locator(input).press('Enter');
 }
 
-function escapeAttribute(value: string) {
-  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-}
-
-function syntheticDocument(index: number, body: string, fields: Record<string, unknown> = {}) {
-  const metadata = {
-    title: '同名文章', filename: `fixture-${index}.md`, virtualPath: `posts/fixture-${index}.md`,
-    href: `/posts/fixture-${index}/`, date: '2026-09-26', description: 'Fixture description', tags: [], ...fields
-  };
-  const path = escapeAttribute(String(metadata.virtualPath));
-  const href = escapeAttribute(String(metadata.href));
-  const kind = String(metadata.virtualPath).startsWith('pages/') ? 'page' : 'post';
-  const relative = path.slice(path.indexOf('/') + 1);
-  const titleId = `fixture-${index}-title`;
-  return `<li hidden data-terminal-entry data-terminal-entry-kind="${kind}" data-terminal-entry-virtual-path="${path}" data-terminal-entry-relative-path="${relative}" data-terminal-entry-filename="${metadata.filename}" data-terminal-entry-title="${escapeAttribute(String(metadata.title))}" data-terminal-entry-href="${href}" data-terminal-entry-date="${metadata.date}"><a href="${href}">${escapeAttribute(String(metadata.title))}</a></li>
-    <template data-terminal-template data-terminal-template-path="${path}" data-home-search-metadata="${escapeAttribute(JSON.stringify(metadata))}"><article data-terminal-stream-document aria-labelledby="${titleId}"><h2 id="${titleId}" data-terminal-stream-title>${escapeAttribute(String(metadata.title))}</h2><button type="button" data-terminal-return>Command</button><button type="button" data-terminal-collapse aria-controls="fixture-${index}-body" aria-expanded="true">Collapse</button><a href="${href}" data-terminal-open>Open document</a><div id="fixture-${index}-body" class="terminal-stream-prose">${body}</div></article></template>`;
-}
-
-async function withSyntheticArticles(page: Page, html: string) {
-  await page.route('**/', async (route) => {
-    if (new URL(route.request().url()).pathname !== '/') return route.continue();
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('<section class="terminal-startup"', `${html}<section class="terminal-startup"`) });
-  });
-}
-
-test('static homepage retains complete ordinary article links and hides search controls', async ({ page }, info) => {
+test('static homepage retains native article access and hides search controls', async ({ page }, info) => {
   test.skip(!info.project.name.endsWith('-static'));
   await page.goto('/');
   await expect(page.locator(search)).toBeHidden();
   const entries = page.locator('[data-terminal-entry]');
   expect(await entries.count()).toBeGreaterThan(10);
-  for (const entry of await entries.all()) await expect(entry.locator('a')).toBeVisible();
-  await page.locator('[data-terminal-entry-href="/pages/about/"] a').click();
+  if (info.project.name.startsWith('chromium-mobile')) {
+    await expectMobileRootBrowsing(page);
+    await page.locator('[data-home-root-navigation] a[href="/pages/"]').click();
+    await page.getByRole('link', { name: '~/blog/pages/about.md', exact: true }).click();
+  } else {
+    for (const entry of await entries.all()) await expect(entry.locator('a')).toBeVisible();
+    await expect(page.locator('[data-home-root-navigation]')).toBeHidden();
+    await page.locator('[data-terminal-entry-href="/pages/about/"] a').click();
+  }
   await expect(page).toHaveURL(/\/pages\/about\/$/u);
 });
 
@@ -188,7 +171,7 @@ test.describe('touch homepage search', () => {
     }
   });
 
-  test('clearing search retains complete native browsing on phone and tablet', async ({ page }) => {
+  test('clearing search retains root browsing and friends on phone and tablet', async ({ page }) => {
     await page.goto('/');
     for (const viewport of [{ width: 375, height: 812 }, { width: 812, height: 375 }, { width: 1024, height: 768 }]) {
       await page.setViewportSize(viewport);
@@ -198,7 +181,7 @@ test.describe('touch homepage search', () => {
       await expect(page.locator(input)).toBeFocused();
       await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
       await expect(page.locator('[data-terminal-session]')).toBeHidden();
-      for (const link of await page.locator('[data-terminal-entry] a').all()) await expect(link).toBeVisible();
+      await expectMobileRootBrowsing(page);
     }
   });
 
@@ -223,7 +206,7 @@ test.describe('touch homepage search', () => {
     await expect(page.locator(search)).toBeHidden();
     await expect(page.locator('[data-home-search-error]')).toBeVisible();
     await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
-    await expect(page.locator('[data-terminal-entry-href="/pages/about/"] a')).toBeVisible();
+    await expectMobileRootBrowsing(page);
   });
 
   test('invalid search metadata exposes native recovery even without starting a shell', async ({ page }) => {
@@ -236,6 +219,7 @@ test.describe('touch homepage search', () => {
     await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     await expect(page.locator('[data-home-search-error]')).toBeVisible();
     await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
+    await expectMobileRootBrowsing(page);
     await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     await expect(page.locator(search)).toBeHidden();
     await expect(page.locator('[data-home-search-error]')).toBeVisible();
@@ -259,7 +243,7 @@ test.describe('touch homepage search', () => {
       await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
       await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
       await expect(page.locator('[data-home-search-error]')).toBeVisible();
-      await expect(page.locator('[data-terminal-entry-href="/pages/about/"] a')).toBeVisible();
+      await expectMobileRootBrowsing(page);
       await page.unroute('**/');
     }
   });

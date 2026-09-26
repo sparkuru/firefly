@@ -1,0 +1,28 @@
+---
+import { formatResourcePath } from '@firefly/presentation-terminal/runtime';
+import type { ContentDirectory } from '../lib/content';
+import ContentMarkers from './ContentMarkers.astro';
+import DirectoryEntryRow from './DirectoryEntryRow.astro';
+
+interface Props {
+  directory: ContentDirectory;
+  homeBrowse?: boolean;
+}
+
+const { directory, homeBrowse = false } = Astro.props;
+---
+
+{
+  directory.children.length === 0 ? (
+    <p class="terminal-meta">No public documents.</p>
+  ) : (
+    <ul class:list={['terminal-directory-list', { 'home-browse-tree': homeBrowse }]}>
+      {directory.children.map((child, index) => (
+        <DirectoryEntryRow kind={child.kind} homeBrowse={homeBrowse} last={index === directory.children.length - 1}>
+          <a href={child.href} data-home-browse-directory={homeBrowse && child.kind === 'directory' ? '' : undefined} aria-label={child.kind === 'file' ? formatResourcePath(`/${child.document.virtualPath}`) : undefined}>{child.name}{child.kind === 'directory' ? '/' : ''}</a>
+          {child.kind === 'file' && <ContentMarkers markers={child.document.markers} />}
+        </DirectoryEntryRow>
+      ))}
+    </ul>
+  )
+}

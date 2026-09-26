@@ -43,9 +43,11 @@ test('native heading links still work with a direct navigator fragment', async (
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
 });
 
-test('homepage native article links use ordinary destinations', async ({ page }) => {
+test('homepage section and native article links use ordinary destinations', async ({ page }) => {
   await page.goto('/');
-  const link = page.locator('[data-terminal-entry-href="/pages/about/"] a');
+  await page.locator('[data-home-root-navigation] a[href="/pages/"]').click();
+  await expect(page).toHaveURL(/\/$/u);
+  const link = page.locator('[data-home-browse-list]').getByRole('link', { name: '~/blog/pages/about.md', exact: true });
   await expect(link).toHaveAttribute('href', terminalPath);
   await link.click();
   await expect(page).toHaveURL(/\/pages\/about\/$/u);

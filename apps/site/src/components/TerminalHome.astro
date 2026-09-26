@@ -6,11 +6,13 @@ import {
   type TerminalExperiment
 } from '@firefly/presentation-terminal/runtime';
 import type { PublicDocument, renderDocument } from '../lib/render-document';
-import type { CanonicalDocument } from '../lib/content';
+import type { CanonicalDocument, ContentDirectory } from '../lib/content';
 import { SITE_CONFIG, terminalIdentityFromConfig } from '../lib/site-config.mjs';
 import { MOBILE_DOCUMENT_NAVIGATION_QUERY } from '../lib/document-navigation';
 import ContentMarkers from './ContentMarkers.astro';
 import TerminalStreamDocument from './TerminalStreamDocument.astro';
+import HomeBrowseSnapshots from './HomeBrowseSnapshots.astro';
+import DirectoryEntryRow from './DirectoryEntryRow.astro';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
@@ -24,6 +26,8 @@ interface HomeDocument {
 interface Props {
   documents: readonly HomeDocument[];
   experiments: readonly TerminalExperiment[];
+  browseDirectories: readonly ContentDirectory[];
+  browseExperiments: readonly { readonly id: string; readonly title: string; readonly href: string }[];
   documentNavigationLookup: string;
 }
 
@@ -33,7 +37,7 @@ interface FriendLink {
   readonly url: string;
 }
 
-const { documents, experiments, documentNavigationLookup } = Astro.props;
+const { documents, experiments, browseDirectories, browseExperiments, documentNavigationLookup } = Astro.props;
 const identity = terminalIdentityFromConfig();
 const prompt = formatTerminalPrompt(identity, { cwd: identity.workingDirectory });
 const encodedAbout = encodeURIComponent(identity.about);
@@ -186,7 +190,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
     <ul id="home-search-results" class="home-search-results" data-home-search-results hidden></ul>
   </section>
   <p class="home-search-error" data-home-search-error role="status" hidden>
-    文章搜索暂时不可用，请使用下方文章列表浏览。
+    文章搜索暂时不可用，请使用下方目录浏览。
   </p>
 
   <section
@@ -234,8 +238,21 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
       The command shell is unavailable. Use the document links below.
     </p>
 
+    <nav class="home-root-navigation" data-home-root-navigation aria-label="Public sections">
+      <ul class="home-browse-tree">
+        <DirectoryEntryRow homeBrowse><a href="/pages/" data-home-browse-directory>pages/</a></DirectoryEntryRow>
+        <DirectoryEntryRow homeBrowse><a href="/lab/" data-home-browse-directory>lab/</a></DirectoryEntryRow>
+        <DirectoryEntryRow homeBrowse last><a href="/posts/" data-home-browse-directory>posts/</a></DirectoryEntryRow>
+      </ul>
+    </nav>
+
+    <section class="home-browse" data-home-browse-panel aria-label="Public directory contents" hidden>
+      <nav class="home-browse-breadcrumbs" data-home-browse-breadcrumbs aria-label="Current directory path" tabindex="-1"></nav>
+      <div data-home-browse-list></div>
+    </section>
+
     <nav class="terminal-index" aria-label="Public document index">
-      <section class="terminal-group" aria-labelledby="terminal-posts-heading">
+      <section class="terminal-group" data-home-expanded-group aria-labelledby="terminal-posts-heading">
         <h3 id="terminal-posts-heading">posts/</h3>
         {
           posts.length === 0 ? (
@@ -265,7 +282,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
         }
       </section>
 
-      <section class="terminal-group" aria-labelledby="terminal-pages-heading">
+      <section class="terminal-group" data-home-expanded-group aria-labelledby="terminal-pages-heading">
         <h3 id="terminal-pages-heading">pages/</h3>
         {
           pages.length === 0 ? (
@@ -295,7 +312,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
         }
       </section>
 
-      <section class="terminal-group" aria-labelledby="terminal-lab-heading">
+      <section class="terminal-group" data-home-expanded-group aria-labelledby="terminal-lab-heading">
         <h3 id="terminal-lab-heading">lab/</h3>
         {
           experiments.length === 0 ? (
@@ -309,6 +326,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
                   data-terminal-experiment-id={experiment.id}
                   data-terminal-experiment-title={experiment.title}
                   data-terminal-experiment-href={experiment.href}
+                  data-home-browse-experiment-href={browseExperiments.find((entry) => entry.id === experiment.id)?.href}
                 >
                   <a href={experiment.href}>{experiment.id}/</a>
                   <span> — {experiment.title}</span>
@@ -319,7 +337,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
         }
       </section>
 
-      <section class="terminal-group" aria-labelledby="terminal-friends-heading">
+      <section class="terminal-group" data-home-friends aria-labelledby="terminal-friends-heading">
         <h3 id="terminal-friends-heading">friend links</h3>
         {
           friendLinks.length === 0 ? (
@@ -369,6 +387,8 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
       </template>
     ))
   }
+
+  <HomeBrowseSnapshots directories={browseDirectories} experiments={browseExperiments} />
 
   <section
     class="terminal-session"
@@ -424,10 +444,12 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
 <script>
   import { startTerminalHome } from '../scripts/terminal-home';
   import { startHomeSearch } from '../scripts/home-search';
+  import { startHomeBrowse } from '../scripts/home-browse';
 
   const root = document.querySelector<HTMLElement>('[data-terminal-home]');
   if (root !== null) {
     startHomeSearch(root);
+    startHomeBrowse(root);
     startTerminalHome(root);
   }
 </script>

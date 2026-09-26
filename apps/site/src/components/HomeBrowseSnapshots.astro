@@ -1,0 +1,29 @@
+---
+import type { ContentDirectory } from '../lib/content';
+import ContentDirectoryChildren from './ContentDirectoryChildren.astro';
+import DirectoryEntryRow from './DirectoryEntryRow.astro';
+
+interface Props {
+  directories: readonly ContentDirectory[];
+  experiments: readonly { readonly title: string; readonly href: string }[];
+}
+
+const { directories, experiments } = Astro.props;
+---
+
+{directories.map((directory) => (
+  <template data-home-browse-template data-home-browse-href={directory.href} data-home-browse-path={`${directory.virtualPath}/`} data-home-browse-parent={directory.virtualPath.includes('/') ? `/${directory.virtualPath.split('/').slice(0, -1).join('/')}/` : '/'}>
+    <ContentDirectoryChildren directory={directory} homeBrowse />
+  </template>
+))}
+<template data-home-browse-template data-home-browse-href="/lab/" data-home-browse-path="lab/" data-home-browse-parent="/">
+  {experiments.length === 0 ? (
+    <p class="terminal-meta">No listed experiments.</p>
+  ) : (
+    <ul class="terminal-directory-list home-browse-tree">
+      {experiments.map((experiment, index) => (
+        <DirectoryEntryRow kind="experiment" homeBrowse last={index === experiments.length - 1}><a href={experiment.href}>Open {experiment.title}</a></DirectoryEntryRow>
+      ))}
+    </ul>
+  )}
+</template>

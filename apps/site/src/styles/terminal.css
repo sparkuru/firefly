@@ -149,6 +149,11 @@
 }
 
 @media (hover: none) and (pointer: coarse) {
+  .terminal-home[data-terminal-home] :is(.home-search, .home-search-error, .terminal-recovery),
+  .terminal-home[data-terminal-home] :is(.home-search, .home-search-error, .terminal-recovery) * {
+    font-size: var(--terminal-font-size);
+  }
+
   .home-search:not([hidden]),
   .home-search-error:not([hidden]),
   .terminal-home[data-home-search-failed="true"] .terminal-recovery[data-terminal-fallback] {
@@ -367,6 +372,14 @@
 
 .terminal-index {
   margin-top: 2rem;
+}
+
+.home-root-navigation {
+  display: none;
+}
+
+.home-browse {
+  display: none;
 }
 
 .terminal-group + .terminal-group {
@@ -1519,11 +1532,109 @@
 @media (hover: none) and (pointer: coarse) {
   .terminal-home[data-terminal-home] .terminal-startup,
   .terminal-home[data-terminal-home] .terminal-session,
-  .terminal-home[data-terminal-home] [data-home-shell-only] {
+  .terminal-home[data-terminal-home] [data-home-shell-only],
+  .terminal-home[data-terminal-home] [data-home-expanded-group] {
     display: none;
   }
 
   .terminal-home[data-terminal-home] .terminal-recovery[data-terminal-fallback] {
     display: block;
+  }
+
+  .home-root-navigation {
+    display: block;
+  }
+
+  .terminal-home .home-browse-tree {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .home-browse-tree-row {
+    display: grid;
+    grid-template-columns: 3ch minmax(0, 1fr);
+    gap: 1ch;
+  }
+
+  [data-home-browse-tree-prefix] {
+    display: flex;
+    align-items: center;
+    align-self: start;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  .home-browse-tree-content {
+    min-width: 0;
+  }
+
+  .home-root-navigation a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.5rem 0;
+    overflow-wrap: anywhere;
+  }
+
+  .home-root-navigation a:focus-visible {
+    outline: 2px solid var(--terminal-color-command);
+    outline-offset: 3px;
+  }
+
+  .terminal-home[data-terminal-home] .terminal-recovery h2,
+  .home-browse-breadcrumbs {
+    color: var(--terminal-color-command);
+    font-size: var(--terminal-font-size);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .terminal-home[data-home-browse-view='directory'] .home-root-navigation,
+  .terminal-home[data-home-browse-view='directory'] [data-home-friends] {
+    display: none;
+  }
+
+  .home-browse:not([hidden]) {
+    display: block;
+  }
+
+  .home-browse-breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+  }
+
+  .home-browse-breadcrumbs a {
+    text-decoration: underline;
+  }
+
+  .home-browse a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .home-browse a:focus-visible,
+  .home-browse-breadcrumbs:focus-visible {
+    outline: 2px solid var(--terminal-color-command);
+    outline-offset: 3px;
+  }
+
+  .terminal-home [data-home-friends] {
+    margin-top: 0;
+  }
+
+  .terminal-home [data-home-friends] a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
   }
 }

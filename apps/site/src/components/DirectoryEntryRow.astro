@@ -1,0 +1,14 @@
+---
+interface Props {
+  kind?: string;
+  homeBrowse?: boolean;
+  last?: boolean;
+}
+
+const { kind, homeBrowse = false, last = false } = Astro.props;
+---
+
+<li data-kind={kind} class={homeBrowse ? 'home-browse-tree-row' : undefined}>
+  {homeBrowse && <span data-home-browse-tree-prefix aria-hidden="true">{last ? '└──' : '├──'}</span>}
+  {homeBrowse ? <div class="home-browse-tree-content"><slot /></div> : <slot />}
+</li>
