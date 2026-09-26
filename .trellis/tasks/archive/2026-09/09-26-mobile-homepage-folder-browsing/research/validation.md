@@ -311,5 +311,10 @@ new validation scope were introduced by this confirmation.
 
 Final staged whitespace review also covered newly added files. Removed one
 extra blank line at the end of `home-search-fixtures.ts`; no code behavior
-changed, so package/browser reruns are unnecessary. Recheck the staged diff
-before committing the approved file set.
+changed, so package/browser reruns are unnecessary. The staged whitespace
+recheck passed before committing the exact approved file set.
+
+Work commit completed: `d7f5a19` (`feat(site): simplify mobile homepage browsing`),
+33 approved files and no unrelated paths. Working tree was clean immediately
+after the work commit. Archive only the current task, then record its journal
+through the standard separate bookkeeping commits.

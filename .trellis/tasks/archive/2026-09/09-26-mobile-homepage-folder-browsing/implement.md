@@ -79,7 +79,10 @@ search stays global/visible and desktop is unchanged.
 8. [x] Review all revised ACs/diff and refresh the concrete Phase 3.4 commit plan.
 9. [x] Obtain fresh commit confirmation. Owner approved the final 33-file plan
    with "不错；可以提交".
-10. [ ] Execute the approved work commit, archive this task and record the journal.
+10. [x] Execute the approved work commit: `d7f5a19`.
+
+Archive and journal bookkeeping follow through the standard wrappers; task
+completion is recorded by archive metadata and the developer journal.
 
 Implementation/check workers own `apps/site`; main owns task/spec records. Tell
 workers they are not alone, preserve other edits, and do not spawn additional
@@ -180,5 +183,5 @@ Unrecognized dirty files: none. Ignored local context JSONL files and temporary
 logs/captures are excluded. The final 33-file list is refreshed after uniform
 typography/tree-row validation and independent review. It includes shared tree
 rows, mobile base typography, clickable breadcrumbs and root-only friend links.
-The owner confirmed this exact final plan with "不错；可以提交". Commit execution
-and archive/journal bookkeeping follow that authorization.
+The owner confirmed this exact final plan with "不错；可以提交". The work commit
+is `d7f5a19`; archive/journal bookkeeping follows through the standard wrappers.
