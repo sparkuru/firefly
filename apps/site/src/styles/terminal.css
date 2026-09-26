@@ -149,17 +149,6 @@
 }
 
 @media (hover: none) and (pointer: coarse) {
-  .terminal-home:has(.home-search:not([hidden])) {
-    display: flex;
-    flex-direction: column;
-    min-height: calc(100dvh - var(--terminal-home-padding-block-start) - var(--terminal-home-padding-block-end));
-  }
-
-  .terminal-home:has(.home-search:not([hidden])) .terminal-session[data-terminal-session-empty] {
-    flex: 1;
-    min-height: 0;
-  }
-
   .home-search:not([hidden]),
   .home-search-error:not([hidden]),
   .terminal-home[data-home-search-failed="true"] .terminal-recovery[data-terminal-fallback] {
@@ -1524,4 +1513,17 @@
 
 .terminal-stream-prose [data-scroll-right] {
   border-right-color: var(--terminal-color-command);
+}
+
+/* Touch home is native browsing even before modules or after desktop startup. */
+@media (hover: none) and (pointer: coarse) {
+  .terminal-home[data-terminal-home] .terminal-startup,
+  .terminal-home[data-terminal-home] .terminal-session,
+  .terminal-home[data-terminal-home] [data-home-shell-only] {
+    display: none;
+  }
+
+  .terminal-home[data-terminal-home] .terminal-recovery[data-terminal-fallback] {
+    display: block;
+  }
 }

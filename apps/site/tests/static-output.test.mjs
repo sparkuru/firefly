@@ -693,6 +693,9 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   const marker = /<script\b[^>]*data-terminal-startup-marker[^>]*>[\s\S]*?<\/script>/u.exec(home)?.[0] ?? '';
   assert.match(marker, /terminalStartupState\s*=\s*['"]connecting['"]/u);
   assert.match(marker, /data-terminal-controller-initialized/u);
+  assert.match(marker, /matchMedia\(root\.dataset\.terminalMobileQuery\)/u);
+  assert.ok(marker.indexOf('if (mobile.matches) return;') < marker.indexOf("root.dataset.terminalStartupState = 'connecting'"));
+  assert.match(home, /data-terminal-mobile-query="\(hover: none\) and \(pointer: coarse\)"/u);
   assert.doesNotMatch(marker, /type=["']module["']/u);
   assert.ok(home.search(/<script\b[^>]*data-terminal-startup-marker/u) < home.search(/<section\b[^>]*data-terminal-fallback/u));
   assert.match(home, /<section\b[^>]*data-terminal-startup[^>]*>/u);
@@ -703,7 +706,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.doesNotMatch(home, /data-terminal-boot-status|connecting\.\.\./u);
   assert.doesNotMatch(home.match(/<section\b[^>]*data-terminal-fallback[^>]*>/u)?.[0] ?? '', /\bhidden\b/u);
   assert.match(home, /<section\b[^>]*data-terminal-session[^>]*\bhidden\b[^>]*>/u);
-  assert.match(home, new RegExp('<h1 class="terminal-visually-hidden">' + SITE_CONFIG.site.name + ' content terminal<\\/h1>', 'u'));
+  assert.match(home, new RegExp('<h1 class="terminal-visually-hidden">' + SITE_CONFIG.site.name + ' articles<\\/h1>', 'u'));
   assert.match(home, /enterkeyhint="send"/u);
   const searchSection = home.match(/<section\b[^>]*data-home-search\b[^>]*>[\s\S]*?<\/section>/u)?.[0] ?? '';
   assert.match(searchSection, /^<section\b[^>]*\bhidden\b/u);

@@ -8,6 +8,7 @@ import {
 import type { PublicDocument, renderDocument } from '../lib/render-document';
 import type { CanonicalDocument } from '../lib/content';
 import { SITE_CONFIG, terminalIdentityFromConfig } from '../lib/site-config.mjs';
+import { MOBILE_DOCUMENT_NAVIGATION_QUERY } from '../lib/document-navigation';
 import ContentMarkers from './ContentMarkers.astro';
 import TerminalStreamDocument from './TerminalStreamDocument.astro';
 
@@ -74,6 +75,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
   data-terminal-identity-prompt-marker={identity.promptMarker}
   data-terminal-document-navigation={documentNavigationLookup}
   data-terminal-boot-duration={TERMINAL_HOME_STARTUP_DURATION_MS}
+  data-terminal-mobile-query={MOBILE_DOCUMENT_NAVIGATION_QUERY}
 >
   <script is:inline data-terminal-startup-marker>
     (() => {
@@ -82,6 +84,8 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
         return;
       }
 
+      const mobile = window.matchMedia(root.dataset.terminalMobileQuery);
+      if (mobile.matches) return;
       root.dataset.terminalStartupState = 'connecting';
       let startupObserver;
       const releaseStartupGuards = () => {
@@ -94,6 +98,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
           releaseStartupGuards();
           return;
         }
+        if (mobile.matches) return;
         if (event.target instanceof Element && event.target.closest('[data-home-search]') !== null) {
           return;
         }
@@ -114,6 +119,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
           releaseStartupGuards();
           return;
         }
+        if (mobile.matches) return;
         const target = event.target;
         const startupSurface = target instanceof Element &&
           target.closest('[data-terminal-startup]') !== null;
@@ -162,7 +168,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
       }
     })();
   </script>
-  <h1 class="terminal-visually-hidden">{SITE_CONFIG.site.name} content terminal</h1>
+  <h1 class="terminal-visually-hidden">{SITE_CONFIG.site.name} articles</h1>
 
   <section class="home-search" data-home-search aria-label="全站文章搜索" hidden>
     <form role="search">
@@ -190,7 +196,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
   >
     <div class="terminal-boot-surface" data-terminal-boot-log>
       <h2 id="terminal-startup-heading" class="terminal-visually-hidden">
-        Starting {SITE_CONFIG.site.name} content terminal
+        Starting {SITE_CONFIG.site.name} articles
       </h2>
       <div class="terminal-boot-lines" aria-hidden="true">
         {TERMINAL_HOME_STARTUP_LOG_LINES.map((line, index) => (
@@ -217,13 +223,13 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
     data-terminal-fallback
     aria-labelledby="terminal-recovery-heading"
   >
-    <p class="terminal-path"><span class="terminal-prompt">{prompt}</span> ls</p>
+    <p class="terminal-path" data-home-shell-only><span class="terminal-prompt">{prompt}</span> ls</p>
     <h2 id="terminal-recovery-heading" tabindex="-1">Browse public documents</h2>
-    <p>
+    <p data-home-shell-only>
       The interactive shell is optional. These native links remain available
       without JavaScript and return if the shell cannot continue.
     </p>
-    <p class="terminal-failure" data-terminal-failure hidden>
+    <p class="terminal-failure" data-home-shell-only data-terminal-failure hidden>
       <span class="terminal-status-label">Interactive error:</span>
       The command shell is unavailable. Use the document links below.
     </p>

@@ -1127,7 +1127,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   prompt. Links, native/ARIA controls, editables, local-scroll code/table
   widgets, composing input, modified variants, and non-collapsed user text
   selections remain native; the standalone document navigator route is unchanged.
-- During the home startup `connecting` state, the inline startup marker also
+- During available desktop home startup `connecting`, the inline startup marker also
   owns an exact unmodified, cancelable, non-composing `Ctrl+L` delivered to
   the visible startup/page surface. It prevents the default and records one
   pending clear; once the shell becomes interactive, the controller consumes
@@ -1135,7 +1135,8 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   controller owns the same shortcut from the initial boot/transcript surface
   or an unfocused home-page body without requiring prompt focus. Native
   controls, selections, modified variants, and events outside the home remain
-  native.
+  native. These guards and controller shortcuts do not own mobile input; media
+  availability is checked before preventing any event.
 - Browser/OS shortcuts remain best-effort: page code can prevent the default
   only when the browser delivers a cancelable key event to the document. It
   cannot override an address-bar/search reservation consumed before DOM event
@@ -1269,14 +1270,19 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   scrolls the fresh prompt to the viewport end. Empty startup and `clear`/`Ctrl+L`
   return to the centered empty-session placement. The connecting startup surface
   and ready boot session share a bounded tall-viewport offset so relocating the
-  boot log does not change its geometry. This responsive fallback is required at
-  the mobile profile as well as desktop.
-  When the independent mobile homepage search is visible, empty-session centering
-  uses the remaining viewport below that header instead of reserving a second
-  full viewport. A delayed search reveal may translate the whole boot log by the
-  measured header height/margins without changing its internal geometry; desktop
-  placement remains unchanged. See [Homepage Search](./homepage-search-contract.md)
-  for the exact lifecycle, layout, and regression contract.
+  boot log does not change its geometry. This applies to available desktop
+  Terminal sessions, including narrow fine-pointer windows.
+- A touch-primary, no-hover homepage keeps complete native article browsing and
+  independent [Homepage Search](./homepage-search-contract.md), with no Terminal
+  boot/command UI or input ownership. Initially mobile does not initialize its
+  session or boot gate. Desktop-to-mobile changes suspend input/startup and
+  release owned focus; returning to desktop does not duplicate initialization.
+  Static CSS and the inline startup marker must enforce the same policy before
+  module execution. Native browse visibility outranks connecting/hidden flags,
+  and search failure never opens a mobile shell. See the indexed
+  [Mobile Experience](./mobile-experience-contract.md) contract for eligibility,
+  lifecycle, failures and regression assertions. Article presentation and its
+  navigator `supportsMobile` profile remain distinct from homepage availability.
 
 #### Read-only document navigator
 
@@ -1854,7 +1860,9 @@ Use this contract when changing the static Terminal home boot surface, its
 inline startup marker, the home controller's first-load transition, or the
 startup Playwright/static-output tests. It exists because a fast cached module
 can otherwise relocate the server-rendered boot DOM before a visitor observes
-its CSS animation.
+its CSS animation. Boot behavior below applies only to available desktop
+homepages. The [Mobile Experience](./mobile-experience-contract.md) contract
+requires native browsing/search with no initial Terminal controller or boot.
 
 ### 2. Signatures
 
@@ -1865,21 +1873,37 @@ startTerminalHome(root: HTMLElement, seams?: TerminalControllerSeams): void
 data-terminal-startup-state: 'connecting' | 'ready' | 'failed'
 data-terminal-controller-initialized?: 'true'
 data-terminal-boot-duration: non-negative milliseconds
+data-terminal-mobile-query: '(hover: none) and (pointer: coarse)'
+data-terminal-home-mode?: 'mobile' | 'desktop'
 ```
 
 ### 3. Contracts
 
-- The server-rendered home emits all 12 boot lines and the prompt before the
-  controller module runs. The line delays are 0..1100 ms in 100 ms steps, the
-  line duration is 180 ms, and the prompt runs at 1400..1580 ms.
+- The shared server-rendered home emits all 12 boot lines and the prompt before
+  modules run, but static mobile CSS hides them and keeps native browsing.
+  On desktop, line delays are 0..1100 ms in 100 ms steps, line duration is
+  180 ms, and the prompt runs at 1400..1580 ms.
 - `data-terminal-boot-duration` is derived from those same component timing
   constants; the controller must not duplicate the 1580 ms literal as its
   source of truth.
-- The inline marker sets `connecting` and prevents Escape while connecting. Its
+- The inline marker reads the shared root media predicate and returns before
+  setting state or installing guards on initial mobile. On desktop it sets
+  `connecting` and prevents Escape while connecting. Its
   DOMContentLoaded failure check only fails when the controller has not set
   `data-terminal-controller-initialized="true"`; an initialized controller may
-  still be waiting for the visual gate.
-- In normal motion, `startTerminalHome()` binds the runtime and keeps the boot
+  still be waiting for the visual gate. A mobile environment never authorizes
+  this marker to start a shell or capture Escape/Ctrl+L. A desktop-origin marker
+  still marks failed when DOMContentLoaded finds no controller during a mobile
+  detour, preserving native recovery on return to desktop. Initial mobile never
+  installs that callback. Desktop-origin guards return inertly while mobile and
+  are released only when startup leaves connecting, so returning to desktop
+  while a module remains delayed does not lose Escape/Ctrl+L protection.
+- `startTerminalHome()` owns one lazy media lifecycle per root. Mobile-first
+  only registers media changes and mode, without constructing state/boot/input
+  handlers. Desktop initialization yields internal suspend/resume methods;
+  switching to mobile cancels pending boot and input/focus ownership, and
+  returning to desktop resumes without duplicate listeners or boot records.
+- In normal motion on desktop, the initialized controller keeps the boot
   surface visible, the session hidden, and shell submission/typing inert until
   the prompt's `terminal-boot-prompt-reveal` `animationend` or a bounded timer.
   It then moves the existing boot surface into exactly one transcript boot
@@ -1892,18 +1916,24 @@ data-terminal-boot-duration: non-negative milliseconds
 
 | Condition | Required result |
 | --- | --- |
-| normal motion, controller faster than 1580 ms | retain the static boot surface until the named prompt animation completes |
+| initial touch-primary/no-hover home | hide boot/session, retain complete native browsing and independent search; no controller or gate initialization |
+| desktop becomes mobile during connecting or ready | suspend startup/input, release shell-owned focus, expose native links; late callbacks cannot reveal/refocus shell |
+| desktop-origin startup switches to mobile before a module fails | mark uninitialized startup failed; returning desktop retains native recovery |
+| desktop-origin startup switches through mobile while module remains delayed | mobile keys stay native; desktop guards remain effective on return |
+| mobile becomes desktop | initialize/resume one usable session without duplicate effects |
+| normal desktop motion, controller faster than 1580 ms | retain the static boot surface until the named prompt animation completes |
 | module arrives while the animation is running | attach the gate, then complete on the existing prompt event |
 | module arrives after the prompt animation | detect completed computed style and transition once without replay |
 | prompt animation event is unavailable | bounded duration fallback completes the transition |
 | reduced motion requested | reveal/open the shell immediately after valid controller initialization |
 | missing/invalid boot-duration attribute | fail through Terminal recovery; do not guess a timing contract |
 | controller fails before initialization marker | retain the native recovery links and set `failed` |
-| key/submit/click before `ready` | do not mutate shell state; ordinary page keys remain unprevented |
+| desktop key/submit/click before `ready` | do not mutate shell state; only documented desktop startup Escape/Ctrl+L guards may prevent page keys |
+| mobile key/submit/click | Terminal does not prevent native events or redirect focus/commands |
 
 ### 5. Good / Base / Bad Cases
 
-- Good: cached HTML and a cached module both expose `connecting`; the 12 static
+- Good: on desktop, cached HTML and a cached module both expose `connecting`; the 12 static
   lines animate once, the prompt ends while the session is hidden, then one
   boot record and one interactive command row appear.
 - Base: a delayed module finds the already-finished prompt, preserves the
@@ -1916,9 +1946,15 @@ data-terminal-boot-duration: non-negative milliseconds
 
 - Static output asserts the 12-line count, 100 ms delay contract, 1580 ms
   duration attribute, inline marker ordering, and controller-initialized guard.
-- Desktop and mobile Chromium tests observe all 12 line animation starts and
+- Desktop Chromium tests observe all 12 line animation starts and
   the single prompt animation end while the root is still `connecting`; then
   assert one boot record, one command row, `ready`, and no replay.
+- Touch portrait/landscape/tablet tests assert visible native links/search and
+  absent boot/session before and after the boot interval, including blocked
+  modules. Connecting/ready mode transitions release input/focus and resume
+  exactly one desktop session. Include failed/delayed-module mobile detours from
+  desktop startup: preserve recovery or pending guards on desktop return.
+  Static touch also keeps ordinary browsing.
 - Browser regression tests delay the module, exercise reduced motion, test
   Escape before/after readiness, refresh, recovery, focus, overflow, and prove
   hidden shell input is blocked while an ordinary body key is not prevented.

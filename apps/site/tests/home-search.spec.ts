@@ -62,13 +62,13 @@ test.describe('touch homepage search', () => {
     test.skip(info.project.name !== 'chromium-mobile-interactive');
   });
 
-  test('works before and after boot, finds public body/pages and preserves native command state', async ({ page }, info) => {
+  test('finds public body/pages without initializing Terminal', async ({ page }, info) => {
     const requests: string[] = [];
     page.on('request', (request) => requests.push(request.url()));
     await page.goto('/');
     await expect(page.locator(search)).toBeVisible();
     await expect(page.locator(input)).not.toBeFocused();
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'connecting');
+    await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     expect(await page.locator(input).evaluate((element) => {
       const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
       element.dispatchEvent(escape);
@@ -76,7 +76,7 @@ test.describe('touch homepage search', () => {
     })).toBe(false);
     await query(page, 'Future presentations can change how the site looks');
     await expect(page.locator(status)).toHaveText('找到 1 篇文章');
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
+    await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     const transcript = await page.locator('[data-terminal-transcript]').textContent();
     const requestCount = requests.length;
     await query(page, 'Future presentations can change how the site looks');
@@ -188,24 +188,17 @@ test.describe('touch homepage search', () => {
     }
   });
 
-  test('cleared Terminal fits beneath accessible search on phone and tablet', async ({ page }) => {
+  test('clearing search retains complete native browsing on phone and tablet', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
-    await page.locator('#terminal-command').fill('clear');
-    await page.locator('#terminal-command').press('Enter');
-    await expect(page.locator('[data-terminal-transcript]')).toBeEmpty();
     for (const viewport of [{ width: 375, height: 812 }, { width: 812, height: 375 }, { width: 1024, height: 768 }]) {
       await page.setViewportSize(viewport);
-      await expect(page.locator(search)).toBeVisible();
-      expect(await page.evaluate(() => document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1)).toBe(true);
-      const searchBox = await page.locator(search).boundingBox();
-      const rowBox = await page.locator('.terminal-command-row').boundingBox();
-      expect(rowBox!.y).toBeGreaterThanOrEqual(searchBox!.y + searchBox!.height);
-      expect(rowBox!.y + rowBox!.height).toBeLessThanOrEqual(viewport.height);
       await query(page, 'about');
       await expect(page.locator(`${results} li`)).not.toHaveCount(0);
       await page.locator('[data-home-search-clear]').click();
       await expect(page.locator(input)).toBeFocused();
+      await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
+      await expect(page.locator('[data-terminal-session]')).toBeHidden();
+      for (const link of await page.locator('[data-terminal-entry] a').all()) await expect(link).toBeVisible();
     }
   });
 
@@ -216,12 +209,12 @@ test.describe('touch homepage search', () => {
       await route.fulfill({ response, body: (await response.text()).replace(/data-terminal-boot-duration="\d+"/u, 'data-terminal-boot-duration="invalid"') });
     });
     await page.goto('/');
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'failed');
+    await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     await query(page, 'Future presentations can change how the site looks');
     await expect(page.locator(status)).toHaveText('找到 1 篇文章');
     await page.unroute('**/');
     await page.goto('/');
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
+    await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     await page.evaluate(() => {
       const template = document.querySelector<HTMLTemplateElement>('[data-terminal-template]');
       template?.content.querySelector('.terminal-stream-prose')?.remove();
@@ -233,23 +226,23 @@ test.describe('touch homepage search', () => {
     await expect(page.locator('[data-terminal-entry-href="/pages/about/"] a')).toBeVisible();
   });
 
-  test('invalid search metadata exposes native recovery even after a successful shell boot', async ({ page }) => {
+  test('invalid search metadata exposes native recovery even without starting a shell', async ({ page }) => {
     await page.route('**/', async (route) => {
       if (new URL(route.request().url()).pathname !== '/') return route.continue();
       const response = await route.fetch();
       await route.fulfill({ response, body: (await response.text()).replace(/data-home-search-metadata="[^"]+"/u, 'data-home-search-metadata="invalid"') });
     });
     await page.goto('/');
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'connecting');
+    await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     await expect(page.locator('[data-home-search-error]')).toBeVisible();
     await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
-    await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
+    await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
     await expect(page.locator(search)).toBeHidden();
     await expect(page.locator('[data-home-search-error]')).toBeVisible();
     await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
   });
 
-  test('incomplete search controls fail into native browsing before and after shell boot', async ({ page }) => {
+  test('incomplete search controls fail into native browsing without shell startup', async ({ page }) => {
     for (const selector of ['[data-home-search-clear]', '[data-home-search]']) {
       await page.route('**/', async (route) => {
         if (new URL(route.request().url()).pathname !== '/') return route.continue();
@@ -262,9 +255,9 @@ test.describe('touch homepage search', () => {
       });
       await page.goto('/');
       await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-home-search-failed', 'true');
-      await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'connecting');
+      await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
       await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
-      await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-startup-state', 'ready');
+      await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-controller-initialized', 'true');
       await expect(page.locator('[data-home-search-error]')).toBeVisible();
       await expect(page.locator('[data-terminal-entry-href="/pages/about/"] a')).toBeVisible();
       await page.unroute('**/');

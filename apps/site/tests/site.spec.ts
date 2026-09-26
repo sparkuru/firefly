@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { MOBILE_DOCUMENT_NAVIGATION_QUERY } from '../src/lib/document-navigation';
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 import { terminalPromptName } from './terminal-prompt';
 
@@ -47,7 +48,11 @@ async function expectTerminalDocument(page: Page, expectedPath: string | RegExp)
   await expect(page.locator('.terminal-titlebar span').nth(1)).toHaveText(expectedPath);
   await expect(page.locator('.terminal-document-nav')).toHaveCount(0);
   await expect(page.locator('.terminal-path')).toHaveCount(0);
-  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  if (await page.evaluate((query) => matchMedia(query).matches, MOBILE_DOCUMENT_NAVIGATION_QUERY)) {
+    await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
+  } else {
+    await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  }
 }
 
 interface WorkflowPaths {
@@ -80,7 +85,7 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
   await expect(page.locator('[data-terminal-startup]')).toBeHidden();
   const programmaticHeading = main.getByRole('heading', {
     level: 1,
-    name: `${SITE_CONFIG.site.name} content terminal`
+    name: `${SITE_CONFIG.site.name} articles`
   });
   await expect(programmaticHeading).toHaveCSS('position', 'absolute');
   expect(await programmaticHeading.evaluate((heading) => ({
@@ -368,15 +373,24 @@ test('semantic document entry remains a complete native anchor without browser J
   await page.goto('/pages/inline-reading-semantic/');
 
   const article = page.locator('.semantic-document');
-  const entry = page.getByRole('link', { name: 'Read document', exact: true });
+  const entry = article.locator('a[data-document-navigator-entry-control]');
+  await expect(entry).toHaveText('Read document');
   await expect(entry).toHaveAttribute('href', '#document-navigator');
-  await expect(entry).toBeVisible();
+  if (await page.evaluate((query) => matchMedia(query).matches, MOBILE_DOCUMENT_NAVIGATION_QUERY)) {
+    await expect(entry).toBeHidden();
+  } else {
+    await expect(entry).toBeVisible();
+  }
   await expect(article.getByRole('heading', { level: 1, name: 'Semantic inline reading' })).toBeVisible();
   await expect(article.locator('.document-outline')).toBeVisible();
   await expect(article.locator('[data-document-navigator-status]')).toHaveAttribute('hidden', '');
   await expect(article.locator('[data-navigation-exit-control]')).toHaveAttribute('hidden', '');
 
-  await entry.click();
+  if (await page.evaluate((query) => matchMedia(query).matches, MOBILE_DOCUMENT_NAVIGATION_QUERY)) {
+    await page.goto('/pages/inline-reading-semantic/#document-navigator');
+  } else {
+    await entry.click();
+  }
   await expect(page).toHaveURL(/\/pages\/inline-reading-semantic\/#document-navigator$/u);
   await expect(page.locator('#document-navigator')).toBeVisible();
   await expect(page.locator('[data-document-navigator-status]')).toHaveAttribute('hidden', '');

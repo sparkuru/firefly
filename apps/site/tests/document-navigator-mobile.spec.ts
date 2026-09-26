@@ -43,42 +43,31 @@ test('native heading links still work with a direct navigator fragment', async (
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
 });
 
-test('Terminal open and inline Open document use ordinary destination links', async ({ page }) => {
+test('homepage native article links use ordinary destinations', async ({ page }) => {
   await page.goto('/');
-  const command = page.locator('#terminal-command');
-  await command.fill('cat ~/blog/pages/markdown-template.md');
-  await command.press('Enter');
-  const inline = page.locator('[data-terminal-open]').last();
-  await expect(inline).toHaveAttribute('href', '/pages/markdown-template/');
-  await expect(page.locator('.terminal-stream-guidance').last()).toContainText('read the full page');
-  await inline.click();
-  await expect(page).toHaveURL(/\/pages\/markdown-template\/$/u);
-  await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
-
-  await page.goto('/');
-  await command.fill('open ~/blog/pages/about.md');
-  await command.press('Enter');
+  const link = page.locator('[data-terminal-entry-href="/pages/about/"] a');
+  await expect(link).toHaveAttribute('href', terminalPath);
+  await link.click();
   await expect(page).toHaveURL(/\/pages\/about\/$/u);
   await expect(page.locator('[data-document-navigator-status]')).toBeHidden();
 });
 
-test('Terminal inline document links track changes in the primary input', async ({ page }) => {
+test('desktop inline document links track changes to touch while shell is suspended', async ({ page }) => {
+  const client = await page.context().newCDPSession(page);
   await page.goto('/');
+  await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   const command = page.locator('#terminal-command');
   await command.fill('cat ~/blog/pages/markdown-template.md');
   await command.press('Enter');
   const inline = page.locator('[data-terminal-open]').last();
   const plainHref = '/pages/markdown-template/';
-  await expect(inline).toHaveAttribute('href', plainHref);
-
-  const client = await page.context().newCDPSession(page);
-  await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
-  await expect.poll(() => page.evaluate(() => matchMedia('(hover: none) and (pointer: coarse)').matches)).toBe(false);
   await expect(inline).toHaveAttribute('href', `${plainHref}${navigatorFragment}`);
-
   await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-  await expect.poll(() => page.evaluate(() => matchMedia('(hover: none) and (pointer: coarse)').matches)).toBe(true);
   await expect(inline).toHaveAttribute('href', plainHref);
+  await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await expect(inline).toHaveAttribute('href', `${plainHref}${navigatorFragment}`);
+  await expect(page.locator('[data-terminal-session]')).toBeVisible();
 });
 
 test('an explicitly opted-in profile retains semantic navigation on touch devices', async ({ page }) => {

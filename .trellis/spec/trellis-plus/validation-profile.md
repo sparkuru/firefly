@@ -43,9 +43,13 @@ Playwright owns the preview server and must not substitute `astro dev` for
 static-publication evidence.
 
 The maintained browser matrix covers JavaScript-disabled static Chromium and
-interactive Chromium at 1440x900 and 375x812; the interactive mobile project
-also enables touch. Fixtures are repository-local and must not add credentials,
-production data, remote services, or mutable mocks.
+interactive Chromium at 1440x900 and 375x812; both mobile projects enable touch
+so static CSS and interactive runtime enforce the same input policy. The mobile
+homepage has native browsing/search without Terminal; its absence and transition
+suite replaces the obsolete mobile command-session baseline, while the desktop
+project retains the complete Terminal regression suite. Fixtures are
+repository-local and must not add credentials, production data, remote services,
+or mutable mocks.
 
 ## Shell and runtime checks
 

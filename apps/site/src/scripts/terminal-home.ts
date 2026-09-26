@@ -1080,10 +1080,42 @@ function insertAtPromptSelection(input: HTMLInputElement, value: string): void {
   input.setRangeText(value, start, end, 'end');
 }
 
-export function startTerminalHome(
+interface TerminalHomeController {
+  suspend(): void;
+  resume(): void;
+}
+
+const startedHomes = new WeakSet<HTMLElement>();
+
+export function startTerminalHome(root: HTMLElement, seams: TerminalControllerSeams = {}): void {
+  if (startedHomes.has(root)) return;
+  startedHomes.add(root);
+  const mobile = window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY);
+  let controller: TerminalHomeController | undefined;
+  let attempted = false;
+  const synchronize = (): void => {
+    root.dataset.terminalHomeMode = mobile.matches ? 'mobile' : 'desktop';
+    if (mobile.matches) {
+      controller?.suspend();
+      return;
+    }
+    if (!attempted) {
+      attempted = true;
+      setStartupState(root, 'connecting');
+      controller = initializeTerminalHome(root, seams, () => !mobile.matches);
+    } else {
+      controller?.resume();
+    }
+  };
+  mobile.addEventListener('change', synchronize);
+  synchronize();
+}
+
+function initializeTerminalHome(
   root: HTMLElement,
-  seams: TerminalControllerSeams = {}
-): void {
+  seams: TerminalControllerSeams,
+  available: () => boolean
+): TerminalHomeController | undefined {
   let nodes: TerminalNodes;
   let entries: readonly TerminalEntry[];
   let experiments: readonly TerminalExperiment[];
@@ -1139,7 +1171,7 @@ export function startTerminalHome(
     } catch {
       // The source remains selectable when the Clipboard API is unavailable.
     }
-    if (!button.isConnected || failed) return;
+    if (!button.isConnected || failed || !available()) return;
     button.textContent = copied ? 'Copied' : 'Copy failed';
     nodes.announcer.textContent = copied ? 'Code copied.' : 'Could not copy code. Select it manually.';
     copyFeedbackTimers.set(button, window.setTimeout(() => {
@@ -1186,7 +1218,7 @@ export function startTerminalHome(
   };
 
   const submit = (): void => {
-    if (!interactiveReady || failed) return;
+    if (!available() || !interactiveReady || failed) return;
     try {
       const command = nodes.input.value;
       const submittedPrompt = formatTerminalPrompt(identity, state);
@@ -1234,13 +1266,14 @@ export function startTerminalHome(
   };
 
   nodes.form.addEventListener('submit', (event) => {
+    if (!available()) return;
     event.preventDefault();
     if (!composing) {
       submit();
     }
   });
   nodes.transcript.addEventListener('click', (event) => {
-    if (!interactiveReady) return;
+    if (!available() || !interactiveReady) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
     const openLink = target.closest('a[data-terminal-open]');
@@ -1280,12 +1313,15 @@ export function startTerminalHome(
     submit();
   });
   document.addEventListener('compositionstart', () => {
+    if (!available()) return;
     composing = true;
   });
   document.addEventListener('compositionend', () => {
+    if (!available()) return;
     composing = false;
   });
   nodes.input.addEventListener('keydown', (event) => {
+    if (!available()) return;
     if (!interactiveReady) {
       event.preventDefault();
       return;
@@ -1467,12 +1503,24 @@ export function startTerminalHome(
     }
   });
   nodes.input.addEventListener('input', () => {
-    if (interactiveReady) {
+    if (available() && interactiveReady) {
       dismissCompletion();
     }
   });
 
   document.addEventListener('keydown', (event) => {
+    if (!available()) return;
+    if (!failed && !interactiveReady && !event.defaultPrevented && !event.isComposing) {
+      const pageSurface = event.target === document.body || event.target === document.documentElement ||
+        (event.target instanceof Element && event.target.closest('[data-terminal-startup]') !== null);
+      if (pageSurface && isUnmodifiedCtrlL(event) && event.cancelable && window.getSelection()?.isCollapsed !== false) {
+        event.preventDefault();
+        root.dataset.terminalPendingClear = '';
+      }
+      if (pageSurface && event.key === 'Escape' && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
+        event.preventDefault();
+      }
+    }
     if (failed || !interactiveReady || composing) {
       return;
     }
@@ -1493,7 +1541,7 @@ export function startTerminalHome(
   nodes.root.dataset.terminalControllerInitialized = 'true';
 
   const completeStartup = (): void => {
-    if (failed || interactiveReady) return;
+    if (!available() || failed || interactiveReady) return;
     try {
       preserveBootLog(nodes);
       nodes.fallback.hidden = true;
@@ -1512,9 +1560,27 @@ export function startTerminalHome(
     }
   };
 
-  try {
-    cancelBootGate = createTerminalBootGate(nodes, completeStartup).cancel;
-  } catch {
-    fail();
-  }
+  const resume = (): void => {
+    if (!available() || failed || interactiveReady) return;
+    try {
+      cancelBootGate = createTerminalBootGate(nodes, completeStartup).cancel;
+    } catch {
+      fail();
+    }
+  };
+  resume();
+  return {
+    resume,
+    suspend: () => {
+      cancelBootGate();
+      composing = false;
+      dismissCompletion();
+      clearCopyFeedback();
+      root.removeAttribute('data-terminal-pending-clear');
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && (nodes.session.contains(focused) || nodes.startup.contains(focused))) {
+        focused.blur();
+      }
+    }
+  };
 }

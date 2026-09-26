@@ -1591,7 +1591,7 @@ test('IME composition leaves text controls native while prompt Tab remains owned
   await expect(page.locator('[data-terminal-transcript]')).toContainText('A personal space for notes, experiments, and technical things I don\'t want to figure out twice.');
 });
 
-test('native Enter submission works at desktop and mobile viewport contracts', async ({ page }) => {
+test('native Enter submission works at wide and narrow fine-pointer viewport contracts', async ({ page }) => {
   await page.goto('/');
   await submit(page, 'about');
   await expect(page.locator('[data-terminal-transcript]')).toContainText('A personal space for notes, experiments, and technical things I don\'t want to figure out twice.');
