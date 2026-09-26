@@ -66,6 +66,14 @@ async function readBootGeometry(page: Page) {
   });
 }
 
+async function readHomeSearchHeight(page: Page) {
+  return page.locator('[data-home-search]').evaluate((section) => {
+    const style = getComputedStyle(section);
+    return style.display === 'none' ? 0 : section.getBoundingClientRect().height +
+      Number.parseFloat(style.marginTop) + Number.parseFloat(style.marginBottom);
+  });
+}
+
 async function readCommandBandGeometry(page: Page) {
   return page.evaluate(() => {
     const records = document.querySelectorAll<HTMLElement>(
@@ -93,11 +101,17 @@ async function readCommandBandGeometry(page: Page) {
 async function expectCenteredEmptySession(page: Page) {
   await expect.poll(async () => page.evaluate(() => {
     const row = document.querySelector<HTMLElement>('[data-terminal-session] .terminal-command-row');
-    if (row === null) {
+    const session = document.querySelector<HTMLElement>('[data-terminal-session]');
+    const main = document.querySelector<HTMLElement>('.terminal-main--home');
+    if (row === null || session === null || main === null) {
       return false;
     }
     const rect = row.getBoundingClientRect();
-    const viewportCenter = window.innerHeight / 2;
+    const search = document.querySelector<HTMLElement>('[data-home-search]');
+    const searchVisible = search !== null && getComputedStyle(search).display !== 'none';
+    const viewportCenter = searchVisible
+      ? (session.getBoundingClientRect().top + window.innerHeight - Number.parseFloat(getComputedStyle(main).paddingBottom)) / 2
+      : window.innerHeight / 2;
     const rowCenter = (rect.top + rect.bottom) / 2;
     return Math.abs(rowCenter - viewportCenter) <= 2 &&
       document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1;
@@ -124,7 +138,10 @@ test('successful startup preserves the boot log before the shell prompt', async 
   await expect(page.locator('[data-terminal-boot-status]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
   await expect(page.locator('.terminal-titlebar')).toHaveCount(0);
-  await expect(page.getByRole('button')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-session]').getByRole('button')).toHaveCount(0);
+  const searchSection = page.locator('[data-home-search]');
+  if (await searchSection.isVisible()) await expect(searchSection.getByRole('button')).toHaveCount(2);
+  else await expect(page.getByRole('button')).toHaveCount(0);
   await expect(page.getByText('Browse public documents')).toBeHidden();
   const markup = await page.locator('body').innerHTML();
   expect(markup).not.toMatch(/PRIVATE_(?:TITLE|BODY)_FIREFLY_7f2a|hidden-draft|owner-fixture/u);
@@ -456,17 +473,20 @@ test('pending startup exposes the direct boot log before the shell is ready', as
   await expect(page.locator('[data-terminal-fallback]')).toBeHidden();
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   const pendingGeometry = await readBootGeometry(page);
+  const pendingSearchHeight = await readHomeSearchHeight(page);
   const pendingPromptHeight = await page.locator('[data-terminal-boot-prompt]').evaluate((prompt) => prompt.getBoundingClientRect().height);
   expect(pendingPromptHeight).toBeGreaterThanOrEqual(44);
   await expect(root).toHaveAttribute('data-terminal-startup-state', 'ready');
   await expect(page.locator('[data-terminal-startup]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-transcript] .terminal-boot-record')).toHaveCount(1);
   const readyGeometry = await readBootGeometry(page);
+  const readySearchHeight = await readHomeSearchHeight(page);
+  const searchOriginShift = readySearchHeight - pendingSearchHeight;
   expect(readyGeometry.lineTops).toHaveLength(pendingGeometry.lineTops.length);
   readyGeometry.lineTops.forEach((top, index) => {
-    expect(Math.abs(top - pendingGeometry.lineTops[index])).toBeLessThanOrEqual(1);
+    expect(Math.abs(top - pendingGeometry.lineTops[index] - searchOriginShift)).toBeLessThanOrEqual(1);
   });
-  expect(Math.abs(readyGeometry.logTop - pendingGeometry.logTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(readyGeometry.logTop - pendingGeometry.logTop - searchOriginShift)).toBeLessThanOrEqual(1);
   await expect(page.locator('.terminal-command-row')).toHaveCount(1);
   expect(await page.locator('.terminal-command-row').evaluate((row) => row.getBoundingClientRect().height)).toBeCloseTo(pendingPromptHeight, 4);
 });
@@ -1102,14 +1122,14 @@ test('tall desktop keeps startup, output, and clear in one reading band', async 
     const rect = row.getBoundingClientRect();
     return { center: (rect.top + rect.bottom) / 2, viewportHeight: window.innerHeight };
   });
-  expect(Math.abs(startup.center - startup.viewportHeight / 2)).toBeLessThan(96);
+  expect(Math.abs(startup.center - startup.viewportHeight / 2 - await readHomeSearchHeight(page))).toBeLessThan(96);
 
   await submit(page, 'pwd');
   const short = await readCommandBandGeometry(page);
   expect(short.sessionInitial).toBe(false);
   expect(short.recordTop).toBeGreaterThanOrEqual(0);
   expect(short.rowBottom).toBeLessThanOrEqual(short.viewportHeight);
-  expect(Math.abs(short.bandCenter - short.viewportHeight / 2)).toBeLessThan(48);
+  expect(Math.abs(short.bandCenter - short.viewportHeight / 2 - await readHomeSearchHeight(page))).toBeLessThan(48);
 
   await submit(page, `grep -nF a ${workflow.shell}`);
   const long = await readCommandBandGeometry(page);

@@ -1271,6 +1271,12 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   and ready boot session share a bounded tall-viewport offset so relocating the
   boot log does not change its geometry. This responsive fallback is required at
   the mobile profile as well as desktop.
+  When the independent mobile homepage search is visible, empty-session centering
+  uses the remaining viewport below that header instead of reserving a second
+  full viewport. A delayed search reveal may translate the whole boot log by the
+  measured header height/margins without changing its internal geometry; desktop
+  placement remains unchanged. See [Homepage Search](./homepage-search-contract.md)
+  for the exact lifecycle, layout, and regression contract.
 
 #### Read-only document navigator
 

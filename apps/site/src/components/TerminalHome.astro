@@ -94,6 +94,9 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
           releaseStartupGuards();
           return;
         }
+        if (event.target instanceof Element && event.target.closest('[data-home-search]') !== null) {
+          return;
+        }
         if (
           !event.defaultPrevented &&
           event.key === 'Escape' &&
@@ -160,6 +163,25 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
     })();
   </script>
   <h1 class="terminal-visually-hidden">{SITE_CONFIG.site.name} content terminal</h1>
+
+  <section class="home-search" data-home-search aria-label="全站文章搜索" hidden>
+    <form role="search">
+      <label for="home-search-query">搜索文章</label>
+      <p id="home-search-help" class="home-search-help">查找标题、标签或正文中的内容</p>
+      <div class="home-search-controls">
+        <input id="home-search-query" type="search" autocomplete="off" enterkeyhint="search"
+          autocapitalize="off" spellcheck="false" placeholder="输入关键词…"
+          aria-describedby="home-search-help" aria-controls="home-search-results" />
+        <button type="submit">搜索</button>
+        <button type="button" data-home-search-clear disabled>清空</button>
+      </div>
+    </form>
+    <p data-home-search-status role="status" aria-live="polite" aria-atomic="true"></p>
+    <ul id="home-search-results" class="home-search-results" data-home-search-results hidden></ul>
+  </section>
+  <p class="home-search-error" data-home-search-error role="status" hidden>
+    文章搜索暂时不可用，请使用下方文章列表浏览。
+  </p>
 
   <section
     class="terminal-startup"
@@ -323,6 +345,15 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
       <template
         data-terminal-template
         data-terminal-template-path={terminalEntry.virtualPath}
+        data-home-search-metadata={JSON.stringify({
+          title: terminalEntry.title,
+          filename: terminalEntry.filename,
+          virtualPath: terminalEntry.virtualPath,
+          href: terminalEntry.href,
+          date: terminalEntry.date,
+          description: entry.data.description,
+          tags: entry.data.tags ?? []
+        })}
       >
         <TerminalStreamDocument
           entry={entry}
@@ -386,9 +417,11 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
 
 <script>
   import { startTerminalHome } from '../scripts/terminal-home';
+  import { startHomeSearch } from '../scripts/home-search';
 
   const root = document.querySelector<HTMLElement>('[data-terminal-home]');
   if (root !== null) {
+    startHomeSearch(root);
     startTerminalHome(root);
   }
 </script>

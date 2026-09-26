@@ -143,6 +143,103 @@
   outline-offset: 3px;
 }
 
+.home-search,
+.home-search-error {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .terminal-home:has(.home-search:not([hidden])) {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--terminal-home-padding-block-start) - var(--terminal-home-padding-block-end));
+  }
+
+  .terminal-home:has(.home-search:not([hidden])) .terminal-session[data-terminal-session-empty] {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .home-search:not([hidden]),
+  .home-search-error:not([hidden]),
+  .terminal-home[data-home-search-failed="true"] .terminal-recovery[data-terminal-fallback] {
+    display: block;
+  }
+
+  .home-search {
+    margin-block-end: var(--terminal-space-record);
+    padding-block-end: 1rem;
+    border-bottom: 1px solid var(--terminal-color-border);
+    overflow-wrap: anywhere;
+  }
+
+  .home-search label {
+    font-weight: 700;
+    color: var(--terminal-color-text);
+  }
+
+  .home-search-help,
+  .home-search-path,
+  .home-search-results time {
+    color: var(--terminal-color-muted);
+    font-size: 0.875rem;
+  }
+
+  .home-search-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.5rem;
+  }
+
+  .home-search :is(input, button) {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+    border: 1px solid var(--terminal-color-border);
+    border-radius: 0;
+    background: var(--terminal-color-surface);
+    color: var(--terminal-color-text);
+    font: inherit;
+  }
+
+  .home-search input {
+    width: 100%;
+    min-width: 0;
+    font-size: max(1rem, var(--terminal-font-size));
+  }
+
+  .home-search button:disabled {
+    color: var(--terminal-color-muted);
+  }
+
+  .home-search :is(input, button, a):focus-visible {
+    outline: 3px solid var(--terminal-color-focus);
+    outline-offset: 3px;
+  }
+
+  .home-search-results {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .home-search-results li {
+    border-top: 1px solid var(--terminal-color-border);
+    padding-block: 0.75rem;
+  }
+
+  .home-search-results a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 700;
+  }
+
+  .home-search-results p {
+    margin-block: 0.5rem;
+  }
+}
+
 .terminal-root a {
   color: var(--terminal-color-link);
   text-decoration-thickness: 0.1em;

@@ -498,8 +498,8 @@ test('route closures keep public documents in Terminal styles and isolate home J
   const staticRoutes = [routes.notFound, routes.lab];
 
   assert.match(routes.home, /data-terminal-home/u);
-  const startupMarkerIndex = routes.home.indexOf('data-terminal-startup-marker');
-  const recoveryIndex = routes.home.indexOf('data-terminal-fallback');
+  const startupMarkerIndex = routes.home.search(/<script\b[^>]*data-terminal-startup-marker/u);
+  const recoveryIndex = routes.home.search(/<section\b[^>]*data-terminal-fallback/u);
   assert.ok(startupMarkerIndex >= 0);
   assert.ok(startupMarkerIndex < recoveryIndex);
   assert.match(routes.home, /data-terminal-startup/u);
@@ -694,7 +694,7 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(marker, /terminalStartupState\s*=\s*['"]connecting['"]/u);
   assert.match(marker, /data-terminal-controller-initialized/u);
   assert.doesNotMatch(marker, /type=["']module["']/u);
-  assert.ok(home.indexOf('data-terminal-startup-marker') < home.indexOf('data-terminal-fallback'));
+  assert.ok(home.search(/<script\b[^>]*data-terminal-startup-marker/u) < home.search(/<section\b[^>]*data-terminal-fallback/u));
   assert.match(home, /<section\b[^>]*data-terminal-startup[^>]*>/u);
   assert.match(home, /data-terminal-boot-log/u);
   assert.match(home, /data-terminal-boot-duration="1580"/u);
@@ -705,7 +705,12 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(home, /<section\b[^>]*data-terminal-session[^>]*\bhidden\b[^>]*>/u);
   assert.match(home, new RegExp('<h1 class="terminal-visually-hidden">' + SITE_CONFIG.site.name + ' content terminal<\\/h1>', 'u'));
   assert.match(home, /enterkeyhint="send"/u);
-  assert.doesNotMatch(withoutTemplates, /<button\b/iu);
+  const searchSection = home.match(/<section\b[^>]*data-home-search\b[^>]*>[\s\S]*?<\/section>/u)?.[0] ?? '';
+  assert.match(searchSection, /^<section\b[^>]*\bhidden\b/u);
+  assert.match(searchSection, /<input\b[^>]*type="search"/u);
+  assert.equal((searchSection.match(/<button\b/gu) ?? []).length, 2);
+  assert.equal((home.match(/data-home-search-metadata=/gu) ?? []).length, templatePaths.length);
+  assert.doesNotMatch(withoutTemplates.replace(searchSection, ''), /<button\b/iu);
   for (const body of templateBodies) {
     assert.match(body, /<button\b[^>]*data-terminal-return/u);
     assert.match(body, /<button\b[^>]*data-terminal-collapse[^>]*aria-expanded="true"[^>]*aria-controls="[^"]+"/u);
