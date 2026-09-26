@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 77
+- **Total Sessions**: 78
 - **Last Active**: 2026-09-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1758 | Active |
+| `journal-1.md` | ~1792 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 78 | 2026-09-26 | Mobile homepage directory browsing | `d7f5a19` | `anti-entropy-loss-syndrome` |
 | 77 | 2026-09-26 | Native mobile homepage without Terminal | `d389039` | `anti-entropy-loss-syndrome` |
 | 76 | 2026-09-26 | Mobile homepage article search | `a464fb1` | `anti-entropy-loss-syndrome` |
 | 75 | 2026-09-24 | Mobile document navigation policy | `3977cea`, `74f2d65`, `fd34e18` | `anti-entropy-loss-syndrome` |

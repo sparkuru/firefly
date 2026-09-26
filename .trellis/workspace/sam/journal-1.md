@@ -1756,3 +1756,37 @@ Fixed touch-primary mobile home to retain native article links and local search 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 78: Mobile homepage directory browsing
+
+**Date**: 2026-09-26
+**Task**: Mobile homepage directory browsing
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed mobile homepage directory browsing with global article search, clickable path navigation, uniform typography and tree rows; retained friend links at root and no-Terminal policy.
+
+### Main Changes
+
+- Mobile home shows pages/lab/posts in order, browsing public immediate children inline without requests; canonical native fallback and local Back/Forward remain available.
+- Underlined ~/blogs/... breadcrumbs navigate root and registered ancestors; current activation is a history no-op, with safe focus and media ownership.
+- Friend links appear only at mobile root; Clear and history restore them. Mobile typography uses the shared base font, and browse rows use decorative accessible tree prefixes.
+- Updated executable mobile/search/workspace specs and task acceptance evidence; final owner-approved 33-file work commit d7f5a19, followed by current-task archive.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d7f5a19` | (see git log) |
+
+### Testing
+
+- [OK] Final Astro check: 111 files, zero diagnostics; build/static: 18 pass; affected four-project browser matrix: 35 pass, 97 expected skips, no retries.
+- [OK] Native mixed/nested/empty-friend build fixture: 1 pass. Independent final review repeated Astro111 and browser35/97 without findings or edits; nine viewport captures inspected.
+- [OK] Earlier full gates: content98, X Core8, mobile32, desktop83, static30 pass. Final staged whitespace check passed; no dependency/authored changes.
+
+### Status
+
+[OK] **Completed**
