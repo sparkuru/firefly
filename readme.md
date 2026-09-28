@@ -9,6 +9,8 @@
 
 Firefly is a static Astro publication backed by Markdown, with a framework-neutral Terminal presentation. Docker is required for builds and checks; `./sam` runs the project commands, and `./render.sh` runs commands that render documents.
 
+The [architecture contract](.trellis/spec/frontend/architecture-contract.md) maps content, presentations, independent experiments, and publication boundaries.
+
 <p align = "center" style="font-size: 28px;" > <strong> Build and preview </strong> </p>
 
 The tracked `content/` directory is a sample blog root with `posts/` and `pages/`. Copy the site configuration template, then build and serve the assembled publication:
@@ -50,7 +52,17 @@ node apps/site/scripts/blog-meta.mjs /path/to/article.md --blog-root /path/to/bl
 
 The [content contract](.trellis/spec/frontend/content-workspace-contract.md) documents front matter, slugs, `.fireflyignore`, markers, and publication visibility. The [site configuration contract](.trellis/spec/frontend/site-configuration-contract.md) documents `config/site.toml`, SEO fields, and content themes.
 
-<p align = "center" style="font-size: 28px;" > <strong> Verify
+<p align = "center" style="font-size: 28px;" > <strong> Themes </strong> </p>
+
+The default `firefly` presentation uses a dark Terminal with slate-blue, teal, soft-green, yellow, and orange accents inspired by [Honkai: Star Rail](https://zhuanlan.zhihu.com/p/704319639). Set `presentation: semantic` in a post or page's front matter for a conventional reading layout.
+
+Article content has a separate `contentTheme` setting. Omit it (or use `default`) to follow the presentation's normal reading style.
+
+Set `contentTheme: paper` in front matter for a warm paper surface, serif text, and muted terracotta accents. This changes the article body in either presentation; it does not change the surrounding page or Terminal shell.
+
+The available content theme IDs are `default` and `paper`.
+
+<p align = "center" style="font-size: 28px;" > <strong> Verify </strong> </p>
 
 The complete repository fixture gate uses the tracked `content/` root:
 
@@ -60,7 +72,3 @@ The complete repository fixture gate uses the tracked `content/` root:
 ```
 
 See the [development runtime contract](.trellis/spec/frontend/development-runtime.md) for focused checks and the [validation profile](.trellis/spec/trellis-plus/validation-profile.md) for release gates.
-
-<p align = "center" style="font-size: 30px;" > <strong> Reference </strong> </p>
-
-1. theme references [Honkai: Star Rail](https://zhuanlan.zhihu.com/p/704319639).

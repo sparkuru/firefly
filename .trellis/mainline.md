@@ -44,7 +44,9 @@
   production activation is owner-local. Credential/key rotation remains an
   owner follow-up. The prior database is retained for owner-led recovery and
   is not a verified backup; it was not imported into the new empty store.
-- Product scope and milestone order: `prd.md`
+- Product and architecture boundaries: `.trellis/spec/frontend/architecture-contract.md`.
+  Milestone order and historical completion state are recorded in this mainline
+  and the archived task evidence below.
 - Completed Trellis Plus initialization: `.trellis/tasks/archive/2026-08/08-12-trellis-plus-init/`
 - Completed prerequisite: `.trellis/tasks/archive/2026-08/00-bootstrap-guidelines/` contains the checked frontend-spec bootstrap task.
 - Work commits: `6e22a7b` (frontend guidelines) and `54f778d` (guided mainline establishment).
@@ -58,7 +60,7 @@
 - Revised M3 automated evidence: X Core 11, semantic 3, Terminal 8, content 13, registry integration 5, static output 9, focused Playwright 12 + 32, and full four-project Playwright 44 tests pass; all package/application checks and builds pass. Static output remains exactly five HTML, one semantic CSS, one home-only JS, and zero maps/unknown files.
 - Revised M3 artifact evidence: home HTML is 72,195 bytes, with 57,637 bytes across exactly three inert build-rendered templates; client JS is 12,538 bytes. Only `/` references the script.
 - M3 review evidence: six desktop/mobile captures cover prompt-only home, canonical Terminal article, and inline `cat`; direct owner review approved the final production preview. The preservation-first article edit ledger remains archived under `.trellis/tasks/archive/2026-08/08-12-m3-terminal-interface/research/`. NERV retains 19 pre-existing audit advisories outside M3 scope.
-- Completed M4 task: `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline/`. Its repository evidence anchors the root PRD's manifest, `/lab/`, Terminal command, independent build, fresh assembly, NERV, container, and validation contracts. The owner approved the final implementation and focused Terminal refinement for commit/archive.
+- Completed M4 task: `.trellis/tasks/archive/2026-08/08-13-m4-experiment-pipeline/`. Its repository evidence anchors the manifest, `/lab/`, Terminal command, independent build, fresh assembly, NERV, container, and validation contracts now indexed by `.trellis/spec/frontend/architecture-contract.md`. The owner approved the final implementation and focused Terminal refinement for commit/archive.
 - M4 automated evidence: all seven package/tool checks pass; the final affected suites include Terminal 9/9, content 13, site/X Core 5, site static-output 12/12, main-site Playwright 54/54, NERV Playwright 8/8, and assembled-publication Playwright 4/4. Clean publication produces a deterministic 18-file release.
 - M4 independent review fixed realpath escapes, partial target promotion, build-order/Docker command drift, incomplete unsafe-artifact scanning, canonical Terminal catalog drift, missing mounted-runtime tests, incomplete global-key protection for ARIA widgets, and residual component-level Terminal theme literals. The current Docker Compose image passes health, route/redirect, both font and license URLs, distinct 404, security/cache header, non-root/read-only confinement, exact 18-file inventory, and teardown probes.
 - M4 post-review runtime correction replaces the stale NERV-only root `dev.sh` with a fresh assembled-publication server. The exact owner command now returns `200` at `/`, `/lab/`, and `/lab/nerv/`, retains exact-label isolation, and tears down cleanly. Its default host binding is now `0.0.0.0` for LAN review; `SAM_BIND_HOST=127.0.0.1` restores loopback-only access.
@@ -114,7 +116,7 @@
   enabling comments, contacting deployment, or using credentials.
 - Documentation convergence evidence (2026-08-28):
   `.trellis/tasks/archive/2026-08/08-28-repository-docs-convergence/` and
-  commit `6edc880` reconcile the root PRD, mainline, and durable frontend
+  commit `6edc880` reconciled the former root PRD, mainline, and durable frontend
   specs. Historical inventory evidence, default Presentation behavior,
   repository-versus-deployment publication ownership, and audited remediation
   gaps are now explicitly separated.
@@ -142,12 +144,13 @@
   The gate preserves package-local failure reports, keeps the owner-workspace
   build separate, and leaves comments disabled; the site build emitted only its
   existing CSS optimizer notices for `::highlight` selectors.
-- Roadmap reconciliation evidence: the root `prd.md` now separates the
-  original SQL input baseline (93 posts / 7 pages) from the authored
-  workspace snapshot observed during M5 (95 posts / 8 pages), classifies
-  M0–M5, M6, M7, M5.1, and P0 with their current states, and records the
-  cwd-relative/`~/blog` Terminal path grammar. Mutable inventory is derived
-  from the explicitly selected workspace rather than fixed as a durable count.
+- Roadmap reconciliation evidence: the former root PRD separated the original
+  SQL input baseline (93 posts / 7 pages) from the authored workspace snapshot
+  observed during M5 (95 posts / 8 pages), and classified M0–M5, M6, M7,
+  M5.1, and P0. The durable architecture and cwd-relative/`~/blog` Terminal
+  path grammar now live in `.trellis/spec/frontend/`; historical states remain
+  in this mainline and archived tasks. Mutable inventory is derived from the
+  explicitly selected workspace rather than fixed as a durable count.
   The archived M6/M7 records and targeted journal entry contain only neutral
   staging references; operational execution details remain local.
 

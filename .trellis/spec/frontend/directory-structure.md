@@ -1,54 +1,60 @@
-# Directory Structure
+# Repository Directory and Ownership Structure
 
-> How frontend code is organized in this project.
+## Scope
 
----
-
-## Overview
-
-<!--
-Document your project's frontend directory structure here.
-
-Questions to answer:
-- Where do components live?
-- How are features/modules organized?
-- Where are shared utilities?
-- How are assets organized?
--->
-
-(To be filled by the team)
-
----
+Use this map when placing source, adding a Presentation or Experiment, or
+changing a build boundary. The cross-module rules are in
+[Firefly Architecture](./architecture-contract.md); this file locates their
+owners in the repository.
 
 ## Directory Layout
 
+```text
+content/                         tracked sample Markdown workspace
+apps/site/                       Astro static shell, routes, content loading
+packages/x-core/                 document and Presentation contracts
+presentations/semantic/          semantic document adapter
+presentations/terminal/          Terminal document adapter and command engine
+experiments/nerv/                independent NERV static project
+experiments/majo/                independent MAJO static project
+tooling/validate-experiments/    manifest decoder and public catalog
+tooling/assemble-publication/    static artifact validation and assembly
+tooling/sync-server/             authoring workspace synchronization
+plugins/comments/                site-owned comments integration
+services/comments/               private comments write/moderation runtime
+config/                          public site and plugin configuration templates
+.trellis/spec/                   durable engineering contracts
+artifacts/, dist/                ignored repository build outputs
+.private/                        ignored private inputs and backups
 ```
-<!-- Replace with your actual structure -->
-src/
-├── ...
-└── ...
-```
 
----
+`content/` is a sample input. `FIREFLY_CONTENT_ROOT` can select another blog
+root with `posts/` and `pages/`; that external root is not a new source-code
+package. Build outputs and private inputs are not public source contracts.
 
-## Module Organization
+## Placement Rules
 
-<!-- How should new features be organized? -->
+- Put a content-schema or canonical-route change in `apps/site/` and update
+  [Content Workspace](./content-workspace-contract.md). Keep authored Markdown
+  independent of Astro and Presentation implementation files.
+- Put framework-neutral document transforms and adapter interfaces in
+  `packages/x-core/`. Put concrete rendering in one of the two `presentations/`
+  packages. Presentation packages do not import each other.
+- Add a complete independent experience under `experiments/<id>/` with its own
+  manifest, lockfile, assets, and build. Its public surface is validated and
+  mounted by `tooling/`, not imported by `apps/site/`.
+- Put public static comments integration under `plugins/comments/` or the site
+  bridge, and private write/database work under `services/comments/`. No site
+  build reads the private database.
+- Put shared publication rules in `tooling/validate-experiments/` or
+  `tooling/assemble-publication/`, according to whether they validate source
+  manifests or built static artifacts. Deployment release switching is outside
+  the repository assembler.
 
-(To be filled by the team)
+## Check Before Moving Code
 
----
-
-## Naming Conventions
-
-<!-- File and folder naming rules -->
-
-(To be filled by the team)
-
----
-
-## Examples
-
-<!-- Link to well-organized modules as examples -->
-
-(To be filled by the team)
+Inspect package manifests, import graphs, route ownership, and the matching
+topic contract. A move is incomplete if it introduces a reverse source import,
+changes a public route without reservation checks, or copies private inputs
+into a static artifact. Run the affected package checks plus the publication
+validation listed in [Development Runtime](./development-runtime.md).
