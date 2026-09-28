@@ -1,6 +1,0 @@
-{"file":".trellis/spec/frontend/index.md","reason":"Frontend pre-development and quality contract."}
-{"file":".trellis/spec/frontend/architecture-contract.md","reason":"Terminal presentation and content-theme ownership boundaries."}
-{"file":".trellis/spec/frontend/mobile-experience-contract.md","reason":"Preserve the native mobile homepage while recoloring the shared root."}
-{"file":".trellis/spec/frontend/development-runtime.md","reason":"Required wrapped site and browser validation commands."}
-{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Shared HTML head and static site metadata boundary for favicon delivery."}
-{"file":".trellis/tasks/09-28-terminal-reference-palette/research/palette-contrast.md","reason":"Exact reference swatches and contrast limits for their roles."}
