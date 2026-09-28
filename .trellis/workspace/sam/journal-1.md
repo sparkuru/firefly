@@ -1790,3 +1790,30 @@ Completed mobile homepage directory browsing with global article search, clickab
 ### Status
 
 [OK] **Completed**
+
+
+## Session 79: Archive legacy document navigator tasks
+
+**Date**: 2026-09-28
+**Task**: Archive legacy document navigator tasks
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Reconciled the four completed child PRD acceptance checklists against their recorded implementation evidence and the completed parent acceptance matrix; archived the parent and all four children while preserving their links. No product code changed and no product tests were rerun. Archive commit: 2205335.
+
+### Main Changes
+
+- Archived all five 09-17 document navigator tasks and cleared the active task list.
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Verified archived statuses, parent-child links, PRD checklists, and git diff --check.
+
+### Status
+
+[OK] **Completed**
