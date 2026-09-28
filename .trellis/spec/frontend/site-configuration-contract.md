@@ -251,8 +251,11 @@ values are normalized to `DEFAULT_CONTENT_THEME_ID`. The current registry is
   stylesheet URL, executable configuration, website chrome setting, X Core
   context member, X Core metadata member, route input, or plugin payload.
 - Registry evolution: a later theme adds a registered ID and site-owned,
-  content-scoped CSS; it does not change Markdown syntax or the presentation
-  contract.
+  content-scoped CSS under
+  `apps/site/src/styles/content-themes/<theme-id>.css`; selectors stay below
+  `[data-article-content][data-content-theme="<theme-id>"]`. Theme IDs are
+  validated before rendering and never become dynamic stylesheet URLs. This
+  does not change Markdown syntax or the presentation contract.
 
 ##### 4. Validation & Error Matrix
 

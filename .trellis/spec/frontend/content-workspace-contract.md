@@ -351,7 +351,12 @@ createDocumentNavigationLookup(
   its containing directory. Rules are ordered Gitignore patterns, and the
   nearest lower-directory policy overrides inherited matches only when the
   parent directory is not blocked. A blocked parent cannot be re-included by a
-  descendant negation.
+  descendant negation. Supported syntax includes comments, blank lines,
+  escaped literals and trailing spaces, `/`, `*`, `?`, ranges, `**`,
+  directory-only patterns, and ordered `!` negation. For example, a root rule
+  `posts/archive/` excludes that branch, while `*.md` followed by `!keep.md`
+  in `posts/notes/.fireflyignore` excludes other Markdown in that reachable
+  directory and keeps `keep.md`.
 - The scanner loads `.fireflyignore` as a regular control file, rejects a
   symlinked, special, unreadable, undecodable, or malformed policy with its
   logical policy path and line where available, and never materializes the
@@ -371,6 +376,27 @@ createDocumentNavigationLookup(
   `--preview` performs no write. It may use `--blog-root` or the configured
   content-root convention, but it is not run through the read-only `./sam`
   build mount for source editing.
+
+#### New article authoring convention
+
+- New posts use `posts/<category>/<safe-slug>.md`; new pages use
+  `pages/<safe-slug>.md` below the selected blog root. Each new non-empty file
+  has schema-valid front matter and body headings begin at `##`, because the
+  document title owns the rendered h1. Do not put whitespace, percent escapes,
+  dot segments, slashes, backslashes, or control characters in new path
+  segments or slugs. The legacy slug normalization below is for existing
+  content, not a new-file naming option.
+- `tooling/new-article.py <target.md> [--blog-root ROOT]
+  [--collection posts|pages] [--editor COMMAND] [--preview]` is the host-side
+  interactive creator. Its target is the final path below `posts/` or `pages/`.
+  It selects the root from `--blog-root`, `FIREFLY_CONTENT_ROOT`, or the tracked
+  `content/` fixture, opens `$VISUAL`, `$EDITOR`, or `vi` unless `--editor` is
+  given, and leaves the new article as a draft unless publication is explicitly
+  confirmed. `--preview` validates and prints without writing. Source editing
+  does not run through the read-only `./sam` mount.
+- For an existing file, use the separate `blog-meta` command above. Its
+  save-as, overwrite, and write-back rules remain independent of the
+  interactive creator.
 
 #### Metadata, projection, and canonical routes
 
