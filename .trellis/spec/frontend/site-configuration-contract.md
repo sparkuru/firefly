@@ -219,14 +219,25 @@ ownership or draft/private filtering.
 #### Terminal palette boundary
 
 `TerminalLayout.astro` selects `data-terminal-theme="firefly"` on the page
-root. `apps/site/src/styles/terminal.css` owns its palette under that selector:
-the exact reference primitives are `--terminal-palette-slate: #616c8c`,
+root. `apps/site/src/styles/terminal.css` owns the shared structure and the
+exact reference primitives under that selector:
+`--terminal-palette-slate: #616c8c`,
 `--terminal-palette-teal: #568c87`, `--terminal-palette-green: #b2d59b`,
 `--terminal-palette-yellow: #f2de79`, and
 `--terminal-palette-orange: #d95f18`. Components consume the
 `--terminal-color-*` semantic tokens instead of repeating raw colors. Dark
 canvas/surface layers and brighter derived teal/orange text tokens preserve
 legibility where the reference swatches are too dim on raised surfaces.
+
+The `firefly` root selects `data-terminal-palette="firefly-dark"` by default.
+Each `apps/site/src/styles/terminal-themes/*.css` file owns one named palette
+and supplies the complete `--terminal-color-*` semantic token set. The
+build-time registry discovers these files, validates their root selector and
+required tokens, then inlines their CSS and publishes their filenames as the
+available names. Adding a valid CSS file registers another palette without
+editing the command or switcher. The palette file also selects the Shiki token
+colors for code blocks. Keep ordinary code text at 4.5:1 contrast against its
+code surface. Components consume semantic tokens for every palette.
 
 The default article content inherits the Terminal root's mapped
 `--article-content-*` tokens; authored `paper` content overrides only its
@@ -236,6 +247,101 @@ palette, keep the root token contract checked by
 `apps/site/tests/static-output.test.mjs` and verify representative text,
 controls, document navigation, and mobile surfaces in browser tests; normal
 text should reach 4.5:1 contrast and visible control boundaries/focus 3:1.
+
+#### Terminal appearance selection contract
+
+##### 1. Scope / Trigger
+
+Use this contract when changing Firefly Terminal palette files, selection
+controls, stored preference, or the `theme` command. The authored
+`contentTheme` registry and Semantic presentation are outside this browser
+appearance state.
+
+##### 2. Signatures
+
+```text
+theme <theme-config-name>
+window.fireflySetTerminalAppearance(name: string): boolean
+localStorage['firefly-terminal-appearance'] = '<theme-config-name>'
+<html data-terminal-theme="firefly" data-terminal-palette="firefly-white" data-terminal-theme-names="firefly-dark firefly-white">
+```
+
+`firefly-dark` is the default and required palette. `TerminalLayout.astro`
+defines the site-owned update function and early head restoration.
+`terminal-theme-registry.ts` derives names from valid CSS filenames at build
+time and optional mobile display labels from `--terminal-theme-label` in each
+palette file; without a label, the filename is shown. `terminal-home.ts`
+registers `theme` through the presentation runtime's command registry seam;
+Tab completion uses the derived configuration names.
+
+##### 3. Contracts
+
+- The shared layout's `[data-terminal-quick-toolbar]` is visible only when
+  `(hover: none) and (pointer: coarse)` matches. Its bottom-right `+` button
+  expands direct child actions for each registered theme and back-to-top;
+  the selected theme is marked. A light viewport backdrop closes on click;
+  child actions reveal with short staggered motion, while reduced-motion mode
+  presents them immediately. Closed actions are noninteractive and absent from
+  keyboard navigation. There is no nested theme menu. Desktop
+  home and desktop documents have no visible switch. The desktop home Terminal
+  accepts every registered `theme <theme-config-name>`; `help theme` describes
+  the command.
+- The command is standalone, not pure text, and does not support redirects.
+  Invalid operands and attempted pipeline, substitution, or redirect use do
+  not change appearance. Tab fills or lists valid operands; Enter executes a
+  complete command.
+- The head reads a stored registered name before page styles are parsed.
+  Legacy `dark` and `light` values migrate to `firefly-dark` and
+  `firefly-white`. Unknown stored names remain at the default. Successful
+  selection updates the root and writes the exact name. A failed storage read
+  starts dark; a failed write still changes the current page. With JavaScript
+  disabled, the toolbar stays hidden and the dark static reading surface
+  remains usable.
+- Terminal appearance changes the root's semantic colors, including native
+  mobile browsing and default article content. Authored `paper` overrides
+  remain scoped to their article content root.
+
+##### 4. Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| `theme firefly-white` or `theme firefly-dark` | change palette and persist the name |
+| `theme ` plus Tab | list discovered CSS palette names; no change until command submission |
+| missing or unknown operand | show usage error; preserve appearance |
+| pipeline, substitution, or redirect | reject the side-effecting command; preserve appearance |
+| storage denied | current-page selection works; reload falls back to dark |
+| JavaScript disabled | static dark reading remains; toolbar is hidden |
+| touch-primary media changes | toolbar visibility follows the shared input predicate; focus leaves it before hiding |
+| valid new CSS palette file | build discovers the name for CSS, command completion, and mobile chooser |
+| mobile speed dial | opening focuses a child action; theme selection updates the root, closes the dial, and restores focus; Escape/backdrop/outside input closes it; rapid toggles leave focus and child visibility coherent |
+
+##### 5. Good / Base / Bad Cases
+
+- Good: desktop `theme firefly-wh` plus Tab, then Enter, selects white and
+  survives a canonical document navigation; a touch-primary reader can switch
+  back from the floating toolbar.
+- Base: no stored preference renders the dark appearance.
+- Bad: `theme amber` or a piped `theme firefly-dark` changes the page despite a
+  command error.
+
+##### 6. Tests Required
+
+Run the site check/build and static-output contract, focused home/document/
+mobile Playwright checks, and the Terminal command suite. Assert command help,
+completion, invalid-operand safety, storage restoration/migration/failure,
+desktop switch absence, mobile toolbar actions and clearance, no-JavaScript
+reading, `paper` focus isolation, and representative 4.5:1 text and code / 3:1
+boundary and focus contrast.
+
+##### 7. Wrong vs Correct
+
+Wrong: add a visible desktop page switch or treat a front matter
+`contentTheme` value as a Terminal appearance command.
+
+Correct: discover palette names and CSS from the same files, register `theme`
+in the site-owned Terminal command registry, and update the root via the shared
+site appearance function; show the floating toolbar only under the
+touch-primary input predicate.
 
 #### content theme registry contract
 

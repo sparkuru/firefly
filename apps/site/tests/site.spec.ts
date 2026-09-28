@@ -45,7 +45,7 @@ function contrastRatio(foreground: string, background: string): number {
     const channels = color.match(/[\d.]+/gu)?.slice(0, 3).map(Number);
     if (channels?.length !== 3) throw new Error(`Unexpected computed color: ${color}`);
     const [red, green, blue] = channels.map((channel) => {
-      const normalized = channel / 255;
+      const normalized = color.startsWith('color(srgb ') ? channel : channel / 255;
       return normalized <= 0.04045
         ? normalized / 12.92
         : ((normalized + 0.055) / 1.055) ** 2.4;
@@ -54,6 +54,33 @@ function contrastRatio(foreground: string, background: string): number {
   };
   const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
   return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
+async function codeColors(page: Page) {
+  const styled = page.locator('.terminal-wide:has(.astro-code span[style*="--shiki-light"])');
+  const frameLocator = await styled.count() > 0 ? styled.first() : page.locator('.terminal-wide:has(.astro-code)').first();
+  return frameLocator.evaluate((frame) => {
+    let token = frame.querySelector<HTMLElement>('.astro-code span[style*="--shiki-light"]');
+    if (!token) {
+      token = frame.querySelector<HTMLElement>('.astro-code code span span') ?? frame.querySelector<HTMLElement>('.astro-code span');
+      if (!token) throw new Error('Code block has no token span');
+      token.style.setProperty('--shiki-light', '#24292e');
+      token.style.setProperty('--shiki-dark', '#e1e4e8');
+    }
+    const code = frame.querySelector<HTMLElement>('.astro-code')!;
+    const tokenStyle = getComputedStyle(token);
+    const colors = [...new Set([...frame.querySelectorAll<HTMLElement>('.astro-code span[style*="--shiki-light"]')]
+      .map((span) => getComputedStyle(span).color))];
+    return {
+      foreground: tokenStyle.color,
+      colors,
+      light: tokenStyle.getPropertyValue('--shiki-light').trim(),
+      dark: tokenStyle.getPropertyValue('--shiki-dark').trim(),
+      background: getComputedStyle(frame).backgroundColor,
+      canvas: getComputedStyle(document.documentElement).backgroundColor,
+      codeBackground: getComputedStyle(code).backgroundColor
+    };
+  });
 }
 
 async function expectTerminalDocument(page: Page, expectedPath: string | RegExp) {
@@ -70,6 +97,12 @@ async function expectTerminalDocument(page: Page, expectedPath: string | RegExp)
   } else {
     await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
   }
+}
+
+async function expectOnlyAppearanceScript(page: Page) {
+  const scripts = page.locator('script');
+  await expect(scripts).toHaveCount(1);
+  expect(await scripts.first().textContent()).toContain('firefly-terminal-appearance');
 }
 
 interface WorkflowPaths {
@@ -151,6 +184,149 @@ test('Terminal palette keeps home and document layers readable', async ({ page }
   expect(contrastRatio(documentLayers.link, documentLayers.shell)).toBeGreaterThanOrEqual(4.5);
 });
 
+test('light Terminal appearance persists across home, inline reading, and documents', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'chromium-desktop-static');
+  const context = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4321/',
+    javaScriptEnabled: true,
+    viewport: { width: 1440, height: 900 }
+  });
+  const page = await context.newPage();
+  try {
+    await page.goto('/');
+    const appearance = page.locator('[data-terminal-quick-toolbar]');
+    await expect(appearance).toBeHidden();
+    const command = page.locator('#terminal-command');
+    await expect(command).toBeVisible();
+    await command.fill('theme firefly-white');
+    await command.press('Enter');
+    await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+    expect(await page.evaluate(() => localStorage.getItem('firefly-terminal-appearance'))).toBe('firefly-white');
+    await page.mouse.move(0, 0);
+
+    const home = await page.locator('html').evaluate((root) => {
+      const styles = getComputedStyle(root);
+      const link = document.querySelector<HTMLElement>('[data-terminal-fallback] a')!;
+      return {
+        canvas: styles.backgroundColor,
+        body: styles.color,
+        link: getComputedStyle(link).color,
+        command: styles.getPropertyValue('--terminal-color-command').trim(),
+        warning: styles.getPropertyValue('--terminal-color-warning').trim(),
+        error: styles.getPropertyValue('--terminal-color-error').trim(),
+        border: styles.getPropertyValue('--terminal-color-border').trim()
+      };
+    });
+    expect(home.canvas).toBe('rgb(247, 249, 246)');
+    expect(home.command).toBe('#315f42');
+    expect(home.warning).toBe('#785d00');
+    expect(home.error).toBe('#a94612');
+    expect(home.border).toBe('#616c8c');
+    expect(contrastRatio(home.body, home.canvas)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(home.link, home.canvas)).toBeGreaterThanOrEqual(4.5);
+    const workflow = await getWorkflowPaths(page);
+    await page.screenshot({ path: info.outputPath('terminal-light-home.png') });
+    await command.fill(`cat ${workflow.shell}`);
+    await command.press('Enter');
+    await expect(page.locator('[data-terminal-stream-document]').last()).toBeVisible();
+    await expect(page.locator('[data-terminal-stream-document]').last().locator('.terminal-stream-prose a').first()).toBeVisible();
+    const inlineCode = await codeColors(page);
+    expect(inlineCode.foreground).not.toBe('rgb(225, 228, 232)');
+    expect(inlineCode.background).not.toBe(inlineCode.canvas);
+    expect(contrastRatio(inlineCode.foreground, inlineCode.background)).toBeGreaterThanOrEqual(4.5);
+    for (const color of inlineCode.colors) {
+      expect(contrastRatio(color, inlineCode.background)).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.screenshot({ path: info.outputPath('terminal-light-inline.png') });
+    if (await page.locator('[data-terminal-template-path="posts/infra/08-enjoy-cloudflare.md"]').count() === 1) {
+      await command.fill('cat ~/blog/posts/infra/08-enjoy-cloudflare.md');
+      await command.press('Enter');
+      const nginxBlock = page.locator('[data-terminal-stream-document]').last()
+        .locator('.terminal-code-block').filter({ hasText: 'set_real_ip_from' }).first();
+      await expect(nginxBlock).toBeVisible();
+      await nginxBlock.scrollIntoViewIfNeeded();
+      const nginxColors = await nginxBlock.evaluate((block) => {
+        const frame = block.querySelector<HTMLElement>('.terminal-wide')!;
+        return {
+          background: getComputedStyle(frame).backgroundColor,
+          colors: [...new Set([...block.querySelectorAll<HTMLElement>('.astro-code span[style*="--shiki-light"]')]
+            .map((span) => getComputedStyle(span).color))]
+        };
+      });
+      expect(nginxColors.colors.length).toBeGreaterThan(1);
+      for (const color of nginxColors.colors) {
+        expect(contrastRatio(color, nginxColors.background)).toBeGreaterThanOrEqual(4.5);
+      }
+      await page.screenshot({ path: info.outputPath('terminal-light-inline-nginx-code.png') });
+    }
+    await page.goto('/posts/ai/llm-workflow-with-trellis/');
+    await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+    const canonicalCode = await codeColors(page);
+    expect(canonicalCode.foreground).not.toBe('rgb(225, 228, 232)');
+    expect(canonicalCode.background).not.toBe(canonicalCode.canvas);
+    expect(contrastRatio(canonicalCode.foreground, canonicalCode.background)).toBeGreaterThanOrEqual(4.5);
+    for (const color of canonicalCode.colors) {
+      expect(contrastRatio(color, canonicalCode.background)).toBeGreaterThanOrEqual(4.5);
+    }
+    await expect(appearance).toBeHidden();
+    const documentLayers = await page.locator('.terminal-shell').evaluate((shell) => {
+      const titlebar = shell.querySelector<HTMLElement>('.terminal-titlebar')!;
+      const article = shell.querySelector<HTMLElement>('[data-article-content]')!;
+      const link = article.querySelector<HTMLElement>('a')!;
+      return {
+        shell: getComputedStyle(shell).backgroundColor,
+        border: getComputedStyle(shell).borderTopColor,
+        titlebar: getComputedStyle(titlebar).backgroundColor,
+        titlebarText: getComputedStyle(titlebar).color,
+        article: getComputedStyle(article).color,
+        link: getComputedStyle(link).color
+      };
+    });
+    expect(documentLayers.shell).toBe('rgb(255, 255, 255)');
+    expect(documentLayers.titlebar).toBe('rgb(237, 242, 239)');
+    expect(contrastRatio(documentLayers.border, documentLayers.shell)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(documentLayers.titlebarText, documentLayers.titlebar)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(documentLayers.article, documentLayers.shell)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(documentLayers.link, documentLayers.shell)).toBeGreaterThanOrEqual(4.5);
+    await page.screenshot({ path: info.outputPath('terminal-light-document.png') });
+
+    const content = page.locator('[data-article-content]');
+    await content.evaluate((element) => element.setAttribute('data-content-theme', 'paper'));
+    await expect(content).toHaveCSS('background-color', 'rgb(244, 236, 221)');
+    await expect(content).toHaveCSS('color', 'rgb(44, 36, 31)');
+    const paperLink = content.locator('a').first();
+    await paperLink.focus();
+    const paperFocus = await paperLink.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { outline: styles.outlineColor, style: styles.outlineStyle };
+    });
+    expect(paperFocus.style).toBe('solid');
+    expect(paperFocus.outline).toBe('rgb(138, 90, 0)');
+    expect(contrastRatio(paperFocus.outline, 'rgb(244, 236, 221)')).toBeGreaterThanOrEqual(3);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+    await page.goto('/');
+    await expect(command).toBeVisible();
+    await command.fill('theme firefly-dark');
+    await command.press('Enter');
+    await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-dark');
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-dark');
+    await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(17, 25, 35)');
+  } finally {
+    await context.close();
+  }
+});
+
+test('dark Terminal code tokens stay legible on their code surface', async ({ page }) => {
+  await page.goto('/posts/ai/llm-workflow-with-trellis/');
+  const code = await codeColors(page);
+  expect(code.background).not.toBe(code.canvas);
+  for (const color of code.colors) {
+    expect(contrastRatio(color, code.background)).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
 test('home exposes Terminal fallback content and visible keyboard focus', async ({ page }) => {
   await page.goto('/');
 
@@ -216,6 +392,8 @@ test('home exposes Terminal fallback content and visible keyboard focus', async 
 
 test('home keeps native recovery without JavaScript and no startup state', async ({ page }) => {
   await page.goto('/');
+
+  await expect(page.locator('[data-terminal-quick-toolbar]')).toBeHidden();
 
   await expect(page.locator('[data-terminal-home]')).not.toHaveAttribute('data-terminal-startup-state');
   await expect(page.locator('[data-terminal-startup]')).toBeHidden();
@@ -297,6 +475,7 @@ test('post deep link uses the firefly default with a document navigator fragment
 
 test('paper theme stays readable inside the Terminal content boundary', async ({ page }) => {
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
+  await expect(page.locator('[data-terminal-quick-toolbar]')).toBeHidden();
 
   const content = page.locator('[data-article-content]');
   await expect(content).toHaveCount(1);
@@ -316,7 +495,7 @@ test('paper theme stays readable inside the Terminal content boundary', async ({
   expect(rootStyles.fontFamily).toContain('ui-serif');
   expect(Number.parseFloat(rootStyles.paddingInline)).toBeGreaterThan(0);
 
-  const link = content.getByRole('link', { name: 'Trellis repository' });
+  const link = content.locator('a').first();
   await link.focus();
   await expect(link).toBeFocused();
   const linkFocusStyles = await link.evaluate((element) => {
@@ -330,6 +509,12 @@ test('paper theme stays readable inside the Terminal content boundary', async ({
   const codeRegion = page.getByRole('region', { name: /^Code content:/u }).first();
   await expect(codeRegion).toHaveCSS('overflow-x', 'auto');
   await expect(codeRegion).toHaveCSS('background-color', 'rgb(251, 247, 238)');
+  const paperCode = await codeColors(page);
+  expect(paperCode.foreground).not.toBe('rgb(225, 228, 232)');
+  expect(contrastRatio(paperCode.foreground, paperCode.background)).toBeGreaterThanOrEqual(4.5);
+  for (const color of paperCode.colors) {
+    expect(contrastRatio(color, paperCode.background)).toBeGreaterThanOrEqual(4.5);
+  }
   await expect(page.locator('html.terminal-root[data-terminal-theme="firefly"]')).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
 });
@@ -380,7 +565,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await expect(page.getByRole('link', { name: 'ai/' })).toHaveAttribute('href', '/posts/ai/');
   await expect(page.getByRole('link', { name: workflowDocumentPath })).toHaveCount(0);
   await expect(page.getByText(/Hidden draft|PRIVATE_TITLE_FIREFLY_7f2a|private-handoff|source-ledger/u)).toHaveCount(0);
-  await expect(page.locator('script')).toHaveCount(0);
+  await expectOnlyAppearanceScript(page);
 
   await page.goto('/posts/ai/');
   await expect(page.getByRole('heading', { level: 1, name: 'posts/ai/' })).toBeVisible();
@@ -393,7 +578,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
     '/posts/ai/llm-workflow-with-trellis/'
   );
   await expect(nestedWorkflowLink).toHaveAttribute('aria-label', workflowDocumentPath);
-  await expect(page.locator('script')).toHaveCount(0);
+  await expectOnlyAppearanceScript(page);
 
   await page.goto('/posts/ai/llm-workflow-with-trellis/');
   await expectTerminalDocument(page, workflowDocumentPath);
@@ -404,7 +589,7 @@ test('nested post and directory indexes use canonical native links', async ({ pa
   await page.goto('/pages/');
   await expect(page.getByRole('heading', { level: 1, name: 'pages/' })).toBeVisible();
   await expect(page.getByRole('link', { name: '~/blog/pages/about.md', exact: true })).toHaveAttribute('href', '/pages/about/');
-  await expect(page.locator('script')).toHaveCount(0);
+  await expectOnlyAppearanceScript(page);
 });
 
 test('page deep link renders readable Markdown', async ({ page }) => {

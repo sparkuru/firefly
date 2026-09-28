@@ -203,6 +203,10 @@
   white-space: pre;
 }
 
+[data-article-content][data-content-theme='paper'] .astro-code span[style*='--shiki-light'] {
+  color: color-mix(in srgb, var(--shiki-light) 65%, var(--article-paper-ink));
+}
+
 [data-article-content][data-content-theme='paper'] :where(.wide-content, .terminal-wide) table {
   width: max-content;
   min-width: 100%;

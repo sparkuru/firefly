@@ -1,0 +1,32 @@
+.terminal-root[data-terminal-theme='firefly'][data-terminal-palette='firefly-dark'] {
+  --terminal-theme-label: "深色";
+  --terminal-color-scheme: dark;
+  --terminal-color-canvas: #111923;
+  --terminal-color-surface: #18232e;
+  --terminal-color-surface-subtle: #22313d;
+  --terminal-color-code-surface: #192531;
+  --terminal-color-text: #e1e8df;
+  --terminal-color-muted: #a5b5b3;
+  --terminal-color-command: var(--terminal-palette-green);
+  --terminal-color-command-fill: var(--terminal-color-command);
+  --terminal-color-on-command: var(--terminal-color-canvas);
+  --terminal-color-link: #86aaa5;
+  --terminal-color-warning: var(--terminal-palette-yellow);
+  --terminal-color-warning-fill: var(--terminal-color-warning);
+  --terminal-color-on-warning: var(--terminal-color-canvas);
+  --terminal-color-marker: var(--terminal-color-link);
+  --terminal-color-marker-border: var(--terminal-palette-teal);
+  --terminal-color-error: #e88749;
+  --terminal-color-error-border: var(--terminal-palette-orange);
+  --terminal-color-border: #7886a2;
+  --terminal-color-focus: var(--terminal-palette-yellow);
+  --terminal-color-highlight: color-mix(in srgb, var(--terminal-palette-yellow) 28%, transparent);
+  --terminal-color-selection: var(--terminal-color-border);
+  --terminal-color-shadow: rgb(0 0 0 / 35%);
+  --terminal-color-ambient-slate: color-mix(in srgb, var(--terminal-palette-slate) 18%, transparent);
+  --terminal-color-ambient-teal: color-mix(in srgb, var(--terminal-palette-teal) 11%, transparent);
+}
+
+.terminal-root[data-terminal-palette='firefly-dark'] .astro-code span[style*='--shiki-dark'] {
+  color: color-mix(in srgb, var(--shiki-dark) 75%, var(--terminal-color-text));
+}

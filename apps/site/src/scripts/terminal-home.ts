@@ -1,5 +1,6 @@
 import {
   DEFAULT_TERMINAL_COMMAND_REGISTRY,
+  createTerminalCommandRegistry,
   cancelCommandInput,
   completeCommand,
   createTerminalState,
@@ -13,6 +14,7 @@ import {
   formatDocumentOperand,
   navigateHistory,
   type TerminalEffect,
+  type TerminalCommandDefinition,
   type TerminalEntry,
   type TerminalExperiment,
   type TerminalFriendLink,
@@ -29,6 +31,68 @@ import {
   type DocumentNavigationCapabilityLookup
 } from '../lib/document-navigation.ts';
 import { createStreamOverflowController } from './terminal-stream-overflow';
+
+declare global {
+  interface Window {
+    fireflySetTerminalAppearance?: (name: string) => boolean;
+  }
+}
+
+const appearanceChoices = document.documentElement.dataset.terminalThemeNames?.split(' ').filter(Boolean) ?? [];
+const currentAppearance = () => document.documentElement.dataset.terminalPalette ?? 'firefly-dark';
+const appearanceCommand: TerminalCommandDefinition = {
+  name: 'theme',
+  aliases: [],
+  group: 'Session',
+  order: 20,
+  summary: 'select the Terminal appearance',
+  usage: 'theme <theme-config-name>',
+  examples: [{ command: `theme ${appearanceChoices.find((name) => name !== 'firefly-dark') ?? 'firefly-dark'}`, description: 'use a registered theme configuration' }],
+  standalone: true,
+  pureText: false,
+  redirect: 'forbidden',
+  execute: (operands) => {
+    if (operands.length === 0) {
+      return { kind: 'lines', tone: 'normal', lines: [
+        `Current theme: ${currentAppearance()}.`,
+        `Available themes: ${appearanceChoices.join(', ')}.`,
+        'Usage: theme <theme-config-name>'
+      ] };
+    }
+    const appearance = operands[0];
+    if (operands.length !== 1 || !appearanceChoices.includes(appearance)) {
+      return { kind: 'lines', tone: 'error', lines: [
+        'Usage: theme <theme-config-name>',
+        `Available themes: ${appearanceChoices.join(', ')}.`
+      ] };
+    }
+    if (window.fireflySetTerminalAppearance === undefined) {
+      return { kind: 'lines', tone: 'error', lines: ['Terminal appearance is unavailable.'] };
+    }
+    if (!window.fireflySetTerminalAppearance(appearance)) {
+      return { kind: 'lines', tone: 'error', lines: ['Terminal appearance is unavailable.'] };
+    }
+    return { kind: 'lines', tone: 'normal', lines: [`Terminal appearance: ${appearance}.`] };
+  },
+  complete: (operand, _context, invokedName) => {
+    const candidates = appearanceChoices.filter((choice) => choice.startsWith(operand));
+    if (candidates.length === 0) return { kind: 'no-match', candidates: [], ownsTab: true };
+    if (candidates.length === 1) {
+      return { kind: 'unique', value: `${invokedName} ${candidates[0]}`, candidates };
+    }
+    return {
+      kind: 'ambiguous',
+      value: `${invokedName} `,
+      candidates,
+      candidateValues: candidates.map((choice) => `${invokedName} ${choice}`),
+      ownsTab: true
+    };
+  }
+};
+const siteTerminalCommandRegistry = createTerminalCommandRegistry([
+  ...DEFAULT_TERMINAL_COMMAND_REGISTRY.definitions,
+  appearanceCommand
+]);
 
 interface TerminalNodes {
   readonly root: HTMLElement;
@@ -1145,7 +1209,10 @@ function initializeTerminalHome(
   let outputInstance = 0;
   const streamOverflow = createStreamOverflowController();
   const copyFeedbackTimers = new Map<HTMLButtonElement, number>();
-  const execute = seams.execute ?? executeCommand;
+  const execute: typeof executeCommand = seams.execute ?? ((options) => executeCommand({
+    ...options,
+    registry: siteTerminalCommandRegistry
+  }));
   const render = seams.render ?? renderEffect;
   const refreshDocumentLinks = (): void => {
     for (const link of nodes.transcript.querySelectorAll<HTMLAnchorElement>('a[data-terminal-open]')) {
@@ -1351,7 +1418,7 @@ function initializeTerminalHome(
         nodes.input.value,
         entries,
         experiments,
-        DEFAULT_TERMINAL_COMMAND_REGISTRY,
+        siteTerminalCommandRegistry,
         state.cwd,
         state.aliases
       );

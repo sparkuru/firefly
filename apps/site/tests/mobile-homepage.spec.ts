@@ -78,6 +78,172 @@ test('mobile first paint and later search retain native browsing without Termina
   await expect(page).toHaveURL(/\/pages\/about\/$/u);
 });
 
+test('mobile native home keeps appearance through document navigation', async ({ page }, info) => {
+  test.skip(info.project.name !== 'chromium-mobile-interactive');
+  await page.goto('/');
+  const appearance = page.locator('[data-terminal-quick-toolbar]');
+  const panel = page.locator('[data-terminal-quick-panel]');
+  const backdrop = page.locator('[data-terminal-quick-backdrop]');
+  await expect(appearance).toBeVisible();
+  const themeToggle = page.locator('[data-terminal-theme-toggle]');
+  const topButton = page.locator('[data-terminal-back-to-top]');
+  const registeredNames = (await page.locator('html').getAttribute('data-terminal-theme-names'))!.split(' ');
+  await expect(themeToggle).toBeVisible();
+  await expect(topButton).toBeHidden();
+  await expect(panel).toHaveAttribute('inert', '');
+  await expect(backdrop).toBeHidden();
+  await expect(page.locator('[data-terminal-theme-option]')).toHaveCount(registeredNames.length);
+  await page.screenshot({ path: info.outputPath('mobile-dark-speed-dial-closed.png') });
+  await themeToggle.click();
+  await expect(topButton).toBeVisible();
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  await expect(panel).not.toHaveAttribute('inert', '');
+  await expect(backdrop).toBeVisible();
+  await expect.poll(() => page.locator('[data-terminal-theme-option]').first()
+    .evaluate((button) => getComputedStyle(button).transform))
+    .toBe('matrix(1, 0, 0, 1, 0, 0)');
+  const motion = await page.evaluate(() => {
+    const child = document.querySelector<HTMLElement>('[data-terminal-back-to-top]')!;
+    const launcherIcon = document.querySelector<SVGElement>('[data-terminal-theme-toggle] svg')!;
+    return {
+      childDuration: getComputedStyle(child).transitionDuration,
+      launcherDuration: getComputedStyle(launcherIcon).transitionDuration
+    };
+  });
+  expect(motion).toEqual({ childDuration: '0.26s, 0.18s', launcherDuration: '0.26s' });
+  const openDelays = await page.evaluate(() => ({
+    firstTheme: Number.parseFloat(getComputedStyle(document.querySelector<HTMLElement>('[data-terminal-theme-option]')!).transitionDelay),
+    backToTop: Number.parseFloat(getComputedStyle(document.querySelector<HTMLElement>('[data-terminal-back-to-top]')!).transitionDelay)
+  }));
+  expect(openDelays.firstTheme).toBeGreaterThan(openDelays.backToTop);
+  await expect(page.locator('[data-terminal-theme-option="firefly-dark"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.screenshot({ path: info.outputPath('mobile-dark-speed-dial-open.png') });
+  await page.locator('[data-terminal-theme-option="firefly-white"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+  await expect(themeToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(topButton).toBeHidden();
+  await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
+  await expect(page.locator(root)).not.toHaveAttribute('data-terminal-controller-initialized');
+  await page.screenshot({ path: info.outputPath('mobile-light-home.png') });
+  await expect(page.locator('[data-home-search]')).toBeVisible();
+  await page.goto('/pages/about/');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+  await expect(appearance).toBeVisible();
+  await themeToggle.click();
+  await expect(themeToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('[data-terminal-theme-option="firefly-white"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.locator('[data-terminal-theme-option]').first()
+    .evaluate((button) => getComputedStyle(button).transform))
+    .toBe('matrix(1, 0, 0, 1, 0, 0)');
+  await page.screenshot({ path: info.outputPath('mobile-light-speed-dial-open.png') });
+  await backdrop.click({ position: { x: 4, y: 4 } });
+  await expect(themeToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(backdrop).toBeHidden();
+  await themeToggle.click();
+  await page.keyboard.press('Escape');
+  await expect(themeToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(themeToggle).toBeFocused();
+  await themeToggle.click();
+  await expect(topButton).toBeVisible();
+  await themeToggle.click();
+  await expect(topButton).toBeHidden();
+  await expect(panel).toHaveAttribute('inert', '');
+  const closeDelays = await page.evaluate(() => ({
+    firstTheme: Number.parseFloat(getComputedStyle(document.querySelector<HTMLElement>('[data-terminal-theme-option]')!).transitionDelay),
+    backToTop: Number.parseFloat(getComputedStyle(document.querySelector<HTMLElement>('[data-terminal-back-to-top]')!).transitionDelay)
+  }));
+  expect(closeDelays.firstTheme).toBeLessThan(closeDelays.backToTop);
+  await themeToggle.click();
+  await expect.poll(async () => {
+    const actionSizes = await appearance.locator('button').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const bounds = button.getBoundingClientRect();
+        return [bounds.width, bounds.height];
+      })
+    );
+    return actionSizes.every(([width, height]) => width >= 44 && height >= 44);
+  }).toBe(true);
+  await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
+  await topButton.click();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(4);
+  await expect(themeToggle).toBeFocused();
+  await page.locator('.terminal-document').evaluate((article) => {
+    article.setAttribute('data-document-navigator-supports-mobile', 'true');
+    const status = article.querySelector<HTMLElement>('.terminal-navigation-status');
+    if (status) status.hidden = false;
+  });
+  const status = page.locator('.terminal-navigation-status');
+  await expect(status).toBeVisible();
+  await expect.poll(async () => {
+    const launcherBox = await appearance.boundingBox();
+    const statusBox = await status.boundingBox();
+    return (statusBox?.y ?? 0) - ((launcherBox?.y ?? 0) + (launcherBox?.height ?? 0));
+  }).toBeGreaterThanOrEqual(0);
+  const bottomClearance = await page.evaluate(() => {
+    const main = document.querySelector('main')!;
+    const launcher = document.querySelector<HTMLElement>('[data-terminal-theme-toggle]')!;
+    return {
+      contentPadding: Number.parseFloat(getComputedStyle(main).paddingBottom),
+      occupiedHeight: innerHeight - launcher.getBoundingClientRect().top
+    };
+  });
+  expect(bottomClearance.contentPadding).toBeGreaterThanOrEqual(bottomClearance.occupiedHeight);
+  const chrome = await page.locator('.terminal-shell').evaluate((shell) => {
+    const button = document.querySelector<HTMLElement>('[data-terminal-theme-toggle]')!;
+    const labels = [...shell.querySelectorAll<HTMLElement>('.terminal-titlebar span')];
+    const buttonBox = button.getBoundingClientRect();
+    return {
+      horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      switchWithinViewport: buttonBox.left >= 0 && buttonBox.right <= innerWidth,
+      labelOverlap: labels.some((label) => {
+        const box = label.getBoundingClientRect();
+        return box.left < buttonBox.right && box.right > buttonBox.left &&
+          box.top < buttonBox.bottom && box.bottom > buttonBox.top;
+      })
+    };
+  });
+  expect(chrome).toEqual({ horizontalOverflow: false, switchWithinViewport: true, labelOverlap: false });
+  await page.screenshot({ path: info.outputPath('mobile-light-document.png') });
+  await page.goto('/');
+  await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+});
+
+test('mobile speed dial reverses rapid toggles and respects reduced motion', async ({ page }, info) => {
+  test.skip(info.project.name !== 'chromium-mobile-interactive');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const launcher = page.locator('[data-terminal-theme-toggle]');
+  const panel = page.locator('[data-terminal-quick-panel]');
+  const backdrop = page.locator('[data-terminal-quick-backdrop]');
+  await page.locator('main').focus();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('main')).toBeFocused();
+  await launcher.click();
+  await launcher.click();
+  await launcher.click();
+  await expect(launcher).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  await expect(backdrop).toBeVisible();
+  const reduced = await page.locator('[data-terminal-back-to-top]').evaluate((button) => {
+    const styles = getComputedStyle(button);
+    return {
+      opacity: styles.opacity,
+      transform: styles.transform,
+      durations: styles.transitionDuration.split(',').map((duration) => Number.parseFloat(duration))
+    };
+  });
+  expect(reduced.opacity).toBe('1');
+  expect(reduced.transform).toBe('matrix(1, 0, 0, 1, 0, 0)');
+  expect(reduced.durations.every((duration) => duration < 0.001)).toBe(true);
+  await backdrop.click({ position: { x: 4, y: 4 } });
+  await expect(panel).toHaveAttribute('inert', '');
+  await expect(launcher).toHaveAttribute('aria-expanded', 'false');
+  await expect(backdrop).toBeHidden();
+});
+
 test('mobile section entries browse native indexes and retain browser history', async ({ page }, info) => {
   test.skip(info.project.name !== 'chromium-mobile-static');
   await page.goto('/');

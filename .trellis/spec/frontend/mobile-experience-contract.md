@@ -12,6 +12,18 @@ document navigator support.
 The owner confirmed this homepage constraint in repair task
 `mobile-homepage-no-terminal`. Future search or layout work
 must preserve it rather than treating mobile Terminal as the baseline.
+The Firefly floating quick toolbar is a shared layout control shown only under
+the same touch-primary input predicate. Its single bottom-right `+` button
+expands direct child actions for the CSS-registered themes and back-to-top.
+Mark the current theme in the expanded actions; optional human-readable labels
+live in each theme CSS file. Each control keeps a touch-sized target. The open
+state has a barely visible click-to-close backdrop and short staggered upward
+motion; reduced-motion preference removes the movement. Closed child actions
+stay inert for keyboard and assistive input.
+It changes root colors without starting a command Terminal; desktop palette
+selection is owned by the home `theme <theme-config-name>` command, and desktop
+document pages have no visible switch. Keep the collapsed button clear of
+mobile navigator status and the viewport safe area.
 Task `mobile-homepage-folder-browsing` refines the native homepage into three
 section entries and retained friend links rather than an expanded article list.
 Owner review then selected inline section/folder navigation to avoid full-page

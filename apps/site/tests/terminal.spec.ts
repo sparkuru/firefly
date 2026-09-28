@@ -1738,6 +1738,69 @@ test('firefly theme and official JetBrains Mono assets stay same-origin', async 
   expect((await page.request.get('/licenses/JetBrainsMono-PROVENANCE.txt')).status()).toBe(200);
 });
 
+test('appearance falls back to dark when browser storage is denied', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() { throw new DOMException('Storage denied', 'SecurityError'); }
+    });
+  });
+  await page.goto('/');
+  const appearance = page.locator('[data-terminal-quick-toolbar]');
+  await expect(appearance).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-dark');
+  await submit(page, 'theme firefly-white');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+  await expect(page.locator('#terminal-command')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-dark');
+  await expect(appearance).toBeHidden();
+});
+
+test('theme help and Tab completion select only valid appearances', async ({ page }) => {
+  await page.goto('/');
+  const names = (await page.locator('html').getAttribute('data-terminal-theme-names'))!.split(' ');
+  await expect(page.locator('[data-terminal-quick-toolbar]')).toBeHidden();
+  await submit(page, 'theme');
+  await expect(page.locator('[data-terminal-transcript] .terminal-record').last()).toContainText('Current theme: firefly-dark.');
+  await expect(page.locator('[data-terminal-transcript] .terminal-record').last()).toContainText(`Available themes: ${names.join(', ')}.`);
+  await submit(page, 'help theme');
+  await expect(page.locator('[data-terminal-transcript] .terminal-record').last()).toContainText('theme <theme-config-name>');
+
+  const input = page.locator('#terminal-command');
+  await input.fill('theme ');
+  await input.press('Tab');
+  await expect(page.locator('[data-terminal-completion] [role="option"]')).toHaveText(names);
+  await input.press('Tab');
+  await expect(input).toHaveAttribute('aria-activedescendant', 'terminal-completion-option-0');
+  await input.press('Enter');
+  await expect(input).toHaveValue(`theme ${names[0]}`);
+  await input.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', names[0]);
+
+  await input.fill('theme firefly-wh');
+  await input.press('Tab');
+  await expect(input).toHaveValue('theme firefly-white');
+  await input.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+
+  await submit(page, 'theme amber');
+  await expect(page.locator('[data-terminal-transcript] .terminal-record').last()).toContainText('Usage: theme <theme-config-name>');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+
+  for (const command of ['theme firefly-dark | cat', 'echo $(theme firefly-dark)', 'theme firefly-dark > .rshell/tmp/appearance']) {
+    await submit(page, command);
+    await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+  }
+});
+
+test('legacy appearance storage migrates to registered theme names', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('firefly-terminal-appearance', 'light'));
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-terminal-palette', 'firefly-white');
+  expect(await page.evaluate(() => localStorage.getItem('firefly-terminal-appearance'))).toBe('firefly-white');
+});
+
 test('cat appends trusted inline documents without navigation and scopes repeated IDs', async ({ page }) => {
   await page.goto('/');
   const workflow = await getWorkflowPaths(page);

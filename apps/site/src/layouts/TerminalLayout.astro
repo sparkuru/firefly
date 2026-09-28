@@ -5,6 +5,7 @@ import articleContentCss from '../styles/article-content.css?raw';
 import paperCss from '../styles/content-themes/paper.css?raw';
 import SiteHead from '../components/SiteHead.astro';
 import { SITE_CONFIG } from '../lib/site-config.mjs';
+import { TERMINAL_THEME_CSS, TERMINAL_THEME_NAMES, TERMINAL_THEME_OPTIONS } from '../lib/terminal-theme-registry';
 
 interface Props {
   title?: string;
@@ -25,8 +26,119 @@ const { title, description, path, home = false, ...headProps } = Astro.props;
 ---
 
 <!doctype html>
-<html lang={SITE_CONFIG.site.language} class="terminal-root" data-terminal-theme="firefly">
+<html lang={SITE_CONFIG.site.language} class="terminal-root" data-terminal-theme="firefly" data-terminal-palette="firefly-dark" data-terminal-theme-names={TERMINAL_THEME_NAMES.join(' ')}>
   <head>
+    <script is:inline>
+      (() => {
+        const storageKey = 'firefly-terminal-appearance';
+        const root = document.documentElement;
+        const names = root.dataset.terminalThemeNames?.split(' ') ?? [];
+        const defaultTheme = 'firefly-dark';
+        const mobile = window.matchMedia('(hover: none) and (pointer: coarse)');
+        const normalize = (name) => ({ dark: 'firefly-dark', light: 'firefly-white' })[name] ?? name;
+        try {
+          const raw = localStorage.getItem(storageKey);
+          const stored = normalize(raw);
+          if (names.includes(stored)) {
+            root.dataset.terminalPalette = stored;
+            if (raw !== stored) localStorage.setItem(storageKey, stored);
+          }
+        } catch {
+          // Private browsing or storage policy may deny access.
+        }
+
+        window.fireflySetTerminalAppearance = (name) => {
+          if (!names.includes(name)) return false;
+          root.dataset.terminalPalette = name;
+          document.querySelectorAll('[data-terminal-theme-option]').forEach((option) => {
+            if (option instanceof HTMLButtonElement) {
+              option.setAttribute('aria-pressed', String(option.dataset.terminalThemeOption === name));
+            }
+          });
+          try {
+            localStorage.setItem(storageKey, name);
+          } catch {
+            // The current page still switches when storage is unavailable.
+          }
+          return true;
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const toolbar = document.querySelector('[data-terminal-quick-toolbar]');
+          const backdrop = document.querySelector('[data-terminal-quick-backdrop]');
+          const launcher = document.querySelector('[data-terminal-theme-toggle]');
+          const panel = document.querySelector('[data-terminal-quick-panel]');
+          const options = [...document.querySelectorAll('[data-terminal-theme-option]')];
+          const top = document.querySelector('[data-terminal-back-to-top]');
+          if (!(toolbar instanceof HTMLElement) || !(backdrop instanceof HTMLElement) ||
+              !(launcher instanceof HTMLButtonElement) ||
+              !(panel instanceof HTMLElement) || !options.every((option) => option instanceof HTMLButtonElement) ||
+              !(top instanceof HTMLButtonElement)) return;
+          const selectedName = root.dataset.terminalPalette ?? defaultTheme;
+          options.forEach((option) => {
+            option.setAttribute('aria-pressed', String(option.dataset.terminalThemeOption === selectedName));
+          });
+          const close = (focus = false) => {
+            const returnFocus = focus || panel.contains(document.activeElement);
+            toolbar.removeAttribute('data-open');
+            backdrop.removeAttribute('data-open');
+            launcher.setAttribute('aria-expanded', 'false');
+            panel.setAttribute('aria-hidden', 'true');
+            panel.inert = true;
+            if (returnFocus) launcher.focus();
+          };
+          const syncMobile = () => {
+            if (!mobile.matches && toolbar.contains(document.activeElement)) {
+              document.querySelector('main')?.focus({ preventScroll: true });
+            }
+            if (!mobile.matches) close();
+            toolbar.hidden = !mobile.matches;
+            panel.hidden = !mobile.matches;
+            backdrop.hidden = !mobile.matches;
+          };
+          syncMobile();
+          mobile.addEventListener('change', syncMobile);
+          launcher.addEventListener('click', () => {
+            if (toolbar.hasAttribute('data-open')) {
+              close();
+              return;
+            }
+            toolbar.setAttribute('data-open', '');
+            backdrop.setAttribute('data-open', '');
+            panel.inert = false;
+            panel.setAttribute('aria-hidden', 'false');
+            launcher.setAttribute('aria-expanded', 'true');
+            options.find((option) => option.getAttribute('aria-pressed') === 'true')?.focus();
+          });
+          options.forEach((option) => {
+            option.addEventListener('click', () => {
+              window.fireflySetTerminalAppearance(option.dataset.terminalThemeOption);
+              close(true);
+            });
+          });
+          top.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+            close(true);
+          });
+          document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && toolbar.hasAttribute('data-open')) close(true);
+          });
+          document.addEventListener('pointerdown', (event) => {
+            if (toolbar.hasAttribute('data-open') && !toolbar.contains(event.target)) close();
+          });
+          const status = document.querySelector('.terminal-navigation-status');
+          if (status instanceof HTMLElement) {
+            const updateClearance = () => {
+              root.style.setProperty('--terminal-mobile-status-height',
+                getComputedStyle(status).display === 'none' ? '0px' : `${status.getBoundingClientRect().height}px`);
+            };
+            new ResizeObserver(updateClearance).observe(status);
+            mobile.addEventListener('change', updateClearance);
+            updateClearance();
+          }
+        });
+      })();
+    </script>
     <SiteHead title={title} description={description} home={home} {...headProps} />
     <link
       rel="preload"
@@ -42,7 +154,7 @@ const { title, description, path, home = false, ...headProps } = Astro.props;
       type="font/woff2"
       crossorigin="anonymous"
     />
-    <style is:inline set:html={`${terminalCss}\n${articleContentCss}\n${paperCss}\n${diagramCss}`}></style>
+    <style is:inline set:html={`${terminalCss}\n${TERMINAL_THEME_CSS}\n${articleContentCss}\n${paperCss}\n${diagramCss}`}></style>
   </head>
   <body class:list={['terminal-body', { 'terminal-body--home': home }]}>
     <a class="terminal-skip" href="#main-content">Skip to main content</a>
@@ -62,6 +174,28 @@ const { title, description, path, home = false, ...headProps } = Astro.props;
       >
         <slot />
       </main>
+    </div>
+    <div class="terminal-quick-backdrop" data-terminal-quick-backdrop hidden aria-hidden="true"></div>
+    <div class="terminal-quick-toolbar" style={`--terminal-quick-hide-delay: ${TERMINAL_THEME_OPTIONS.length * 45 + 260}ms`} data-terminal-quick-toolbar hidden>
+      <div class="terminal-quick-panel" id="terminal-quick-panel" role="group" aria-label="快捷操作" aria-hidden="true" data-terminal-quick-panel hidden inert>
+        {TERMINAL_THEME_OPTIONS.map(({ name, label }, index) => (
+          <button type="button" class="terminal-quick-child" style={`--terminal-quick-open-delay: ${(TERMINAL_THEME_OPTIONS.length - index) * 45}ms; --terminal-quick-close-delay: ${index * 45}ms`} data-terminal-theme-option={name} aria-label={`切换主题：${label}`} aria-pressed={name === 'firefly-dark' ? 'true' : 'false'}>
+            <span class="terminal-quick-child__label">{label}</span>
+            <span class="terminal-quick-child__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"></circle><path d="M12 5a7 7 0 0 1 0 14Z" fill="currentColor" stroke="none"></path></svg>
+            </span>
+          </button>
+        ))}
+        <button class="terminal-quick-child" type="button" style={`--terminal-quick-open-delay: 0ms; --terminal-quick-close-delay: ${TERMINAL_THEME_OPTIONS.length * 45}ms`} data-terminal-back-to-top aria-label="回到顶部">
+          <span class="terminal-quick-child__label">回到顶部</span>
+          <span class="terminal-quick-child__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"></path></svg>
+          </span>
+        </button>
+      </div>
+      <button class="terminal-quick-launcher" type="button" data-terminal-theme-toggle aria-label="快捷操作" aria-controls="terminal-quick-panel" aria-expanded="false" title="快捷操作">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
     </div>
   </body>
 </html>

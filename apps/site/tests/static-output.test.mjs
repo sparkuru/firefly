@@ -630,8 +630,18 @@ test('Terminal components consume the root semantic theme contract', async () =>
   const css = await readFile(path.join(sourceRoot, 'styles/terminal.css'), 'utf8');
   const theme = /\.terminal-root\[data-terminal-theme='firefly'\]\s*\{[\s\S]*?\n\}/u.exec(css);
   assert.ok(theme);
-
   const componentCss = css.replace(theme[0], '');
+  const themeDirectory = path.join(sourceRoot, 'styles/terminal-themes');
+  const names = (await readdir(themeDirectory)).filter((file) => file.endsWith('.css')).map((file) => file.slice(0, -4)).sort();
+  const registry = await readFile(path.join(sourceRoot, 'lib/terminal-theme-registry.ts'), 'utf8');
+  assert.match(registry, /import\.meta\.glob\('\.\.\/styles\/terminal-themes\/\*\.css'/u);
+  assert.match(registry, /missing \$\{token\}/u);
+  assert.match(registry, /Invalid Terminal theme filename/u);
+  assert.ok(names.includes('firefly-dark'));
+  assert.ok(names.includes('firefly-white'));
+  const builtHome = await readFile(path.join(distRoot, 'index.html'), 'utf8');
+  assert.match(builtHome, /data-terminal-palette="firefly-dark"/u);
+  assert.match(builtHome, new RegExp(`data-terminal-theme-names="${names.join(' ')}"`, 'u'));
   const semanticTokens = [
     '--terminal-color-scheme',
     '--terminal-color-canvas',
@@ -646,6 +656,7 @@ test('Terminal components consume the root semantic theme contract', async () =>
     '--terminal-color-border',
     '--terminal-color-focus',
     '--terminal-color-shadow',
+    '--terminal-color-code-surface',
     '--terminal-font-family',
     '--terminal-font-size',
     '--terminal-line-height',
@@ -656,8 +667,19 @@ test('Terminal components consume the root semantic theme contract', async () =>
     '--terminal-space-prompt-settlement'
   ];
   for (const token of semanticTokens) {
-    assert.match(theme[0], new RegExp(`${token}:`, 'u'));
-    assert.match(componentCss, new RegExp(`var\\(${token}\\)`, 'u'));
+    if (!['--terminal-color-code-surface'].includes(token)) {
+      assert.match(css, new RegExp(`var\\(${token}\\)`, 'u'));
+    }
+  }
+  assert.match(componentCss, /background: var\(--terminal-color-code-surface\)/u);
+  for (const name of names) {
+    const themeCss = await readFile(path.join(themeDirectory, `${name}.css`), 'utf8');
+    assert.match(themeCss, new RegExp(`data-terminal-palette='${name}'`, 'u'));
+    for (const token of semanticTokens.filter((value) => value.startsWith('--terminal-color-'))) {
+      assert.match(themeCss, new RegExp(`${token}:`, 'u'));
+    }
+    assert.match(builtHome, new RegExp(`data-terminal-theme-option="${name}"`, 'u'));
+    assert.match(builtHome, new RegExp(`data-terminal-palette='${name}'`, 'u'));
   }
   assert.doesNotMatch(componentCss, /#[0-9a-f]{3,8}\b|(?:rgb|hsl)a?\(/iu);
 });
@@ -740,7 +762,15 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(searchSection, /<input\b[^>]*type="search"/u);
   assert.equal((searchSection.match(/<button\b/gu) ?? []).length, 2);
   assert.equal((home.match(/data-home-search-metadata=/gu) ?? []).length, templatePaths.length);
-  assert.doesNotMatch(withoutTemplates.replace(searchSection, ''), /<button\b/iu);
+  const quickToolbar = /<div\b[^>]*data-terminal-quick-toolbar[^>]*>[\s\S]*?<button\b[^>]*data-terminal-theme-toggle[^>]*>[\s\S]*?<\/button>\s*<\/div>/u.exec(withoutTemplates)?.[0] ?? '';
+  assert.match(quickToolbar, /\bhidden\b/u);
+  assert.match(quickToolbar, /data-terminal-theme-toggle/u);
+  assert.match(quickToolbar, /data-terminal-theme-option/u);
+  assert.match(quickToolbar, /data-terminal-back-to-top/u);
+  assert.equal((quickToolbar.match(/data-terminal-back-to-top/gu) ?? []).length, 1);
+  assert.doesNotMatch(quickToolbar, /terminal-quick-dock|<select\b/u);
+  assert.equal((withoutTemplates.match(/<div\b[^>]*data-terminal-quick-toolbar/gu) ?? []).length, 1);
+  assert.doesNotMatch(withoutTemplates.replace(searchSection, '').replace(quickToolbar, ''), /<button\b/iu);
   for (const body of templateBodies) {
     assert.match(body, /<button\b[^>]*data-terminal-return/u);
     assert.match(body, /<button\b[^>]*data-terminal-collapse[^>]*aria-expanded="true"[^>]*aria-controls="[^"]+"/u);
