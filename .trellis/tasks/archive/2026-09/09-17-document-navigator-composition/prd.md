@@ -55,21 +55,21 @@ external workspace edits.
 
 ## Acceptance Criteria
 
-- [ ] Posts and pages render in all four cells; omission preserves today's enabled
+- [x] Posts and pages render in all four cells; omission preserves today's enabled
       behavior; both registered themes still render without changes.
-- [ ] Invalid site configuration and resolver definitions reject duplicates,
+- [x] Invalid site configuration and resolver definitions reject duplicates,
       unknown IDs, wrong types, empty values and invalid profiles before document
       rendering.
-- [ ] Static disabled pages contain complete readable content, working links,
+- [x] Static disabled pages contain complete readable content, working links,
       heading anchors and outline, while containing no navigator DOM/hooks/status/
       entry and no navigator-only import/preload/style edge or browser request.
-- [ ] Enabled pages retain current profile behavior and `#document-navigator`.
+- [x] Enabled pages retain current profile behavior and `#document-navigator`.
       A test-only alternate navigator definition exercises resolver composition
       without shipping another production navigator.
-- [ ] The destination capability lookup is generated from public canonical
+- [x] The destination capability lookup is generated from public canonical
       documents, agrees with rendered pages, preserves query handling and same-
       origin validation, and gives the browser the approved enabled/disabled URL.
-- [ ] No navigator or theme fields enter X Core metadata or the content schema;
+- [x] No navigator or theme fields enter X Core metadata or the content schema;
       active legacy fragment behavior is absent.
 
 ## Risks and rollback

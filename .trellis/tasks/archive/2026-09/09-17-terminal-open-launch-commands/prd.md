@@ -40,17 +40,17 @@ host process execution/building and changes to canonical route validation.
 
 ## Acceptance Criteria
 
-- [ ] Help/registry/completion/execution use `open` for documents and `launch` for
+- [x] Help/registry/completion/execution use `open` for documents and `launch` for
       experiments; `cat` stays inline and `vim` is not registered.
-- [ ] Cwd-relative/rooted paths, exact listed leaves, missing/extra operands,
+- [x] Cwd-relative/rooted paths, exact listed leaves, missing/extra operands,
       directories, wrong resource kinds, unknown/private/unlisted targets and
       standalone policies have bounded errors and no navigation on failure.
-- [ ] Document `open` destination navigation preserves canonical route/query,
+- [x] Document `open` destination navigation preserves canonical route/query,
       same-origin validation and A's enabled/disabled fragment behavior; pure
       effects remain fragment-free.
-- [ ] Completion inserts safe physical operands, never titles/host paths, and
+- [x] Completion inserts safe physical operands, never titles/host paths, and
       uses the correct command's candidates and labels.
-- [ ] No old experiment-open dispatch, vim alias, history conversion, redirect or
+- [x] No old experiment-open dispatch, vim alias, history conversion, redirect or
       compatibility branch exists; active legacy fragment behavior is absent.
 
 ## Risks and rollback

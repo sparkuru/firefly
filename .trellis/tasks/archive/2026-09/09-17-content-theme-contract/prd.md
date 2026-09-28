@@ -41,18 +41,18 @@ reader overrides, theme-lock metadata, X Core/theme payloads and structural
 
 ## Acceptance Criteria
 
-- [ ] New, omitted, old-only, both-name, unknown and wrong-type input cases match
+- [x] New, omitted, old-only, both-name, unknown and wrong-type input cases match
       the approved migration matrix.
-- [ ] Repository fixtures, `blog-meta`, schema, resolver/types, renderer props,
+- [x] Repository fixtures, `blog-meta`, schema, resolver/types, renderer props,
       DOM attribute, CSS and docs agree on `contentTheme` with no accepted alias.
-- [ ] Omitted/default and explicit paper styling render in all four composition
+- [x] Omitted/default and explicit paper styling render in all four composition
       cells and remain unchanged through navigator entry/exit and no-JS reading.
-- [ ] Exactly one `data-content-theme` exists on the content root; the structural
+- [x] Exactly one `data-content-theme` exists on the content root; the structural
       `[data-article-content]` hook remains, and no theme data enters X Core/plugin
       payloads or route identity.
-- [ ] No public picker, reader override, theme-switching runtime or external
+- [x] No public picker, reader override, theme-switching runtime or external
       workspace mutation is introduced; old-field diagnostics are actionable.
-- [ ] Active legacy fragment behavior remains absent.
+- [x] Active legacy fragment behavior remains absent.
 
 ## Risks and rollback
 

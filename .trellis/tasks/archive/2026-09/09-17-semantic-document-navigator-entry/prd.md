@@ -49,18 +49,18 @@ behavior, public theme switching, old-fragment compatibility and route changes.
 
 ## Acceptance Criteria
 
-- [ ] Entry is visible for enabled semantic posts/pages with and without an
+- [x] Entry is visible for enabled semantic posts/pages with and without an
       outline, absent for `none`, and has native anchor semantics.
-- [ ] Direct fragment load, same-page activation, repeat activation, local exit,
+- [x] Direct fragment load, same-page activation, repeat activation, local exit,
       focus restoration, viewport preservation and Back/Forward match the lifecycle
       table in the parent design.
-- [ ] Enhanced toggles do not reload, add a history entry, call forced movement or
+- [x] Enhanced toggles do not reload, add a history entry, call forced movement or
       introduce a transition delay; ordinary heading navigation remains native.
-- [ ] No-JS static Chromium and interactive desktop/mobile checks prove complete
+- [x] No-JS static Chromium and interactive desktop/mobile checks prove complete
       reading, keyboard/touch operation, visible focus and editable/control guards.
-- [ ] Firefly `:q` still returns home; semantic `:q` and the exit control stay on
+- [x] Firefly `:q` still returns home; semantic `:q` and the exit control stay on
       the document and use only the current fragment contract.
-- [ ] No active old fragment, global shortcut, picker, editor or compatibility
+- [x] No active old fragment, global shortcut, picker, editor or compatibility
       branch is introduced.
 
 ## Risks and rollback
