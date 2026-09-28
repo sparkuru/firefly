@@ -1817,3 +1817,24 @@ Reconciled the four completed child PRD acceptance checklists against their reco
 ### Status
 
 [OK] **Completed**
+
+
+## Session 80: Firefly Terminal themes and mobile speed dial
+
+**Date**: 2026-09-28
+**Task**: Firefly Terminal themes and mobile speed dial
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Added CSS-registered dark and white Terminal themes, dynamic desktop theme completion, readable code blocks, and an accessible animated mobile speed dial; verified tracked build, static output, and focused browser checks.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `08045e3` | (see git log) |
+
+### Status
+
+[OK] **Completed**
