@@ -41,6 +41,11 @@ function assertContentThemeBoundary(html, route) {
   );
 }
 
+function assertSharedFavicon(html, route) {
+  const iconLinks = html.match(/<link\b[^>]*\brel="icon"[^>]*>/gu) ?? [];
+  assert.deepEqual(iconLinks, ['<link rel="icon" type="image/png" href="/favicon.png">'], `${route}: expected one shared PNG icon link`);
+}
+
 function splitCssSelectors(selectorList) {
   const selectors = [];
   let start = 0;
@@ -232,6 +237,8 @@ test('static build emits only the implemented route surface', async () => {
   assert.deepEqual(diagrams, [...diagramReferences].sort(), 'publish exactly the diagrams referenced by public HTML');
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
     ...diagrams,
+    'favicon.ico',
+    'favicon.png',
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
     'fonts/JetBrainsMono-Regular-v2.304.woff2',
     'licenses/JetBrainsMono-OFL-1.1.txt',
@@ -247,6 +254,8 @@ test('shared head metadata and public discovery files follow site configuration'
   const home = await readFile(path.join(distRoot, 'index.html'), 'utf8');
   const article = await readFile(path.join(distRoot, 'posts/ai/llm-workflow-with-trellis/index.html'), 'utf8');
   const robots = await readFile(path.join(distRoot, 'robots.txt'), 'utf8');
+  assertSharedFavicon(home, 'home');
+  assertSharedFavicon(article, 'Terminal article');
   assert.match(home, new RegExp('<html lang="' + SITE_CONFIG.site.language + '"', 'u'));
   assert.match(home, new RegExp('<title>' + SITE_CONFIG.site.name + '</title>', 'u'));
   assert.match(home, /friend links/u);
@@ -540,6 +549,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
   }
   for (const html of semanticDocumentRoutes) {
+    assertSharedFavicon(html, 'semantic document');
     assert.match(html, /class="semantic-document"/u);
     assert.doesNotMatch(html, /class="terminal-root"/u);
     assert.match(html, new RegExp(`href="/${stylesheet.replaceAll('.', '\\.')}`));

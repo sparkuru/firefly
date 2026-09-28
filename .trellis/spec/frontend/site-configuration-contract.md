@@ -216,6 +216,27 @@ terracotta/ochre accents inside that root only; there is no picker or runtime
 switcher. Unknown keys remain schema errors. These fields do not change route
 ownership or draft/private filtering.
 
+#### Terminal palette boundary
+
+`TerminalLayout.astro` selects `data-terminal-theme="firefly"` on the page
+root. `apps/site/src/styles/terminal.css` owns its palette under that selector:
+the exact reference primitives are `--terminal-palette-slate: #616c8c`,
+`--terminal-palette-teal: #568c87`, `--terminal-palette-green: #b2d59b`,
+`--terminal-palette-yellow: #f2de79`, and
+`--terminal-palette-orange: #d95f18`. Components consume the
+`--terminal-color-*` semantic tokens instead of repeating raw colors. Dark
+canvas/surface layers and brighter derived teal/orange text tokens preserve
+legibility where the reference swatches are too dim on raised surfaces.
+
+The default article content inherits the Terminal root's mapped
+`--article-content-*` tokens; authored `paper` content overrides only its
+content root. The mobile homepage consumes the same colors for native
+browsing/search but does not start a command Terminal. When changing this
+palette, keep the root token contract checked by
+`apps/site/tests/static-output.test.mjs` and verify representative text,
+controls, document navigation, and mobile surfaces in browser tests; normal
+text should reach 4.5:1 contrast and visible control boundaries/focus 3:1.
+
 #### content theme registry contract
 
 ##### 1. Scope / Trigger
@@ -324,6 +345,17 @@ generation. Only the final public static route set is an input; drafts,
 private documents, source paths, and unlisted/non-main experiment routes must
 not be added manually.
 
+#### Public favicon assets
+
+`apps/site/public/favicon.png` and `favicon.ico` are copied unchanged to the
+site root during the Astro build. The shared `SiteHead.astro` emits one
+`<link rel="icon" type="image/png" href="/favicon.png">` for both Terminal
+and Semantic routes. Adding or removing a root `public/` asset changes the
+published file inventory: update the exact allowlist in
+`apps/site/tests/static-output.test.mjs` along with the asset and any head
+reference, then verify the built files and route heads. A successful Astro
+page-generation phase alone does not mean the strict static-output gate passed.
+
 ### 4. Validation & Error Matrix
 
 | Condition | Required result |
@@ -345,6 +377,7 @@ not be added manually.
 | root/no-leading-slash/`.html` sitemap input | normalize to one canonical trailing-slash path |
 | `/404` or non-main `/lab/<experiment>/` sitemap input | exclude from sitemap |
 | missing public route in final build | do not invent a sitemap entry from source paths |
+| favicon missing from build or shared head | fail the static-output inventory or shared-head assertion |
 
 ### 5. Good / Base / Bad Cases
 
@@ -378,6 +411,8 @@ not be added manually.
 - `./sam npm --prefix apps/site run build`: default output contains robots and
   omits sitemap when the default origin is omitted; metadata and terminal prompt
   match the active TOML.
+- Static output asserts both root favicon files and exactly one PNG icon link
+  on home, Terminal document, and Semantic document routes.
 - Custom-config smoke: temporarily use a safe non-default origin/identity,
   build, assert `lang`, title, prompt, canonical, OG/Twitter image, robots
   Sitemap, and non-empty final sitemap, then restore the default TOML and rerun

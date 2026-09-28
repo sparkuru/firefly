@@ -40,6 +40,22 @@ async function expectHeadingLevels(page: Page, levels: number[]) {
   expect(actual).toEqual(levels);
 }
 
+function contrastRatio(foreground: string, background: string): number {
+  const luminance = (color: string) => {
+    const channels = color.match(/[\d.]+/gu)?.slice(0, 3).map(Number);
+    if (channels?.length !== 3) throw new Error(`Unexpected computed color: ${color}`);
+    const [red, green, blue] = channels.map((channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return red * 0.2126 + green * 0.7152 + blue * 0.0722;
+  };
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
 async function expectTerminalDocument(page: Page, expectedPath: string | RegExp) {
   await expect(page.locator('html.terminal-root[data-terminal-theme="firefly"]')).toHaveCount(1);
   await expect(page.locator('.terminal-document')).toHaveCount(1);
@@ -76,6 +92,64 @@ async function getWorkflowPaths(page: Page): Promise<WorkflowPaths> {
 }
 
 const workflowDocumentPath = /^~\/blog\/posts\/ai\/[^/]*llm-workflow-with-trellis\.md$/u;
+
+test('Terminal palette keeps home and document layers readable', async ({ page }) => {
+  await page.goto('/');
+  const home = await page.locator('html.terminal-root').evaluate((root) => {
+    const styles = getComputedStyle(root);
+    const link = root.querySelector<HTMLElement>('.terminal-recovery a');
+    const heading = root.querySelector<HTMLElement>('.terminal-recovery h2');
+    if (link === null || heading === null) throw new Error('Missing native home content.');
+    return {
+      swatches: ['slate', 'teal', 'green', 'yellow', 'orange'].map((name) =>
+        styles.getPropertyValue(`--terminal-palette-${name}`).trim()
+      ),
+      canvas: styles.backgroundColor,
+      body: styles.color,
+      link: getComputedStyle(link).color,
+      headingAccent: getComputedStyle(heading).borderInlineStartColor,
+      command: styles.getPropertyValue('--terminal-color-command').trim(),
+      focus: styles.getPropertyValue('--terminal-color-focus').trim(),
+      ambient: styles.backgroundImage
+    };
+  });
+  expect(home.swatches).toEqual(['#616c8c', '#568c87', '#b2d59b', '#f2de79', '#d95f18']);
+  expect(home.canvas).toBe('rgb(17, 25, 35)');
+  expect(home.ambient).toContain('radial-gradient');
+  expect(home.command).toBe('#b2d59b');
+  expect(home.focus).toBe('#f2de79');
+  expect(home.headingAccent).toBe('rgb(217, 95, 24)');
+  expect(contrastRatio(home.body, home.canvas)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(home.link, home.canvas)).toBeGreaterThanOrEqual(4.5);
+  if (await page.evaluate((query) => matchMedia(query).matches, MOBILE_DOCUMENT_NAVIGATION_QUERY)) {
+    await expect(page.locator('[data-home-root-navigation]')).toBeVisible();
+    await expect(page.locator('[data-terminal-session]')).toBeHidden();
+  }
+
+  await page.goto('/posts/ai/llm-workflow-with-trellis/');
+  const documentLayers = await page.locator('.terminal-shell').evaluate((shell) => {
+    const root = document.documentElement;
+    const titlebar = shell.querySelector<HTMLElement>('.terminal-titlebar');
+    const link = shell.querySelector<HTMLElement>('.terminal-document a');
+    if (titlebar === null || link === null) throw new Error('Missing Terminal document layer.');
+    return {
+      canvas: getComputedStyle(root).backgroundColor,
+      shell: getComputedStyle(shell).backgroundColor,
+      shellBorder: getComputedStyle(shell).borderTopColor,
+      titlebar: getComputedStyle(titlebar).backgroundColor,
+      titlebarText: getComputedStyle(titlebar).color,
+      titlebarAccent: getComputedStyle(titlebar).borderInlineStartColor,
+      link: getComputedStyle(link).color
+    };
+  });
+  expect(documentLayers.shell).toBe('rgb(24, 35, 46)');
+  expect(documentLayers.titlebar).toBe('rgb(34, 49, 61)');
+  expect(documentLayers.shellBorder).toBe('rgb(120, 134, 162)');
+  expect(documentLayers.titlebarAccent).toBe('rgb(217, 95, 24)');
+  expect(contrastRatio(documentLayers.shellBorder, documentLayers.canvas)).toBeGreaterThanOrEqual(3);
+  expect(contrastRatio(documentLayers.titlebarText, documentLayers.titlebar)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(documentLayers.link, documentLayers.shell)).toBeGreaterThanOrEqual(4.5);
+});
 
 test('home exposes Terminal fallback content and visible keyboard focus', async ({ page }) => {
   await page.goto('/');

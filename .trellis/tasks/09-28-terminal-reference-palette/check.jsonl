@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend quality checklist and relevant topic contract index."}
+{"file":".trellis/spec/frontend/mobile-experience-contract.md","reason":"Verify mobile home still omits the command Terminal."}
+{"file":".trellis/spec/frontend/development-runtime.md","reason":"Validate only through the repository's wrapped command boundary."}
+{"file":".trellis/spec/frontend/site-configuration-contract.md","reason":"Review shared head metadata and favicon asset delivery without changing authored theme ownership."}
+{"file":".trellis/spec/trellis-plus/validation-profile.md","reason":"Select the focused site and browser checks."}
+{"file":".trellis/tasks/09-28-terminal-reference-palette/research/palette-contrast.md","reason":"Audit exact source hues, derived foregrounds, and representative contrast."}

@@ -15,21 +15,30 @@
 }
 
 .terminal-root[data-terminal-theme='firefly'] {
+  --terminal-palette-slate: #616c8c;
+  --terminal-palette-teal: #568c87;
+  --terminal-palette-green: #b2d59b;
+  --terminal-palette-yellow: #f2de79;
+  --terminal-palette-orange: #d95f18;
   --terminal-color-scheme: dark;
-  --terminal-color-canvas: #050806;
-  --terminal-color-surface: #080d0a;
-  --terminal-color-surface-subtle: #0d1510;
-  --terminal-color-text: #d6e7db;
-  --terminal-color-muted: #91a99a;
-  --terminal-color-command: #63f59a;
-  --terminal-color-link: #7bf7a8;
-  --terminal-color-warning: #ffd166;
-  --terminal-color-marker: var(--terminal-color-warning);
-  --terminal-color-error: #ff8090;
-  --terminal-color-border: #2e4937;
-  --terminal-color-focus: #9affbd;
-  --terminal-color-highlight: rgb(255 209 102 / 28%);
+  --terminal-color-canvas: #111923;
+  --terminal-color-surface: #18232e;
+  --terminal-color-surface-subtle: #22313d;
+  --terminal-color-text: #e1e8df;
+  --terminal-color-muted: #a5b5b3;
+  --terminal-color-command: var(--terminal-palette-green);
+  --terminal-color-link: #86aaa5;
+  --terminal-color-warning: var(--terminal-palette-yellow);
+  --terminal-color-marker: var(--terminal-color-link);
+  --terminal-color-marker-border: var(--terminal-palette-teal);
+  --terminal-color-error: #e88749;
+  --terminal-color-error-border: var(--terminal-palette-orange);
+  --terminal-color-border: #7886a2;
+  --terminal-color-focus: var(--terminal-palette-yellow);
+  --terminal-color-highlight: color-mix(in srgb, var(--terminal-palette-yellow) 28%, transparent);
   --terminal-color-shadow: rgb(0 0 0 / 35%);
+  --terminal-color-ambient-slate: color-mix(in srgb, var(--terminal-palette-slate) 18%, transparent);
+  --terminal-color-ambient-teal: color-mix(in srgb, var(--terminal-palette-teal) 11%, transparent);
   --article-content-text: var(--terminal-color-text);
   --article-content-muted: var(--terminal-color-muted);
   --article-content-surface: var(--terminal-color-canvas);
@@ -55,6 +64,9 @@
   min-height: 100%;
   color-scheme: var(--terminal-color-scheme);
   background: var(--terminal-color-canvas);
+  background-image:
+    radial-gradient(ellipse at 12% 3%, var(--terminal-color-ambient-slate), transparent 44%),
+    radial-gradient(ellipse at 88% 92%, var(--terminal-color-ambient-teal), transparent 54%);
   color: var(--terminal-color-text);
   font-family: var(--terminal-font-family);
 }
@@ -98,7 +110,9 @@
   min-height: 2.75rem;
   padding: 0.65rem 1rem;
   border-bottom: 1px solid var(--terminal-color-border);
+  border-inline-start: 3px solid var(--terminal-palette-orange);
   background: var(--terminal-color-surface-subtle);
+  box-shadow: inset 0 2px var(--terminal-palette-slate);
   color: var(--terminal-color-muted);
   font-size: 0.875rem;
   letter-spacing: 0.04em;
@@ -259,7 +273,7 @@
 }
 
 .terminal-root .content-marker {
-  border: 1px solid var(--terminal-color-marker);
+  border: 1px solid var(--terminal-color-marker-border);
   padding-inline: 0.5ch;
   color: var(--terminal-color-marker);
   font-weight: 500;
@@ -365,6 +379,8 @@
 
 .terminal-recovery h2 {
   margin-block: 0.4rem 0.75rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 3px solid var(--terminal-palette-orange);
   color: var(--terminal-color-text);
   font-weight: 500;
   font-size: clamp(1.45rem, 4vw, 2rem);
@@ -413,7 +429,7 @@
 .terminal-failure {
   margin-block: 1.25rem;
   padding-left: 0.75rem;
-  border-left: 3px solid var(--terminal-color-error);
+  border-left: 3px solid var(--terminal-color-error-border);
 }
 
 .terminal-failure[hidden],
