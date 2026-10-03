@@ -1867,3 +1867,32 @@ Implemented and independently checked the standalone memo public/config contract
 ### Next Steps
 
 - Review memo-service design and context manifests before activation.
+
+
+## Session 82: Complete independent memo service
+
+**Date**: 2026-10-04
+**Task**: Complete independent memo service
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and independently reviewed the private memo runtime: submissions, single-use verification, authenticated moderation/CLI, transactional encrypted outbox, persistent rates and retention, exact public exports, snapshot backup/restore and nonroot Docker image. Owner confirmed the work commit and service-only archival on 2026-10-04; parent progress is 2/4. Site and publication/runtime remain planning.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bcbca34` | (see git log) |
+
+### Testing
+
+- [OK] Service29/29 and memo contract12/12; check/build, strict Node declarations, shell syntax/lint/format and disposable Docker isolation/recreation passed. No product code changed after these gates.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Present memo-site as the next ready child; review its planning against the implemented service contract before separate owner-authorized activation.
