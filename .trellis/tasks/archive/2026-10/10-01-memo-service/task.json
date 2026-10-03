@@ -1,0 +1,30 @@
+{
+  "id": "memo-service",
+  "name": "memo-service",
+  "title": "Build independent memo service",
+  "description": "实现独立 memo Docker 服务的提交、邮箱验证、私有存储、审核 API/CLI、导出、备份与健康检查；依赖 memo-contract 的稳定契约。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-10-01",
+  "completedAt": "2026-10-04",
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": "bcbca34",
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-28-public-memo-stream",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "owner_approval": "2026-10-03: Owner approved current project progress and requested implementation; implement the prepared memo-service artifacts, preserve parent planning and downstream task boundaries.",
+    "quality_gate": "2026-10-03: Independent full-scope review passed; service tests 29/29, memo contract 12/12, check/build, strict Node declaration consumption, shell syntax/lint/format and Docker recreation/isolation passed. Work committed in bcbca34 after owner confirmation on 2026-10-04.",
+    "commit_approval": "2026-10-04: Owner confirmed the presented work commit, service-only archival and session recording; work commit bcbca34."
+  }
+}
