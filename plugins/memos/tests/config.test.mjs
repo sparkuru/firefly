@@ -41,3 +41,18 @@ test('nonnullable public settings reject explicit null instead of defaulting', (
   for (const key of ['exportPath', 'consentVersion']) assert.throws(() => parseMemosConfig({ public: { [key]: null } }), TypeError);
   for (const writeOrigin of ['https://example.com/a/..', 'https://example.com/.', 'https:///example.com']) assert.throws(() => parseMemosConfig({ public: { writeOrigin } }), TypeError);
 });
+
+test('SMTP and encryption references are strict frozen private config and absent from public projection', () => {
+  const smtp = { host: 'smtp.example.com', user: 'mail-login', from: 'memos@example.com' };
+  const config = { runtime: { smtp, encryptionKeyId: 'key-1', secretEnv: { encryptionKey: 'MEMOS_ENCRYPTION_KEY' } } };
+  const parsed = parseMemosConfig(config);
+  assert.equal(parsed.runtime.smtp.port, 587);
+  assert.equal(parsed.runtime.smtp.secure, false);
+  assert.equal(parsed.runtime.encryptionKeyId, 'key-1');
+  assert.ok(Object.isFrozen(parsed.runtime.smtp));
+  assert.deepEqual(parseMemosPublicConfig(config), parseMemosConfig().public);
+  for (const patch of [{ host: 'bad/host' }, { from: 'sender\r\n@example.com' }, { from: `${'a'.repeat(65)}@example.com` }, { from: `memos@${`${'a'.repeat(63)}.`.repeat(3)}${'b'.repeat(62)}.com` }, { port: 0 }, { port: 65536 }, { port: '587' }, { secure: 'false' }, { commandTimeoutMs: 0 }, { password: 'secret' }, { user: '' }]) assert.throws(() => parseMemosConfig({ runtime: { smtp: { ...smtp, ...patch } } }), TypeError);
+  for (const encryptionKeyId of ['', null, 'space key', 'key/path']) assert.throws(() => parseMemosConfig({ runtime: { encryptionKeyId } }), TypeError);
+  assert.equal(parseMemosConfig({ runtime: { smtp: { ...smtp, port: 465 } } }).runtime.smtp.secure, true);
+  assert.throws(() => parseMemosConfig({ runtime: { secretEnv: { encryptionKey: 'raw-key-secret' } } }), TypeError);
+});

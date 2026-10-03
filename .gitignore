@@ -27,6 +27,8 @@ config.dev
 config/secrets.env
 config/plugins/comments/config.toml
 config/plugins/comments/secrets.env
+config/plugins/memos/config.toml
+config/plugins/memos/secrets.env
 plugins/comments/config.toml
 plugins/comments/secrets.env
 plugins/comments/data/

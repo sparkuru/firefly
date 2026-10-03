@@ -55,6 +55,7 @@ types, errors, and validation rules live in the linked contracts.
 | `tooling/assemble-publication/` | Validate and combine static artifacts as one repository candidate | Rewrite Experiment HTML or switch a deployed release |
 | `plugins/comments/`, `services/comments/` | Site-owned comments integration and private write/moderation service | Direct database access from static site generation |
 | `plugins/memos/` | Independent memo public export and configuration contract | Site registration, HTTP handlers, private state, or publication promotion |
+| `services/memos/` | Independent memo submission, verification, encrypted private state, moderation, mail and export runtime | Comments state, site rendering, public runtime reads, or static release writes |
 
 Use a Presentation when an implementation renders the shared Markdown document
 contract. Use an Experiment when it owns a complete page, global style, or
@@ -125,6 +126,11 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
   moderation, and export. The public site consumes a controlled static read
   projection; static pages never query its database. Tracked example config
   stays disabled by default, while owner-local activation is independent.
+- The memo service owns a separate package, database and mail lifecycle. Its
+  public read projection is the exact `plugins/memos/` export contract;
+  verification alone never publishes a record. Service delivery does not
+  activate a site route or publication adapter. Historical Typecho memo data
+  remains outside this new-submission workflow.
 
 See [Experiment Publication](./publication-contract.md), [Comments and
 Publication](./comments-publication-contract.md), and [Development

@@ -83,14 +83,27 @@ The producer and digest helpers accept an envelope without `digest`.
   fragment. Export/config paths are repository-relative with the required
   `.json`/`.toml` suffix.
 - Runtime settings are `allowedOrigins`, `publicOrigin`, `dataRoot`,
-  `databasePath`, `outboxPath`, and `secretEnv`. Origin lists are unique;
+  `databasePath`, `outboxPath`, `secretEnv`, `smtp`, and `encryptionKeyId`.
+  Origin lists are unique;
   private paths may be absolute. Paths reject traversal, empty segments,
   backslashes, whitespace, controls and unsupported characters.
-- `secretEnv` contains only optional `smtpPassword`, `adminToken`, and
-  `tokenKey` environment-name references. The module never reads environment
-  values or secret files. SMTP transport settings, email encryption inputs,
-  secret loading and the final secret template belong to service work and
-  require coordinated contract additions before use.
+- `secretEnv` contains only optional `smtpPassword`, `adminToken`, `tokenKey`,
+  and `encryptionKey` environment-name references. The module never reads
+  environment values or secret files. Secret loading belongs to the service.
+- `smtp` defaults to null. When supplied it requires `host`, `user`, and
+  `from`; accepts `port`, `secure`, `connectionTimeoutMs`, and
+  `commandTimeoutMs`; and rejects every other field. Port defaults to 587,
+  `secure` defaults to true only on port 465, and both timeouts default to
+  10000 ms (range 100–120000). Passwords remain separate secret inputs.
+  Sender mailboxes have at most 64 local-part characters, 253 domain
+  characters and 320 total characters, matching the service mailbox checks.
+  The runtime requires certificate-validated implicit TLS or STARTTLS.
+- `encryptionKeyId` defaults to `primary`, matches
+  `^[A-Za-z0-9_-]{1,64}$`, and identifies the encryption envelope. It is a
+  nonsecret identifier; changing keys requires a separate migration procedure.
+- The pure parser preserves nullable `outboxPath` for contract compatibility.
+  The memo service uses its transactional SQLite outbox and rejects nonnull
+  file-outbox settings instead of silently ignoring them.
 - Public projection validates the supplied config but returns only public
   values. It does not read configuration files. Disabled consumers must
   short-circuit before loading plugin files or exports.

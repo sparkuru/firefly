@@ -13,7 +13,18 @@ export interface MemosRuntimeConfig {
   readonly dataRoot: string | null;
   readonly databasePath: string | null;
   readonly outboxPath: string | null;
-  readonly secretEnv: Readonly<{ smtpPassword?: string; adminToken?: string; tokenKey?: string }>;
+  readonly secretEnv: Readonly<{ smtpPassword?: string; adminToken?: string; tokenKey?: string; encryptionKey?: string }>;
+  readonly smtp: MemosSmtpConfig | null;
+  readonly encryptionKeyId: string;
+}
+export interface MemosSmtpConfig {
+  readonly host: string;
+  readonly port: number;
+  readonly secure: boolean;
+  readonly user: string;
+  readonly from: string;
+  readonly connectionTimeoutMs: number;
+  readonly commandTimeoutMs: number;
 }
 export interface MemosConfig {
   readonly public: MemosPublicConfig;

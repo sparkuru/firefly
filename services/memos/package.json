@@ -1,0 +1,22 @@
+{
+  "name": "@firefly/memos-service",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc",
+    "test": "npm run build --silent && NODE_NO_WARNINGS=1 node --test dist/tests/*.test.js",
+    "start": "node dist/src/server.js",
+    "admin": "node dist/src/admin.js",
+    "deliver:notifications": "node dist/src/operations.js deliver",
+    "maintain": "node dist/src/operations.js maintain",
+    "backup": "node dist/src/operations.js backup",
+    "restore": "node dist/src/operations.js restore"
+  },
+  "engines": { "node": ">=22.13.0" },
+  "dependencies": { "smol-toml": "1.8.0" },
+  "devDependencies": { "@types/node": "24.3.0", "typescript": "6.0.3" }
+}

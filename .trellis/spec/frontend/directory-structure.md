@@ -23,6 +23,7 @@ tooling/sync-server/             authoring workspace synchronization
 plugins/comments/                site-owned comments integration
 plugins/memos/                   independent memo public/config contract
 services/comments/               private comments write/moderation runtime
+services/memos/                  independent private memo write/moderation runtime
 config/                          public site and plugin configuration templates
 .trellis/spec/                   durable engineering contracts
 artifacts/, dist/                ignored repository build outputs
@@ -50,6 +51,10 @@ package. Build outputs and private inputs are not public source contracts.
 - Put the independent memo wire/config contract under `plugins/memos/`.
   Its consumers own site registration, service behavior, and publication
   integration separately; do not import comments record or route semantics.
+  Put memo HTTP, private SQLite state, encrypted mail, admin CLI and local
+  backup/restore operations under `services/memos/`. Its site and publication
+  consumers import only the pure plugin contract, never the service database
+  or runtime modules.
 - Put shared publication rules in `tooling/validate-experiments/` or
   `tooling/assemble-publication/`, according to whether they validate source
   manifests or built static artifacts. Deployment release switching is outside
