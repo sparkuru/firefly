@@ -21,6 +21,7 @@ tooling/validate-experiments/    manifest decoder and public catalog
 tooling/assemble-publication/    static artifact validation and assembly
 tooling/sync-server/             authoring workspace synchronization
 plugins/comments/                site-owned comments integration
+plugins/memos/                   independent memo public/config contract
 services/comments/               private comments write/moderation runtime
 config/                          public site and plugin configuration templates
 .trellis/spec/                   durable engineering contracts
@@ -46,6 +47,9 @@ package. Build outputs and private inputs are not public source contracts.
 - Put public static comments integration under `plugins/comments/` or the site
   bridge, and private write/database work under `services/comments/`. No site
   build reads the private database.
+- Put the independent memo wire/config contract under `plugins/memos/`.
+  Its consumers own site registration, service behavior, and publication
+  integration separately; do not import comments record or route semantics.
 - Put shared publication rules in `tooling/validate-experiments/` or
   `tooling/assemble-publication/`, according to whether they validate source
   manifests or built static artifacts. Deployment release switching is outside

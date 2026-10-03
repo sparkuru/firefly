@@ -1,0 +1,23 @@
+# Future site activation, after memo-site installs its loader:
+# [plugins.memos]
+# enabled = false
+# configPath = "config/plugins/memos/config.toml"
+
+[public]
+# Required only when enabled:
+# writeOrigin = "https://example.com"
+exportPath = "artifacts/memos/memos.public.v1.json"
+consentVersion = "memos-v1"
+
+[runtime]
+allowedOrigins = []
+# publicOrigin = "https://example.com"
+# dataRoot = "/var/lib/firefly-memos"
+# databasePath = "/var/lib/firefly-memos/memos.sqlite"
+# outboxPath = "/var/lib/firefly-memos/outbox"
+
+# Optional references only; the service owns actual secret provisioning.
+# [runtime.secretEnv]
+# smtpPassword = "MEMOS_SMTP_PASSWORD"
+# adminToken = "MEMOS_ADMIN_TOKEN"
+# tokenKey = "MEMOS_TOKEN_KEY"

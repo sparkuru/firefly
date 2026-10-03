@@ -1,0 +1,13 @@
+{
+  "id": "memos",
+  "version": "0.1.0",
+  "configNamespace": "plugins.memos",
+  "capabilities": ["site-page", "publication", "service"],
+  "entrypoints": {
+    "config": "plugins/memos/config.mjs",
+    "site": "apps/site/src/plugins/memos/index.mjs",
+    "publication": "tooling/assemble-publication/src/plugins/memos.ts",
+    "service": "services/memos/src/plugin.ts",
+    "ui": ["apps/site/src/plugins/memos/MemoStream.astro", "apps/site/src/plugins/memos/MemoForm.astro"]
+  }
+}

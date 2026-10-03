@@ -3,8 +3,8 @@
 ## 1. Scope / Trigger
 
 Use this contract when changing ownership between authored content, the Astro
-site, X Core, presentations, Experiments, the comments plugin/service, or the
-publication pipeline. It records the durable product and dependency boundaries;
+site, X Core, presentations, Experiments, the comments plugin/service, memo
+contracts, or the publication pipeline. It records the durable product and dependency boundaries;
 the linked topic contracts below own field-level and command-level behavior.
 
 Firefly is a personal Markdown publication with a static HTML reading surface
@@ -54,6 +54,7 @@ types, errors, and validation rules live in the linked contracts.
 | `tooling/validate-experiments/` | Validate manifests and project the safe public catalog | Build arbitrary browser/remote manifests |
 | `tooling/assemble-publication/` | Validate and combine static artifacts as one repository candidate | Rewrite Experiment HTML or switch a deployed release |
 | `plugins/comments/`, `services/comments/` | Site-owned comments integration and private write/moderation service | Direct database access from static site generation |
+| `plugins/memos/` | Independent memo public export and configuration contract | Site registration, HTTP handlers, private state, or publication promotion |
 
 Use a Presentation when an implementation renders the shared Markdown document
 contract. Use an Experiment when it owns a complete page, global style, or
@@ -141,8 +142,11 @@ boundaries.
   dependency enters an ordinary article by default.
 - Reject or sanitize authored raw HTML at the declared processor boundary.
   Enhancement props are JSON-safe. No drafts, private workspace paths,
-  backups, credentials, email, IP, user-agent, moderation fields, or memo data
-  enter the public release. `.private/` stays outside Git and CI inputs.
+  backups, credentials, email, IP, user-agent, moderation fields, or historical
+  Typecho memo data enter the public release. New owner-approved memos have a
+  separate exact-field contract; adding that contract alone does not activate
+  a public route or authorize historical import. `.private/` stays outside Git
+  and CI inputs.
 - The site generates per-document title, description, SEO metadata, RSS, and
   sitemap from validated public content. Canonical URLs require either an
   authored URL or a configured site origin. Experiments are not article
