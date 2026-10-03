@@ -1838,3 +1838,32 @@ Added CSS-registered dark and white Terminal themes, dynamic desktop theme compl
 ### Status
 
 [OK] **Completed**
+
+
+## Session 81: Complete memo public contract
+
+**Date**: 2026-10-03
+**Task**: Complete memo public contract
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and independently checked the standalone memo public/config contract; archived the contract child. Parent progress is 1/4. Next: finalize memo-service planning.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c9885e6` | (see git log) |
+
+### Testing
+
+- [OK] Memo contract tests: 11 passed; strict declaration and JavaScript syntax checks passed through sam.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Review memo-service design and context manifests before activation.
