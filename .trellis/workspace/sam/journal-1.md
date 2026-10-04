@@ -1896,3 +1896,39 @@ Implemented and independently reviewed the private memo runtime: submissions, si
 ### Next Steps
 
 - Present memo-site as the next ready child; review its planning against the implemented service contract before separate owner-authorized activation.
+
+
+## Session 83: Complete Firefly memo site integration
+
+**Date**: 2026-10-05
+**Task**: Complete Firefly memo site integration
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and independently reviewed the optional static memo route, strict public export/config adapter, native visitor form and navigation. Owner confirmed the exact work commit and site-only archival on 2026-10-05; memo-site is archived and parent progress is 3/4. Publication/runtime remains planning.
+
+### Main Changes
+
+- Strict contained raw-byte export loading and disabled input short-circuit; conditional /memos/ route and native six-field consent form; desktop/mobile navigation and record-projection isolation.
+- Added synthetic build/browser fixtures, forwarded FIREFLY_MEMOS_EXPORT through sam and synchronized frontend contracts. Corrected two proven pre-existing theme test fixtures without changing theme behavior.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f5bc47c` | (see git log) |
+
+### Testing
+
+- [OK] Independent full-scope review passed; all six site acceptance criteria met. Memo focused 4/4, content 101, integration 8, diagrams 15, static output 18/18 and memo browser 3/3 passed.
+- [OK] Equivalent repository gate completed in ordered stages after two stale fixture corrections: site browser 157 passed with 139 expected skips, NERV 8/8, publication 6/6, comments contract/service 7/60, package checks and shell gates passed. No product code changed after validation.
+- [OK] Desktop/mobile page and native response captures inspected; generated privacy checks and exact-labelled reviewer runtime cleanup passed. Browser service responses were synthetic, not deployed SMTP/proxy/publication evidence.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Review memo-publication-runtime planning against the completed contract, service and site before separately authorized activation. Parent cross-layer acceptance remains incomplete.
