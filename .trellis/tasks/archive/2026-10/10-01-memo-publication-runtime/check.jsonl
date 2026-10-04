@@ -1,0 +1,18 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend ownership and maintained browser profile."}
+{"file": ".trellis/spec/frontend/architecture-contract.md", "reason": "Preserve static site and independent runtime/publication ownership."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Place shared build inputs and memo adapters without reverse site dependencies."}
+{"file": ".trellis/spec/frontend/publication-contract.md", "reason": "Safe staged output, route inventories and coordinated artifact/release promotion."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Preserve existing comments/proxy/release behavior and independent metadata."}
+{"file": ".trellis/spec/frontend/memo-contract.md", "reason": "Exact raw-byte public contract, config projection, digest and deletion epochs."}
+{"file": ".trellis/spec/frontend/memo-site-contract.md", "reason": "Accepted native route/form/containment and disabled projection boundaries."}
+{"file": ".trellis/spec/frontend/memo-service-contract.md", "reason": "Accepted private storage, rates, delivery leases, operations and image boundaries."}
+{"file": ".trellis/spec/frontend/development-runtime.md", "reason": "Approved wrapper, pinned browser, host Docker and exact teardown commands."}
+{"file": ".trellis/spec/trellis-plus/validation-profile.md", "reason": "Package ordering, local/static/browser and shell validation requirements."}
+{"file": ".trellis/spec/trellis-plus/comments-observability-release-boundary.md", "reason": "Separate repository integration evidence from real operator release evidence."}
+{"file": ".trellis/spec/guides/project-record-privacy.md", "reason": "Keep credentials, identities, raw tokens and deployment facts out of durable records."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Share the contained-file boundary without importing Astro or duplicating validation."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Review input, DOM, manifest, proxy/worker and owner operation boundaries together."}
+{"file": ".trellis/tasks/archive/2026-10/10-01-memo-publication-runtime/research/publication-findings.md", "reason": "Source-grounded adapter, DOM binding, epoch/snapshot, privacy and staged rollback research."}
+{"file": ".trellis/tasks/archive/2026-10/10-01-memo-publication-runtime/research/runtime-findings.md", "reason": "Source-grounded service trust, worker, Compose/proxy, private logs and lifecycle research."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Independent full-scope verification and regression conventions."}
+{"file": ".trellis/spec/frontend/memo-publication-runtime-contract.md", "reason": "Executable new assembler input/DOM/history/snapshot, trusted proxy/worker and integrated runtime contract; main-owned spec sync reviewed with final source."}
