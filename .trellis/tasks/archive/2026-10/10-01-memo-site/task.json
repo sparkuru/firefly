@@ -1,0 +1,28 @@
+{
+  "id": "memo-site",
+  "name": "memo-site",
+  "title": "Build Firefly memo site adapter and UI",
+  "description": "实现 Firefly 构建时导出适配、/memos/ 静态页面、无 JavaScript 投稿表单与导航接入；依赖 memo-contract，服务端点按父任务契约接入。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-10-01",
+  "completedAt": "2026-10-05",
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": "f5bc47c",
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-28-public-memo-stream",
+  "relatedFiles": [],
+  "notes": "Implementation approved on 2026-10-04; six site acceptance criteria and independent full-scope review passed. Owner confirmed the exact 36-file work commit, site-only archive and separate journal commit on 2026-10-05. Work commit f5bc47c; see research/validation-findings.md. Parent and publication/runtime remain planning.",
+  "meta": {
+    "commit_approval": "2026-10-05: Owner approved the presented work commit, memo-site-only archival and scoped session recording."
+  }
+}
