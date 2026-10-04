@@ -7,8 +7,8 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-- **Active File**: `journal-1.md`
-- **Total Sessions**: 83
+- **Active File**: `journal-2.md`
+- **Total Sessions**: 84
 - **Last Active**: 2026-10-05
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,8 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1934 | Active |
+| `journal-2.md` | ~100 | Active |
+| `journal-1.md` | ~1934 | Archived |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 84 | 2026-10-05 | Complete Memo publication and private runtime | `08be5df` | `anti-entropy-loss-syndrome` |
 | 83 | 2026-10-05 | Complete Firefly memo site integration | `f5bc47c` | `anti-entropy-loss-syndrome` |
 | 82 | 2026-10-04 | Complete independent memo service | `bcbca34` | `anti-entropy-loss-syndrome` |
 | 81 | 2026-10-03 | Complete memo public contract | `c9885e6` | `anti-entropy-loss-syndrome` |
