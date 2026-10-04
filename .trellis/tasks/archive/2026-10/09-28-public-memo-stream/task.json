@@ -1,0 +1,34 @@
+{
+  "id": "public-memo-stream",
+  "name": "public-memo-stream",
+  "title": "Plan public memo stream",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-09-28",
+  "completedAt": "2026-10-05",
+  "branch": "anti-entropy-loss-syndrome",
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": "08be5df",
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "10-01-memo-contract",
+    "10-01-memo-service",
+    "10-01-memo-site",
+    "10-01-memo-publication-runtime"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "2026-10-05: All four children are archived and all eight joint parent criteria pass. Final runtime/publication work commit 08be5df and child archive 4b4a01a follow owner approval of the concrete work/child/parent archive/journal plan. Archive this completed integration record, then record a scoped session journal. No production deployment, real mail, push or automatic next task.",
+  "meta": {
+    "owner_archive_approval": "2026-10-05: 批准 — separate parent archive after the final child confirmed.",
+    "acceptance": "8/8 parent criteria passed; all four child deliverables accepted and archived."
+  }
+}

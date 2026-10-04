@@ -1,0 +1,11 @@
+{"file": ".trellis/spec/frontend/architecture-contract.md", "reason": "Check that the implementation preserves static-site ownership, dependency direction, route isolation, and absence of runtime database reads."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Check file ownership and package boundaries across plugins/memos, services/memos, apps/site, Nginx/Compose, and publication tooling."}
+{"file": ".trellis/spec/frontend/comments-publication-contract.md", "reason": "Check the analogous lifecycle while verifying memo remains a separate public contract, record schema, service, and route from comments."}
+{"file": ".trellis/spec/frontend/publication-contract.md", "reason": "Check export exactness, route/digest/tombstone validation, candidate preservation, private-field exclusion, and publication rollback behavior."}
+{"file": ".trellis/spec/frontend/site-configuration-contract.md", "reason": "Check disabled-plugin behavior, public configuration boundaries, and that secrets/runtime settings do not enter static artifacts."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Check focused package gates, deterministic validation, static-output privacy review, and cross-import/reuse checks before handoff."}
+{"file": ".trellis/spec/frontend/development-runtime.md", "reason": "Check that all reported commands use the approved ./sam/runtime boundary and that unavailable operator checks are clearly separated."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Check every boundary in the end-to-end flow and confirm untyped payloads are decoded once and narrowed before consumers use them."}
+{"file": ".trellis/spec/guides/project-record-privacy.md", "reason": "Check that tests, logs, fixtures, task records, and generated artifacts contain no private email, tokens, local paths, or historical memo data."}
+{"file": ".trellis/spec/trellis-plus/validation-profile.md", "reason": "Check validation ordering, package coverage, browser/static publication scope, and operator-gated deployment exclusions."}
+{"file": ".trellis/tasks/archive/2026-10/09-28-public-memo-stream/research/repository-findings.md", "reason": "Check implementation and review against the repository evidence and the explicit historical-data and comments-isolation constraints."}
