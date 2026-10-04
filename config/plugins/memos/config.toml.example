@@ -1,4 +1,4 @@
-# Future site activation, after memo-site installs its loader:
+# Site activation in config/site.toml (disabled by default):
 # [plugins.memos]
 # enabled = false
 # configPath = "config/plugins/memos/config.toml"

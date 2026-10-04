@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'astro/zod';
 import { parse as parseToml } from 'smol-toml';
+import { readContainedFile } from './contained-file.mjs';
+import { parseMemosActivation, parseMemosPublicConfig } from '../../../../plugins/memos/config.mjs';
 import {
   parseCommentsActivation,
   parseCommentsConfig,
@@ -242,7 +244,7 @@ function commentsSiteProjection(rawValue, source, commentsConfig) {
   if (rawPlugins !== undefined) {
     if (!isRecord(rawPlugins)) throw new TypeError('plugins must be a plain object.');
     for (const key of Object.keys(rawPlugins)) {
-      if (key !== 'comments') throw new TypeError(`plugins contains unsupported key "${key}".`);
+      if (!['comments', 'memos'].includes(key)) throw new TypeError(`plugins contains unsupported key "${key}".`);
     }
   }
   const rawPluginActivation = rawPlugins === undefined ? undefined : rawPlugins.comments;
@@ -251,24 +253,30 @@ function commentsSiteProjection(rawValue, source, commentsConfig) {
   return { activation, public: parsed.public };
 }
 
-function assembleSiteConfig(rawValue, source, commentsConfig, siteData) {
+function assembleSiteConfig(rawValue, source, commentsConfig, siteData, memosConfig) {
   let commentsProjection;
+  let memosActivation;
+  let memosPublic;
   try {
     commentsProjection = commentsSiteProjection(rawValue, source, commentsConfig);
+    memosActivation = parseMemosActivation(rawValue.plugins?.memos, source);
+    memosPublic = parseMemosPublicConfig(memosActivation.enabled ? memosConfig : undefined, 'memo configuration', { enabled: memosActivation.enabled });
   } catch (error) {
     throw new Error(`Invalid site configuration in ${source}: ${error instanceof Error ? error.message : String(error)}`);
   }
   return freezeDeep({
     ...siteData,
-    plugins: { comments: commentsProjection.activation },
-    comments: commentsProjection.public
+    plugins: { comments: commentsProjection.activation, memos: memosActivation },
+    comments: commentsProjection.public,
+    memos: memosPublic
   });
 }
 
 export function parseSiteConfig(value, source = 'config/site.toml', options = {}) {
   const rawValue = isRecord(value) ? value : {};
   const siteData = parseCoreSiteConfig(rawValue, source);
-  return assembleSiteConfig(rawValue, source, options.commentsConfig, siteData);
+  const memosEnabled = parseMemosActivation(rawValue.plugins?.memos, source).enabled;
+  return assembleSiteConfig(rawValue, source, options.commentsConfig, siteData, memosEnabled ? options.memosConfig : undefined);
 }
 
 function configRepositoryRoot(filePath) {
@@ -329,7 +337,17 @@ export function loadSiteConfig(filePath = SITE_CONFIG_PATH) {
   const rawValue = isRecord(value) ? value : {};
   const siteData = parseCoreSiteConfig(rawValue, filePath);
   const commentsConfig = readCommentsConfigForSite(value, filePath);
-  return assembleSiteConfig(rawValue, filePath, commentsConfig, siteData);
+  const memosActivation = parseMemosActivation(rawValue.plugins?.memos, 'site memo activation');
+  let memosConfig;
+  if (memosActivation.enabled) {
+    const bytes = readContainedFile(memosActivation.configPath, configRepositoryRoot(filePath), 'memo configuration');
+    try {
+      memosConfig = parseToml(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    } catch {
+      throw new Error('Invalid TOML in memo configuration.');
+    }
+  }
+  return assembleSiteConfig(rawValue, filePath, commentsConfig, siteData, memosConfig);
 }
 
 export const SITE_CONFIG = loadSiteConfig();

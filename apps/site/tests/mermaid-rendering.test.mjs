@@ -176,14 +176,18 @@ test('post-sanitization highlighting preserves code text and rejects authored st
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.setContent(`<div class="terminal-root" data-terminal-theme="firefly"><div class="terminal-stream-prose"><div class="terminal-code-body">${code}</div></div></div><div class="canonical">${code}</div>`);
+    await page.setContent(`<div class="terminal-root" data-terminal-theme="firefly" data-terminal-palette="firefly-dark"><div class="terminal-stream-prose"><div class="terminal-code-body">${code}</div></div></div><div class="canonical">${code}</div>`);
     await page.addStyleTag({ content: await readFile(new URL('../src/styles/terminal.css', import.meta.url), 'utf8') });
-    const tokenColors = await page.locator('.terminal-stream-prose pre[data-language="js"] code .line span[style*="--shiki-dark"]').evaluateAll((tokens) =>
-      tokens.map((token) => getComputedStyle(token).color));
-    assert.ok(new Set(tokenColors).size >= 2, `Expected at least two terminal token colors, got ${tokenColors}`);
-    const canonicalColors = await page.locator('.canonical pre[data-language="js"] code .line span[style*="--shiki-dark"]').evaluateAll((tokens) =>
-      tokens.map((token) => getComputedStyle(token).color));
-    assert.equal(new Set(canonicalColors).size, 1);
+    for (const palette of ['firefly-dark', 'firefly-white']) {
+      await page.addStyleTag({ content: await readFile(new URL(`../src/styles/terminal-themes/${palette}.css`, import.meta.url), 'utf8') });
+      await page.locator('.terminal-root').evaluate((root, name) => { root.dataset.terminalPalette = name; }, palette);
+      const tokenColors = await page.locator('.terminal-stream-prose pre[data-language="js"] code .line span[style*="--shiki-dark"]').evaluateAll((tokens) =>
+        tokens.map((token) => getComputedStyle(token).color));
+      assert.ok(new Set(tokenColors).size >= 2, `Expected at least two ${palette} terminal token colors, got ${tokenColors}`);
+      const canonicalColors = await page.locator('.canonical pre[data-language="js"] code .line span[style*="--shiki-dark"]').evaluateAll((tokens) =>
+        tokens.map((token) => getComputedStyle(token).color));
+      assert.equal(new Set(canonicalColors).size, 1, `${palette} must not style canonical tokens`);
+    }
   } finally { await browser.close(); }
 });
 

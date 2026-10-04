@@ -106,8 +106,11 @@ ${body}`;
   await writeFile(path.join(contentRoot, 'posts/category/child.md'), semanticSource.replaceAll('paper-semantic', 'child'));
   await writeFile(path.join(contentRoot, 'posts/category/deeper/leaf.md'), semanticSource.replaceAll('paper-semantic', 'leaf'));
   const configPath = path.join(runRoot, 'site.toml');
-  const siteConfig = await readFile(path.resolve(siteRoot, '../../config/site.toml'), 'utf8');
+  const siteConfig = await readFile(path.resolve(siteRoot, '../../config/site.toml.example'), 'utf8');
   await writeFile(configPath, siteConfig.replace(/\[\[terminal\.friends\]\][\s\S]*?(?=\n\[(?!\[terminal\.friends\])|$)/gu, ''));
+  const terminalLayout = await readFile(path.join(siteRoot, 'src/layouts/TerminalLayout.astro'), 'utf8');
+  const appearanceScript = /<script is:inline>([\s\S]*?)<\/script>/u.exec(terminalLayout)?.[1].trim();
+  assert.ok(appearanceScript, 'the established appearance helper must be present');
 
   try {
     const result = spawnSync(
@@ -150,7 +153,16 @@ ${body}`;
       assert.doesNotMatch(snapshot, /data-terminal-entry|data-terminal-template|data-terminal-friend|<script\b/iu);
       assert.match(html, new RegExp(`<a href="${parent}">\\.\\.<\\/a>`, 'u'));
       assert.match(html, /<a href="\/">~\/blog<\/a>/u);
-      assert.doesNotMatch(html, /<script\b/iu);
+      const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/giu)];
+      assert.equal(scripts.length, 1, 'native directories only include the established appearance helper');
+      assert.equal(scripts[0][1].trim(), '', 'the appearance helper is inline, without module or external attributes');
+      assert.equal(scripts[0][2].trim(), appearanceScript);
+      const head = /<head\b[^>]*>([\s\S]*?)<\/head>/iu.exec(html)?.[1];
+      const main = /<main\b[^>]*>([\s\S]*?)<\/main>/iu.exec(html)?.[1];
+      assert.ok(head?.includes(scripts[0][0]), 'the appearance helper stays in the document head');
+      assert.ok(main, 'native directory content must be present');
+      assert.doesNotMatch(main, /<script\b/iu);
+      assert.doesNotMatch(listing, /<script\b/iu);
     }
 
     const semanticRoute = await readFile(

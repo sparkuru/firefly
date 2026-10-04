@@ -55,6 +55,11 @@ package. Build outputs and private inputs are not public source contracts.
   backup/restore operations under `services/memos/`. Its site and publication
   consumers import only the pure plugin contract, never the service database
   or runtime modules.
+- Put memo build adaptation and UI under `apps/site/src/plugins/memos/`, with
+  the manifest-aligned `index.mjs` entrypoint and conditional
+  `apps/site/src/pages/memos/[...stream].astro` route. Config/export file safety
+  stays at the site read boundary; publication state/proxy wiring stays with
+  the publication/runtime consumer. See [Memo Site](./memo-site-contract.md).
 - Put shared publication rules in `tooling/validate-experiments/` or
   `tooling/assemble-publication/`, according to whether they validate source
   manifests or built static artifacts. Deployment release switching is outside

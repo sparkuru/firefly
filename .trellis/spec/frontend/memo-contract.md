@@ -73,9 +73,9 @@ The producer and digest helpers accept an envelope without `digest`.
 ### Configuration
 
 - Activation has only `enabled` and `configPath`. Defaults are `false` and
-  `config/plugins/memos/config.toml`. The current site loader does not yet
-  accept memo activation; integrate it in the site child before changing
-  live `config/site.toml`.
+  `config/plugins/memos/config.toml`. The site loader accepts memo activation
+  and projects its public config independently of comments; see
+  [Memo Site](./memo-site-contract.md) for conditional route/loading behavior.
 - Plugin configuration has only `public` and `runtime`. Public settings are
   `writeOrigin` (nullable, required when enabled), `exportPath` (default
   `artifacts/memos/memos.public.v1.json`), and `consentVersion` (default
@@ -109,7 +109,8 @@ The producer and digest helpers accept an envelope without `digest`.
   short-circuit before loading plugin files or exports.
 - Path resolution is lexical, not a filesystem security check. Future file
   loaders must reject symlink escapes/non-regular files and establish real
-  containment before reading; do not infer that this module does so.
+  containment before reading; do not infer that this module does so. The site
+  loader enforces those filesystem checks at its own read boundary.
 
 ## 4. Validation & Error Matrix
 

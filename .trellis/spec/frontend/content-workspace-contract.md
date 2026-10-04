@@ -449,11 +449,20 @@ createDocumentNavigationLookup(
   breadcrumbs, aliases, Terminal entries, templates, and route generation.
   Consumers do not reinterpret raw collection IDs or operands.
 - The route reservation table includes `/`, every directory, document, and
-  alias. All routes are canonical trailing-slash paths and reject case/Unicode,
+  alias, plus the plugin-owned `/memos/` page only while memo activation is
+  enabled. That reservation prevents authored aliases overwriting the static
+  plugin page; memo records remain outside the canonical content model. All
+  routes are canonical trailing-slash paths and reject case/Unicode,
   file/directory, canonical/alias, and duplicate-alias collisions.
 - Directory indexes list only immediate guest-visible children. Private-only
   branches do not create empty directories, routes, templates, completion
   candidates, or tree nodes.
+- Native directory pages may contain the established inline appearance helper
+  from `TerminalLayout.astro` in the head. Their main/listing/snapshot remains
+  script-free and must not load external/module Terminal scripts. Positive
+  build fixtures compare that single helper with its source, rather than
+  banning every script tag, and use tracked `config/site.toml.example` so they
+  do not depend on an owner-local config file.
 - Authored Markdown HTML is a site-owned presentation input, not workspace
   metadata. The site opts into it only after `rehypeRaw` parses the Markdown
   bridge and `rehype-sanitize` applies its explicit schema before X Core. The

@@ -326,6 +326,9 @@ main() {
 	if [[ -n "${SITE_CONFIG_OVERRIDE_PATH}" ]]; then
 		environment_flags+=(-e "FIREFLY_SITE_CONFIG_PATH=${SITE_CONFIG_OVERRIDE_PATH}")
 	fi
+	if [[ -n "${FIREFLY_MEMOS_EXPORT:-}" ]]; then
+		environment_flags+=(-e "FIREFLY_MEMOS_EXPORT")
+	fi
 	if [[ -f "${REPO_ROOT}/config/site.toml" ]]; then
 		config_mount_flags=(--mount "type=bind,src=${REPO_ROOT}/config/site.toml,dst=/app/config/site.toml,readonly")
 	fi

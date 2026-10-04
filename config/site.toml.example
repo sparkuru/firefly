@@ -59,3 +59,8 @@ enabled = false
 # The comments plugin owns its non-secret public/runtime settings in this
 # repository-relative file. The static site receives only its [public] section.
 configPath = "config/plugins/comments/config.toml"
+
+[plugins.memos]
+# Enable after accepting the independent memo runtime and publication gates.
+enabled = false
+configPath = "config/plugins/memos/config.toml"

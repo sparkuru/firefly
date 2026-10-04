@@ -13,7 +13,7 @@ also contain non-secret runtime settings. It is never a secret store.
 ### 2. Signatures
 
 ```js
-parseSiteConfig(value: unknown, source?: string): Readonly<SiteConfig>
+parseSiteConfig(value: unknown, source?: string, options?: { commentsConfig?: unknown; memosConfig?: unknown }): Readonly<SiteConfig>
 loadSiteConfig(filePath?: string): Readonly<SiteConfig>
 resolveSiteConfigOverridePath(value: unknown, repositoryRoot?: string): string | null
 terminalIdentityFromConfig(config?: SiteConfig): Readonly<TerminalIdentity>
@@ -67,6 +67,10 @@ twitterCard = "summary"
 [plugins.comments]
 enabled = false
 configPath = "config/plugins/comments/config.toml"
+
+[plugins.memos]
+enabled = false
+configPath = "config/plugins/memos/config.toml"
 
 # The comments plugin owns its non-secret public/runtime TOML separately.
 # The site loader reads only its [public] projection; the private service may
@@ -138,6 +142,13 @@ configPath = "config/plugins/comments/config.toml"
   public site projection. Explicit service environment variables may override
   file values at the runtime boundary; the static build does not read the
   secret file.
+- The independent memo plugin owns `[plugins.memos]` with the same activation
+  field names but its own strict contract. The loader exposes only `config.memos`
+  public values, skips its config/export entirely disabled, and never reads
+  memo secrets. Preserve the complete service config template; the separate
+  `config/plugins/memos/site-public.toml.example` illustrates static-only public
+  settings. Enabled memo inputs require non-symlink contained regular files and
+  strict UTF-8. See [Memo Site](./memo-site-contract.md) for form/route/gates.
 - Plugin-owned private runtime paths use the same strict decoder as the public
   projection: absolute or relative slash-separated paths are allowed, but
   backslashes, traversal segments, empty interior segments, controls, and
@@ -238,6 +249,12 @@ available names. Adding a valid CSS file registers another palette without
 editing the command or switcher. The palette file also selects the Shiki token
 colors for code blocks. Keep ordinary code text at 4.5:1 contrast against its
 code surface. Components consume semantic tokens for every palette.
+
+Highlighting browser fixtures must reproduce the real root's palette attribute
+and load both structural `terminal.css` and the selected palette CSS. Loading
+the structural file alone cannot establish token-color behavior. Exercise the
+maintained dark/white token selections while preserving distinct colors inside
+the Terminal root and color isolation from canonical markup outside it.
 
 The default article content inherits the Terminal root's mapped
 `--article-content-*` tokens; authored `paper` content overrides only its

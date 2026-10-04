@@ -96,6 +96,8 @@ The browser entry is `startHomeSearch(root: HTMLElement): void` in
   Terminal and directory-browser initialization/ownership. Mobile exposes the
   root pages/lab/posts entries with configured friends, or the selected inline
   directory with clickable breadcrumbs and friends hidden. Search remains global
+  over documents only; an enabled native `/memos/` link does not add memo records
+  to the corpus or inline directory tree. Search remains independent
   at every browse depth; it does not wait for
   or trigger Terminal startup or directory requests.
 - Use the existing `(hover: none) and (pointer: coarse)` media condition in CSS

@@ -213,6 +213,7 @@ test('static build emits only the implemented route surface', async () => {
     '404.html',
     'index.html',
     'lab/index.html',
+    ...(SITE_CONFIG.plugins.memos.enabled ? ['memos/index.html'] : []),
     'pages/index.html',
     'posts/index.html',
     ...(await collectContentRoutes(generatedPagesRoot, 'pages', false)),
@@ -693,8 +694,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
   const rootNavigation = /<nav\b[^>]*data-home-root-navigation[^>]*>[\s\S]*?<\/nav>/u.exec(home)?.[0] ?? '';
   assert.deepEqual([...rootNavigation.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/gu)].map((match) => [match[1], match[2]]),
-    [['/pages/', 'pages/'], ['/lab/', 'lab/'], ['/posts/', 'posts/']]);
-  assert.deepEqual([...rootNavigation.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]), ['├──', '├──', '└──']);
+    [['/pages/', 'pages/'], ['/lab/', 'lab/'], ['/posts/', 'posts/'], ...(SITE_CONFIG.plugins.memos.enabled ? [['/memos/', 'memos/']] : [])]);
+  const rootLinkCount = SITE_CONFIG.plugins.memos.enabled ? 4 : 3;
+  assert.deepEqual([...rootNavigation.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]), Array.from({ length: rootLinkCount }, (_, index) => index === rootLinkCount - 1 ? '└──' : '├──'));
+  if (SITE_CONFIG.plugins.memos.enabled) assert.match(rootNavigation, /<a href="\/memos\/">memos\/<\/a>/u);
   for (const [, contents] of home.matchAll(/<template\b[^>]*data-home-browse-template[^>]*>([\s\S]*?)<\/template>/gu)) {
     const prefixes = [...contents.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]);
     const rowCount = (contents.match(/<li\b/gu) ?? []).length;

@@ -136,7 +136,10 @@ actual desktop controller is installed, not on mobile-first entry.
   Boot logs, prompts, command input/transcript/completion, shell instructions,
   and Terminal failure announcements are absent from the mobile interface.
 - The homepage section entries are exactly `pages/`, `lab/`, `posts/`, in that
-  order, with native `/pages/`, `/lab/`, `/posts/` destinations. Their article,
+  order when optional plugins are disabled, with native `/pages/`, `/lab/`,
+  `/posts/` destinations. An enabled memo plugin appends a native `memos/` link
+  to `/memos/`, without `data-home-browse-directory`; it is not an inline
+  directory or document/search record. Their article,
   page and experiment lists are not expanded on mobile home. Retain the existing
   configured `friend links` group below, including names, descriptions, native
   URLs, configured order and empty feedback. Friends are outside article search.

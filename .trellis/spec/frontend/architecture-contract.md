@@ -84,7 +84,8 @@ adapters may be used without changing the source document.
   arbitrary stylesheet URLs, or Experiment dependencies into authored content.
   New content directives require a documented semantic contract and fixtures.
 - The site owns `/`, canonical `/posts/<category...>/<slug>/` and
-  `/pages/<slug>/` routes, directory routes, `/lab/`, and its 404. Each
+  `/pages/<slug>/` routes, directory routes, `/lab/`, optional plugin-owned
+  `/memos/`, and its 404. Each
   Experiment owns only its validated `/lab/<id>/...` mount. Public paths,
   aliases, and route reservations are derived from the selected workspace and
   must be collision-free. Slugs do not change automatically with titles.
@@ -131,6 +132,12 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
   verification alone never publishes a record. Service delivery does not
   activate a site route or publication adapter. Historical Typecho memo data
   remains outside this new-submission workflow.
+- The optional memo site adapter loads a strict public export only at build
+  time. Disabled activation reads no memo config/export and emits no route;
+  enabled activation renders `/memos/` with a native visitor form. The memo
+  route/records remain independent of posts, pages, search and Terminal entries.
+  Site delivery does not establish proxy or publication integration. See
+  [Memo Site](./memo-site-contract.md).
 
 See [Experiment Publication](./publication-contract.md), [Comments and
 Publication](./comments-publication-contract.md), and [Development
