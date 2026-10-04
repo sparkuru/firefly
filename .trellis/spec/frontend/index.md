@@ -31,6 +31,7 @@
 | [Memo Contract](./memo-contract.md) | Independent memo wire/config contract, strict decoding, and consumer boundaries | Established |
 | [Memo Service](./memo-service-contract.md) | Independent private submission, verification, moderation, encrypted mail, export and recovery | Established |
 | [Memo Site](./memo-site-contract.md) | Conditional static memo stream, strict export loading, native visitor form and independent navigation | Established |
+| [Memo Publication and Runtime](./memo-publication-runtime-contract.md) | Staged DOM/export identity, retained deletion history, public snapshots, private proxy/worker and integrated validation | Established |
 | [Site Configuration](./site-configuration-contract.md) | Public TOML, SEO, and content themes | Established |
 | [Homepage Search](./homepage-search-contract.md) | Public metadata/body search, mobile UI lifecycle, failure recovery and validation | Established |
 | [Mobile Experience](./mobile-experience-contract.md) | Native mobile homepage, absent Terminal ownership, input-mode transitions and article-reading policy | Established |

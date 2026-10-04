@@ -4,7 +4,7 @@ import { openRuntime } from './runtime.js';
 try {
   process.umask(0o077);
   const { config, repository, service } = openRuntime();
-  const server = createMemoServer(service, config.adminHash, (code) => process.stderr.write(`memos:${code}\n`));
+  const server = createMemoServer(service, config.adminHash, (code) => process.stderr.write(`memos:${code}\n`), config.trustProxy);
   const timer = setInterval(() => { try { repository.maintain(); } catch { process.stderr.write('memos:maintenance_failed\n'); } }, 60000);
   timer.unref();
   server.requestTimeout = 15000;

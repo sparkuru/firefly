@@ -10,6 +10,8 @@ import { assemblePublication, validateRelease, walkSafeTree, type CommentsPublic
 async function fixture(context: test.TestContext) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-publication-'));
   context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'config'));
+  await writeFile(path.join(root, 'config/site.toml'), '[plugins.memos]\nenabled = false\n');
   const site = path.join(root, 'apps/site/dist');
   const experiment = path.join(root, 'experiments/alpha');
   await mkdir(path.join(site, 'lab'), { recursive: true });
@@ -164,6 +166,8 @@ test('fresh assembly is deterministic, excludes stale files, and preserves a pri
       id: 'alpha', title: 'Alpha', kind: 'landing', href: '/lab/alpha/', entryHref: '/lab/alpha/', tags: Object.freeze(['fixture'])
     })])
   });
+  await mkdir(path.join(root, 'artifacts'));
+  await writeFile(path.join(root, 'artifacts/publication.json'), JSON.stringify({ schemaVersion: 1, catalog: discovery.catalog, inventory: ['sentinel.txt'] }));
   const first = await assemblePublication({ repositoryRoot: root, discovery });
   assert.equal(first.inventory.includes('sentinel.txt'), false);
   assert.equal(await readFile(path.join(root, 'dist/lab/alpha/license'), 'utf8'), 'fixture license');

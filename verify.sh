@@ -20,8 +20,9 @@ usage() {
 		"Usage: ${SCRIPT_NAME} [--help]" \
 		'' \
 		'Run the complete repository-fixture validation gate through ./sam.' \
-		'The gate runs check:m51, test:m51, build:m51, and the site, NERV, and' \
-		'assembled-publication Playwright suites in that order.' \
+		'The gate runs package checks/tests, focused memo publication/browser checks,' \
+		'then rebuilds disabled fixture output before ordinary site/NERV/publication browsers.' \
+		'The host then checks disposable memo proxy/mail/lifecycle fixtures with exact cleanup.' \
 		'' \
 		"The tracked ${CONTENT_ROOT} fixture is always selected. SAM_IMAGE and SAM_IPC" \
 		'may be overridden for diagnostics; the defaults are:' \
@@ -66,7 +67,8 @@ main() {
 	export SAM_IMAGE="${SAM_IMAGE-${DEFAULT_PLAYWRIGHT_IMAGE}}"
 	export SAM_IPC="${SAM_IPC-host}"
 
-	exec "${SAM_PATH}" npm run verify:m51
+	"${SAM_PATH}" npm run verify:m51
+	"${SCRIPT_DIR}/services/memos/ops/check-runtime.sh"
 }
 
 main "$@"

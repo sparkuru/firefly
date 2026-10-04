@@ -42,12 +42,15 @@ environment values override the file. Keep keys separately from backups.
 
 `MEMOS_CONFIG_PATH` defaults to `config/plugins/memos/config.toml`, relative
 to the repository. The package cwd is `services/memos`. `MEMOS_BIND` defaults
-to `127.0.0.1`, `MEMOS_PORT` to `8788`. A separate proxy container cannot reach
-another container's loopback. The later runtime integration must choose a
-shared network namespace or an explicit private-network binding and publish
-no service port to the host. This package does not install Compose, Nginx,
-trusted proxy address handling, worker scheduling or production credentials.
-Socket IP is currently the rate key; arbitrary forwarded addresses are ignored.
+to `127.0.0.1`, `MEMOS_PORT` to `8788`. Root Compose's opt-in `memos` profile
+shares the web network namespace; HTTP and worker publish no private port.
+See [operator preparation](../../plugins/memos/README.md) before enabling it.
+`MEMOS_TRUST_PROXY` accepts `none` (default) or `loopback`. Direct mode ignores
+all forwarding headers. Loopback mode requires a loopback listener and socket
+peer plus exactly one literal `X-Real-IP`; invalid/missing/duplicate values fail
+before persistence. The proxy overwrites that header and removes forwarding
+chains. IPv4-mapped IPv6 and equivalent IPv6 spellings share canonical quotas.
+The repository proxy does not automatically trust any additional edge.
 
 SMTP uses certificate-validated implicit TLS (`secure = true`) or mandatory
 STARTTLS (`secure = false`); failed upgrades never send credentials in plaintext.
@@ -107,6 +110,21 @@ the same email. Its token remains single-use. Rejection/deletion/verification
 cancel queued mail; delivery and expiry clear queued ciphertext. SMTP delivery
 and DNS/TLS/provider setup require separate operator validation.
 
+`npm run worker` runs the same encrypted lease operation continuously, one
+message per 15-second cycle, without overlapping drains. Errors produce only
+fixed status codes and recover on subsequent cycles. SIGINT/SIGTERM stop future
+ticks and wait for in-flight delivery before closing SQLite. The SMTP operation
+has a 180-second total deadline; Compose allows 200 seconds for shutdown.
+Forced termination leaves the existing five-minute lease to expire, after which
+the message retries. A crash after SMTP acceptance can duplicate mail; this is
+at-least-once delivery, with single-use verification tokens.
+
+Worker health checks its own process and private tick file, allowing 45 seconds
+idle or 190 seconds during a drain. It neither probes SMTP nor uses the HTTP
+sibling's readiness. Compose explicitly replaces the image's HTTP healthcheck
+for the worker. The image defaults to HTTP; `dist/src/worker-server.js` is its
+explicit worker command.
+
 ## Backup and restore
 
 Run these operator commands inside the service container with private writable
@@ -147,3 +165,21 @@ published ports. Keys are checked at every database open; replacing either key
 or key ID fails closed. Key rotation and migration are explicit future operator
 procedures. The runtime image includes the imported memo validation helper and
 checks both health and readiness from inside its loopback namespace.
+
+After the package and publication builds, run the maintained host-Docker gate:
+
+```sh
+services/memos/ops/check-runtime.sh
+```
+
+It uses the nonroot caller's UID:GID and requires installed repository packages, Docker,
+OpenSSL and the matching Playwright image. It creates exact-labelled disposable
+containers with no host ports, private fixture inputs and an isolated publication
+root. It proves proxy failures/headers/auth/spoof-resistant quotas, recreation
+of persistent rates/outbox, certificate-validated local TLS mail, real native
+desktop/mobile no-JavaScript POSTs, moderation/export/assembly/removal, stale
+HTML/export/restored-database refusal, and private log/output exclusion.
+It serializes actual site builds and must not run alongside another Astro build.
+Cleanup removes only its containers/image and owned fixture roots. This is
+repository integration evidence; real SMTP, edge client identity/TLS and release
+operations remain separate operator checks.

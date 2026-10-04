@@ -5,6 +5,7 @@ import type { MemosConfig, MemosSmtpConfig } from '../../../plugins/memos/config
 import { credentialHash, decodeKey, MemoCrypto } from './crypto.js';
 import { containedFile, privateDirectory, readRegular } from './files.js';
 import { ServiceError } from './types.js';
+import { proxyTrust, type ProxyTrust } from './address.js';
 
 export interface ServiceConfig {
   readonly plugin: MemosConfig;
@@ -15,6 +16,7 @@ export interface ServiceConfig {
   readonly smtp: (MemosSmtpConfig & { readonly password: string }) | null;
   readonly bind: string;
   readonly port: number;
+  readonly trustProxy: ProxyTrust;
 }
 export function loadSecrets(env: NodeJS.ProcessEnv, file = env.MEMOS_SECRETS_FILE): NodeJS.ProcessEnv {
   const values: NodeJS.ProcessEnv = {};
@@ -47,6 +49,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, repositoryRoot 
     const port = Number(env.MEMOS_PORT ?? '8788');
     const bind = env.MEMOS_BIND ?? '127.0.0.1';
     if (!Number.isInteger(port) || port < 1 || port > 65535 || !['127.0.0.1', '::1', '0.0.0.0'].includes(bind)) throw new ServiceError(503, 'invalid_config');
-    return { plugin, dataRoot, databasePath, crypto, adminHash: credentialHash(adminToken), smtp: { ...plugin.runtime.smtp, password }, bind, port };
+    return { plugin, dataRoot, databasePath, crypto, adminHash: credentialHash(adminToken), smtp: { ...plugin.runtime.smtp, password }, bind, port, trustProxy: proxyTrust(env.MEMOS_TRUST_PROXY, bind) };
   } catch { throw new ServiceError(503, 'configuration_unavailable'); }
 }

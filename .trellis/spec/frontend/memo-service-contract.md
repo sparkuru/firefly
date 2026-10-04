@@ -8,10 +8,12 @@ service imports only the pure `plugins/memos/` contract. It never reads comments
 state, renders Firefly pages, exposes a public memo-list API or promotes a
 static release. Historical Typecho data is outside this workflow.
 
-The site and publication/runtime children own `/memos/`, static export
-consumption, Nginx/Compose, trusted proxy addresses, worker scheduling and
-comparison with previously published tombstone epochs. A completed service
-does not establish that those integrations exist.
+The site and publication/runtime integrations own `/memos/`, static export
+consumption, Nginx/Compose and comparison with previously published tombstone
+epochs. The service also supplies explicit trusted-address and worker plumbing
+for that integration, without changing domain/schema semantics. A service-only
+gate does not establish deployed proxy/SMTP/publication evidence. See
+[Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 
 ## 2. Signatures
 
@@ -35,7 +37,7 @@ FIREFLY_CONTENT_ROOT="$PWD/content" ./sam npm --prefix services/memos run build
 FIREFLY_CONTENT_ROOT="$PWD/content" ./sam node --test plugins/memos/tests/*.test.mjs
 ```
 
-The package provides `start`, `admin`, `deliver:notifications`, `maintain`,
+The package provides `start`, `worker`, `admin`, `deliver:notifications`, `maintain`,
 `backup` and `restore` commands. Use host Docker for disposable service-image
 checks; `./sam docker ...` is not a valid Docker execution boundary.
 
@@ -80,9 +82,12 @@ insufficient.
 - Cap streaming request bodies at 32 KiB. Reject invalid UTF-8, repeated form
   fields, unexpected fields and unsupported content types before persistence.
 - Require an explicit public-write origin allowlist. Derive verification links
-  from configured public origin. Socket IP is authoritative until a separately
-  reviewed trusted-proxy protocol exists; arbitrary forwarded headers are not
-  client identity.
+  from configured public origin. Socket IP is authoritative by default.
+  `MEMOS_TRUST_PROXY=loopback` is an explicit deployment policy requiring
+  loopback bind/local/peer sockets and one validated X-Real-IP overwritten by
+  the proxy. Canonical IPv4/mapped IPv6/IPv6 identity prevents spelling-based
+  quota splitting. Missing/duplicate/list/bad values fail before write/rates;
+  Forwarded/X-Forwarded-For remain untrusted.
 - New valid submissions and exact unexpired unverified duplicates return the
   same generic acceptance response. A duplicate creates no record or mail.
   Verification expires after 24 hours; expiry permits a fresh submission
@@ -140,6 +145,11 @@ calling the memo producer/serializer. Creation time stays the submission time.
   or deletion. SMTP requires validated implicit TLS or mandatory STARTTLS.
   Validate sender mailbox bounds at configuration time so readiness cannot
   accept a sender the delivery transport will reject.
+- `npm run worker` periodically wraps the existing leased delivery, one message
+  per 15-second cycle with no overlap. Shutdown cancels scheduling, awaits the
+  active drain and closes SQLite once; forced stop uses lease/retry recovery.
+  Its private process/tick health is independent of sibling HTTP readiness.
+  Runtime Compose and proxy contracts belong to the linked integration spec.
 - Purge private email and abuse fields after 30 days through startup, periodic
   and explicit maintenance. Cleanup never approves or resurrects records.
   Removing live data does not erase earlier operator backups.

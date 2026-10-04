@@ -30,6 +30,9 @@ test('runtime enforces contained private database, real files, all keys, origins
     write();
     const env = { MEMOS_CONFIG_PATH: 'config/memos.toml', MEMOS_ADMIN_TOKEN: adminToken, MEMOS_TOKEN_KEY: '02'.repeat(32), MEMOS_ENCRYPTION_KEY: '01'.repeat(32), MEMOS_SMTP_PASSWORD: 'dummy-local-test' };
     const config = loadConfig(env, root); assert.equal(config.bind, '127.0.0.1'); assert.equal(config.port, 8788); assert.equal(fs.statSync(data).mode & 0o777, 0o700);
+    assert.equal(config.trustProxy, 'none');
+    assert.equal(loadConfig({ ...env, MEMOS_TRUST_PROXY: 'loopback' }, root).trustProxy, 'loopback');
+    for (const overrides of [{ MEMOS_TRUST_PROXY: '' }, { MEMOS_TRUST_PROXY: 'all' }, { MEMOS_TRUST_PROXY: 'loopback', MEMOS_BIND: '0.0.0.0' }]) assert.throws(() => loadConfig({ ...env, ...overrides }, root), /configuration_unavailable/u);
     for (const missing of ['MEMOS_ADMIN_TOKEN', 'MEMOS_TOKEN_KEY', 'MEMOS_ENCRYPTION_KEY', 'MEMOS_SMTP_PASSWORD'] as const) assert.throws(() => loadConfig({ ...env, [missing]: undefined }, root), /configuration_unavailable/);
     for (const extra of ['outboxPath = "/tmp/memo-outbox"', 'databasePath = "/tmp/outside.sqlite"']) { write(extra); assert.throws(() => loadConfig(env, root)); }
     write('', 'allowedOrigins = []'); assert.throws(() => loadConfig(env, root));

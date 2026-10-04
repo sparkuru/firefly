@@ -7,10 +7,11 @@
 Use this contract for dependency installation, Astro/Node commands, development
 servers, browser validation, publication tooling, or changes to `sam` / `dev.sh`.
 It applies to the validator, X Core, semantic, Terminal, assembler, main site,
-and NERV.
+NERV, and private comments/Memo service checks.
 
-`./sam` is the single development-command boundary. Host Node, global Playwright,
-direct host npm, and raw Docker are not project validation paths.
+`./sam` is the Node/npm/browser development-command boundary. Host Node, global
+Playwright, and direct host npm are not project validation paths. Explicit host
+Docker fixture and packaging boundaries are described below.
 
 ### 2. Signatures
 
@@ -69,14 +70,17 @@ FIREFLY_CONTENT_ROOT="$PWD/content" \
   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
   ./sam npm run verify:m51
 ./package-runtime.sh
+services/memos/ops/check-runtime.sh
 ```
 
 Browser signatures are recorded in the single Playwright profile in `index.md`.
 Root npm scripts are delegators and are valid only when already invoked inside
 `./sam` with the appropriate image. `verify.sh` is the host-facing complete
 repository-fixture gate; it pins the tracked root before `sam` loads the
-optional `config.dev`. Its inner `verify:m51` form is for phase-level diagnosis
-and is valid only through `./sam`.
+optional `config.dev`. After the inner gate succeeds, it runs the host-owned
+disposable Memo lifecycle fixture. Its inner `verify:m51` form is for phase-level
+diagnosis and is valid only through `./sam`; it does not include that Docker
+fixture.
 
 Docker Compose configuration syntax is a host Docker boundary, not a wrapped
 Node command. Use `docker compose config --quiet` to validate Compose files;
@@ -95,7 +99,7 @@ syntax check.
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `dev.sh` uses scope `dev.sh` and service `web`. |
 | `config.dev` | Optional ignored shell defaults file loaded by `sam` and `dev.sh`; copy `config.dev.example` and edit it for the current machine. Explicit environment variables take precedence. |
 | `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; it may be set in `config.dev` and otherwise defaults to `<repo>/content`. `sam` resolves and passes it into the container. |
-| `verify.sh` / `verify:m51` | `verify.sh` fixes the tracked `<repo>/content` root before the wrapper reads `config.dev`, defaults to the Playwright Noble image and `SAM_IPC=host`, and invokes the inner command. `verify:m51` uses `/app/content` for each phase and runs check → test → build → site → NERV → publication, short-circuiting on failure; direct host npm is not evidence. |
+| `verify.sh` / `verify:m51` | `verify.sh` fixes tracked `<repo>/content`, defaults to pinned Playwright Noble and host IPC, runs the inner gate, then the host disposable Memo lifecycle. The inner gate uses `/app/content`, runs checks/service/contract/site tests → isolated real Memo publication → Memo browser fixture → default publication build → site/NERV/publication browsers, short-circuiting on failure. Direct host npm is not evidence. |
 | `FIREFLY_SITE_CONFIG_PATH` | Optional repository-relative `.toml` override for contained build/test projections. `sam` requires an existing readable file whose real path stays inside the repository, then passes the same relative path into the container; the site loader additionally rejects a symlinked file and unsafe segments. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |

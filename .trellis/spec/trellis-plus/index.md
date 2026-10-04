@@ -26,9 +26,11 @@ artifact, not a project source directory.
 - The repository is a single root with separate manifests and lockfiles for
   the site, presentation packages, validation tooling, publication tooling,
   and NERV experiment.
-- `./sam` is the executable boundary for Node, npm, browser, and Docker
-  commands. Host npm, global Playwright, and raw Docker commands are not
-  validation evidence.
+- `./sam` is the executable boundary for Node, npm, and browser commands.
+  Host npm and global Playwright are not validation evidence. Compose syntax,
+  image isolation, runtime packaging, and the maintained disposable Memo
+  lifecycle fixture use the explicit host Docker boundaries in the validation
+  profile; their containers require exact ownership labels and cleanup.
 - The approved dependency direction is X Core → semantic/Terminal → site.
   The validator feeds the site and assembler at build time; the assembler
   depends on the validator; NERV remains isolated.

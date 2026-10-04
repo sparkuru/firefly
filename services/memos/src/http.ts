@@ -3,6 +3,7 @@ import { authenticated } from './crypto.js';
 import { publicContract } from './contract.js';
 import { MemoService } from './service.js';
 import { MAX_REQUEST_BYTES, ServiceError, type Action } from './types.js';
+import { clientAddress, type ProxyTrust } from './address.js';
 
 const messages: Readonly<Record<string, string>> = {
   accepted: 'If your submission is accepted, a verification email will arrive. It remains private until verification and owner approval.',
@@ -58,7 +59,7 @@ async function parseBody(request: IncomingMessage): Promise<unknown> {
     return fields;
   } catch { throw new ServiceError(400, 'invalid_input'); }
 }
-export function createMemoServer(service: MemoService, adminHash: Buffer, diagnostic: (code: string) => void = () => {}): Server {
+export function createMemoServer(service: MemoService, adminHash: Buffer, diagnostic: (code: string) => void = () => {}, trustProxy: ProxyTrust = 'none'): Server {
   return createServer((request, response) => {
     headers(response);
     const form = request.headers['content-type']?.split(';')[0]?.trim().toLowerCase() === 'application/x-www-form-urlencoded';
@@ -70,7 +71,8 @@ export function createMemoServer(service: MemoService, adminHash: Buffer, diagno
       if (url.pathname === '/v1/memos/submissions' && request.method === 'POST') {
         // Reject origin/availability before consuming attacker-controlled input.
         if (!request.headers.origin || !service.config.runtime.allowedOrigins.includes(request.headers.origin)) throw new ServiceError(403, 'origin_denied');
-        service.submit(await parseBody(request), request.headers.origin, request.socket.remoteAddress ?? 'unknown');
+        const address = clientAddress(request, trustProxy);
+        service.submit(await parseBody(request), request.headers.origin, address);
         result(response, 202, 'accepted', form); return;
       }
       if (url.pathname.startsWith('/v1/memos/verify/') && request.method === 'GET') {

@@ -12,10 +12,13 @@
     "assemble": "npm run build --silent && node dist/src/cli.js",
     "build:experiments": "npm run build --silent && node dist/src/cli.js --build-experiments",
     "start:e2e": "node dist/src/serve-release.js",
-    "test:e2e": "npm run build --silent && playwright test"
+    "test:e2e": "npm run build --silent && playwright test",
+    "test:memos-built": "npm run build --silent && node scripts/check-memos-built.mjs"
   },
   "dependencies": {
-    "@firefly/validate-experiments": "file:../validate-experiments"
+    "@firefly/validate-experiments": "file:../validate-experiments",
+    "parse5": "7.3.0",
+    "smol-toml": "1.8.0"
   },
   "devDependencies": {
     "@playwright/test": "1.62.0",

@@ -69,6 +69,10 @@ The producer and digest helpers accept an envelope without `digest`.
 - Tombstone epochs are non-negative safe integers; negative zero is invalid.
   Publication consumers must compare with prior promoted state to reject
   rollback. The pure module does not maintain publication history.
+  The independent assembler binds the actual staged memo DOM to this envelope,
+  retains deletion history while disabled and stores a canonical public-only
+  snapshot under artifacts. See
+  [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 
 ### Configuration
 

@@ -21,6 +21,9 @@ Required package gates are:
 | `tooling/assemble-publication` | `./sam npm --prefix tooling/assemble-publication ci`; `run check`; `run test`; `run build` |
 | `apps/site` | `./sam npm --prefix apps/site ci`; `run test:content`; `run test:x-core`; `run check`; `run build` |
 | `experiments/nerv` | `./sam npm --prefix experiments/nerv ci`; `run check`; `run build` |
+| `plugins/memos` | `./sam npm run test:memos-contract` |
+| `services/memos` | `./sam npm --prefix services/memos ci`; `run check`; `run test`; `run build` |
+| Memo integration | `./sam npm run test:memos:site`; `run test:memos-publication`; `run prepare:test:memos`; pinned browser `run test:e2e:memos` |
 
 For a main-publication run, materialize the configured content workspace,
 build and validate every declared manifest, then run the affected package,
@@ -58,3 +61,21 @@ repository's shell syntax, ShellCheck, formatting, wrapper-Node, and exact
 teardown checks. Runtime/package checks must prove the expected artifact,
 labels, isolation, and cleanup; a deployment-only check cannot replace local
 package or browser evidence.
+
+`./verify.sh` runs the inner `verify:m51` Node/browser gate through `sam`, then
+the host `services/memos/ops/check-runtime.sh` fixture only after that succeeds.
+The inner gate runs service and pure-contract checks, site and assembler
+regressions, an isolated real Memo publication, the Memo browser fixture, then
+restores the default publication before ordinary site/NERV/publication browsers.
+The host fixture owns a disposable HTTPS proxy, persistence root, and validated
+TLS SMTP sink; it never starts the owner/default Compose stack. Its native
+desktop/mobile form flow covers email verification, moderation, export,
+publication, deletion, and stale restore refusal without disabling TLS checks.
+The browser fixture rejects its certificate before importing the synthetic CA
+into disposable NSS trust. Its owned Playwright-derived image installs
+`libnss3-tools`, so fixture preparation requires the image package repository.
+
+Host Docker is also the explicit boundary for `docker compose config --quiet`,
+`services/memos/ops/check-image.sh`, and `./package-runtime.sh`. Syntax checks
+do not start services. Image and lifecycle fixtures must remove only their own
+exact labeled resources and leave default publication history untouched.

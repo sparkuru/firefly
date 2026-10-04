@@ -3,7 +3,7 @@ WORKDIR /app/services/memos
 COPY services/memos/package.json services/memos/package-lock.json services/memos/tsconfig.json ./
 RUN npm ci --ignore-scripts
 COPY services/memos/src ./src
-COPY plugins/memos /app/plugins/memos
+COPY plugins/memos/config.mjs plugins/memos/config.d.mts plugins/memos/public.mjs plugins/memos/public.d.mts plugins/memos/validation.mjs /app/plugins/memos/
 RUN npm run build
 
 FROM node:22-alpine
@@ -19,4 +19,5 @@ USER node
 VOLUME ["/var/lib/firefly-memos"]
 EXPOSE 8788
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["node", "-e", "Promise.all(['/healthz','/readyz'].map(p=>fetch('http://127.0.0.1:8788'+p))).then(r=>process.exit(r.every(v=>v.ok)?0:1)).catch(()=>process.exit(1))"]
-ENTRYPOINT ["node", "dist/src/server.js"]
+ENTRYPOINT ["node"]
+CMD ["dist/src/server.js"]

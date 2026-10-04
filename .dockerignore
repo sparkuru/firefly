@@ -9,6 +9,8 @@ dist
 **/*.log
 config/secrets.env
 config/plugins/comments/secrets.env
+config/plugins/memos/config.toml
+plugins/memos/data
 **/secrets.env
 services/comments/staging.env
 **/*.sqlite

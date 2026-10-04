@@ -33,7 +33,9 @@ interface MemoStreamBuildData {
 `capability: 'site-page'`). It is outside the post-extension registry.
 `apps/site/src/lib/contained-file.mjs` supplies
 `readContainedFile(relativePath, repositoryRoot, label): Buffer` for memo
-config/export inputs.
+config/export inputs as a facade over `tooling/shared/contained-file.mjs`;
+the shared utility also accepts an optional maximum byte count. This preserves
+the site interface without a reverse assembler-to-Astro dependency.
 
 Site configuration exposes `plugins.memos` activation and `memos` public
 values. `parseSiteConfig(value, source?, options?)` accepts a supplied
@@ -87,6 +89,12 @@ configured plugin file only when enabled.
   bodies are escaped text, never HTML/Markdown. Preserve body line breaks and
   wrap long text without horizontal page overflow. A valid empty stream retains
   a readable message and native form.
+- The stream receives the full immutable public envelope and emits public
+  schema/revision/generated-time/digest/epoch attributes plus each article's
+  opaque memo ID. These bind the actual staged DOM to publication input; they
+  are not credentials or a trust signature. Publication validates ordered
+  displayed fields and the form, rather than trusting a marker alone. See
+  [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 - Enabled sitemap inclusion follows the final emitted page set. Disabled output
   omits the memo page, form, links and sitemap URL. No SSR or runtime list fetch.
 

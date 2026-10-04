@@ -169,6 +169,13 @@ commands, and only then assembles the release.
   Candidate cleanup targets only transaction paths created inside the repository.
 - `artifacts/publication.json` is deterministic evidence containing schema
   version, safe catalog, and sorted inventory. It is not a browser registry.
+  Its additive exact six-field `memos` record binds the independently decoded
+  Memo configuration/export to the staged DOM. The canonical decoded snapshot
+  belongs only in `artifacts/memos/memos.public.v1.json`, outside the release
+  and web image. Disabled releases retain the prior tombstone epoch; lower
+  epochs and untrustworthy history fail before promotion. See
+  [Memo publication/runtime contract](./memo-publication-runtime-contract.md)
+  for raw-input ownership, exact DOM checks, bootstrap, and history rules.
 - This promotion is a repository build transaction: root `artifacts/` is its
   evidence target and root `dist/` is its assembled release candidate. The
   assembler does not create operator release IDs, populate an immutable

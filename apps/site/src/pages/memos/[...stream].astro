@@ -17,6 +17,6 @@ const { stream } = Astro.props;
 <DocumentLayout title="Memos" description="Short notes shared by readers, verified and approved before publication." pathname={MEMOS_SITE_PLUGIN.route}>
   <h1>Memos</h1>
   <p>Short notes shared by readers and approved by the owner.</p>
-  <MemoStream memos={stream.envelope.memos} />
+  <MemoStream envelope={stream.envelope} />
   <MemoForm config={stream.public} />
 </DocumentLayout>

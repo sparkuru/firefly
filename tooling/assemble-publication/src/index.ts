@@ -19,11 +19,24 @@ import {
   type ExperimentManifest
 } from '@firefly/validate-experiments';
 
+import {
+  loadMemoPublication,
+  memoMetadata,
+  memoContract,
+  memoHtmlReferences,
+  validateMemoTree,
+  type MemosPublicationMetadata,
+  type MemoPublicationOptions
+} from './plugins/memos.js';
+import { readMemoHistory } from './plugins/memo-history.js';
+export type { MemosPublicationMetadata, MemoPublicationOptions } from './plugins/memos.js';
+
 export interface PublicationResult {
   readonly manifestCount: number;
   readonly catalog: ExperimentDiscovery['catalog'];
   readonly inventory: readonly string[];
   readonly comments: CommentsPublicationMetadata;
+  readonly memos: MemosPublicationMetadata;
   readonly artifactsRoot: string;
   readonly releaseRoot: string;
 }
@@ -247,6 +260,7 @@ function decodeReference(reference: string, owner: string): string | null {
 }
 
 function referenceTargets(source: string, contents: string): readonly string[] {
+  if (source === 'memos/index.html') return memoHtmlReferences(contents);
   const targets: string[] = [];
   if (source.endsWith('.html') || source.endsWith('.svg')) {
     const attributePattern = /\b(?:href|src|poster|action)\s*=\s*["']([^"']+)["']/giu;
@@ -486,7 +500,12 @@ interface Promotion {
   readonly target: string;
 }
 
-async function promoteTogether(promotions: readonly Promotion[]): Promise<void> {
+async function promoteTogether(promotions: readonly Promotion[], beforeRename?: (step: number) => void | Promise<void>): Promise<void> {
+  let step = 0;
+  const move = async (from: string, to: string) => {
+    await beforeRename?.(++step);
+    await rename(from, to);
+  };
   const prepared: Array<Promotion & { readonly backup: string; readonly hadTarget: boolean }> = [];
   const moved: Array<Promotion & { readonly backup: string; readonly hadTarget: boolean }> = [];
   try {
@@ -494,12 +513,12 @@ async function promoteTogether(promotions: readonly Promotion[]): Promise<void> 
       const backup = `${promotion.target}.previous-${randomUUID()}`;
       const hadTarget = await pathExists(promotion.target);
       if (hadTarget) {
-        await rename(promotion.target, backup);
+        await move(promotion.target, backup);
       }
       prepared.push({ ...promotion, backup, hadTarget });
     }
     for (const promotion of prepared) {
-      await rename(promotion.candidate, promotion.target);
+      await move(promotion.candidate, promotion.target);
       moved.push(promotion);
     }
   } catch (error) {
@@ -564,6 +583,9 @@ export async function assemblePublication(options: {
   readonly repositoryRoot: string;
   readonly discovery?: ExperimentDiscovery;
   readonly comments?: CommentsPublicationMetadata;
+  readonly memoOptions?: MemoPublicationOptions;
+  /** Test seam for caught promotion failures. Never used for deployment switching. */
+  readonly beforePromotionRename?: (step: number) => void | Promise<void>;
 }): Promise<PublicationResult> {
   const repositoryRoot = path.resolve(options.repositoryRoot);
   const discovery = options.discovery ?? await discoverExperiments({ repositoryRoot });
@@ -571,6 +593,12 @@ export async function assemblePublication(options: {
   const siteOutput = path.join(repositoryRoot, 'apps/site/dist');
   const artifactsTarget = path.join(repositoryRoot, 'artifacts');
   const releaseTarget = path.join(repositoryRoot, 'dist');
+  const memoInput = loadMemoPublication(repositoryRoot, options.memoOptions);
+  const retainedEpoch = await readMemoHistory(repositoryRoot, memoInput, comments);
+  if (memoInput !== null && memoInput.envelope.tombstoneEpoch < retainedEpoch) {
+    throw new TypeError(`memo tombstone epoch ${memoInput.envelope.tombstoneEpoch} predates the published epoch ${retainedEpoch}; refusing rollback.`);
+  }
+  const memos = memoMetadata(memoInput, retainedEpoch);
   const publishedTombstoneEpoch = await readPublishedCommentsEpoch(artifactsTarget);
   if (comments.tombstoneEpoch < publishedTombstoneEpoch) {
     throw new TypeError(`comments tombstone epoch ${comments.tombstoneEpoch} predates the published epoch ${publishedTombstoneEpoch}; refusing rollback.`);
@@ -585,6 +613,12 @@ export async function assemblePublication(options: {
   let releasePromoted = false;
   try {
     await copySafeTree(siteOutput, path.join(artifactsCandidate, 'site'));
+    const stagedSite = path.join(artifactsCandidate, 'site');
+    await validateMemoTree(stagedSite, (await walkSafeTree(stagedSite)).files, memoInput);
+    if (memoInput !== null) {
+      await mkdir(path.join(artifactsCandidate, 'memos'));
+      await writeFile(path.join(artifactsCandidate, 'memos/memos.public.v1.json'), memoContract.serializePublicExport(memoInput.envelope));
+    }
     for (const manifest of discovery.manifests) {
       await requireRealContained(repositoryRoot, manifest.directory, `${manifest.id} directory`);
       const sourceOutput = path.resolve(manifest.directory, manifest.build.outputDir);
@@ -619,16 +653,18 @@ export async function assemblePublication(options: {
       await copySafeTree(path.join(artifactsCandidate, 'experiments', manifest.id), destination);
     }
     const inventory = await validateRelease(releaseCandidate, discovery.manifests);
+    await validateMemoTree(releaseCandidate, inventory, memoInput);
     await writeFile(path.join(artifactsCandidate, 'publication.json'), `${JSON.stringify({
       schemaVersion: 1,
       catalog: discovery.catalog,
       comments,
+      memos,
       inventory
     }, null, 2)}\n`);
     await promoteTogether([
       { candidate: artifactsCandidate, target: artifactsTarget },
       { candidate: releaseCandidate, target: releaseTarget }
-    ]);
+    ], options.beforePromotionRename);
     artifactsPromoted = true;
     releasePromoted = true;
     return Object.freeze({
@@ -636,6 +672,7 @@ export async function assemblePublication(options: {
       catalog: discovery.catalog,
       inventory,
       comments,
+      memos,
       artifactsRoot: artifactsTarget,
       releaseRoot: releaseTarget
     });

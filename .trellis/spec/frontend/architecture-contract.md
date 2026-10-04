@@ -53,6 +53,7 @@ types, errors, and validation rules live in the linked contracts.
 | `experiments/<id>/` | Own source, lockfile, assets, build command, and static output | Main-site source imports or writes to root `dist/` |
 | `tooling/validate-experiments/` | Validate manifests and project the safe public catalog | Build arbitrary browser/remote manifests |
 | `tooling/assemble-publication/` | Validate and combine static artifacts as one repository candidate | Rewrite Experiment HTML or switch a deployed release |
+| `tooling/shared/` | Framework-independent contained build-input file reading | Astro/site source imports, wire/domain rules or service state |
 | `plugins/comments/`, `services/comments/` | Site-owned comments integration and private write/moderation service | Direct database access from static site generation |
 | `plugins/memos/` | Independent memo public export and configuration contract | Site registration, HTTP handlers, private state, or publication promotion |
 | `services/memos/` | Independent memo submission, verification, encrypted private state, moderation, mail and export runtime | Comments state, site rendering, public runtime reads, or static release writes |
@@ -136,8 +137,13 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
   time. Disabled activation reads no memo config/export and emits no route;
   enabled activation renders `/memos/` with a native visitor form. The memo
   route/records remain independent of posts, pages, search and Terminal entries.
-  Site delivery does not establish proxy or publication integration. See
-  [Memo Site](./memo-site-contract.md).
+  Site delivery alone does not establish proxy or publication integration.
+  The independent publication adapter binds staged HTML to its export, retains
+  deletion epochs across disablement and stores a canonical public snapshot
+  only under artifacts. Opt-in private proxy and delivery-worker wiring do not
+  change static reading or authorize production deployment. See
+  [Memo Site](./memo-site-contract.md) and
+  [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 
 See [Experiment Publication](./publication-contract.md), [Comments and
 Publication](./comments-publication-contract.md), and [Development

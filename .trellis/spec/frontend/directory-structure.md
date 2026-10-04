@@ -19,9 +19,10 @@ experiments/nerv/                independent NERV static project
 experiments/majo/                independent MAJO static project
 tooling/validate-experiments/    manifest decoder and public catalog
 tooling/assemble-publication/    static artifact validation and assembly
+tooling/shared/                  framework-independent contained build-input files
 tooling/sync-server/             authoring workspace synchronization
 plugins/comments/                site-owned comments integration
-plugins/memos/                   independent memo public/config contract
+plugins/memos/                   independent memo public/config contract and runtime template/docs
 services/comments/               private comments write/moderation runtime
 services/memos/                  independent private memo write/moderation runtime
 config/                          public site and plugin configuration templates
@@ -53,13 +54,18 @@ package. Build outputs and private inputs are not public source contracts.
   integration separately; do not import comments record or route semantics.
   Put memo HTTP, private SQLite state, encrypted mail, admin CLI and local
   backup/restore operations under `services/memos/`. Its site and publication
-  consumers import only the pure plugin contract, never the service database
-  or runtime modules.
+  consumers import only the pure plugin contract and shared build-input tools,
+  never the service database or runtime modules. The memo-specific publication
+  adapter/history modules live under `tooling/assemble-publication/src/plugins/`;
+  its independent worker/trusted-address boundary stays in `services/memos/`.
 - Put memo build adaptation and UI under `apps/site/src/plugins/memos/`, with
   the manifest-aligned `index.mjs` entrypoint and conditional
   `apps/site/src/pages/memos/[...stream].astro` route. Config/export file safety
-  stays at the site read boundary; publication state/proxy wiring stays with
-  the publication/runtime consumer. See [Memo Site](./memo-site-contract.md).
+  uses `tooling/shared/contained-file.mjs` through the existing site facade;
+  publication state/proxy wiring stays with the publication/runtime consumer.
+  Keep the helper independent of Astro, service state and the pure wire module.
+  See [Memo Site](./memo-site-contract.md) and
+  [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 - Put shared publication rules in `tooling/validate-experiments/` or
   `tooling/assemble-publication/`, according to whether they validate source
   manifests or built static artifacts. Deployment release switching is outside

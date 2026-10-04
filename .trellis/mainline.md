@@ -156,7 +156,7 @@
 
 ## Next Decision
 
-The approved P1 remediation parent is the current initiative. Its ordered
+The approved P1 remediation parent is a completed initiative. Its ordered
 deliverables are documentation convergence, deterministic validation,
 comments-contract extraction, X Core/canonical-route cleanup, adapter/package
 cleanup, and release/observability hardening; all six deliverables are now
@@ -167,5 +167,26 @@ Public comments enablement was completed through the separate owner-approved
 task archived on 2026-09-05. Production owner-local activation is enabled;
 tracked example configuration remains disabled by default. Credential/key
 rotation, retained-database recovery, and deployment crash recovery remain
-owner-operated follow-ups. No next product task is active. Historic counters
-remain private unless another task defines their schema and presentation.
+owner-operated follow-ups. Historic counters remain private unless another
+task defines their schema and presentation.
+
+The independent public memo initiative has completed implementation and joint
+acceptance across all four deliverables. Contract `c9885e6`, service `bcbca34`
+and site `f5bc47c` precede the final publication/runtime integration. Its durable
+records belong under `.trellis/tasks/archive/2026-10/` in
+`10-01-memo-publication-runtime/` and `09-28-public-memo-stream/`.
+
+On 2026-10-05 the owner approved implementation and then confirmed the concrete
+53-file work commit, separate final-child and parent archives, and scoped
+session journal. The integrated result binds actual static Memo DOM to strict
+public input, retains deletion history while disabled, and supplies opt-in
+private Compose/Nginx/proxy trust, delivery scheduling and operator guidance.
+
+Independent final verification passed: one complete maintained gate with
+372 Node tests, 174 browser passes and 139 intentional skips, strict local
+HTTPS/TLS lifecycle, minimal web packaging and default-user service image
+checks. All six final-child and eight parent criteria pass together. These
+local results do not certify production deployment, real SMTP or owner edge
+topology. Historical Typecho import and new domain rules remain excluded.
+No next product task is created or started automatically; the next product
+direction requires a fresh owner decision.
