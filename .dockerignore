@@ -1,6 +1,8 @@
 .git
 .private
 .devhome
+.env
+config.dev
 **/.astro
 **/dist
 artifacts

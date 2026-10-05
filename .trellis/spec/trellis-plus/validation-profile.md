@@ -32,6 +32,62 @@ with its exact error; it is not counted as a pass.
 
 ## Browser profile
 
+### Trellis Plus: Playwright Validation Profile
+
+- execution mode: `docker-wrapper`; every Node/browser command uses `sam`.
+- setup/install: `./sam npm run install:m51`; the pinned Playwright Noble image
+  provides matching Chromium binaries/libraries. Docker/image access is a
+  prerequisite, not granted by this profile. Do not use global browsers.
+- application readiness/base URL: after `./preview.sh build`, the site config
+  owns `npm run start:e2e -- --host 0.0.0.0 --port 4321`, probing
+  `http://127.0.0.1:4321/`; NERV probes `/lab/nerv/` on 4321; assembler owns
+  `npm run start:e2e`, probing `http://127.0.0.1:4322`. Memo fixture preparation
+  uses `./preview.sh render npm run prepare:test:memos`, and its browser config
+  owns `node scripts/serve-memos-fixture.mjs` on 4321. These servers live inside
+  the browser container and are independent of the root user preview port.
+- focused commands: `./preview.sh render npm --prefix apps/site run test:e2e -- tests/home-browse.spec.ts`;
+  `./preview.sh render npm --prefix experiments/nerv run test:e2e`;
+  `./preview.sh render npm --prefix tooling/assemble-publication run test:e2e`;
+  `./preview.sh render npm run test:e2e:memos` after preparing its fixture.
+- full/CI-equivalent gate: `./preview.sh verify`. No separate CI browser job
+  is declared in this repository. The maintained host Memo lifecycle runs
+  only after the inner package/build/browser gate succeeds.
+- tests/config: `apps/site/tests/` and `playwright.config.ts` plus
+  `playwright.memos.config.ts`; `experiments/nerv/tests/` and its config;
+  `tooling/assemble-publication/tests/` and its config. MAJO's independent
+  `experiments/majo/playwright.config.ts` uses `/lab/majo/` on 4321 and runs via
+  `./preview.sh render npm --prefix experiments/majo run test:e2e` when affected.
+- browser projects/viewports: main site has `chromium-desktop-static`,
+  `chromium-desktop-interactive` at 1440x900 and `chromium-mobile-static`,
+  `chromium-mobile-interactive` at 375x812; static disables JS, mobile enables
+  touch. Memo has desktop-static/mobile-static/mobile-interactive; NERV/MAJO
+  have `chromium-desktop`/`chromium-mobile`; publication has
+  `publication-desktop`/`publication-mobile`, at the same widths/heights.
+- mobile applicability: ordinary changed reading/navigation/forms require
+  separate desktop and narrow-mobile interaction/final-state evidence even
+  without CSS edits. Pure shell/config/spec maintenance is non-UI. For a
+  mobile-focused site run append `-- --project=chromium-mobile-static
+  --project=chromium-mobile-interactive` to the existing `test:e2e` command.
+  Device/touch emulation does not prove physical phones/browser engines.
+- fixtures/data: tracked `content/`, disabled plugin baseline, isolated public
+  Memo fixture and disposable CA/SMTP/private lifecycle. No owner credentials,
+  production data, real mail delivery or personal browser sessions.
+- accessibility: use existing role/name/focus/keyboard assertions; no separate
+  accessibility scanner is configured. Assistive technology remains human-only.
+- visuals: screenshots are diagnostic; no automatically accepted screenshot
+  baseline. Any intentional future snapshot change needs approved comparison.
+- failure artifacts: package-local ignored `test-results/` and
+  `playwright-report/`; Memo uses `apps/site/test-results/memos-browser/`.
+  Ordinary configs retain screenshot-on-failure and trace-on-first-retry;
+  Memo retains trace-on-failure. Preserve runner stdout and console/network
+  evidence when investigating failures, and report exact artifact paths.
+
+Read this profile before external browser documentation. Classify each changed
+UI acceptance as required/equivalent/not-effective/unavailable and mobile
+required/not-applicable/unavailable before implementation. Missing automation
+is not evidence of success. The submit-ready gate in `commit-policy.md` handles
+only residual human judgment after all runnable automated checks.
+
 The main site and NERV use the pinned pair `@playwright/test@1.62.0` and
 `mcr.microsoft.com/playwright:v1.62.0-noble`. Browser commands run through:
 
@@ -56,13 +112,13 @@ or mutable mocks.
 
 ## Shell and runtime checks
 
-When `sam`, `dev.sh`, `package-runtime.sh`, or `verify.sh` changes, run the
+When `sam`, `preview.sh`, or `tooling/shared/dev-env.sh` changes, run the
 repository's shell syntax, ShellCheck, formatting, wrapper-Node, and exact
 teardown checks. Runtime/package checks must prove the expected artifact,
 labels, isolation, and cleanup; a deployment-only check cannot replace local
 package or browser evidence.
 
-`./verify.sh` runs the inner `verify:m51` Node/browser gate through `sam`, then
+`./preview.sh verify` runs the inner `verify:m51` Node/browser gate through `sam`, then
 the host `services/memos/ops/check-runtime.sh` fixture only after that succeeds.
 The inner gate runs service and pure-contract checks, site and assembler
 regressions, an isolated real Memo publication, the Memo browser fixture, then
@@ -76,6 +132,6 @@ into disposable NSS trust. Its owned Playwright-derived image installs
 `libnss3-tools`, so fixture preparation requires the image package repository.
 
 Host Docker is also the explicit boundary for `docker compose config --quiet`,
-`services/memos/ops/check-image.sh`, and `./package-runtime.sh`. Syntax checks
+`services/memos/ops/check-image.sh`, and `./preview.sh package`. Syntax checks
 do not start services. Image and lifecycle fixtures must remove only their own
 exact labeled resources and leave default publication history untouched.

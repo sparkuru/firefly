@@ -10,7 +10,7 @@
 #     ./sam npm --prefix experiments/nerv run test:e2e
 #   FIREFLY_COMMENTS_EXPORT=artifacts/comments/comments.public.v1.json \
 #     ./sam npm run build:m51
-#   WEB_HOST_PORT=4322 ./dev.sh
+#   WEB_HOST_PORT=4322 ./preview.sh start
 #
 # Ports: the assembled publication maps container 4321 to host 4321 by default.
 # Change WEB_HOST_PORT for parallel agents; WEB_CONTAINER_PORT must match the publication server port.
@@ -19,15 +19,13 @@ set -Eeuo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEVHOME="${REPO_ROOT}/.devhome"
-DEV_CONFIG_PATH="${REPO_ROOT}/config.dev"
 STEP_INDEX=0
 
-readonly REPO_ROOT DEVHOME DEV_CONFIG_PATH
+readonly REPO_ROOT DEVHOME
 
-if [[ -f "${DEV_CONFIG_PATH}" ]]; then
-	# shellcheck source=/dev/null
-	source "${DEV_CONFIG_PATH}"
-fi
+# shellcheck source=tooling/shared/dev-env.sh
+source "${REPO_ROOT}/tooling/shared/dev-env.sh"
+load_dev_environment "${REPO_ROOT}"
 
 IMAGE="${SAM_IMAGE:-node:22-alpine}"
 SAM_IPC="${SAM_IPC-private}"
@@ -284,6 +282,7 @@ main() {
 		COMMENTS_CONSENT_VERSION
 	)
 	local env_name
+	local published_host=${SAM_BIND_HOST}
 
 	[[ $# -gt 0 ]] || {
 		usage
@@ -298,8 +297,20 @@ main() {
 	discover_content_mounts
 	run_step internal mkdir -p -- "${DEVHOME}"
 
-	[[ -t 0 ]] && tty_flags+=(-i)
-	[[ -t 0 && -t 1 ]] && tty_flags+=(-t)
+	case "${SAM_DETACH:-0}" in
+	0)
+		[[ -t 0 ]] && tty_flags+=(-i)
+		[[ -t 0 && -t 1 ]] && tty_flags+=(-t)
+		;;
+	1)
+		tty_flags+=(--detach --pull never)
+		[[ -z "${SAM_CONTAINER_NAME:-}" ]] || tty_flags+=(--name "${SAM_CONTAINER_NAME}")
+		;;
+	*)
+		printf '[sam] SAM_DETACH must be 0 or 1\n' >&2
+		return 2
+		;;
+	esac
 
 	case "${SAM_IPC}" in
 	private | host) ;;
@@ -312,7 +323,8 @@ main() {
 	case "${SAM_SERVICE:-}" in
 	"") ;;
 	web)
-		port_flags=(-p "${SAM_BIND_HOST}:${WEB_HOST_PORT}:${WEB_CONTAINER_PORT}")
+		[[ "${published_host}" != *:* || "${published_host}" == \[*\] ]] || published_host="[${published_host}]"
+		port_flags=(-p "${published_host}:${WEB_HOST_PORT}:${WEB_CONTAINER_PORT}")
 		;;
 	*)
 		printf '[sam] unknown service for port mapping: %s\n' "${SAM_SERVICE}" >&2
@@ -353,6 +365,8 @@ main() {
 		--label "sam.repo=${REPO_ROOT}"
 		--label "sam.scope=${SAM_SCOPE:-manual}"
 		--label "sam.service=${SAM_SERVICE:-}"
+		--label "sam.preview.mode=${SAM_PREVIEW_MODE:-}"
+		--label "sam.preview.config=${SAM_PREVIEW_CONFIG:-}"
 		"${port_flags[@]}"
 		"${IMAGE}"
 		"$@"

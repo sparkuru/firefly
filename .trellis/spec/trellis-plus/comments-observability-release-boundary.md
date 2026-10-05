@@ -137,7 +137,7 @@ operator-owned deployment details remain at their existing private boundary.
 - `./sam npm run check:assembler`, `./sam npm run test:assembler`, and
   `./sam npm run build:assembler`: preserve local promotion/rollback and the
   comments tombstone-epoch anti-rollback guard.
-- `./verify.sh`: run the repository gate. If the existing published epoch is
+- `./preview.sh verify`: run the repository gate. If the existing published epoch is
   newer than the local candidate, record the exact guard failure and confirm
   that publication artifacts were not changed; do not lower the epoch or
   weaken the guard.

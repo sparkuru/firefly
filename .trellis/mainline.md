@@ -14,6 +14,41 @@
 - After each task is archived, run Project Pulse and present the next ready item before continuing.
 - Guided mode requires a fresh user decision before creating or starting the next product task.
 
+## Authorized Repository Maintenance
+
+- Owner decision (2026-10-05): consolidate the four root shell entrypoints into
+  `preview.sh`, then reapply Trellis Plus; explicitly do not create a task.
+- Approved scope: unified developer CLI and real callers, literal root dotenv
+  configuration, background preview/readiness/status/precise stop, preserved
+  renderer/fixture validation/runtime packaging, and project-owned durable
+  workflow policies. `sam` remains the Docker command boundary.
+- Product pages, wire/data contracts, owner deployments, task states, prior
+  archives and Git history are outside this maintenance. The owner separately
+  approved the narrow root/Memo README command migration in this session.
+- Acceptance: shell/static and focused command tests; actual local lifecycle
+  and port cleanup; preserved complete fixture gate and runtime packaging.
+  Record actual validation separately from source implementation. This owner
+  choice does not authorize a subsequent product task or automatic commit.
+- The owner subsequently explicitly authorized committing this completed
+  maintenance. Task creation and archival remain outside this session.
+- Verified (2026-10-05): Bash syntax/ShellCheck/shfmt and diff checks;
+  23 CLI behavior fixtures and 36 combined diagram/CLI tests; the complete
+  `./preview.sh verify` fixture gate, including 174 Playwright passes and 139
+  applicability skips, plus Memo proxy/persistence/TLS/native desktop/mobile
+  POST/publication/removal/restore/privacy and verified disposable cleanup.
+  The final gate exited zero and both script/test source hashes stayed fixed.
+- Real lifecycle verified after fixing Docker auto-removal timing: invocation
+  from another directory, same-container repeated start, status/four routes,
+  conflicting configuration rejection, immediate stop/down and closed ports;
+  Astro hot reload with distinct host/container ports and owned lock cleanup;
+  actual IPv6 loopback mapping and bracket-normalized repeated start. No owned
+  preview containers remain. Runtime packaging assertions also passed with an
+  isolated image tag, then its test container/tag were removed.
+- Shared policy is installed under `spec/trellis-plus/`. Future task loading,
+  actual Trellis update, incremental environment synchronization, UI/UUPM task
+  execution and attributed archival remain unverified. Experimental media
+  notice provenance remains `license-notice-needed` in `third_party/index.md`.
+
 ## Ordered Work
 
 | Order | Work item | State | Dependency / readiness |

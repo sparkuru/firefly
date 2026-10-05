@@ -251,7 +251,7 @@ start on content rather than empty canvas. Store the encoded ID only on the
 SVG root, read only that root marker on cache hits, and keep preview image
 URLs fragment-free; labels must never be interpreted as navigation metadata.
 
-Run `./render.sh npm --prefix apps/site run test:diagrams` for renderer safety,
+Run `./preview.sh render npm --prefix apps/site run test:diagrams` for renderer safety,
 fresh-render determinism, both adapter metadata, warm-cache and asset ownership
 checks; `mermaid.spec.ts` covers no-JS canonical images/disclosure and repeated
 Terminal `cat` isolation in the existing desktop/mobile browser projects.

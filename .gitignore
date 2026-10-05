@@ -24,6 +24,7 @@ tooling/.gitignore
 
 config/site.toml
 config.dev
+.env
 config/secrets.env
 config/plugins/comments/config.toml
 config/plugins/comments/secrets.env

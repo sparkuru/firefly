@@ -194,7 +194,7 @@ The browser entry is `startHomeSearch(root: HTMLElement): void` in
   restoring root, and independent browse/search failure; do not filter results
   to the current folder or tie availability to its controller.
 - Cover portrait, landscape, touch tablet, desktop interactive, and static
-  projects. Use the tracked public fixture and `./sam`/`./render.sh` command
+  projects. Use the tracked public fixture and `./sam`/`./preview.sh render` command
   boundary from `../trellis-plus/validation-profile.md`.
 - Measure an expanded synthetic public corpus with hundreds of longer bodies;
   assert complete counts and record extraction/search timings. Do not add

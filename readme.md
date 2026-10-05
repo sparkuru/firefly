@@ -7,7 +7,7 @@
 
 <p align = "center" style="font-size: 30px;" > <strong> Firefly </strong> </p>
 
-Firefly is a static Astro publication backed by Markdown, with a framework-neutral Terminal presentation. Docker is required for builds and checks; `./sam` runs the project commands, and `./render.sh` runs commands that render documents.
+Firefly is a static Astro publication backed by Markdown, with a framework-neutral Terminal presentation. Docker is required for builds and checks; `./sam` runs the project commands, and `./preview.sh render` runs commands that render documents.
 
 The [architecture contract](.trellis/spec/frontend/architecture-contract.md) maps content, presentations, independent experiments, and publication boundaries.
 
@@ -17,21 +17,22 @@ The tracked `content/` directory is a sample blog root with `posts/` and `pages/
 
 ```sh
 cp config/site.toml.example config/site.toml
+cp .env.example .env
 ./sam npm run install:m4
-./render.sh npm run build:m4
-./dev.sh
+./preview.sh build
+./preview.sh
 ```
 
-`./dev.sh` serves the existing build at port `4321`.
+`./preview.sh` serves the existing build in the background at the configured port (default `4321`) and returns after readiness. Use `./preview.sh status` to inspect it.
 
-Use `./dev.sh dev` for main-site hot reload, `./dev.sh preview` to rebuild and serve the complete publication, and `./dev.sh down` to stop the development service.
+Use `./preview.sh dev` for main-site hot reload, `./preview.sh preview` to rebuild and serve the complete publication, and `./preview.sh down` to stop the development service.
 
-Copy `config.dev.example` to the ignored `config.dev` to set a local content root, bind address, or port.
+Copy `.env.example` to the ignored `.env` to set a local content root, bind address, or port.
 
 To build from another blog root, point `FIREFLY_CONTENT_ROOT` at the directory containing both `posts/` and `pages/`:
 
 ```sh
-FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./render.sh npm run build:m4
+FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./preview.sh build
 ```
 
 To serve with Compose, build first, then run `docker compose up --build -d`. Stop it with `docker compose down`. The optional private comments service has a separate [setup guide](services/comments/README.md).
@@ -68,7 +69,7 @@ The complete repository fixture gate uses the tracked `content/` root:
 
 ```sh
 ./sam npm run install:m51
-./verify.sh
+./preview.sh verify
 ```
 
 See the [development runtime contract](.trellis/spec/frontend/development-runtime.md) for focused checks and the [validation profile](.trellis/spec/trellis-plus/validation-profile.md) for release gates.

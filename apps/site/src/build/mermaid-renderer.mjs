@@ -96,7 +96,7 @@ async function render(source, cacheDir, timeoutMs) {
   try {
     browser = await chromium.launch({ headless: true });
   } catch (cause) {
-    throw new Error('Mermaid renderer unavailable. Install locked site dependencies and run this command through ./render.sh (Playwright 1.62.0 Noble).', { cause });
+    throw new Error('Mermaid renderer unavailable. Install locked site dependencies and run this command through ./preview.sh render (Playwright 1.62.0 Noble).', { cause });
   }
   try {
     const context = await browser.newContext({ javaScriptEnabled: true, serviceWorkers: 'block' });
@@ -105,7 +105,7 @@ async function render(source, cacheDir, timeoutMs) {
     try {
       await page.addScriptTag({ path: require.resolve('mermaid/dist/mermaid.min.js') });
     } catch (cause) {
-      throw new Error('Mermaid runtime unavailable. Install the locked apps/site dependencies and use ./render.sh.', { cause });
+      throw new Error('Mermaid runtime unavailable. Install the locked apps/site dependencies and use ./preview.sh render.', { cause });
     }
     let timeout;
     const work = (async () => {

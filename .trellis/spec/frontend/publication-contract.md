@@ -91,7 +91,7 @@ assemble-publication [--root <repository-root>] [--build-experiments]
 ./sam npm run assemble:publication
 ./sam npm run publication:m4
 ./sam npm run build:m4
-./package-runtime.sh
+./preview.sh package
 ```
 
 `publication:m4` clean-installs every owned lockfile and invokes `build:m4`.
@@ -207,7 +207,7 @@ commands, and only then assembles the release.
   command input.
 - NERV remains autonomous at `/lab/nerv/`. Reduced motion disables scanline,
   flicker, and scroll-driven stripe movement while preserving static content.
-- `package-runtime.sh` requires exact equality between
+- `preview.sh package` requires exact equality between
   `artifacts/publication.json`, root `dist/`, and image runtime inventory before
   route probes. Its temporary Docker context contains only Dockerfile, Nginx
   config, and the validated release; no repository/workspace source enters it.
@@ -435,5 +435,5 @@ For progressive first-slide text, this same rule applies to the initial DOM:
 - `experiments/nerv/src/pages/index.astro`
 - `Dockerfile`
 - `nginx.conf`
-- `package-runtime.sh`
+- `preview.sh package`
 - `.trellis/spec/frontend/content-workspace-contract.md`

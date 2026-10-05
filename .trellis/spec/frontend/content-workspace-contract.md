@@ -23,10 +23,10 @@ FIREFLY_CONTENT_ROOT=/absolute/path/to/blog ./sam npm run build:m4
 ./sam npm run check:m4
 ./sam npm run test:m4
 ./sam npm run build:m4
-./verify.sh
-./package-runtime.sh
+./preview.sh verify
+./preview.sh package
 
-cp config.dev.example config.dev
+cp .env.example .env
 ```
 
 Materialization and access:
@@ -299,11 +299,11 @@ createDocumentNavigationLookup(
 
 - `FIREFLY_CONTENT_ROOT` is optional. It defaults to the blog root
   `<repo>/content`, which must contain readable `posts/` and `pages/` children.
-  `sam` and `dev.sh` load the ignored `config.dev` shell defaults file when it
-  exists; explicit environment variables take precedence. When configured, the
+  `sam` and `preview.sh` load ignored root `.env` as literal values through the
+  shared parser; explicit environment variables take precedence. When configured, the
   value must name an absolute readable blog root with the same shape.
-- `verify.sh` is the deterministic repository-fixture entry point. It fixes the
-  tracked `<repo>/content` root before `sam` loads `config.dev`; its inner
+- `preview.sh verify` is the deterministic repository-fixture entry point. It fixes the
+  tracked `<repo>/content` root before `sam` loads `.env`; its inner
   `verify:m51` command uses `/app/content` for every phase and runs the complete
   non-browser and browser gate. The explicit owner-workspace `build:workspace`
   command remains an authoring check and is not fixture evidence.
@@ -1629,7 +1629,7 @@ const mobile = window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY).matches;
   clicking a public directory with an unmodified primary activation submits a
   safe `cd ~/blog/posts/characters/`, updates the prompt, and leaves the home URL
   unchanged. Ctrl/Cmd/Alt/Shift activation remains a native directory link.
-- Base: omitted `FIREFLY_CONTENT_ROOT` and `config.dev` builds the repository fixture; omitted
+- Base: omitted/empty `FIREFLY_CONTENT_ROOT` builds the repository fixture; omitted
   `access` is public; JavaScript-disabled permalinks remain normal documents.
 - Good: one frozen `PresentationExperience` record supplies the adapter used by
   `PresentationRegistry`, while the composition resolver supplies the
@@ -2117,7 +2117,7 @@ const label = match.path === '-' ? '-' : formatResourcePath(match.path);
 - `apps/site/src/pages/pages/index.astro`
 - `apps/site/src/components/ContentDirectoryIndex.astro`
 - `apps/site/src/components/TerminalDocument.astro`
-- `package-runtime.sh`
+- `preview.sh package`
 
 ### Inline zoom and fixture verification
 

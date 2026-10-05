@@ -95,7 +95,7 @@ test('missing browser is an actionable infrastructure error, not a diagram fallb
     });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /Mermaid renderer unavailable/u);
-    assert.match(result.stderr, /render\.sh/u);
+    assert.match(result.stderr, /preview\.sh render/u);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

@@ -85,7 +85,7 @@ copy_export() {
 
 build_site() {
 	if ! FIREFLY_CONTENT_ROOT="$REPOSITORY_ROOT/content" FIREFLY_SITE_CONFIG_PATH="$publication_relative/config/site.toml" \
-		"$REPOSITORY_ROOT/render.sh" env FIREFLY_MEMOS_EXPORT="$publication_relative/inputs/memos.json" \
+		"$REPOSITORY_ROOT/preview.sh" render env FIREFLY_MEMOS_EXPORT="$publication_relative/inputs/memos.json" \
 		npm --prefix apps/site run astro -- build --outDir "/app/$publication_relative/apps/site/dist" >"$scratch/runtime/site-build.log" 2>&1; then
 		cat "$scratch/runtime/site-build.log" >&2
 		die 'owned static site build failed'

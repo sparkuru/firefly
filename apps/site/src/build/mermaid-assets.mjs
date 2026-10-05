@@ -19,7 +19,7 @@ export async function publishDiagramAssets(directory, cacheDir = diagramCache) {
   if (keys.size) await mkdir(path.join(directory, 'diagrams'), { recursive: true });
   for (const key of keys) {
     try { await copyFile(path.join(cacheDir, `${key}.svg`), path.join(directory, 'diagrams', `${key}.svg`)); }
-    catch (cause) { throw new Error(`Missing generated diagram ${key}. Clear apps/site/.astro and rebuild through ./render.sh.`, { cause }); }
+    catch (cause) { throw new Error(`Missing generated diagram ${key}. Clear apps/site/.astro and rebuild through ./preview.sh render.`, { cause }); }
   }
   return keys;
 }

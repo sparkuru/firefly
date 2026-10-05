@@ -160,7 +160,7 @@ configured plugin file only when enabled.
 ## 6. Tests Required
 
 Run Node/site commands through `./sam` and diagram-capable builds through
-`./render.sh`, with tracked content selected. Focused scripts are
+`./preview.sh render`, with tracked content selected. Focused scripts are
 `test:memos`, `prepare:test:memos`, and `test:e2e:memos` in `apps/site`.
 Browser commands use the pinned image/IPC profile from
 [Development Runtime](./development-runtime.md).

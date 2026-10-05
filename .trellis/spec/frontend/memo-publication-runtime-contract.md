@@ -47,7 +47,7 @@ startDeliveryWorker({ deliver, close, diagnostic?, heartbeat?, schedule? }):
 ```
 
 Host Docker validates Compose; Node/browser commands use `./sam` and
-diagram-capable site commands use `./render.sh`. Runtime commands in the image
+diagram-capable site commands use `./preview.sh render`. Runtime commands in the image
 remain `npm run start`, `npm run worker`, private `admin`, maintenance,
 one-shot delivery and backup/restore. Default image startup is still HTTP.
 
@@ -113,7 +113,7 @@ one-shot delivery and backup/restore. Default image startup is still HTTP.
 - The full root Docker builder excludes `artifacts/` and `dist/`, so it starts
   fresh and cannot establish a prior host/deployment epoch. Use the maintained
   wrapped host publication with durable history and the minimal
-  `package-runtime.sh` release context when validating retained deletion state.
+  `preview.sh package` release context when validating retained deletion state.
   Fresh Docker assembly is not evidence of cross-release rollback protection.
 
 ### Private proxy and rate identity

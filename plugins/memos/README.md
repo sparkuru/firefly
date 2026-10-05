@@ -81,7 +81,7 @@ explicit override, `FIREFLY_MEMOS_EXPORT`, then public
 static reading. The assembler compares actual generated records/form/envelope
 identity and rejects stale, unsafe or swapped output before promotion.
 
-Package the validated publication with `./package-runtime.sh`; its minimal web
+Package the validated publication with `./preview.sh package`; its minimal web
 image context contains only the Dockerfile, Nginx configuration and public
 `dist/` tree. An enabled full root Docker build instead requires separate
 contained public TOML/export inputs at paths included in that build context,

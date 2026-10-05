@@ -6,6 +6,7 @@ import path from 'node:path';
 const repositoryRoot = path.resolve(import.meta.dirname, '../../../..');
 const releaseRoot = path.join(repositoryRoot, 'dist');
 const port = Number(process.env.PUBLICATION_PORT ?? '4322');
+const host = process.env.PUBLICATION_HOST ?? '0.0.0.0';
 const types = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.html', 'text/html; charset=utf-8'],
@@ -40,6 +41,6 @@ createServer(async (request, response) => {
   response.statusCode = 404;
   response.setHeader('Content-Type', 'text/html; charset=utf-8');
   createReadStream(fallback).pipe(response);
-}).listen(port, '0.0.0.0', () => {
+}).listen(port, host, () => {
   process.stdout.write(`Publication server listening on ${port}\n`);
 });
