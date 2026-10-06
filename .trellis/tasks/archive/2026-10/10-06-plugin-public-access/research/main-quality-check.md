@@ -106,8 +106,9 @@ Local automated, independent source-review and actual current-state deployment
 acceptance pass. `human-not-needed` for these covered mechanics: no residual
 material runnable check or subjective visual decision remains. All six AC are
 met within the explicitly reviewed fixture-versus-production boundary. Work
-commit and subsequent archival/journal were explicitly confirmed by the owner;
-execute the reviewed scoped plan without a Git push.
+commit and subsequent archival/journal were explicitly confirmed by the owner.
+Work commit `c04b09f` contains the reviewed changes. The completed task is
+archived with that reference; separate bookkeeping follows without a Git push.
 Enabled production comments is intentionally untested because no
 prepared runtime exists; its positive/mixed acceptance is isolated synthetic
 evidence, with future synchronization requiring matching readiness/config.

@@ -1,7 +1,9 @@
 # Proposed commit and bookkeeping plan
 
 The owner explicitly confirmed this scoped work commit, task archival and
-session journal. Execute in the order below; no Git push is authorized.
+session journal. Work commit `c04b09f` is complete and the task is archived;
+separate archive/journal commits follow in that order. The list below retains
+the approved historical work scope. No Git push is authorized.
 
 ## Work commit
 

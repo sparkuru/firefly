@@ -52,7 +52,7 @@
 ## Ordered Work
 
 The owner approved unified plugin public-access switches on 2026-10-06. The
-active `10-06-plugin-public-access` task makes comments and Memo false close
+completed `plugin-public-access` task makes comments and Memo false close
 their entire public namespaces with 404 while retaining private data/history.
 The reviewed current deployment keeps both owner flags false. Positive/mixed
 coverage uses isolated fixtures; provisioning the absent comments runtime is
@@ -66,8 +66,11 @@ redirects and desktop/mobile reading verified. Memo source/remote bytes,
 pointer/receipt/history and retained plugin modes match their exact baseline;
 both owner flags remain unchanged. The private sync also corrected an observed
 target Zsh special-variable conflict, with 33 isolated flows plus real retry
-passing. The owner explicitly confirmed the scoped work commit, task archival
-and journal; bookkeeping follows without Git push or another product task.
+passing. Work commit `c04b09f` contains the reviewed implementation, specs and
+safe evidence. The task is archived at
+`.trellis/tasks/archive/2026-10/10-06-plugin-public-access/`; its separate
+archive and session journal commits follow the approved work commit. No Git
+push or another product task is authorized.
 
 | Order | Work item | State | Dependency / readiness |
 | --- | --- | --- | --- |
