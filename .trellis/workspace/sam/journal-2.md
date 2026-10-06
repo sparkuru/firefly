@@ -98,3 +98,38 @@ No remote push or subsequent product task is authorized by this closure.
 ### Status
 
 [OK] **Completed**
+
+
+## Session 85: Owner Memo publisher and historical note import
+
+**Date**: 2026-10-06
+**Task**: Owner Memo publisher and historical note import
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed the owner Markdown publisher and imported 89 nonempty historical notes with 211 local image assets into the external source directory; UTC+8 source timestamps, public eligibility and all acceptance checks confirmed. Both tasks archived after explicit scoped Git approval.
+
+### Main Changes
+
+- Committed the reviewed publisher and strict schema/body-limit support; external authoring content and private migration artifacts remain outside Git.
+- Imported 89 notes as draft:false, skipped 287 empty records, preserved original ledgers, and retained unavailable image/link targets visibly.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `82131db` | (see git log) |
+
+### Testing
+
+- [OK] Contract 11/11, publisher 16/16, publication 4/4, site integration 4/4, synthetic browser 6/6, and independent review passed.
+- [OK] Real-corpus desktop/mobile each verified 89 notes, 221 decoded images, 37 mapped anchors and zero overflow or failed/external requests.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- This scope is complete. Remote publication of the historical corpus requires a compatible validator image and separate authorization.
