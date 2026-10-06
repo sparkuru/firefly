@@ -23,7 +23,8 @@
     "preview": "astro preview",
     "blog:meta": "node scripts/blog-meta.mjs",
     "astro": "npm run prepare:content && astro",
-    "test:memos": "node --test --test-concurrency=1 tests/memos.test.mjs tests/memos-build.test.mjs",
+    "test:memos": "node --test --test-concurrency=1 tests/memos.test.mjs tests/memos-build.test.mjs tests/plugin-access.test.mjs",
+    "test:plugin-access": "node --test tests/plugin-access.test.mjs",
     "prepare:test:memos": "node scripts/prepare-memos-fixture.mjs",
     "test:e2e:memos": "playwright test --config playwright.memos.config.ts"
   },

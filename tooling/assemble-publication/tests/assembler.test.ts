@@ -4,8 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { writeAccess } from './access-fixture.js';
 import { decodeExperimentManifest } from '@firefly/validate-experiments';
 import { assemblePublication, validateRelease, walkSafeTree, type CommentsPublicationMetadata } from '../src/index.js';
+import { loadCommentsPublication } from '../src/plugins/comments.js';
 
 async function fixture(context: test.TestContext) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-publication-'));
@@ -16,6 +18,7 @@ async function fixture(context: test.TestContext) {
   const experiment = path.join(root, 'experiments/alpha');
   await mkdir(path.join(site, 'lab'), { recursive: true });
   await mkdir(path.join(experiment, 'dist/assets'), { recursive: true });
+  await writeAccess(site, { comments: false, memos: false });
   await writeFile(path.join(site, 'index.html'), '<a href="/lab/">Lab</a>');
   await writeFile(path.join(site, '404.html'), '<h1>Missing</h1>');
   await writeFile(path.join(site, 'lab/index.html'), '<a href="/lab/alpha/">Alpha</a>');
@@ -65,6 +68,21 @@ test('comments publication adapter consumes the repository public contract', asy
   assert.doesNotMatch(source, /apps\/site\/src/u);
 });
 
+test('disabled comments ignore retained export inputs while enabled comments require evidence', async (context) => {
+  const { root } = await fixture(context);
+  const previous = process.env.FIREFLY_COMMENTS_EXPORT;
+  try {
+    process.env.FIREFLY_COMMENTS_EXPORT = '/missing/retained-export.json';
+    assert.equal((await loadCommentsPublication(root)).enabled, false);
+    await writeAccess(path.join(root, 'apps/site/dist'), { comments: true, memos: false });
+    delete process.env.FIREFLY_COMMENTS_EXPORT;
+    await assert.rejects(loadCommentsPublication(root), /Enabled comments require/u);
+  } finally {
+    if (previous === undefined) delete process.env.FIREFLY_COMMENTS_EXPORT;
+    else process.env.FIREFLY_COMMENTS_EXPORT = previous;
+  }
+});
+
 test('safe walker rejects symlinks and source maps', async (context) => {
   const { root } = await fixture(context);
   const tree = path.join(root, 'tree');
@@ -87,6 +105,8 @@ test('safe walker rejects symlinks and source maps', async (context) => {
 test('release validation warns for missing references but rejects escapes and prohibited text', async (context) => {
   const { root, manifest } = await fixture(context);
   const release = path.join(root, 'release');
+  await mkdir(release);
+  await writeAccess(release, { comments: false, memos: false });
   await mkdir(path.join(release, 'lab/alpha/assets'), { recursive: true });
   await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
   await writeFile(path.join(release, '404.html'), '<h1>Missing</h1>');
@@ -121,6 +141,8 @@ test('release validation warns for missing references but rejects escapes and pr
 test('allows path-like authored post/page bodies but rejects the same text in an Experiment', async (context) => {
   const { root, manifest } = await fixture(context);
   const release = path.join(root, 'release');
+  await mkdir(release);
+  await writeAccess(release, { comments: false, memos: false });
   const authoredBody = '<img src="asset.txt">\n/srv/uploads/public-example.txt';
   await mkdir(path.join(release, 'posts/example/article'), { recursive: true });
   await mkdir(path.join(release, 'posts/security/binary/article'), { recursive: true });
@@ -245,6 +267,8 @@ test('assembly rejects Experiment outputs and licenses reached through symlinked
 test('release validation rejects private or unsafe comment surfaces in authored documents', async (context) => {
   const { root, manifest } = await fixture(context);
   const release = path.join(root, 'release');
+  await mkdir(release);
+  await writeAccess(release, { comments: true, memos: false });
   await mkdir(path.join(release, 'lab/alpha'), { recursive: true });
   await mkdir(path.join(release, 'posts/example/article'), { recursive: true });
   await writeFile(path.join(release, 'index.html'), '<h1>Home</h1>');
@@ -262,6 +286,8 @@ test('release validation rejects private or unsafe comment surfaces in authored 
 test('comment privacy scanning preserves canonical route category names', async (context) => {
   const { root, manifest } = await fixture(context);
   const release = path.join(root, 'release');
+  await mkdir(release);
+  await writeAccess(release, { comments: true, memos: false });
   await mkdir(path.join(release, 'lab/alpha'), { recursive: true });
   for (const category of ['app', 'home', 'tmp']) {
     await mkdir(path.join(release, 'posts', category, 'article'), { recursive: true });
@@ -313,6 +339,8 @@ test('publication evidence records comment tombstones and refuses an older rollb
     digest: 'a'.repeat(64),
     tombstoneEpoch: 3
   };
+  await writeAccess(path.join(root, 'apps/site/dist'), { comments: true, memos: false });
+  await writeFile(path.join(root, 'apps/site/dist/index.html'), '<section class="comment-section"><p>Approved</p></section>');
   const result = await assemblePublication({ repositoryRoot: root, discovery, comments: current });
   assert.deepEqual(result.comments, current);
   const publication = JSON.parse(await readFile(path.join(root, 'artifacts/publication.json'), 'utf8')) as { comments: CommentsPublicationMetadata };
@@ -322,4 +350,68 @@ test('publication evidence records comment tombstones and refuses an older rollb
     /predates the published epoch 3/u
   );
   assert.equal(await readFile(path.join(root, 'dist/lab/alpha/index.html'), 'utf8'), '<link href="/lab/alpha/assets/app.css">');
+  await writeAccess(path.join(root, 'apps/site/dist'), { comments: false, memos: false });
+  await writeFile(path.join(root, 'apps/site/dist/index.html'), '<h1>Comments hidden</h1>');
+  const disabled = await assemblePublication({ repositoryRoot: root, discovery });
+  assert.equal(disabled.comments.enabled, false);
+  assert.equal(disabled.comments.digest, null);
+  assert.equal(disabled.comments.tombstoneEpoch, 3);
+  assert.equal((await assemblePublication({ repositoryRoot: root, discovery })).comments.tombstoneEpoch, 3);
+  await writeAccess(path.join(root, 'apps/site/dist'), { comments: true, memos: false });
+  await writeFile(path.join(root, 'apps/site/dist/index.html'), '<section class="comment-section"><p>Approved</p></section>');
+  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery, comments: { ...current, tombstoneEpoch: 2 } }), /predates the published epoch 3/u);
+  assert.deepEqual((await assemblePublication({ repositoryRoot: root, discovery, comments: current })).comments, current);
+});
+
+test('activation and emitted comment evidence agree across all four states', async (context) => {
+  const { root } = await fixture(context);
+  const discovery = Object.freeze({ manifests: Object.freeze([]), catalog: Object.freeze([]) });
+  const site = path.join(root, 'apps/site/dist');
+  const evidence: CommentsPublicationMetadata = { enabled: true, schemaVersion: 1, sourceRevision: 'fixture', generatedAt: '2026-10-06T00:00:00.000Z', digest: 'a'.repeat(64), tombstoneEpoch: 4 };
+  for (const comments of [false, true]) for (const memos of [false, true]) {
+    await writeAccess(site, { comments, memos });
+    await writeFile(path.join(site, 'index.html'), comments ? '<section class="comment-section">Approved</section>' : '<h1>Home</h1>');
+    const result = await assemblePublication({ repositoryRoot: root, discovery, ...(comments ? { comments: evidence } : {}) });
+    assert.equal(result.pluginAccess.plugins.comments.enabled, comments);
+    assert.equal(result.pluginAccess.plugins.memos.enabled, memos);
+    assert.equal(result.memos.enabled, false);
+    assert.ok(result.inventory.includes('plugins.public.v1.json'));
+    assert.equal(result.inventory.includes('plugin-access/memos.enabled'), memos);
+    assert.equal(result.inventory.includes('plugin-access/comments.enabled'), comments);
+  }
+  await writeAccess(site, { comments: false, memos: false });
+  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery, comments: evidence }), /contradicts/u);
+  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery }), /comment surface|comment HTML/u);
+});
+
+test('new activation history is strict while old manifests remain recoverable', async (context) => {
+  const { root } = await fixture(context);
+  const discovery = Object.freeze({ manifests: Object.freeze([]), catalog: Object.freeze([]) });
+  await assemblePublication({ repositoryRoot: root, discovery });
+  const manifestPath = path.join(root, 'artifacts/publication.json');
+  const good = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const legacy = { ...good };
+  delete legacy.pluginAccess;
+  await writeFile(manifestPath, JSON.stringify(legacy));
+  await assert.doesNotReject(assemblePublication({ repositoryRoot: root, discovery }));
+  for (const value of [null, { ...good.pluginAccess, extra: true }, { ...good.pluginAccess, plugins: { comments: { enabled: true }, memos: { enabled: false } } }]) {
+    await writeFile(manifestPath, JSON.stringify({ ...good, pluginAccess: value }));
+    await assert.rejects(assemblePublication({ repositoryRoot: root, discovery }));
+  }
+  await writeFile(manifestPath, JSON.stringify(good));
+  await rm(path.join(root, 'apps/site/dist/plugins.public.v1.json'));
+  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery }));
+});
+
+test('caught promotion failure restores the prior release activation together with history', async (context) => {
+  const { root } = await fixture(context);
+  const discovery = Object.freeze({ manifests: Object.freeze([]), catalog: Object.freeze([]) });
+  const prior = await assemblePublication({ repositoryRoot: root, discovery });
+  const priorMetadata = await readFile(path.join(root, 'artifacts/publication.json'));
+  await writeAccess(path.join(root, 'apps/site/dist'), { comments: false, memos: true });
+  await assert.rejects(assemblePublication({ repositoryRoot: root, discovery, beforePromotionRename: (step) => { if (step === 3) throw new Error('caught fixture rename'); } }), /caught fixture rename/u);
+  assert.deepEqual(await readFile(path.join(root, 'artifacts/publication.json')), priorMetadata);
+  assert.equal(JSON.parse(await readFile(path.join(root, 'dist/plugins.public.v1.json'), 'utf8')).plugins.memos.enabled, false);
+  assert.equal(prior.pluginAccess.plugins.memos.enabled, false);
+  assert.equal((await assemblePublication({ repositoryRoot: root, discovery })).pluginAccess.plugins.memos.enabled, true);
 });

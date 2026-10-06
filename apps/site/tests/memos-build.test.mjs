@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { buildMemoFixture } from '../scripts/prepare-memos-fixture.mjs';
 import { prepareMemoFixture, repositoryRoot } from './memos-fixture.mjs';
+import { readPluginAccess } from '../../../plugins/public-access-files.mjs';
 async function files(root, prefix = '') {
   const result = [];
   for (const entry of await readdir(root, { withFileTypes: true })) {
@@ -24,6 +25,7 @@ test('blog enabled and disabled builds have discovery only with Memo inputs unav
     const result = buildMemoFixture(fixture, output, { FIREFLY_MEMOS_EXPORT: '/missing/legacy/export.json' });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     const inventory = await files(output);
+    assert.deepEqual(await readPluginAccess(output), { schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled } } });
     assert.ok(!inventory.some((file) => file.toLowerCase().startsWith('memos/')));
     await assert.rejects(access(path.join(output, 'memos/index.html')));
     const home = await readFile(path.join(output, 'index.html'), 'utf8');
@@ -33,7 +35,7 @@ test('blog enabled and disabled builds have discovery only with Memo inputs unav
     for (const file of inventory.filter((item) => /\.(html|js|css|json|xml)$/u.test(item))) assert.ok(!(await readFile(path.join(output, file), 'utf8')).includes('MEMO_FIXTURE_PRIVATE_INPUT'));
   }
 });
-test('the complete independent Memo namespace stays reserved while discovery is hidden', async (context) => {
+test('plugin public routes and activation artifact namespaces stay reserved while disabled', async (context) => {
   const parent = path.join(repositoryRoot, '.firefly/memos');
   await mkdir(parent, { recursive: true });
   const root = await mkdtemp(path.join(parent, 'route-reservation-'));
@@ -42,10 +44,10 @@ test('the complete independent Memo namespace stays reserved while discovery is 
   const content = path.join(root, 'blog-source');
   await mkdir(path.join(content, 'pages'), { recursive: true });
   await mkdir(path.join(content, 'posts'), { recursive: true });
-  for (const route of ['/memos/', '/MEMOS/assets/']) {
+  for (const route of ['/memos/', '/MEMOS/assets/', '/v1/comments/', '/v1/comments/admin/', '/plugin-access/', '/plugins.public.v1.json/']) {
     await writeFile(path.join(content, 'pages/collision.md'), `---\ntitle: Route collision\nslug: collision\ndate: 2026-10-06\ndescription: Reserved route fixture.\ndraft: false\nlayout: page\naliases:\n  - ${route}\n---\nSynthetic collision.\n`);
     const result = buildMemoFixture(fixture, path.join(root, 'collision'), { FIREFLY_CONTENT_ROOT: content });
     assert.notEqual(result.status, 0);
-    assert.match(`${result.stdout}${result.stderr}`, /Route collision between independent Memo namespace and alias/u);
+    assert.match(`${result.stdout}${result.stderr}`, /Route collision between (?:independent Memo namespace|comments public namespace|plugin activation artifact namespace) and alias/u);
   }
 });

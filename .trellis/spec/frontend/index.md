@@ -28,9 +28,10 @@
 | [X Core and Presentation](./x-core-contract.md) | Document transform, adapter, metadata, and enhancement contracts | Established |
 | [Experiment Publication](./publication-contract.md) | Manifests, isolated builds, safe static assembly, and runtime inventory | Established |
 | [Comments and Publication](./comments-publication-contract.md) | Private write service and static public read projection | Established |
+| [Plugin Public Access](./plugin-public-access-contract.md) | Unified public activation, release-bound markers, route gates and retained history | Established |
 | [Memo Contract](./memo-contract.md) | Owner Markdown schema-2 wire/config contract and strict decoding | Owner publisher |
 | [Memo Service](./memo-service-contract.md) | Retired visitor/mail boundary and retained private recovery | Retired |
-| [Memo Site](./memo-site-contract.md) | Navigation-only blog integration and independent static reading | Owner publisher |
+| [Memo Site](./memo-site-contract.md) | Public activation, blog discovery and independent static reading | Owner publisher |
 | [Memo Publication and Runtime](./memo-publication-runtime-contract.md) | Independent candidate/receipt/pointer, automatic push, retained history and blog preservation | Owner publisher |
 | [Site Configuration](./site-configuration-contract.md) | Public TOML, SEO, and content themes | Established |
 | [Homepage Search](./homepage-search-contract.md) | Public metadata/body search, mobile UI lifecycle, failure recovery and validation | Established |

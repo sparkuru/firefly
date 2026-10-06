@@ -21,6 +21,7 @@ import {
 
 import { memoMetadata, validateMemoTree, type MemosPublicationMetadata } from './plugins/memos.js';
 import { readMemoHistory } from './plugins/memo-history.js';
+import { readPluginAccess, type PluginAccess } from './plugins/access.js';
 export type { MemosPublicationMetadata } from './plugins/memos.js';
 
 export interface PublicationResult {
@@ -29,6 +30,7 @@ export interface PublicationResult {
   readonly inventory: readonly string[];
   readonly comments: CommentsPublicationMetadata;
   readonly memos: MemosPublicationMetadata;
+  readonly pluginAccess: PluginAccess;
   readonly artifactsRoot: string;
   readonly releaseRoot: string;
 }
@@ -395,11 +397,14 @@ function assertNoCaseCollisions(paths: readonly string[]): void {
   }
 }
 
-function normalizeCommentsPublicationMetadata(value: CommentsPublicationMetadata): CommentsPublicationMetadata {
+export function normalizeCommentsPublicationMetadata(value: CommentsPublicationMetadata): CommentsPublicationMetadata {
   const generatedAt = typeof value === 'object' && value !== null && typeof value.generatedAt === 'string' ? new Date(value.generatedAt) : null;
   if (
     typeof value !== 'object' ||
     value === null ||
+    Array.isArray(value) ||
+    Object.keys(value).length !== 6 ||
+    ['enabled', 'schemaVersion', 'sourceRevision', 'generatedAt', 'digest', 'tombstoneEpoch'].some((key) => !Object.hasOwn(value, key)) ||
     value.enabled !== true && value.enabled !== false ||
     value.schemaVersion !== 1 ||
     typeof value.sourceRevision !== 'string' ||
@@ -410,7 +415,9 @@ function normalizeCommentsPublicationMetadata(value: CommentsPublicationMetadata
     (value.digest !== null && (typeof value.digest !== 'string' || !/^[a-f0-9]{64}$/u.test(value.digest))) ||
     !Number.isSafeInteger(value.tombstoneEpoch) ||
     value.tombstoneEpoch < 0 ||
-    (value.enabled && value.digest === null)
+    Object.is(value.tombstoneEpoch, -0) ||
+    (value.enabled && value.digest === null) ||
+    (!value.enabled && (value.digest !== null || value.sourceRevision !== 'empty' || value.generatedAt !== '1970-01-01T00:00:00.000Z'))
   ) {
     throw new TypeError('comments publication metadata is invalid.');
   }
@@ -431,15 +438,7 @@ async function readPublishedCommentsEpoch(artifactsTarget: string): Promise<numb
   if (typeof value !== 'object' || value === null || !('comments' in value)) {
     return 0;
   }
-  const comments = (value as { comments?: unknown }).comments;
-  if (typeof comments !== 'object' || comments === null || !('tombstoneEpoch' in comments)) {
-    throw new TypeError(`${metadataPath}: comments tombstone epoch is missing.`);
-  }
-  const epoch = (comments as { tombstoneEpoch?: unknown }).tombstoneEpoch;
-  if (!Number.isSafeInteger(epoch) || (epoch as number) < 0) {
-    throw new TypeError(`${metadataPath}: comments tombstone epoch is invalid.`);
-  }
-  return epoch as number;
+  return normalizeCommentsPublicationMetadata((value as { comments: CommentsPublicationMetadata }).comments).tombstoneEpoch;
 }
 
 export async function validateRelease(
@@ -447,6 +446,7 @@ export async function validateRelease(
   manifests: readonly ExperimentManifest[]
 ): Promise<readonly string[]> {
   const tree = await walkSafeTree(releaseRoot);
+  const pluginAccess = await readPluginAccess(releaseRoot);
   await validateMemoTree(releaseRoot, tree.files);
   assertNoCaseCollisions([...tree.directories, ...tree.files]);
   const requiredSiteFiles = ['index.html', '404.html', 'lab/index.html'];
@@ -474,6 +474,13 @@ export async function validateRelease(
     }
   }
   await validateTextAndReferences(releaseRoot, tree.files, manifests);
+  if (!pluginAccess.plugins.comments.enabled) {
+    for (const file of tree.files.filter((file) => file.endsWith('.html'))) {
+      if (/<section\b[^>]*\bclass=["'](?:terminal-)?comment-section["']/iu.test(await readFile(path.join(releaseRoot, file), 'utf8'))) {
+        throw new TypeError('Disabled comments activation contradicts emitted comment HTML.');
+      }
+    }
+  }
   return tree.files;
 }
 
@@ -580,7 +587,7 @@ export async function assemblePublication(options: {
 }): Promise<PublicationResult> {
   const repositoryRoot = path.resolve(options.repositoryRoot);
   const discovery = options.discovery ?? await discoverExperiments({ repositoryRoot });
-  const comments = normalizeCommentsPublicationMetadata(options.comments ?? EMPTY_COMMENTS_PUBLICATION);
+  let comments = normalizeCommentsPublicationMetadata(options.comments ?? EMPTY_COMMENTS_PUBLICATION);
   const siteOutput = path.join(repositoryRoot, 'apps/site/dist');
   const artifactsTarget = path.join(repositoryRoot, 'artifacts');
   const releaseTarget = path.join(repositoryRoot, 'dist');
@@ -588,6 +595,7 @@ export async function assemblePublication(options: {
   const retainedEpoch = await readMemoHistory(repositoryRoot, comments);
   const memos = memoMetadata(retainedEpoch);
   const publishedTombstoneEpoch = await readPublishedCommentsEpoch(artifactsTarget);
+  if (!comments.enabled) comments = Object.freeze({ ...comments, tombstoneEpoch: Math.max(comments.tombstoneEpoch, publishedTombstoneEpoch) });
   if (comments.tombstoneEpoch < publishedTombstoneEpoch) {
     throw new TypeError(`comments tombstone epoch ${comments.tombstoneEpoch} predates the published epoch ${publishedTombstoneEpoch}; refusing rollback.`);
   }
@@ -602,6 +610,18 @@ export async function assemblePublication(options: {
   try {
     await copySafeTree(siteOutput, path.join(artifactsCandidate, 'site'));
     const stagedSite = path.join(artifactsCandidate, 'site');
+    const pluginAccess = await readPluginAccess(stagedSite);
+    if (pluginAccess.plugins.comments.enabled !== comments.enabled) {
+      throw new TypeError('Comments publication evidence contradicts the built plugin activation.');
+    }
+    if (comments.enabled && !(await walkSafeTree(stagedSite)).files.some((file) => file.endsWith('.html'))) {
+      throw new TypeError('Enabled comments require emitted site HTML.');
+    }
+    let hasCommentSurface = false;
+    for (const file of (await walkSafeTree(stagedSite)).files.filter((file) => file.endsWith('.html'))) {
+      if (/<section\b[^>]*\bclass=["'](?:terminal-)?comment-section["']/iu.test(await readFile(path.join(stagedSite, file), 'utf8'))) hasCommentSurface = true;
+    }
+    if (comments.enabled !== hasCommentSurface) throw new TypeError('Comments activation and publication evidence must match the emitted comment surface.');
     await validateMemoTree(stagedSite, (await walkSafeTree(stagedSite)).files);
     for (const manifest of discovery.manifests) {
       await requireRealContained(repositoryRoot, manifest.directory, `${manifest.id} directory`);
@@ -642,6 +662,7 @@ export async function assemblePublication(options: {
       catalog: discovery.catalog,
       comments,
       memos,
+      pluginAccess,
       inventory
     }, null, 2)}\n`);
     await promoteTogether([
@@ -656,6 +677,7 @@ export async function assemblePublication(options: {
       inventory,
       comments,
       memos,
+      pluginAccess,
       artifactsRoot: artifactsTarget,
       releaseRoot: releaseTarget
     });

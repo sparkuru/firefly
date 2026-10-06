@@ -6,6 +6,7 @@ import test from 'node:test';
 import { loadSiteConfig, parseSiteConfig } from '../src/lib/site-config.mjs';
 import { createMemoFixtureServer } from '../scripts/serve-memos-fixture.mjs';
 import { prepareMemoFixture } from './memos-fixture.mjs';
+import { writePluginAccess } from '../../../plugins/public-access-files.mjs';
 test('enabled and disabled discovery never access Memo config or injected options', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-memos-discovery-'));
   context.after(() => rm(root, { recursive: true, force: true }));
@@ -29,6 +30,7 @@ test('combined fixture serves only public regular reads and survives malformed r
   await writeFile(path.join(root, 'public/index.html'), '<h1>Independent Memo</h1>');
   await writeFile(path.join(root, 'receipt.json'), 'private history');
   await symlink('../receipt.json', path.join(root, 'public/linked.txt'));
+  await writePluginAccess(root, { schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled: true } } });
   const server = createMemoFixtureServer(root, root);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   context.after(() => new Promise((resolve) => server.close(resolve)));

@@ -35,7 +35,7 @@ site artifact + Experiment artifacts
 separate owner Memo Markdown + retained private receipt
   -> tooling/publish-memos sanitized static candidate
   -> independent Memo releases/current (public/ + private receipt)
-  -> static /memos/ mount; blog activation controls navigation only
+  -> static /memos/ mount; blog release activation gates public access
 ```
 
 The key interfaces are `PresentationAdapter.transform(input:
@@ -61,6 +61,7 @@ types, errors, and validation rules live in the linked contracts.
 | `tooling/shared/` | Framework-independent contained input reading and HTML sanitation policy | Astro/site source imports, wire/domain rules or service state |
 | `plugins/comments/`, `services/comments/` | Site-owned comments integration and private write/moderation service | Direct database access from static site generation |
 | `plugins/memos/` | Independent memo public export and configuration contract | Site registration, HTTP handlers, private state, or publication promotion |
+| `plugins/public-access*` | Exact shared activation, route ownership and release marker closure | Content rendering, private state or deployment switching |
 | `tooling/publish-memos/` | Owner Markdown authoring, static rendering, independent receipt/history and automatic push | Blog source/build/pointer/mirror, visitor identity, comments state or mail |
 
 Use a Presentation when an implementation renders the shared Markdown document
@@ -138,7 +139,8 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
   Markdown public records. The visitor HTTP/mail service is retired; retained
   private operational data is not imported. Normal Memo publication builds and
   automatically pushes only its own static candidate and private receipt.
-- Blog activation adds native navigation and sitemap discovery only. Neither
+- Blog activation controls native navigation, sitemap discovery and public
+  route gating through the [plugin-access contract](./plugin-public-access-contract.md). Neither
   enabled nor disabled blog builds read Memo config/source/export. The blog
   assembler reserves the namespace and retains validated legacy deletion-floor
   metadata only as migration evidence. It never owns current Memo output or

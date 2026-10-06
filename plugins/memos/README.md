@@ -1,8 +1,10 @@
 # Owner Memo contract
 
 Memo is a separate owner-authored Markdown publication mounted at `/memos/`.
-The blog's `plugins.memos.enabled` flag controls discovery only. The route is
-reserved independently of activation; the blog never reads Memo sources or
+The blog's `plugins.memos.enabled` flag controls discovery and public access.
+False makes `/memos` and its descendants return 404 after the blog release is
+deployed, while retaining Memo content and history. The route is reserved
+independently of activation; the blog never reads Memo sources or
 exports and its assembler never replaces the Memo release.
 
 `public.mjs` defines schema 2 with required `bodyFormat: "markdown"`. Records

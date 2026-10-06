@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'astro/zod';
 import { parse as parseToml } from 'smol-toml';
 import { parseMemosActivation } from '../../../../plugins/memos/config.mjs';
+import { PLUGIN_IDS } from '../../../../plugins/public-access.mjs';
 import {
   parseCommentsActivation,
   parseCommentsConfig,
@@ -243,7 +244,7 @@ function commentsSiteProjection(rawValue, source, commentsConfig) {
   if (rawPlugins !== undefined) {
     if (!isRecord(rawPlugins)) throw new TypeError('plugins must be a plain object.');
     for (const key of Object.keys(rawPlugins)) {
-      if (!['comments', 'memos'].includes(key)) throw new TypeError(`plugins contains unsupported key "${key}".`);
+      if (!PLUGIN_IDS.includes(key)) throw new TypeError(`plugins contains unsupported key "${key}".`);
     }
   }
   const rawPluginActivation = rawPlugins === undefined ? undefined : rawPlugins.comments;

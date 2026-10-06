@@ -112,12 +112,19 @@ installing the `/memos/` alias to `current/public/`. Stable Memo HTML/style/medi
 fetch current bytes after publication. `no-store` asks browsers and
 intermediaries not to store the response. Overriding edge rules can still change
 that policy, so verify actual CDN response headers as well as origin headers.
+The gate uses a fixed blog `current` root, independently of the Memo alias.
+Keep the example's named 404 handler when a surrounding server has a global
+error page, so an internal redirect cannot discard the non-cacheable headers.
 Only that public subtree is served: `receipt.json`, `established`, incoming candidates and sources remain
 private. Never serve the deployment root. Select a deployment root outside the blog deployer's recursive copy, ownership
 and cleanup scope. Full blog deployment switches only
 the blog pointer and preserves this independent mount and history.
 
-The site flag `plugins.memos.enabled` controls discovery only. It never loads
+The site flag `plugins.memos.enabled` controls discovery and public access.
+Deploying a blog release with false closes `/memos` and all descendants with
+404, while retaining the independent Memo release and accepted history. The
+combined owner push skips Memo publication when false; standalone publication
+does not change the blog's activation. The flag never loads
 Memo config/source/export or generates the page; `/memos/` stays reserved even
 when discovery is hidden. An enabled blog-only build expects an external static
 mount. Explicit combined preview/package selects a previously validated candidate:
@@ -127,7 +134,9 @@ FIREFLY_MEMOS_CANDIDATE=/absolute/validated-candidate ./preview.sh start
 FIREFLY_MEMOS_CANDIDATE=/absolute/validated-candidate ./preview.sh package
 ```
 
-Neither command builds or fetches Memo. Missing/invalid selected input fails.
+Neither command builds or fetches Memo. Enabled Memo requires that explicit
+validated input for local preview/package. Disabled Memo may retain a selected
+artifact, but its public routes remain closed. Missing/invalid selected input fails.
 Astro `dev` explicitly rejects a selected combined candidate; use static `start`
 or `preview` for composition. Background/Compose runtime receives only the
 validated `FIREFLY_MEMOS_PUBLIC_ROOT`, mounted read-only.

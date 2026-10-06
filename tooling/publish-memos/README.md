@@ -87,7 +87,9 @@ and `rollback`, via `SAM_CONTENT_MODE=none ./sam npm --prefix tooling/publish-me
 also exposes only this CLI. Use the **host shell entry** for SSH and `publish`;
 no SSH configuration/key enters the publisher image.
 
-Main-site activation controls navigation/sitemap discovery only; `/memos/` is
+Main-site activation controls navigation/sitemap discovery and public access;
+false closes `/memos` and its descendants with 404 after the blog release is
+deployed. Retained Memo content and history remain intact, and `/memos/` is
 reserved even when hidden. Blog builds need no Memo input. Default packaging is
 blog-only; explicit `FIREFLY_MEMOS_CANDIDATE` composition serves a prebuilt,
 validated read-only artifact without overwriting root `dist/` or Memo history.

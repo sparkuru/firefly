@@ -187,6 +187,10 @@ Unicode routes correctly.
   `sourceRevision`, `generatedAt`, `digest`, and `tombstoneEpoch`.
   A candidate with a lower tombstone epoch than the currently published
   metadata is rejected before promotion.
+  Disabling comments keeps its maximum validated published floor while emitting
+  no public content digest. Re-enabling still rejects exports below that floor;
+  turning access off is not a deletion-history reset. Public activation is
+  recorded separately in the [shared plugin-access contract](./plugin-public-access-contract.md).
 
 ### 4. Validation & Error Matrix
 
@@ -203,6 +207,7 @@ Unicode routes correctly.
 | comment route absent from emitted site | reject assembly |
 | private field, email-like private sentinel, unsafe comment markup, source path, or secret in comment HTML | reject publication validation |
 | candidate tombstone epoch lower than published epoch | refuse rollback/promotion |
+| comments disabled after a positive published epoch | retain the floor and build a comment-free release; public API routes return 404 |
 | no enabled export/configured origin | preserve the empty disabled build |
 
 The publication privacy scanner applies source-path sentinels at a path-token

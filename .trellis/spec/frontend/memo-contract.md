@@ -56,7 +56,8 @@ and `resolveMemosConfigPath(configPath?, repositoryRoot?)`.
   defaults are false and `config/plugins/memos/config.toml`.
   `configPath` is a safe repository-relative TOML path. It is compatibility
   metadata, not a physical file dependency for either enabled or disabled blog
-  builds. The site flag controls navigation only.
+  builds. The site flag controls public access and discovery through the
+  [shared plugin-access projection](./plugin-public-access-contract.md).
 - Optional plugin configuration permits only `public.route`, fixed `/memos/`.
   Unknown runtime, SMTP, secret, consent, write-origin and export-path keys fail.
   Publisher source/display/output/deployment settings belong to its own CLI

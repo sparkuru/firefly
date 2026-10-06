@@ -1,10 +1,10 @@
-# Memo Navigation and Independent Static Reading
+# Memo Public Activation and Independent Static Reading
 
 ## 1. Scope / Trigger
 
 Read when changing site Memo activation/navigation/sitemap, reserved routes,
 independent static-page browser tests or explicit combined preview. The blog
-build owns navigation only; Memo content and rendering belong to
+build owns discovery and public activation evidence; Memo content and rendering belong to
 `tooling/publish-memos/`. There is no visitor form or browser publishing UI.
 
 ## 2. Signatures
@@ -27,12 +27,17 @@ selects a validated candidate with `FIREFLY_MEMOS_CANDIDATE`. See the
 - Enabled activation adds a native `/memos/` link to ordinary document and
   home recovery/mobile navigation, and advertises the same-origin static mount
   in sitemap. Link handling never becomes a home-directory interception.
-  Disabled activation omits discovery but does not free the namespace.
+  Disabled activation omits discovery and makes the public runtime return 404
+  for the exact path and descendants, even with retained published bytes.
+  It does not free the namespace or delete content/history. See the
+  [shared plugin-access contract](./plugin-public-access-contract.md).
 - Always reserve `/memos/` and its descendants against article/page aliases
   regardless of activation. Memo records never enter content collections,
   X Core, post extensions, search, Terminal filesystem, RSS or Lab.
-- Blog-only build/package remains usable with Memo config/source/export absent
-  or invalid. It expects the external static mount if discovery is enabled.
+- Blog builds remain usable with Memo config/source/export absent or invalid.
+  Enabled activation expects the independent static mount. Local static preview
+  and runtime packaging require an explicit validated candidate when enabled;
+  disabled blog-only preview/package needs no Memo input.
 - The separate static page uses semantic chronological entries, configured owner
   name, UTC time, stable fragment links and home/blog navigation. Empty output
   says no Memo has been published. No form/email/consent/status/write script.
@@ -56,6 +61,7 @@ selects a validated candidate with `FIREFLY_MEMOS_CANDIDATE`. See the
 | Enabled/disabled with missing or corrupt Memo source/config/export | Normal blog build; no physical Memo read |
 | Authored alias uses Memo namespace or descendant | Reject content route collision |
 | Enabled discovery | Native external-static link and sitemap entry, no site-owned Memo output |
+| Disabled activation with a retained Memo mount | 404 for HTML, public JSON, CSS/media and relevant methods; preserve receipt/history |
 | Empty Memo publication | Honest static empty state and navigation |
 | Unsafe Markdown or incomplete asset closure | Publisher rejects/sanitizes before reading surface is accepted |
 | Selected combined artifact missing/invalid | Combined-input error, no empty fallback |
@@ -63,8 +69,8 @@ selects a validated candidate with `FIREFLY_MEMOS_CANDIDATE`. See the
 
 ## 5. Good / Base / Bad Cases
 
-Good: enable discovery once, then independently publish Memo edits while all
-blog bytes remain unchanged. Base: disabled discovery and independent blog
+Good: enable public activation once, then independently publish Memo edits while
+all blog bytes remain unchanged. Base: disabled activation and independent blog
 build with no Memo input. Bad: read Memo TOML when enabling navigation, render
 a placeholder Memo route in Astro, or classify Memo as a document directory.
 
@@ -89,5 +95,5 @@ residuals, not implied by emulation.
 Wrong: enable the link by loading an export and emitting `memos/index.html`
 inside the blog release, or reserve the path only while discovery is visible.
 
-Correct: always reserve the namespace, change navigation/sitemap only, and
-serve the independent validated public artifact at the static mount.
+Correct: always reserve the namespace, emit release-bound public activation,
+and gate the independent static mount before redirects or reads.

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { writeAccess } from './access-fixture.js';
 import { assemblePublication } from '../src/index.js';
 import { decodeMemoMetadata } from '../src/plugins/memos.js';
 const discovery = Object.freeze({ manifests: Object.freeze([]), catalog: Object.freeze([]) });
@@ -12,6 +13,7 @@ async function fixture(t: test.TestContext) {
   const site = path.join(root, 'apps/site/dist');
   await mkdir(path.join(site, 'lab'), { recursive: true });
   for (const file of ['index.html', '404.html', 'lab/index.html']) await writeFile(path.join(site, file), '<h1>Static blog</h1>');
+  await writeAccess(site, { comments: false, memos: false });
   return { root, site, assemble: () => assemblePublication({ repositoryRoot: root, discovery }) };
 }
 test('blog assembly needs no Memo config/export and retains legacy floor as migration evidence', async (t) => {

@@ -61,9 +61,9 @@
     "test:m4": "npm run test:validator && npm run test:x-core && npm run test:semantic && npm run test:terminal && npm run test:assembler && npm run test:content:site && npm run test:x-core:site && npm --prefix apps/site run test:diagrams",
     "publication:m4": "npm run install:m4 && npm run build:m4",
     "install:m51": "npm run install:m4 && npm run install:comments && npm run install:memos",
-    "check:m51": "npm run check:memos-contract && npm run check:comments && npm run check:memos && npm run check:m4",
+    "check:m51": "npm run check:plugins-contract && npm run check:memos-contract && npm run check:comments && npm run check:memos && npm run check:m4",
     "test:comments-contract": "node --test plugins/comments/tests/*.test.mjs",
-    "test:m51": "npm run test:comments-contract && npm run test:memos-contract && npm run test:comments && npm run test:memos && npm run test:m4 && npm run test:memos:site && npm run test:memos:ops",
+    "test:m51": "npm run test:plugins-contract && npm run test:comments-contract && npm run test:memos-contract && npm run test:comments && npm run test:memos && npm run test:m4 && npm run test:memos:site && npm run test:memos:ops",
     "build:m51": "npm run build:validator && npm run validate:experiments && npm run build:x-core && npm run build:semantic && npm run build:terminal && npm run build:comments && npm run build:memos && npm run build:assembler && npm run build:site && npm run build:experiments && npm run assemble:publication",
     "publication:m51": "npm run install:m51 && npm run build:m51",
     "verify:m51": "FIREFLY_CONTENT_ROOT=/app/content npm run check:m51 && FIREFLY_CONTENT_ROOT=/app/content npm run test:m51 && FIREFLY_CONTENT_ROOT=/app/content npm run prepare:test:memos && FIREFLY_CONTENT_ROOT=/app/content npm run test:e2e:memos && FIREFLY_CONTENT_ROOT=/app/content npm run build:m51 && FIREFLY_CONTENT_ROOT=/app/content npm run test:e2e:site && FIREFLY_CONTENT_ROOT=/app/content npm run test:e2e:nerv && FIREFLY_CONTENT_ROOT=/app/content npm run test:e2e:publication",
@@ -80,6 +80,9 @@
     "test:memos-runtime": "tooling/publish-memos/ops/check-runtime.sh",
     "check:memos-contract": "node --check plugins/memos/config.mjs && node --check plugins/memos/public.mjs && node --check plugins/memos/validation.mjs && npm exec --prefix tooling/assemble-publication -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 plugins/memos/tests/declarations.mts",
     "memos": "node tooling/publish-memos/src/cli.mjs",
-    "test:memos:ops": "node --test tooling/publish-memos/ops/*.test.mjs"
+    "test:memos:ops": "node --test tooling/publish-memos/ops/*.test.mjs",
+    "check:plugins-contract": "node --check plugins/public-access.mjs && node --check plugins/public-access-files.mjs && npm exec --prefix tooling/assemble-publication -- tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 plugins/tests/declarations.mts",
+    "test:plugins-contract": "node --test plugins/tests/*.test.mjs",
+    "test:plugins-runtime": "tooling/plugin-access/check-runtime.sh"
   }
 }

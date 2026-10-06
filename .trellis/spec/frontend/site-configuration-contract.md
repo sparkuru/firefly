@@ -142,8 +142,10 @@ configPath = "config/plugins/memos/config.toml"
   public site projection. Explicit service environment variables may override
   file values at the runtime boundary; the static build does not read the
   secret file.
-- The independent Memo publisher uses `[plugins.memos]` strictly for navigation
-  and sitemap discovery. Its activation field names remain compatible, but
+- Every `plugins.<id>.enabled` flag controls public site surfaces and runtime
+  routes through the [release-bound projection](./plugin-public-access-contract.md).
+  The independent Memo publisher uses `[plugins.memos]` for public access,
+  navigation and sitemap discovery. Its activation field names remain compatible, but
   neither enabled nor disabled loading reads a Memo config/source/export or
   projects content/runtime settings. `/memos/` and descendants remain reserved
   regardless of visibility. Optional pure Memo config allows only the fixed

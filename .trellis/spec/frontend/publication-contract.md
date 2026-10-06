@@ -169,6 +169,9 @@ commands, and only then assembles the release.
   Candidate cleanup targets only transaction paths created inside the repository.
 - `artifacts/publication.json` is deterministic evidence containing schema
   version, safe catalog, and sorted inventory. It is not a browser registry.
+  Its `pluginAccess` projection matches `plugins.public.v1.json` and the exact
+  positive marker set in the built release. That public activation is separate
+  from content/history evidence; see [Plugin Public Access](./plugin-public-access-contract.md).
   Its strict legacy six-field `memos` metadata retains validated prior deletion
   history only as migration evidence. The blog assembler neither loads current
   Memo config/export nor emits a Memo page/snapshot. It permanently reserves

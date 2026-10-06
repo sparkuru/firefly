@@ -1,15 +1,38 @@
 # Include only inside the existing owner-managed HTTPS server block.
-# Replace the path with the independent deployment boundary. Never serve its root.
-location = /memos { return 301 /memos/; }
-location ^~ /memos/ {
-    alias /absolute/independent-memo-deployment/current/public/;
-    index index.html;
-    autoindex off;
+# Replace both absolute roots; the gate uses the BLOG root even inside an alias.
+# Missing positive markers close public access. Never serve the Memo deployment root.
+location = /memos {
+    open_file_cache off;
+    if (!-f /absolute/blog-deployment/current/plugin-access/memos.enabled) { return 404; }
+    if ($request_method !~ ^(GET|HEAD)$) { return 403; }
+    error_page 404 = @memo_not_found;
     add_header Cache-Control "no-cache, no-store" always;
-    limit_except GET { deny all; }
     add_header Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options DENY always;
     add_header Referrer-Policy no-referrer always;
+    return 301 /memos/;
+}
+location ^~ /memos/ {
+    open_file_cache off;
+    if (!-f /absolute/blog-deployment/current/plugin-access/memos.enabled) { return 404; }
+    if ($request_method !~ ^(GET|HEAD)$) { return 403; }
+    error_page 404 = @memo_not_found;
+    alias /absolute/independent-memo-deployment/current/public/;
+    index index.html;
+    autoindex off;
+    add_header Cache-Control "no-cache, no-store" always;
+    add_header Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy no-referrer always;
+}
+location @memo_not_found {
+    add_header Cache-Control "no-cache, no-store" always;
+    add_header Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy no-referrer always;
+    return 404;
 }
 # /v1/memos/ has no upstream. Keep the ordinary unknown-/v1/ rejection.

@@ -1,5 +1,6 @@
 import { diagramPipelineVersion, rehypeMermaid } from './src/build/mermaid-markdown.mjs';
 import { createMermaidIntegration } from './src/build/mermaid-assets.mjs';
+import { createPluginAccessIntegration } from './src/build/plugin-access.mjs';
 import { unified } from '@astrojs/markdown-remark';
 import { siteRehypeShiki, siteSyntaxHighlight } from './src/build/code-highlighting.mjs';
 import {
@@ -31,7 +32,7 @@ export default defineConfig({
   // Content HTML and generated diagrams share the same cold-cache boundary.
   cacheDir: './.astro/cache/',
   trailingSlash: 'always',
-  integrations: [createSiteSeoIntegration(), createMermaidIntegration()],
+  integrations: [createSiteSeoIntegration(), createMermaidIntegration(), createPluginAccessIntegration()],
   markdown: {
     syntaxHighlight: siteSyntaxHighlight,
     processor: unified({

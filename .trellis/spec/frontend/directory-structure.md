@@ -24,6 +24,8 @@ tooling/shared/                  framework-independent contained build-input fil
 tooling/sync-server/             authoring workspace synchronization
 plugins/comments/                site-owned comments integration
 plugins/memos/                   independent Markdown public/config contract
+plugins/public-access*           shared activation projection and marker closure
+plugins/tests/                  shared public-access contract tests
 services/comments/               private comments write/moderation runtime
 config/                          public site and plugin configuration templates
 .trellis/spec/                   durable engineering contracts
@@ -58,7 +60,7 @@ package. Build outputs and private inputs are not public source contracts.
   live under `content/memos/`; ignored owner adapters select external reading
   explicitly. Generated candidates and private receipts stay in ignored
   `.firefly/memos/`, outside root blog artifacts/dist.
-- Site Memo integration owns navigation only, with no content loader or route
+- Site Memo integration owns discovery and public activation, with no content loader or route
   renderer. The reserved static mount is served from the publisher's `public/`;
   private receipt/history, authoring sources and SSH inputs never enter a web
   image. Shared sanitation and contained-file helpers live under

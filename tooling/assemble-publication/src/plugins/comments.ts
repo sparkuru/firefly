@@ -2,6 +2,7 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { walkSafeTree, type CommentsPublicationMetadata } from '../index.js';
+import { readPluginAccess } from './access.js';
 
 const EMPTY_COMMENTS_PUBLICATION: CommentsPublicationMetadata = Object.freeze({
   enabled: false,
@@ -15,6 +16,7 @@ const EMPTY_COMMENTS_PUBLICATION: CommentsPublicationMetadata = Object.freeze({
 export async function loadCommentsPublication(repositoryRoot: string): Promise<CommentsPublicationMetadata> {
   const siteOutput = path.join(repositoryRoot, 'apps/site/dist');
   const tree = await walkSafeTree(siteOutput);
+  const access = await readPluginAccess(siteOutput);
   let hasCommentSurface = false;
   for (const relative of tree.files) {
     if (!relative.endsWith('.html')) continue;
@@ -24,12 +26,13 @@ export async function loadCommentsPublication(repositoryRoot: string): Promise<C
       break;
     }
   }
+  if (!access.plugins.comments.enabled) {
+    if (hasCommentSurface) throw new Error('Disabled comments activation contradicts emitted comment HTML.');
+    return EMPTY_COMMENTS_PUBLICATION;
+  }
   const handoff = process.env.FIREFLY_COMMENTS_EXPORT?.trim();
   if (!handoff) {
-    if (hasCommentSurface) {
-      throw new Error('comment HTML is present but FIREFLY_COMMENTS_EXPORT was not supplied.');
-    }
-    return EMPTY_COMMENTS_PUBLICATION;
+    throw new Error('Enabled comments require FIREFLY_COMMENTS_EXPORT matching emitted comment HTML.');
   }
 
   const candidate = path.resolve(path.isAbsolute(handoff) ? handoff : path.join(repositoryRoot, handoff));

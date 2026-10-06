@@ -51,6 +51,24 @@
 
 ## Ordered Work
 
+The owner approved unified plugin public-access switches on 2026-10-06. The
+active `10-06-plugin-public-access` task makes comments and Memo false close
+their entire public namespaces with 404 while retaining private data/history.
+The reviewed current deployment keeps both owner flags false. Positive/mixed
+coverage uses isolated fixtures; provisioning the absent comments runtime is
+outside this task. Completion and live acceptance evidence follow verification.
+Local full verification, runtime packaging and independent reviews pass. The
+first host installation restored its baseline after verified origin checks
+rejected an expired source certificate. The owner separately authorized renewal;
+the existing client renewed it and strict origin TLS passed. The reviewed
+both-off publication is now deployed, with canonical origin/edge 404s, headers,
+redirects and desktop/mobile reading verified. Memo source/remote bytes,
+pointer/receipt/history and retained plugin modes match their exact baseline;
+both owner flags remain unchanged. The private sync also corrected an observed
+target Zsh special-variable conflict, with 33 isolated flows plus real retry
+passing. The owner explicitly confirmed the scoped work commit, task archival
+and journal; bookkeeping follows without Git push or another product task.
+
 | Order | Work item | State | Dependency / readiness |
 | --- | --- | --- | --- |
 | 0 | M0 — architecture baseline | complete | The repository layout, NERV experiment, Trellis workflow, Docker wrapper, and validation path are established. This is a structural baseline, not an assertion that product features are complete. |

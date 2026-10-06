@@ -119,12 +119,17 @@ labels, isolation, and cleanup; a deployment-only check cannot replace local
 package or browser evidence.
 
 `./preview.sh verify` runs the inner `verify:m51` Node/browser gate through `sam`,
-then `tooling/publish-memos/ops/check-runtime.sh` only after that succeeds.
+then `tooling/publish-memos/ops/check-runtime.sh` and
+`tooling/plugin-access/check-runtime.sh` only after each preceding stage succeeds.
 The inner gate checks comments, pure contracts, owner publisher, site and
 assembler, then the Markdown Memo browser fixture and ordinary publication/
 site/NERV browsers. The host fixture verifies independent Memo promotion/history,
 reciprocal byte preservation and an actual read-only Nginx static mount, with no
 Memo HTTP/SMTP process. It never starts the owner/default Compose stack.
+The plugin-access fixture checks both-off, both-on and mixed states with retained
+Memo bytes and a responding synthetic comments upstream. It changes the blog
+pointer on/off/on under one Nginx instance and proves public namespace/method
+404s, private upstream reachability, no stale marker cache and unchanged history.
 Synthetic host SSH/dry-run/failure fixtures do not prove production access.
 
 Host Docker is also the explicit boundary for `docker compose config --quiet`,
@@ -135,6 +140,9 @@ Publisher work selects `SAM_CONTENT_MODE=none` with narrow explicit source/
 assets/history/output/deployment mounts; SSH credentials remain with host-only
 `tooling/publish-memos/publish.sh`. `FIREFLY_MEMOS_CANDIDATE` selects explicit
 combined preview/package; default blog commands do not build/read Memo.
+Owner synchronization selects the same site configuration as its blog build;
+configuration checks use the blog wrapper mode, not the independent publisher's
+`none` mode, which intentionally omits owner site configuration.
 Publisher image preparation uses its minimal allowlist, not the whole workspace.
 
 ## Runtime packaging with private logs

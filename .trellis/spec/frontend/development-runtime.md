@@ -77,6 +77,9 @@ FIREFLY_CONTENT_ROOT="$PWD/content" \
   ./sam npm run verify:m51
 ./preview.sh package
 tooling/publish-memos/ops/check-runtime.sh
+tooling/plugin-access/check-runtime.sh
+SAM_CONTENT_MODE=none ./sam npm run check:plugins-contract
+SAM_CONTENT_MODE=none ./sam npm run test:plugins-contract
 SAM_CONTENT_MODE=none ./sam npm run check:memos
 SAM_CONTENT_MODE=none ./sam npm run test:memos
 tooling/publish-memos/publish.sh publish --config <owner-only-json>
@@ -88,7 +91,8 @@ Root npm scripts are delegators and are valid only when already invoked inside
 `./sam` with the appropriate image. `preview.sh verify` is the host-facing complete
 repository-fixture gate; it pins the tracked root before `sam` loads the
 optional root `.env`. After the inner gate succeeds, it runs the host-owned
-disposable independent Memo publication/static fixture. Its inner `verify:m51` form is for phase-level
+disposable independent Memo publication/static fixture and the four-state plugin
+public-access fixture. Its inner `verify:m51` form is for phase-level
 diagnosis and is valid only through `./sam`; it does not include that Docker
 fixture.
 
@@ -110,7 +114,7 @@ syntax check.
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `preview.sh` uses scope `preview.sh` and service `web`. |
 | `.env` | Ignored literal root settings loaded by `tooling/shared/dev-env.sh` in both `sam` and `preview.sh`; copy `.env.example`. Explicit environment variables take precedence. The old local `config.dev` is preserved but no longer loaded. |
 | `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; it may be set in `.env` and empty/omitted selects `<repo>/content`. `sam` resolves and passes it into the container. |
-| `preview.sh verify` / `verify:m51` | Fixes tracked `<repo>/content`, defaults to pinned Playwright Noble and host IPC, runs comments/contract/publisher/site/assembler checks and static Memo plus ordinary site/NERV/publication browsers, then the host independent-publication/Nginx fixture. Short-circuit on failure; direct host npm is not evidence. |
+| `preview.sh verify` / `verify:m51` | Fixes tracked `<repo>/content`, defaults to pinned Playwright Noble and host IPC, runs plugin access/comments/contract/publisher/site/assembler checks and static Memo plus ordinary site/NERV/publication browsers, then host independent-publication and four-state plugin-access Nginx fixtures. Short-circuit on failure; direct host npm is not evidence. |
 | `SAM_CONTENT_MODE` | `blog` default discovers existing blog mounts; `none` skips blog, comments export and site override probing for independent publisher commands. Explicit Memo source/assets/history/output/deployment mounts remain narrowly validated. |
 | `FIREFLY_MEMOS_CANDIDATE` | Explicit existing validated candidate for combined preview/package; only public bytes enter the static runtime. Missing selected input fails, default blog operation remains independent. |
 | `FIREFLY_SITE_CONFIG_PATH` | Optional repository-relative `.toml` override for contained build/test projections. `sam` requires an existing readable file whose real path stays inside the repository, then passes the same relative path into the container; the site loader additionally rejects a symlinked file and unsafe segments. |
@@ -121,6 +125,7 @@ syntax check.
 | Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
 | Publication dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
 | Runtime packaging | Runs the assembled blog build and exact manifest/release checks, creates a minimal Dockerfile/Nginx/release context, optionally copies only selected validated Memo public bytes into the separate static mount, probes non-root/read-only confinement and exact inventories, then tears down exact owned resources. |
+| Plugin activation | Validate the release-bound JSON and positive markers before serving or packaging. Disabled retained Memo bytes and a live comments upstream cannot override false. A selected combined Memo candidate does not imply activation; verify both flags and all public routes. |
 | Main-site browser server | Run the site build/static scan first. Playwright owns `astro preview` of that same `dist/` at `/`; `start:e2e` must not rebuild or run `astro dev`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
 | Publication browser server | Build/assemble first; assembler Playwright owns a static server for unchanged root `dist/`. |

@@ -6,6 +6,7 @@ import {
 import { projectCanonicalRoute } from './canonical-route.mjs';
 import { resolveContentMarkers } from './content-markers.mjs';
 import { displayNameForDocument } from './content-metadata.mjs';
+import { PLUGIN_ACCESS_PATH, PLUGIN_MARKER_ROOT, pluginForPublicPath } from '../../../../plugins/public-access.mjs';
 
 export type PublicPost = CollectionEntry<'posts'>;
 export type PublicPage = CollectionEntry<'pages'>;
@@ -195,6 +196,13 @@ function assertRouteReservations(documents: readonly CanonicalDocument[], direct
     const key = collisionKey(route);
     if (owner !== 'independent Memo namespace' && (key === '/memos/' || key.startsWith('/memos/'))) {
       throw new Error(`Route collision between independent Memo namespace and ${owner}.`);
+    }
+    if (pluginForPublicPath(key) === 'comments') {
+      throw new Error(`Route collision between comments public namespace and ${owner}.`);
+    }
+    if (key === `/${PLUGIN_ACCESS_PATH}/` || key.startsWith(`/${PLUGIN_ACCESS_PATH}/`) ||
+        key === `/${PLUGIN_MARKER_ROOT}/` || key.startsWith(`/${PLUGIN_MARKER_ROOT}/`)) {
+      throw new Error(`Route collision between plugin activation artifact namespace and ${owner}.`);
     }
     const existing = reservations.get(key);
     if (existing !== undefined) throw new Error(`Route collision between ${existing} and ${owner}.`);

@@ -36,7 +36,7 @@ usage() {
 		"  stop     Stop only this repository's preview web containers (alias: down)." \
 		'  status   Probe the current preview; never start a service.' \
 		'  render   Run a command through sam with pinned Playwright and host IPC.' \
-		'  verify   Run the tracked-fixture gate, then independent Memo deployment checks.' \
+		'  verify   Run tracked-fixture, independent Memo and plugin-access runtime checks.' \
 		'  package  Build and validate the runtime-only publication image.' \
 		'' \
 		'Set up preview configuration: cp .env.example .env' \
@@ -80,6 +80,14 @@ validate_selected_memos() {
 	SAM_CONTENT_MODE=none "${REPO_ROOT}/sam" node tooling/publish-memos/src/cli.mjs validate --candidate-root "${FIREFLY_MEMOS_CANDIDATE}" >/dev/null
 }
 
+validate_release_access() {
+	require_command jq
+	SAM_CONTENT_MODE=none "${REPO_ROOT}/sam" node tooling/assemble-publication/scripts/check-runtime-metadata.mjs >/dev/null
+	if [[ "$(jq -r '.plugins.memos.enabled' "${REPO_ROOT}/dist/plugins.public.v1.json")" == true && -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
+		die 'enabled Memo preview/package requires FIREFLY_MEMOS_CANDIDATE selecting a validated publication'
+	fi
+}
+
 build_publication() {
 	local target=build:m4
 	[[ -z "${FIREFLY_COMMENTS_EXPORT:-}" ]] || target=build:m51
@@ -95,6 +103,7 @@ verify_repository() {
 	require_sam
 	FIREFLY_CONTENT_ROOT="${REPO_ROOT}/content" SAM_IMAGE="${VERIFY_IMAGE}" SAM_IPC="${VERIFY_IPC}" "${REPO_ROOT}/sam" npm run verify:m51
 	"${REPO_ROOT}/tooling/publish-memos/ops/check-runtime.sh"
+	"${REPO_ROOT}/tooling/plugin-access/check-runtime.sh"
 }
 
 preview_configuration() {
@@ -379,10 +388,13 @@ start_preview() {
 		for file in dist/index.html dist/lab/index.html dist/lab/majo/index.html dist/lab/nerv/index.html tooling/assemble-publication/dist/src/serve-release.js; do
 			[[ -f "${REPO_ROOT}/${file}" ]] || die "assembled publication is missing ${file}; run ./preview.sh build or ./preview.sh preview"
 		done
+		validate_release_access
 		service_command=(env "PUBLICATION_PORT=${WEB_CONTAINER_PORT}" "PUBLICATION_HOST=${WEB_BIND_HOST}" npm --prefix tooling/assemble-publication run start:e2e)
 	fi
 	require_command sha256sum
-	config_hash=$(printf '%s\0' "${mode}" "${image}" "${ipc}" "${SAM_BIND_HOST}" "${WEB_BIND_HOST}" "${WEB_HOST_PORT}" "${WEB_CONTAINER_PORT}" "${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}" "${FIREFLY_SITE_CONFIG_PATH:-}" "${FIREFLY_MEMOS_CANDIDATE:-}" | sha256sum)
+	local access_digest=""
+	[[ "${mode}" == dev ]] || access_digest=$(sha256sum -- "${REPO_ROOT}/dist/plugins.public.v1.json")
+	config_hash=$(printf '%s\0' "${mode}" "${image}" "${ipc}" "${SAM_BIND_HOST}" "${WEB_BIND_HOST}" "${WEB_HOST_PORT}" "${WEB_CONTAINER_PORT}" "${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}" "${FIREFLY_SITE_CONFIG_PATH:-}" "${FIREFLY_MEMOS_CANDIDATE:-}" "${access_digest}" | sha256sum)
 	config_hash=${config_hash%% *}
 	ids=$(owned_containers)
 	preview_mode=${mode}
@@ -534,7 +546,7 @@ package_runtime() {
 	local -A release_files=()
 	local -A runtime_files=()
 
-	for dependency in curl cut docker find jq mktemp rg sed sha256sum sort; do
+	for dependency in chmod curl cut docker find jq mktemp rg sed sha256sum sort; do
 		require_command "${dependency}"
 	done
 	[[ -x "${REPO_ROOT}/sam" ]] || {
@@ -554,7 +566,7 @@ package_runtime() {
 	fi
 	[[ "$(jq -r '.schemaVersion' artifacts/publication.json)" == 1 ]]
 	jq -e '.comments.schemaVersion == 1 and (.comments.tombstoneEpoch | type == "number")' artifacts/publication.json >/dev/null
-	./sam node tooling/assemble-publication/scripts/check-runtime-metadata.mjs
+	validate_release_access
 	mapfile -t manifest_inventory < <(jq -r '.inventory[]' artifacts/publication.json)
 	mapfile -t release_inventory < <(find dist -type f -printf '%P\n' | sort)
 	[[ "${#manifest_inventory[@]}" -gt 0 && "${#manifest_inventory[@]}" -eq "${#release_inventory[@]}" ]] || {
@@ -586,6 +598,7 @@ package_runtime() {
 	CONTEXT_ROOT=$(mktemp -d /tmp/firefly-runtime-context.XXXXXX)
 	mkdir -p "${CONTEXT_ROOT}/dist"
 	cp Dockerfile nginx.conf "${CONTEXT_ROOT}/"
+	chmod 644 -- "${CONTEXT_ROOT}/Dockerfile" "${CONTEXT_ROOT}/nginx.conf"
 	cp -R dist/. "${CONTEXT_ROOT}/dist/"
 	if [[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
 		cp -R "${FIREFLY_MEMOS_CANDIDATE}/public" "${CONTEXT_ROOT}/memos-public"
@@ -648,15 +661,29 @@ package_runtime() {
 		expected_memos=$(jq -r '.inventory[].path | sub("^public/"; "")' "${FIREFLY_MEMOS_CANDIDATE}/receipt.json" | sort)
 		actual_memos=$(docker exec "${CONTAINER_ID}" find /usr/share/nginx/memos -type f | sed 's#^/usr/share/nginx/memos/##' | sort)
 		[[ "${expected_memos}" == "${actual_memos}" ]] || die 'runtime Memo public inventory differs from validated candidate'
-		probe_status 301 /memos
+		local memo_status=404 memo_redirect=404 memo_write=404
+		if [[ "$(jq -r '.plugins.memos.enabled' dist/plugins.public.v1.json)" == true ]]; then
+			memo_status=200 memo_redirect=301 memo_write=403
+		fi
+		probe_status "${memo_redirect}" /memos
 		while IFS= read -r memo_file; do
 			memo_route=$(jq -nr --arg file "${memo_file}" '$file | split("/") | map(@uri) | join("/")')
-			probe_status 200 "/memos/${memo_route}"
-			assert_header "/memos/${memo_route}" '^cache-control: no-cache, no-store'
-			[[ "$(curl --fail --silent "${RUNTIME_ORIGIN}/memos/${memo_route}" | sha256sum | cut -d ' ' -f 1)" == "$(sha256sum "${FIREFLY_MEMOS_CANDIDATE}/public/${memo_file}" | cut -d ' ' -f 1)" ]] || die 'runtime Memo public file changed'
+			probe_status "${memo_status}" "/memos/${memo_route}"
+			if [[ "${memo_status}" == 200 ]]; then
+				assert_header "/memos/${memo_route}" '^cache-control: no-cache, no-store'
+				[[ "$(curl --fail --silent "${RUNTIME_ORIGIN}/memos/${memo_route}" | sha256sum | cut -d ' ' -f 1)" == "$(sha256sum "${FIREFLY_MEMOS_CANDIDATE}/public/${memo_file}" | cut -d ' ' -f 1)" ]] || die 'runtime Memo public file changed'
+			fi
 		done <<<"${expected_memos}"
 		probe_status 404 /memos/receipt.json
-		[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "${RUNTIME_ORIGIN}/memos/")" == 403 ]] || die 'Memo mount accepted a write'
+		[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "${RUNTIME_ORIGIN}/memos/")" == "${memo_write}" ]] || die 'Memo mount write handling contradicts activation'
+	fi
+	if [[ "$(jq -r '.plugins.memos.enabled' dist/plugins.public.v1.json)" == false ]]; then
+		probe_status 404 /memos
+		probe_status 404 /memos/
+	fi
+	if [[ "$(jq -r '.plugins.comments.enabled' dist/plugins.public.v1.json)" == false ]]; then
+		probe_status 404 /v1/comments
+		probe_status 404 /v1/comments/submissions
 	fi
 	probe_status 200 /
 	probe_status 200 /posts/

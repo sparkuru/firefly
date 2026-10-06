@@ -20,8 +20,10 @@ async function fixture() {
     await mkdir(path.dirname(path.join(root, file)), { recursive: true });
     await writeFile(path.join(root, file), 'fixture');
   }
-  for (const folder of ['content/posts', 'content/pages', 'tooling/publish-memos/ops']) await mkdir(path.join(root, folder), { recursive: true });
+  await writeFile(path.join(root, 'dist/plugins.public.v1.json'), JSON.stringify({ schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled: false } } }));
+  for (const folder of ['content/posts', 'content/pages', 'tooling/publish-memos/ops', 'tooling/plugin-access']) await mkdir(path.join(root, folder), { recursive: true });
   await writeFile(path.join(root, 'tooling/publish-memos/ops/check-runtime.sh'), '#!/usr/bin/env bash\nprintf "host-memo\\n" >> "$FIXTURE_LOG"\n', { mode: 0o755 });
+  await writeFile(path.join(root, 'tooling/plugin-access/check-runtime.sh'), '#!/usr/bin/env bash\nprintf "host-plugins\\n" >> "$FIXTURE_LOG"\n', { mode: 0o755 });
   await writeFile(path.join(root, 'sam'), `#!/usr/bin/env bash
 printf 'sam:%s:%s:%s:%s\\n' "$SAM_IMAGE" "$SAM_IPC" "\${FIREFLY_CONTENT_ROOT:-}" "$*" >> "$FIXTURE_LOG"
 if [[ "\${SAM_DETACH:-}" == 1 ]]; then
@@ -33,6 +35,9 @@ if [[ "\${SAM_DETACH:-}" == 1 ]]; then
   if [[ "\${FIXTURE_START_SIGNAL:-0}" == 1 ]]; then kill -TERM "$PPID"; exit 0; fi
   printf '${containerId}\\n'
 else
+  if [[ "$*" == 'node tooling/assemble-publication/scripts/check-runtime-metadata.mjs' ]]; then
+    exit "\${FIXTURE_METADATA_EXIT:-0}"
+  fi
   printf '%s\\n' "$SAM_IMAGE" "$SAM_IPC" "$@"
   exit "\${FIXTURE_SAM_EXIT:-0}"
 fi
@@ -74,8 +79,11 @@ console.log(JSON.stringify([{State:{Running:true},Config:{Image:'node:22-alpine'
   // The browser image does not require host jq. The fixture supplies Docker's
   // inspection projections, keeping Docker/address behavior independent of it.
   await writeFile(path.join(root, 'bin/jq'), `#!/usr/bin/env node
+import { readFileSync } from 'node:fs';
+const args=process.argv.slice(2);
+if(args[1]==='.plugins.memos.enabled') { console.log(JSON.parse(readFileSync(args[2],'utf8')).plugins.memos.enabled);process.exit(0); }
 let input='';for await (const part of process.stdin) input+=part;
-const json=JSON.parse(input)[0];const args=process.argv.slice(2);const vars={};
+const json=JSON.parse(input)[0];const vars={};
 for(let i=0;i<args.length;i++) if(args[i]==='--arg'){vars[args[i+1]]=args[i+2];i+=2;}
 const query=args.at(-1);
 if(query.includes('.State.Running and')) {
@@ -146,14 +154,14 @@ test('dev rejects selected static Memo composition before validation or Docker s
   await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
 }));
 
-test('verify forces tracked content and runs independent Memo static fixture only after the inner gate', () => withFixture(async (f) => {
+test('verify forces tracked content and runs Memo plus plugin runtime fixtures only after the inner gate', () => withFixture(async (f) => {
   await f.run(['verify'], { FIREFLY_CONTENT_ROOT: '/private/owner' });
   let calls = await f.log();
-  assert.match(calls, new RegExp(`sam:mcr\\.microsoft\\.com/playwright:v1\\.62\\.0-noble:host:${f.root}/content:npm run verify:m51\\nhost-memo\\n`, 'u'));
+  assert.match(calls, new RegExp(`sam:mcr\\.microsoft\\.com/playwright:v1\\.62\\.0-noble:host:${f.root}/content:npm run verify:m51\\nhost-memo\\nhost-plugins\\n`, 'u'));
   await writeFile(path.join(f.root, 'calls'), '');
   await assert.rejects(f.run(['verify'], { FIXTURE_SAM_EXIT: '23' }), { code: 23 });
   calls = await f.log();
-  assert.doesNotMatch(calls, /host-memo/u);
+  assert.doesNotMatch(calls, /host-memo|host-plugins/u);
 }));
 
 test('start, repeat start and status share clean complete host-address summary and exact stop ownership', () => withFixture(async (f) => {
@@ -169,7 +177,8 @@ test('start, repeat start and status share clean complete host-address summary a
   assert.doesNotMatch(first.stdout, /203\.0\.113\.99|http:\/\/0\.0\.0\.0|sam:|container ID/u);
   assert.match(first.stdout, /Local only \(preview host\):\nWebsite \(web\):\nhttp:\/\/127\.0\.0\.1:7081/u);
   const calls = await f.log();
-  assert.equal(calls.split('sam:').length - 1, 1);
+  assert.equal(calls.split('\n').filter((line) => line.includes(':env PUBLICATION_PORT=')).length, 1);
+  assert.equal(calls.split('node tooling/assemble-publication/scripts/check-runtime-metadata.mjs').length - 1, 2);
   assert.match(calls, /--filter label=sam\.scope=preview\.sh --filter label=sam\.service=web/u);
   await f.run(['stop']);
   await f.run(['down']);
@@ -179,6 +188,21 @@ test('start, repeat start and status share clean complete host-address summary a
 test('mode/config changes preserve the running preview and require explicit stop', () => withFixture(async (f) => {
   await f.run();
   await assert.rejects(f.run(['start'], { WEB_HOST_PORT: '9000' }), (error) => error.code === 1 && /configuration differs/u.test(error.stderr));
+  assert.doesNotMatch(await f.log(), /docker:(stop|rm)/u);
+}));
+
+test('static preview rejects unsafe activation and enabled Memo without a selected artifact before service startup', () => withFixture(async (f) => {
+  await assert.rejects(f.run([], { FIXTURE_METADATA_EXIT: '26' }), { code: 26 });
+  assert.doesNotMatch(await f.log(), /:env PUBLICATION_PORT=/u);
+  await writeFile(path.join(f.root, 'dist/plugins.public.v1.json'), JSON.stringify({ schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled: true } } }));
+  await assert.rejects(f.run(), (error) => error.code === 1 && /enabled Memo preview\/package requires/u.test(error.stderr));
+  assert.doesNotMatch(await f.log(), /:env PUBLICATION_PORT=/u);
+}));
+
+test('activation changes require a fresh preview instead of silently reusing its old gate snapshot', () => withFixture(async (f) => {
+  await f.run();
+  await writeFile(path.join(f.root, 'dist/plugins.public.v1.json'), JSON.stringify({ schemaVersion: 1, plugins: { comments: { enabled: true }, memos: { enabled: false } } }));
+  await assert.rejects(f.run(['start']), (error) => error.code === 1 && /configuration differs/u.test(error.stderr));
   assert.doesNotMatch(await f.log(), /docker:(stop|rm)/u);
 }));
 

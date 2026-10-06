@@ -11,6 +11,8 @@ import {
 } from '../src/lib/content-markers.mjs';
 import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 import { createRobotsText } from '../src/lib/site-seo.mjs';
+import { enabledMarkerPaths, PLUGIN_ACCESS_PATH, pluginAccessFromConfig } from '../../../plugins/public-access.mjs';
+import { readPluginAccess } from '../../../plugins/public-access-files.mjs';
 
 const siteRoot = path.resolve(import.meta.dirname, '..');
 const distRoot = path.join(siteRoot, 'dist');
@@ -243,9 +245,12 @@ test('static build emits only the implemented route surface', async () => {
     'fonts/JetBrainsMono-Regular-v2.304.woff2',
     'licenses/JetBrainsMono-OFL-1.1.txt',
     'licenses/JetBrainsMono-PROVENANCE.txt',
+    PLUGIN_ACCESS_PATH,
+    ...enabledMarkerPaths(pluginAccessFromConfig(SITE_CONFIG)),
     'robots.txt',
     ...(SITE_CONFIG.site.url === null ? [] : ['sitemap.xml'])
-  ]);
+  ].sort());
+  assert.deepEqual(await readPluginAccess(distRoot), pluginAccessFromConfig(SITE_CONFIG));
   assert.equal(files.includes('sitemap.xml'), SITE_CONFIG.site.url !== null);
   assert.equal(files.some((file) => file.endsWith('.map')), false);
 });

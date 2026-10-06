@@ -54,14 +54,16 @@ twitterCard = "summary_large_image"
 
 [plugins.comments]
 # Enable only after the private runtime, edge, SMTP, backup, and public smoke
-# gates are accepted. This is the only comments enable flag.
+# gates are accepted. False hides comments and closes all public comments routes.
+# This is the only comments enable flag; retained private data is preserved.
 enabled = false
 # The comments plugin owns its non-secret public/runtime settings in this
 # repository-relative file. The static site receives only its [public] section.
 configPath = "config/plugins/comments/config.toml"
 
 [plugins.memos]
-# Discovery only: /memos/ is served by the independent static publisher.
+# Controls discovery and public /memos access. False returns 404 after deploying
+# the blog release; the independent Memo publication and history are retained.
 enabled = false
 # configPath is retained for activation compatibility; blog builds never read it.
 configPath = "config/plugins/memos/config.toml"

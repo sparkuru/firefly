@@ -138,6 +138,12 @@ validation/state/promotion run in the reviewed ephemeral publisher image.
   headers and `Cache-Control: no-cache, no-store` on every Memo response.
   Check actual edge response headers as well as origin headers. No Memo HTTP/mail listener, worker, API proxy, DNS or certificate
   change is required. Keep comments and unrelated locations intact.
+- Public access is additionally gated by the blog release's validated
+  `plugin-access/memos.enabled` marker. False returns non-cacheable 404 before
+  redirects or method handling and preserves the independent pointer/history.
+  A combined owner sync skips disabled Memo publication. Standalone explicit
+  publisher operations do not enable that route. See
+  [Plugin Public Access](./plugin-public-access-contract.md).
 - Blog builds never read current Memo input/state. The assembler reserves the
   namespace and retains strict legacy Memo metadata solely as migration
   evidence. Explicit combined preview/package consumes already validated
@@ -165,6 +171,7 @@ validation/state/promotion run in the reviewed ephemeral publisher image.
 | Transfer or promotion interrupted | Retain current; inspect owned staging/release before retry |
 | Old rollback contains withdrawn content | Refuse new rollback publication |
 | Selected combined artifact missing or invalid | Explicit combined-input error |
+| Retained Memo artifact while public activation is false | 404 without changing publisher history |
 | Selected combined candidate in Astro dev | Refuse explicitly; use static start/preview |
 | Present optional config field has wrong type/null | Refuse before wrapper/transport; absence alone gets defaults |
 | Blog source/config unavailable during Memo build | Independent Memo build still succeeds |
