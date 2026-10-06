@@ -231,8 +231,10 @@ direction requires a fresh owner decision.
 On 2026-10-06 the owner replaced interactive Memo production enablement with
 local owner-only Markdown authoring and an independent static publisher. The
 reviewed revised plan was explicitly approved. Implementation and actual
-production acceptance now pass in `.trellis/tasks/10-05-memo-production-enablement/`;
-final commit/archive bookkeeping was approved with the historical import batch.
+production acceptance now pass in
+`.trellis/tasks/archive/2026-10/10-05-memo-production-enablement/`.
+The owner-approved combined publisher/import work was committed as `82131db`;
+this production-enablement task is complete and archived.
 Visitor submission,
 verification and mail are superseded; comments retain their own boundary.
 
