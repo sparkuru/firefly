@@ -133,3 +133,70 @@ Completed the owner Markdown publisher and imported 89 nonempty historical notes
 ### Next Steps
 
 - This scope is complete. Remote publication of the historical corpus requires a compatible validator image and separate authorization.
+
+
+## Session 86: Unified plugin access and deployment closure
+
+**Date**: 2026-10-06
+**Task**: Unified plugin access and deployment closure
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Unified release-bound plugin access, retained history, owner-authorized TLS renewal and verified both-off deployment; scoped work and task archive complete.
+
+### Main Changes
+
+Implemented one public activation contract for comments and Memo. The site's
+selected configuration emits strict release-bound activation JSON and positive
+markers; assembler inventory/history, Node serving and Nginx gates consume the
+same state. Disabled namespaces return non-cacheable 404 before redirect, proxy
+or method handling. Comment deactivation retains its established deletion floor;
+Memo source, independent receipt/history and private maintenance remain separate.
+
+The ignored owner sync skips disabled Memo publication, validates current versus
+built flags including no-build, verifies prepared enabled runtimes and staged
+policy, and checks canonical routes after promotion. Caught failures restore
+blog state while preserving independently accepted Memo. The shared-root chown
+was removed; exact retained plugin owners/modes and bytes match baseline.
+
+Validation passed: full preview fixture gate under restrictive umask, isolated
+runtime packaging, 11 shared contract tests, 18 assembler/Node tests, four real
+Nginx combinations plus on/off/on without reload, and 33 private flow fixtures.
+Browser suites passed 177 cases with 139 applicability skips. Actual public
+GET/HEAD/POST/OPTIONS/PUT/DELETE closure, verified direct-origin HTTPS, canonical
+redirects/security/cache headers and desktop/mobile JS/no-JS native post reading
+passed. Final public activation bytes match the validated owner release.
+
+Deployment exposed an expired existing origin certificate; automatic rollback
+restored the original host configuration. The owner separately authorized
+existing-client renewal, which passed validity/hostname/key-pair and strict TLS
+checks before the reviewed both-off deployment. The target's Zsh special path
+and status variables then exposed a probe assumption; shell-neutral names,
+exact sh/Zsh four-state regressions and an independently reviewed live retry
+passed. No private deployment identity, certificate/key material or raw logs
+enter project records.
+
+The native dedicated checker could not start due to the thread limit. The main
+session completed the full-scope skill check with complementary independent
+cross-reviews. No residual material runnable or subjective human check remains
+for the approved current-state mechanics; enabled production comments remains
+outside acceptance because its prepared runtime is absent. Positive/mixed
+states are explicit synthetic evidence, not a production claim.
+
+The owner confirmed the work commit, scoped task archival and journal. Work
+commit is c04b09f; the completed task is under the 2026-10 archive. No Git push
+or subsequent product task was performed. Existing third-party notice gaps
+remain license-notice-needed; no new dependency/content or licensing approval
+is claimed by this change.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c04b09f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
