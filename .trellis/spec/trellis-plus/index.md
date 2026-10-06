@@ -33,7 +33,7 @@ snapshot still exists.
   and NERV experiment.
 - `./sam` is the executable boundary for Node, npm, and browser commands.
   Host npm and global Playwright are not validation evidence. Compose syntax,
-  image isolation, runtime packaging, and the maintained disposable Memo
+  image isolation, runtime packaging, and the maintained disposable static Memo
   lifecycle fixture use the explicit host Docker boundaries in the validation
   profile; their containers require exact ownership labels and cleanup.
 - The approved dependency direction is X Core → semantic/Terminal → site.

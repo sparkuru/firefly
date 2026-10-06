@@ -39,6 +39,7 @@ SITE_CONFIG_OVERRIDE_PATH="${FIREFLY_SITE_CONFIG_PATH:-}"
 readonly IMAGE SAM_IPC SAM_BIND_HOST WEB_HOST_PORT WEB_CONTAINER_PORT COMMENTS_EXPORT_PATH SITE_CONFIG_OVERRIDE_PATH
 
 content_mounts=()
+memos_mounts=()
 
 usage() {
 	printf 'Usage: %s <command> [arguments...]\n' "$(basename "$0")" >&2
@@ -249,6 +250,37 @@ discover_content_mounts() {
 	export FIREFLY_CONTENT_ROOT
 }
 
+discover_memos_mounts() {
+	local key selected canonical writable
+	for key in SAM_MEMOS_SOURCE_ROOT SAM_MEMOS_ASSETS_ROOT SAM_MEMOS_WORK_ROOT SAM_MEMOS_DEPLOYMENT_ROOT SAM_MEMOS_HISTORY_ROOT SAM_MEMOS_PRIOR_ROOT FIREFLY_MEMOS_CANDIDATE FIREFLY_MEMOS_PUBLIC_ROOT; do
+		selected=${!key:-}
+		[[ -n "${selected}" ]] || continue
+		require_command realpath
+		[[ "${selected}" == /* && "${selected}" != *\\* ]] || {
+			printf '[sam] %s must be an absolute directory\n' "${key}" >&2
+			return 2
+		}
+		validate_mount_path "${selected}"
+		canonical=$(realpath -e -- "${selected}") || return 2
+		[[ "${canonical}" == "${selected}" && -d "${canonical}" && ! -L "${selected}" ]] || {
+			printf '[sam] %s must be a canonical regular directory\n' "${key}" >&2
+			return 2
+		}
+		if [[ "${key}" == SAM_MEMOS_WORK_ROOT || "${key}" == SAM_MEMOS_DEPLOYMENT_ROOT ]]; then
+			if [[ "${canonical}" == "${REPO_ROOT}" || "${canonical}" == "${REPO_ROOT}/"* || "${REPO_ROOT}/" == "${canonical}/"* ]]; then
+				[[ "${canonical}" == "${REPO_ROOT}/.firefly/memos" || "${canonical}" == "${REPO_ROOT}/.firefly/memos/"* ]] || {
+					printf '[sam] repository-local Memo outputs must stay within .firefly/memos\n' >&2
+					return 2
+				}
+			fi
+		fi
+		writable=,readonly
+		[[ "${key}" != SAM_MEMOS_SOURCE_ROOT || "${SAM_MEMOS_SOURCE_WRITABLE:-0}" != 1 ]] || writable=""
+		[[ "${key}" != SAM_MEMOS_WORK_ROOT && "${key}" != SAM_MEMOS_DEPLOYMENT_ROOT ]] || writable=""
+		memos_mounts+=(--mount "type=bind,src=${canonical},dst=${canonical}${writable}")
+	done
+}
+
 run_step() {
 	local label=$1
 	shift
@@ -289,12 +321,22 @@ main() {
 		return 2
 	}
 
-	validate_comments_export
-	validate_site_config_override
+	case "${SAM_CONTENT_MODE:-blog}" in
+	blog)
+		validate_comments_export
+		validate_site_config_override
+		;;
+	none) ;;
+	*)
+		printf '[sam] SAM_CONTENT_MODE must be blog or none\n' >&2
+		return 2
+		;;
+	esac
 	require_command docker
 	require_command id
 	require_command mkdir
-	discover_content_mounts
+	[[ "${SAM_CONTENT_MODE:-blog}" == none ]] || discover_content_mounts
+	discover_memos_mounts
 	run_step internal mkdir -p -- "${DEVHOME}"
 
 	case "${SAM_DETACH:-0}" in
@@ -335,32 +377,34 @@ main() {
 	if [[ -n "${COMMENTS_EXPORT_CONTAINER_PATH}" ]]; then
 		environment_flags=(-e "FIREFLY_COMMENTS_EXPORT=${COMMENTS_EXPORT_CONTAINER_PATH}")
 	fi
-	if [[ -n "${SITE_CONFIG_OVERRIDE_PATH}" ]]; then
+	if [[ "${SAM_CONTENT_MODE:-blog}" == blog && -n "${SITE_CONFIG_OVERRIDE_PATH}" ]]; then
 		environment_flags+=(-e "FIREFLY_SITE_CONFIG_PATH=${SITE_CONFIG_OVERRIDE_PATH}")
 	fi
-	if [[ -n "${FIREFLY_MEMOS_EXPORT:-}" ]]; then
-		environment_flags+=(-e "FIREFLY_MEMOS_EXPORT")
-	fi
-	if [[ -f "${REPO_ROOT}/config/site.toml" ]]; then
+	if [[ "${SAM_CONTENT_MODE:-blog}" == blog && -f "${REPO_ROOT}/config/site.toml" ]]; then
 		config_mount_flags=(--mount "type=bind,src=${REPO_ROOT}/config/site.toml,dst=/app/config/site.toml,readonly")
 	fi
-	if [[ -f "${REPO_ROOT}/config/plugins/comments/config.toml" ]]; then
+	if [[ "${SAM_CONTENT_MODE:-blog}" == blog && -f "${REPO_ROOT}/config/plugins/comments/config.toml" ]]; then
 		config_mount_flags+=(--mount "type=bind,src=${REPO_ROOT}/config/plugins/comments/config.toml,dst=/app/config/plugins/comments/config.toml,readonly")
 	fi
-	for env_name in "${comments_environment_names[@]}"; do
-		[[ -n "${!env_name-}" ]] && environment_flags+=(-e "${env_name}")
-	done
+	if [[ "${SAM_CONTENT_MODE:-blog}" == blog ]]; then
+		for env_name in "${comments_environment_names[@]}"; do
+			[[ -n "${!env_name-}" ]] && environment_flags+=(-e "${env_name}")
+		done
+	fi
+	[[ -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || environment_flags+=(-e FIREFLY_MEMOS_CANDIDATE)
+	[[ -z "${FIREFLY_MEMOS_PUBLIC_ROOT:-}" ]] || environment_flags+=(-e FIREFLY_MEMOS_PUBLIC_ROOT)
+	[[ "${SAM_CONTENT_MODE:-blog}" == none ]] || environment_flags+=(-e "FIREFLY_CONTENT_ROOT=${FIREFLY_CONTENT_ROOT}")
 	docker_command=(
 		docker run --rm --init
 		"${tty_flags[@]}"
 		--ipc "${SAM_IPC}"
 		--user "$(id -u):$(id -g)"
 		-e HOME=/app/.devhome
-		-e "FIREFLY_CONTENT_ROOT=${FIREFLY_CONTENT_ROOT}"
 		"${environment_flags[@]}"
 		-v "${REPO_ROOT}:/app"
 		"${config_mount_flags[@]}"
 		"${content_mounts[@]}"
+		"${memos_mounts[@]}"
 		-w /app
 		--label "sam.repo=${REPO_ROOT}"
 		--label "sam.scope=${SAM_SCOPE:-manual}"

@@ -57,15 +57,18 @@ namespaces are `SAM_`, `WEB_`, `FIREFLY_`, `COMMENTS_` and `MEMOS_`.
 | `WEB_CONTAINER_PORT` | publication/Astro listener and `sam` target port |
 | `FIREFLY_CONTENT_ROOT` | optional absolute readable blog root; empty selects tracked `content/` |
 | `FIREFLY_RUNTIME_IMAGE` | `package` output tag; no deployment implied |
-| `FIREFLY_COMMENTS_EXPORT` / `FIREFLY_MEMOS_EXPORT` | optional existing public inputs; presence selects packaging `build:m51` |
+| `FIREFLY_COMMENTS_EXPORT` | optional existing comments public input; selects packaging `build:m51` |
+| `FIREFLY_MEMOS_CANDIDATE` | selected already-built Memo candidate; combined preview/package validates it and serves public bytes only |
+| `SAM_CONTENT_MODE` | `blog` default or `none` for independent publisher work without blog discovery |
 
 The ordinary public preview requires no account/password. Optional private
-comments/Memo consumers retain `config/plugins/*/secrets.env` and their existing
+comments consumers retain `config/plugins/comments/secrets.env` and their existing
 Compose paths; this CLI does not start those services or print their secrets.
 `render` pins Playwright Noble 1.62.0 with host IPC after loading configuration.
 `verify` forces tracked content before `sam` reads `.env` and preserves explicit
-diagnostic image/IPC overrides. Private fixture state is disposable and owned
-by the maintained Memo runtime check, not the default Compose project.
+diagnostic image/IPC overrides. Memo uses a host-owned publisher and static
+mount; its retired visitor/mail runtime is not started. Disposable static Memo
+fixture state belongs to its exact owned check, not default Compose.
 
 When keys change, update the example and consumer together. If `.env` exists,
 append only absent keys with safe defaults; preserve existing empty values,

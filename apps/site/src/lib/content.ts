@@ -6,7 +6,6 @@ import {
 import { projectCanonicalRoute } from './canonical-route.mjs';
 import { resolveContentMarkers } from './content-markers.mjs';
 import { displayNameForDocument } from './content-metadata.mjs';
-import { SITE_CONFIG } from './site-config.mjs';
 
 export type PublicPost = CollectionEntry<'posts'>;
 export type PublicPage = CollectionEntry<'pages'>;
@@ -194,12 +193,15 @@ function assertRouteReservations(documents: readonly CanonicalDocument[], direct
       throw new Error(`Noncanonical route reservation: ${route}`);
     }
     const key = collisionKey(route);
+    if (owner !== 'independent Memo namespace' && (key === '/memos/' || key.startsWith('/memos/'))) {
+      throw new Error(`Route collision between independent Memo namespace and ${owner}.`);
+    }
     const existing = reservations.get(key);
     if (existing !== undefined) throw new Error(`Route collision between ${existing} and ${owner}.`);
     reservations.set(key, owner);
   };
   reserve('/', 'site root');
-  if (SITE_CONFIG.plugins.memos.enabled) reserve('/memos/', 'memo site page');
+  reserve('/memos/', 'independent Memo namespace');
   for (const directory of directories) reserve(directory.href, `directory ${directory.virtualPath}`);
   for (const document of documents) {
     reserve(document.href, `document ${document.virtualPath}`);

@@ -1,101 +1,32 @@
 import path from 'node:path';
-import { denseArray, exactObject } from './validation.mjs';
+import { exactObject } from './validation.mjs';
 
 export const DEFAULT_MEMOS_CONFIG_PATH = 'config/plugins/memos/config.toml';
-const PUBLIC_KEYS = ['writeOrigin', 'exportPath', 'consentVersion'];
-const RUNTIME_KEYS = ['allowedOrigins', 'publicOrigin', 'dataRoot', 'databasePath', 'outboxPath', 'secretEnv', 'smtp', 'encryptionKeyId'];
+const failure = (source) => (message) => { throw new TypeError(`Invalid memos configuration in ${source}: ${message}`); };
 
-function failure(source) {
-  return (message) => { throw new TypeError(`Invalid memos configuration in ${source}: ${message}`); };
-}
-function safeText(value, fail, label) {
-  if (typeof value !== 'string' || !value || value.trim() !== value || value.normalize('NFC') !== value || /[\p{Cc}\p{Cf}\p{Cs}\u2028\u2029]/u.test(value)) fail(`${label} must be safe canonical single-line text.`);
-  return value;
-}
-function safePath(value, fail, label, absolute = false) {
-  const result = safeText(value, fail, label);
-  const relative = absolute && result.startsWith('/') ? result.slice(1) : result;
-  if (relative.split('/').some((segment) => !/^[A-Za-z0-9_-][A-Za-z0-9._-]*$/u.test(segment))) fail(`${label} must be a safe ${absolute ? 'private' : 'repository-relative'} path without traversal.`);
-  return result;
-}
-function origin(value, fail, label) {
-  safeText(value, fail, label);
-  let parsed;
-  try { parsed = new URL(value); } catch { fail(`${label} must be an HTTPS origin.`); }
-  if (!/^https:\/\/[^/?#\\]+\/?$/u.test(value) || /\s/u.test(value) || parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) fail(`${label} must be an HTTPS origin without credentials, path, query or fragment.`);
-  return parsed.origin;
-}
-function publicConfig(value, fail, enabled) {
-  const raw = exactObject(value === undefined ? {} : value, PUBLIC_KEYS, [], fail, 'memos.public');
-  const writeOrigin = raw.writeOrigin === undefined || raw.writeOrigin === null ? null : origin(raw.writeOrigin, fail, 'writeOrigin');
-  if (enabled && writeOrigin === null) fail('writeOrigin is required when enabled.');
-  const exportPath = safePath(raw.exportPath === undefined ? 'artifacts/memos/memos.public.v1.json' : raw.exportPath, fail, 'exportPath');
-  if (!exportPath.endsWith('.json')) fail('exportPath must end with .json.');
-  const consentVersion = safeText(raw.consentVersion === undefined ? 'memos-v1' : raw.consentVersion, fail, 'consentVersion');
-  return Object.freeze({ writeOrigin, exportPath, consentVersion });
-}
-function runtimeConfig(value, fail) {
-  const raw = exactObject(value === undefined ? {} : value, RUNTIME_KEYS, [], fail, 'memos.runtime');
-  const allowedOrigins = raw.allowedOrigins === undefined ? [] : denseArray(raw.allowedOrigins, fail, 'allowedOrigins').map((value) => origin(value, fail, 'allowedOrigins entry'));
-  if (new Set(allowedOrigins).size !== allowedOrigins.length) fail('allowedOrigins must be unique.');
-  const secretEnv = exactObject(raw.secretEnv === undefined ? {} : raw.secretEnv, ['smtpPassword', 'adminToken', 'tokenKey', 'encryptionKey'], [], fail, 'secretEnv');
-  const secrets = {};
-  for (const [key, value] of Object.entries(secretEnv)) {
-    if (typeof value !== 'string' || !/^[A-Z_][A-Z0-9_]*$/u.test(value)) fail(`secretEnv.${key} must name an environment variable, never a secret value.`);
-    secrets[key] = value;
-  }
-  const runtimePath = (key) => raw[key] === undefined || raw[key] === null ? null : safePath(raw[key], fail, key, true);
-  return Object.freeze({
-    allowedOrigins: Object.freeze(allowedOrigins),
-    publicOrigin: raw.publicOrigin === undefined || raw.publicOrigin === null ? null : origin(raw.publicOrigin, fail, 'publicOrigin'),
-    dataRoot: runtimePath('dataRoot'), databasePath: runtimePath('databasePath'), outboxPath: runtimePath('outboxPath'),
-    secretEnv: Object.freeze(secrets),
-    smtp: smtpConfig(raw.smtp, fail),
-    encryptionKeyId: raw.encryptionKeyId === undefined ? 'primary' : keyId(raw.encryptionKeyId, fail)
-  });
-}
-function keyId(value, fail) {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/u.test(value)) fail('encryptionKeyId must be a safe key identifier.');
-  return value;
-}
-function smtpConfig(value, fail) {
-  if (value === undefined || value === null) return null;
-  const raw = exactObject(value, ['host', 'port', 'secure', 'user', 'from', 'connectionTimeoutMs', 'commandTimeoutMs'], ['host', 'user', 'from'], fail, 'smtp');
-  const host = safeText(raw.host, fail, 'smtp.host');
-  if (host.length > 253 || !host.split('.').every((label) => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u.test(label))) fail('smtp.host must be a safe hostname.');
-  const user = safeText(raw.user, fail, 'smtp.user');
-  const from = safeText(raw.from, fail, 'smtp.from');
-  const [local, domain] = from.split('@');
-  if (user.length > 320 || !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~@-]+$/u.test(user)) fail('smtp.user must be a safe login identifier.');
-  if (from.length > 320 || !local || local.length > 64 || !domain || domain.length > 253 || !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/u.test(from)) fail('smtp.from must be a safe mailbox.');
-  const integer = (key, fallback, min, max) => {
-    const result = raw[key] === undefined ? fallback : raw[key];
-    if (!Number.isInteger(result) || result < min || result > max) fail(`smtp.${key} is outside its supported range.`);
-    return result;
-  };
-  const port = integer('port', 587, 1, 65535);
-  const secure = raw.secure === undefined ? port === 465 : raw.secure;
-  if (typeof secure !== 'boolean') fail('smtp.secure must be boolean.');
-  return Object.freeze({ host, port, secure, user, from, connectionTimeoutMs: integer('connectionTimeoutMs', 10000, 100, 120000), commandTimeoutMs: integer('commandTimeoutMs', 10000, 100, 120000) });
-}
 export function parseMemosActivation(value, source = 'config/site.toml') {
   const fail = failure(source);
   const raw = exactObject(value === undefined ? {} : value, ['enabled', 'configPath'], [], fail, 'plugins.memos');
   const enabled = raw.enabled === undefined ? false : raw.enabled;
   if (typeof enabled !== 'boolean') fail('enabled must be boolean.');
-  const configPath = safePath(raw.configPath === undefined ? DEFAULT_MEMOS_CONFIG_PATH : raw.configPath, fail, 'configPath');
-  if (!configPath.endsWith('.toml')) fail('configPath must end with .toml.');
+  const configPath = raw.configPath === undefined ? DEFAULT_MEMOS_CONFIG_PATH : raw.configPath;
+  if (typeof configPath !== 'string' || !configPath.endsWith('.toml') || configPath.split('/').some((segment) => !/^[A-Za-z0-9_-][A-Za-z0-9._-]*$/u.test(segment))) fail('configPath must be a safe repository-relative TOML path without traversal.');
   return Object.freeze({ enabled, configPath });
 }
-export function parseMemosConfig(value, source = DEFAULT_MEMOS_CONFIG_PATH, options = {}) {
+
+export function parseMemosConfig(value, source = DEFAULT_MEMOS_CONFIG_PATH) {
   const fail = failure(source);
-  const raw = exactObject(value === undefined ? {} : value, ['public', 'runtime'], [], fail, 'memos configuration');
-  return Object.freeze({ public: publicConfig(raw.public, fail, options.enabled === true), runtime: runtimeConfig(raw.runtime, fail) });
+  const raw = exactObject(value === undefined ? {} : value, ['public'], [], fail, 'memos configuration');
+  const publicConfig = exactObject(raw.public === undefined ? {} : raw.public, ['route'], [], fail, 'memos.public');
+  const route = publicConfig.route === undefined ? '/memos/' : publicConfig.route;
+  if (route !== '/memos/') fail('route must be /memos/.');
+  return Object.freeze({ public: Object.freeze({ route }) });
 }
-export function parseMemosPublicConfig(value, source = DEFAULT_MEMOS_CONFIG_PATH, options = {}) {
-  return parseMemosConfig(value, source, options).public;
+
+export function parseMemosPublicConfig(value, source = DEFAULT_MEMOS_CONFIG_PATH) {
+  return parseMemosConfig(value, source).public;
 }
+
 export function resolveMemosConfigPath(configPath = DEFAULT_MEMOS_CONFIG_PATH, repositoryRoot = process.cwd()) {
-  const activation = parseMemosActivation({ configPath });
-  return path.resolve(repositoryRoot, activation.configPath);
+  return path.resolve(repositoryRoot, parseMemosActivation({ configPath }).configPath);
 }

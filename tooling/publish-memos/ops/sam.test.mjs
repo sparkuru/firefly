@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { promisify } from 'node:util';
+import test from 'node:test';
+const execute = promisify(execFile);
+const realRoot = path.resolve(import.meta.dirname, '../../..');
+test('sam publisher mode ignores absent blog and adds only selected narrow Memo mounts', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-sam-publisher-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const dir of ['tooling/shared', 'bin', 'source', '.firefly/memos/work']) await mkdir(path.join(root, dir), { recursive: true });
+  await copyFile(path.join(realRoot, 'sam'), path.join(root, 'sam'));
+  await copyFile(path.join(realRoot, 'tooling/shared/dev-env.sh'), path.join(root, 'tooling/shared/dev-env.sh'));
+  await writeFile(path.join(root, 'bin/docker'), `#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify(process.argv.slice(2)));\n`, { mode: 0o755 });
+  const env = { ...process.env, PATH: `${root}/bin:${process.env.PATH}`, SAM_CONTENT_MODE: 'none', FIREFLY_CONTENT_ROOT: '/missing/blog', FIREFLY_COMMENTS_EXPORT: '/missing/comments', FIREFLY_SITE_CONFIG_PATH: '/missing/config', SAM_MEMOS_SOURCE_ROOT: path.join(root, 'source'), SAM_MEMOS_WORK_ROOT: path.join(root, '.firefly/memos/work') };
+  const result = await execute(path.join(root, 'sam'), ['node', '--version'], { env });
+  const args = JSON.parse(result.stdout);
+  assert.ok(args.includes(`type=bind,src=${root}/source,dst=${root}/source,readonly`));
+  assert.ok(args.includes(`type=bind,src=${root}/.firefly/memos/work,dst=${root}/.firefly/memos/work`));
+  assert.ok(!args.some((arg) => arg.includes('FIREFLY_CONTENT_ROOT') || arg.includes('FIREFLY_COMMENTS_EXPORT') || arg.includes('FIREFLY_SITE_CONFIG_PATH')));
+  assert.ok(!args.some((arg) => arg.includes('/missing/')));
+  await symlink(path.join(root, 'source'), path.join(root, 'linked-source'));
+  await assert.rejects(execute(path.join(root, 'sam'), ['node', '--version'], { env: { ...env, SAM_MEMOS_SOURCE_ROOT: path.join(root, 'linked-source') } }), /canonical regular directory/u);
+  await assert.rejects(execute(path.join(root, 'sam'), ['node', '--version'], { env: { ...env, SAM_MEMOS_WORK_ROOT: '/tmp' } }), /broad system/u);
+});

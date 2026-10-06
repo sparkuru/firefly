@@ -44,7 +44,7 @@ export function createSiteSeoIntegration(config = SITE_CONFIG) {
           logger.info('Wrote robots.txt; sitemap omitted because site.url is unset.');
           return;
         }
-        const paths = publicSitemapPaths(pages);
+        const paths = publicSitemapPaths(config.plugins.memos.enabled ? [...pages, { pathname: '/memos/' }] : pages);
         const sitemap = createSitemapXml(paths, config.site.url);
         if (sitemap === undefined) return;
         await writeFile(new URL('sitemap.xml', dir), sitemap, 'utf8');

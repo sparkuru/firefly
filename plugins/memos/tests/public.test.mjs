@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { createPublicExport, decodePublicMemosExport, digestForExport, normalizeBody, normalizeDisplayName, serializePublicExport, PublicMemosContractError } from '../public.mjs';
+import { createPublicExport, decodePublicMemosExport, digestForExport, MAX_BODY_BYTES, normalizeBody, normalizeDisplayName, serializePublicExport, PublicMemosContractError } from '../public.mjs';
 
 const date = '2026-09-30T00:00:00.000Z';
 const memo = (overrides = {}) => ({ id: 'm_aaa', displayName: 'Reader', body: 'Hello', createdAt: date, ...overrides });
-const input = (memos = [memo()]) => ({ schemaVersion: 1, sourceRevision: 'revision-1', generatedAt: date, tombstoneEpoch: 0, memos });
+const input = (memos = [memo()]) => ({ schemaVersion: 2, bodyFormat: 'markdown', sourceRevision: 'revision-1', generatedAt: date, tombstoneEpoch: 0, memos });
 const wire = () => structuredClone(createPublicExport(input()));
 const rejects = (value, message) => assert.throws(() => decodePublicMemosExport(value), (error) => {
   assert.ok(error instanceof PublicMemosContractError);
@@ -19,8 +19,8 @@ test('producer normalizes and sorts without mutating; digest has a fixed indepen
   const result = createPublicExport(original);
   assert.deepEqual(original, snapshot);
   assert.deepEqual(result.memos.map(({ id }) => id), ['m_AAA', 'm_zzz', 'm_old']);
-  assert.equal(result.memos[1].body, 'é\nline\nnext');
-  const expected = '{"schemaVersion":1,"sourceRevision":"revision-1","generatedAt":"2026-09-30T00:00:00.000Z","tombstoneEpoch":0,"memos":[{"id":"m_aaa","displayName":"Reader","body":"Hello","createdAt":"2026-09-30T00:00:00.000Z"}]}';
+  assert.equal(result.memos[1].body, ' e\u0301\nline\nnext ');
+  const expected = '{"schemaVersion":2,"bodyFormat":"markdown","sourceRevision":"revision-1","generatedAt":"2026-09-30T00:00:00.000Z","tombstoneEpoch":0,"memos":[{"id":"m_aaa","displayName":"Reader","body":"Hello","createdAt":"2026-09-30T00:00:00.000Z"}]}';
   assert.equal(wire().digest, createHash('sha256').update(expected).digest('hex'));
   assert.equal(digestForExport(input()), wire().digest);
   const serialized = serializePublicExport(result);
@@ -56,7 +56,8 @@ test('strict wire does not repair order, canonical text, invalid dates, or IDs',
   const result = createPublicExport(input([memo(), memo({ id: 'm_bbb' })]));
   rejects({ ...result, memos: [...result.memos].reverse() }, /newest-first/);
   rejects({ ...wire(), memos: [memo(), memo()] }, /duplicate IDs/);
-  for (const body of [' Hello', 'Hello ', 'e\u0301', 'a\rb', 'a\r\nb', 'a\u0000b', 'a\u202eb', '\ud800', '']) rejects({ ...wire(), memos: [memo({ body })] }, /canonical|unsafe text|well-formed Unicode/);
+  for (const body of ['a\rb', 'a\r\nb', 'a\u0000b', 'a\u202eb', '\ud800', '']) rejects({ ...wire(), memos: [memo({ body })] }, /canonical|unsafe text|well-formed Unicode/);
+  for (const body of [' Hello', 'Hello ', 'e\u0301', '  indented\nline  \n', '```\ne\u0301  \n```']) assert.equal(createPublicExport(input([memo({ body })])).memos[0].body, body);
   for (const id of ['c_aaa', 'm_a', 'm_中文', 'm_a/b', 'm_' + 'a'.repeat(129)]) rejects({ ...wire(), memos: [memo({ id })] }, /opaque memo ID/);
   for (const createdAt of ['2026-02-30T00:00:00.000Z', '2026-09-30T00:00:00Z', '2026-09-30T00:00:00.000+00:00', '+010000-01-01T00:00:00.000Z']) {
     rejects({ ...wire(), memos: [memo({ createdAt })] }, /createdAt.*canonical UTC timestamp/);
@@ -65,18 +66,38 @@ test('strict wire does not repair order, canonical text, invalid dates, or IDs',
   assert.throws(() => createPublicExport(input([memo({ body: '\udfff' })])), PublicMemosContractError);
 });
 
-test('exact code point and UTF-8 limits apply to both producers and wire records', () => {
+test('exact display-name code point limit applies to producers and wire records', () => {
   const displayName = '😀'.repeat(80);
-  const body = '中'.repeat(2730) + 'ab';
   assert.equal(normalizeDisplayName(` ${displayName} `), displayName);
-  assert.equal(normalizeBody(` ${body} `), body);
-  assert.equal(Buffer.byteLength(body), 8192);
-  assert.equal(decodePublicMemosExport(createPublicExport(input([memo({ displayName, body })]))).memos[0].body, body);
-  for (const changes of [{ displayName: displayName + 'a' }, { body: body + 'a' }, { body: 'a'.repeat(8193) }, { displayName: 'a\nb' }, { displayName: ' ' }]) {
+  assert.equal(normalizeBody(' leading and trailing  '), ' leading and trailing  ');
+  assert.equal(decodePublicMemosExport(createPublicExport(input([memo({ displayName })]))).memos[0].displayName, displayName);
+  for (const changes of [{ displayName: displayName + 'a' }, { displayName: 'a\nb' }, { displayName: ' ' }]) {
     assert.throws(() => createPublicExport(input([memo(changes)])), PublicMemosContractError);
-    rejects({ ...wire(), memos: [memo(changes)] }, /1–80|1–8192|unsafe text/);
+    rejects({ ...wire(), memos: [memo(changes)] }, /1–80|unsafe text/);
   }
-  assert.equal(normalizeBody('a'.repeat(8192)).length, 8192);
+});
+
+test('128 KiB ASCII and multibyte bodies round trip exactly; one extra byte is rejected', () => {
+  assert.equal(MAX_BODY_BYTES, 131072);
+  const bodies = ['a'.repeat(131072), '中'.repeat(43690) + 'ab', '😀'.repeat(32768)];
+  for (const body of bodies) {
+    assert.equal(Buffer.byteLength(body, 'utf8'), 131072);
+    assert.equal(normalizeBody(body), body);
+    const result = createPublicExport(input([memo({ body })]));
+    const serialized = serializePublicExport(result);
+    for (const value of [result, serialized, Buffer.from(serialized, 'utf8')]) {
+      assert.equal(decodePublicMemosExport(value).memos[0].body, body);
+    }
+    const oversized = body + 'a';
+    assert.equal(Buffer.byteLength(oversized, 'utf8'), 131073);
+    const message = /body must contain 1–131072 UTF-8 bytes\./;
+    assert.throws(() => normalizeBody(oversized), message);
+    assert.throws(() => createPublicExport(input([memo({ body: oversized })])), message);
+    const invalid = { ...result, memos: [memo({ body: oversized })] };
+    for (const value of [invalid, JSON.stringify(invalid), Buffer.from(JSON.stringify(invalid), 'utf8')]) {
+      rejects(value, message);
+    }
+  }
 });
 
 test('digest and epoch checks reject corruption and invalid metadata', () => {
@@ -84,7 +105,8 @@ test('digest and epoch checks reject corruption and invalid metadata', () => {
   for (const tombstoneEpoch of [-1, -0, 0.5, Number.MAX_SAFE_INTEGER + 1, Infinity, '0', null]) rejects({ ...wire(), tombstoneEpoch }, /tombstoneEpoch.*safe integer/);
   assert.equal(createPublicExport({ ...input([]), tombstoneEpoch: Number.MAX_SAFE_INTEGER }).tombstoneEpoch, Number.MAX_SAFE_INTEGER);
   rejects({ ...wire(), sourceRevision: '/private/path' }, /sourceRevision.*opaque ASCII revision/);
-  rejects({ ...wire(), schemaVersion: 2 }, /schemaVersion must be 1/);
+  rejects({ ...wire(), schemaVersion: 1 }, /schemaVersion must be 2/);
+  rejects({ ...wire(), bodyFormat: 'text' }, /bodyFormat must be markdown/);
   rejects({ ...wire(), memos: [memo({ body: 'tampered' })] });
 });
 

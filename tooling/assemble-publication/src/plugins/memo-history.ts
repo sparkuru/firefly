@@ -2,7 +2,7 @@ import { lstat, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { walkSafeTree, type CommentsPublicationMetadata } from '../index.js';
-import { decodeMemoMetadata, hasMemoSurface, publicationContractRoot, readContainedFile, type MemoPublicationInput } from './memos.js';
+import { decodeMemoMetadata, hasMemoSurface, publicationContractRoot, readContainedFile } from './memos.js';
 
 async function exists(candidate: string): Promise<boolean> {
   try { await lstat(candidate); return true; }
@@ -31,7 +31,7 @@ function decodeManifest(bytes: Buffer): { memos?: unknown } {
     !Array.isArray(item.tags) || item.tags.some((tag: unknown) => typeof tag !== 'string'))) return invalid();
   return value;
 }
-export async function readMemoHistory(repositoryRoot: string, input: MemoPublicationInput | null, comments: CommentsPublicationMetadata): Promise<number> {
+export async function readMemoHistory(repositoryRoot: string, comments: CommentsPublicationMetadata): Promise<number> {
   const artifacts = path.join(repositoryRoot, 'artifacts');
   const release = path.join(repositoryRoot, 'dist');
   if (await exists(path.join(artifacts, 'publication.json'))) {
@@ -43,7 +43,7 @@ export async function readMemoHistory(repositoryRoot: string, input: MemoPublica
     if (await priorMemoSurface(artifacts) || await priorMemoSurface(release)) return invalid();
     return 0;
   }
-  const recognized = new Set(input === null ? [] : [path.resolve(repositoryRoot, input.exportPath)]);
+  const recognized = new Set<string>();
   const handoff = process.env.FIREFLY_COMMENTS_EXPORT;
   if (comments.enabled && handoff) {
     const relative = path.relative(repositoryRoot, path.resolve(repositoryRoot, handoff));

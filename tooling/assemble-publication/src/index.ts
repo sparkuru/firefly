@@ -19,17 +19,9 @@ import {
   type ExperimentManifest
 } from '@firefly/validate-experiments';
 
-import {
-  loadMemoPublication,
-  memoMetadata,
-  memoContract,
-  memoHtmlReferences,
-  validateMemoTree,
-  type MemosPublicationMetadata,
-  type MemoPublicationOptions
-} from './plugins/memos.js';
+import { memoMetadata, validateMemoTree, type MemosPublicationMetadata } from './plugins/memos.js';
 import { readMemoHistory } from './plugins/memo-history.js';
-export type { MemosPublicationMetadata, MemoPublicationOptions } from './plugins/memos.js';
+export type { MemosPublicationMetadata } from './plugins/memos.js';
 
 export interface PublicationResult {
   readonly manifestCount: number;
@@ -260,7 +252,6 @@ function decodeReference(reference: string, owner: string): string | null {
 }
 
 function referenceTargets(source: string, contents: string): readonly string[] {
-  if (source === 'memos/index.html') return memoHtmlReferences(contents);
   const targets: string[] = [];
   if (source.endsWith('.html') || source.endsWith('.svg')) {
     const attributePattern = /\b(?:href|src|poster|action)\s*=\s*["']([^"']+)["']/giu;
@@ -456,6 +447,7 @@ export async function validateRelease(
   manifests: readonly ExperimentManifest[]
 ): Promise<readonly string[]> {
   const tree = await walkSafeTree(releaseRoot);
+  await validateMemoTree(releaseRoot, tree.files);
   assertNoCaseCollisions([...tree.directories, ...tree.files]);
   const requiredSiteFiles = ['index.html', '404.html', 'lab/index.html'];
   for (const required of requiredSiteFiles) {
@@ -583,7 +575,6 @@ export async function assemblePublication(options: {
   readonly repositoryRoot: string;
   readonly discovery?: ExperimentDiscovery;
   readonly comments?: CommentsPublicationMetadata;
-  readonly memoOptions?: MemoPublicationOptions;
   /** Test seam for caught promotion failures. Never used for deployment switching. */
   readonly beforePromotionRename?: (step: number) => void | Promise<void>;
 }): Promise<PublicationResult> {
@@ -593,12 +584,9 @@ export async function assemblePublication(options: {
   const siteOutput = path.join(repositoryRoot, 'apps/site/dist');
   const artifactsTarget = path.join(repositoryRoot, 'artifacts');
   const releaseTarget = path.join(repositoryRoot, 'dist');
-  const memoInput = loadMemoPublication(repositoryRoot, options.memoOptions);
-  const retainedEpoch = await readMemoHistory(repositoryRoot, memoInput, comments);
-  if (memoInput !== null && memoInput.envelope.tombstoneEpoch < retainedEpoch) {
-    throw new TypeError(`memo tombstone epoch ${memoInput.envelope.tombstoneEpoch} predates the published epoch ${retainedEpoch}; refusing rollback.`);
-  }
-  const memos = memoMetadata(memoInput, retainedEpoch);
+  // Retain the legacy floor as migration evidence; independent Memo state lives elsewhere.
+  const retainedEpoch = await readMemoHistory(repositoryRoot, comments);
+  const memos = memoMetadata(retainedEpoch);
   const publishedTombstoneEpoch = await readPublishedCommentsEpoch(artifactsTarget);
   if (comments.tombstoneEpoch < publishedTombstoneEpoch) {
     throw new TypeError(`comments tombstone epoch ${comments.tombstoneEpoch} predates the published epoch ${publishedTombstoneEpoch}; refusing rollback.`);
@@ -614,11 +602,7 @@ export async function assemblePublication(options: {
   try {
     await copySafeTree(siteOutput, path.join(artifactsCandidate, 'site'));
     const stagedSite = path.join(artifactsCandidate, 'site');
-    await validateMemoTree(stagedSite, (await walkSafeTree(stagedSite)).files, memoInput);
-    if (memoInput !== null) {
-      await mkdir(path.join(artifactsCandidate, 'memos'));
-      await writeFile(path.join(artifactsCandidate, 'memos/memos.public.v1.json'), memoContract.serializePublicExport(memoInput.envelope));
-    }
+    await validateMemoTree(stagedSite, (await walkSafeTree(stagedSite)).files);
     for (const manifest of discovery.manifests) {
       await requireRealContained(repositoryRoot, manifest.directory, `${manifest.id} directory`);
       const sourceOutput = path.resolve(manifest.directory, manifest.build.outputDir);
@@ -653,7 +637,6 @@ export async function assemblePublication(options: {
       await copySafeTree(path.join(artifactsCandidate, 'experiments', manifest.id), destination);
     }
     const inventory = await validateRelease(releaseCandidate, discovery.manifests);
-    await validateMemoTree(releaseCandidate, inventory, memoInput);
     await writeFile(path.join(artifactsCandidate, 'publication.json'), `${JSON.stringify({
       schemaVersion: 1,
       catalog: discovery.catalog,

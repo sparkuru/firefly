@@ -1,0 +1,10 @@
+# Opt in only after validating the selected independent candidate.
+services:
+  web:
+    volumes:
+      - type: bind
+        source: ${FIREFLY_MEMOS_PUBLIC_ROOT:?select a validated Memo public directory}
+        target: /usr/share/nginx/memos
+        read_only: true
+        bind:
+          create_host_path: false

@@ -1,126 +1,79 @@
-# Memo runtime and publication operation
+# Owner Memo contract
 
-The public contract stays independent of the private service. The root static
-runtime works with memos disabled. Provisioning a service does not activate
-`/memos/`; enabling the site does not publish unverified or pending submissions.
+Memo is a separate owner-authored Markdown publication mounted at `/memos/`.
+The blog's `plugins.memos.enabled` flag controls discovery only. The route is
+reserved independently of activation; the blog never reads Memo sources or
+exports and its assembler never replaces the Memo release.
 
-## Prepare private inputs
+`public.mjs` defines schema 2 with required `bodyFormat: "markdown"`. Records
+contain exactly `id`, `displayName`, `body`, `createdAt`. Schema 1 service
+exports are plain text and are rejected rather than reinterpreted. Markdown
+uses canonical LF while preserving whitespace and Unicode code points; owner
+display identity is canonical NFC. Digests include the version/body format.
 
-Copy `config/plugins/memos/config.toml.example` and `secrets.env.example` to
-owner-controlled configuration files outside public release directories. Set
-the allowed/public HTTPS origin, certificate-validated SMTP transport, private
-data path and independent random keys. Use the secret-file format described in
-[the service guide](../../services/memos/README.md). Never put private data or
-backup inputs below `artifacts/` or `dist/`.
+Use the independent package under `tooling/publish-memos` through `./sam`:
 
-Data directories must already exist as 0700 and secret files as 0600, owned by
-the numeric UID:GID selected by `MEMOS_RUNTIME_USER`. Config must be a readable
-regular nonsymlink file. Root Compose defaults to `1000:1000`; set the override
-when owner mount identity differs. Both runtime services use the same identity,
-config/secrets and private SQLite root. Missing bind inputs are refused, and
-ownership mismatch fails startup; do not loosen permissions to make startup work.
+```sh
+SAM_CONTENT_MODE=none ./sam npm --prefix tooling/publish-memos ci
+SAM_CONTENT_MODE=none ./sam npm --prefix tooling/publish-memos run memos -- new first-note
+SAM_CONTENT_MODE=none ./sam npm --prefix tooling/publish-memos run memos -- build --display-name Owner
+```
 
-For root Compose set `MEMOS_DATA_ROOT` to the private data directory and
-`MEMOS_CONFIG_ROOT` to the directory containing `config.toml` and `secrets.env`,
-then enable `--profile memos`. HTTP and worker share the web namespace, with
-HTTP bound at `127.0.0.1:8788`. Comments remains on 8787. The web process sees
-no memo config, secrets or database mounts. No private host port is published.
+Drafts are absent from public output. Each source file starts with exact YAML:
 
-The standalone [Compose template](compose.yml) uses host networking for an
-operator's same-host edge and requires `MEMOS_RUNTIME_USER` explicitly. Copy it
-into the owner deployment directory with separate private data/config inputs,
-or set the two path variables. Both templates drop capabilities, prevent
-privilege escalation, use a read-only root filesystem and bounded temporary
-storage. Stop the HTTP/worker services without deleting the persistent data.
+```yaml
+---
+id: m_stableOwnerId
+createdAt: 2026-10-06T00:00:00.000Z
+draft: true
+---
+```
 
-## Proxy and delivery
+Edit the Markdown body and set `draft: false` to include the note. `new`
+creates random IDs/UTC times without overwriting. Keep IDs and creation times
+when editing. Withdrawal retires an ID permanently; intentional republication
+needs a new ID. Output defaults to ignored `.firefly/memos/`, independently of
+blog `artifacts/` and `dist/`.
 
-The root Nginx proxy forwards only `/v1/memos/`, retains Host and Origin,
-overwrites `X-Real-IP` from its socket peer, and removes forwarded chains.
-The service's opt-in loopback policy rejects missing/malformed/duplicate
-address headers. Its default direct mode ignores forwarding. Requests and
-responses use restrictive security headers and no-store; absent services fail
-within bounded timeouts. Owner routes still require Bearer authentication.
-Memo access and error URI logs are disabled because verification URLs carry
-tokens. Service and worker diagnostics contain fixed codes only.
+The renderer supports basic Markdown, GFM lists/tables and inert fenced code.
+It sanitizes active HTML; there is no diagram execution, article loader or
+browser Markdown runtime. Image URLs must refer to contained owned raster
+files under the selected assets root (default `<sourceRoot>/assets`). HTTP(S)
+links are allowed; remote images are rejected. Local image/download links are
+copied only when referenced. Supported types: PNG/JPEG/GIF/WebP/AVIF/ICO, PDF,
+MP3/OGG/WAV/MP4 and text. SVG, HTML and executable asset types are rejected.
+Use `![description](assets/photo.png)` or a relative path within that root.
+Unicode media paths receive URI encoding. Build never downloads assets.
 
-[The host-scoped edge example](../../services/memos/ops/nginx-hosts.conf.example)
-uses placeholders. Configure it only in the matching owner-managed HTTPS
-server block. Do not expose `/readyz`, private metrics or unrelated service
-routes. The container proxy does not establish trust in an upstream CDN/edge;
-real client identity, host isolation and TLS need operator validation.
+Candidates contain `public/index.html`, `public/memos.public.v2.json` and
+owned `public/assets/`, plus owner-only `receipt.json` outside the served tree.
+Validation regenerates canonical sanitized HTML and checks exact inventories
+and digests. Accepted receipts retain a monotonic sequence, deletion floor,
+retired IDs and accepted creation times. Publication rechecks an expected base
+under the Memo lock and atomically changes one `current` pointer selecting both
+public data and private history. A fixed owner-only `established` marker
+prevents accidental zero-history bootstrap after accepted state disappears;
+it does not carry a second content/history pointer. Established missing history fails closed.
+Rollback builds a new candidate against current history and refuses retired
+content; it never repoints to an older sequence.
 
-The worker drains one leased encrypted message per 15-second cycle. Graceful
-shutdown waits for the active drain before closing SQLite; the templates allow
-200 seconds against a 180-second SMTP deadline. Forced stops recover after the
-five-minute lease expires. Delivery is at-least-once across SMTP acceptance
-followed by a crash. Worker-specific process/tick health cannot be replaced by
-the HTTP sibling's healthy listener. Readiness/health never send mail.
+The host entry `tooling/publish-memos/publish.sh` owns authenticated automatic
+`publish` and its `--dry-run` mode:
 
-## Export, enable and remove
+```sh
+tooling/publish-memos/publish.sh publish --config config/memos-publisher.json
+tooling/publish-memos/publish.sh publish --dry-run --config config/memos-publisher.json
+```
 
-Use the authenticated service CLI for list/moderation and approved-only export.
-Stage only its decoded public JSON as a contained repository-relative `.json`
-file. Keep staging outside the two promotion targets when path preservation is
-needed; inputs inside `artifacts/` or `dist/` are consumed by successful
-promotion. The assembler retains only the canonical public snapshot at
-`artifacts/memos/memos.public.v1.json`, never service inputs or neighboring files.
-That snapshot is build input and stays out of the browser/runtime release.
+See [owner operations](../../tooling/publish-memos/ops/README.md) for the private
+JSON config, create/edit/draft/withdrawal workflow and independent static mount.
+ Owner SSH configuration stays on the host and never enters
+the renderer/validator image. The package's `build` is local-only; `state`,
+`validate`, `promote` and `rollback` provide the bounded integration commands.
+After an ambiguous push, inspect the destination receipt before retrying.
 
-Use a separate contained public-only TOML for the site handoff, containing only
-`[public]` settings for write origin, consent version and export path. Select
-that file through `[plugins.memos].configPath` in the selected site TOML.
-The full owner runtime configuration at `config/plugins/memos/config.toml`
-is excluded from Docker build contexts; the disabled example's default path
-does not make that private file an enabled web-build input.
-
-Enable `[plugins.memos].enabled` only after providing that public config/export;
-run the normal tracked-content build and publication gate. Export selection is
-explicit override, `FIREFLY_MEMOS_EXPORT`, then public
-`exportPath`. A service change requires a fresh owner export and build to update
-static reading. The assembler compares actual generated records/form/envelope
-identity and rejects stale, unsafe or swapped output before promotion.
-
-Package the validated publication with `./preview.sh package`; its minimal web
-image context contains only the Dockerfile, Nginx configuration and public
-`dist/` tree. An enabled full root Docker build instead requires separate
-contained public TOML/export inputs at paths included in that build context,
-with the site's activation pointing to them. Default `artifacts/` snapshots
-and prior deletion history are excluded from that context, so that builder
-validates a fresh build and cannot enforce the prior host publication floor.
-Use the wrapped assembler with retained durable history, then the minimal
-runtime packager, for a release that preserves that floor. Local publication
-history does not establish the history of an external deployed release.
-Never reinclude owner runtime config, secrets,
-private data or backups to satisfy a web build.
-
-After approved removal, export and rebuild. Its tombstone epoch must meet the
-previously promoted high-water mark. Disabling removes the memo surface and
-needs no service/config/export access, while retaining that mark. Re-enabling
-an older export is refused. Do not delete durable publication metadata or use
-an older history-unaware assembler to bypass the epoch guard. Corrupt or lost
-publication history requires explicit operator recovery.
-
-## Backup and restore
-
-Use the service's consistent snapshot command and retain matching keys
-separately, with owner-managed encryption and retention for backups. A backup
-contains nonpublic text plus encrypted recipients and queued token payloads.
-Deleting live data cannot erase earlier backups. Restore only into an absent
-private destination; validate it before repointing runtime mounts. Never copy a
-live database or restore over active state. Restored older DB/export epochs
-cannot replace a newer promoted publication. See the service guide for exact
-commands and required key identity.
-
-Local fixture gates prove repository wiring only. Production SMTP delivery,
-edge host/client-IP/TLS behavior, provisioning, immutable release switching and
-crash recovery are owner deployment work and remain unperformed by these gates.
-
-The maintained runtime fixture builds disposable service and pinned Playwright
-images. Its browser image installs `libnss3-tools` from the image package
-repository, so a cold build requires package-network access. Chromium first
-rejects the untrusted synthetic certificate, then trusts only the fixture CA
-through a disposable NSS database and performs the native form/static reading
-checks with normal TLS validation. Browser mounts contain only dependencies,
-the fixture script, the public certificate and an owned screenshot directory.
-Cleanup verifies the exact owned containers, anonymous volumes and image tags.
+First cutover must inspect any applicable legacy deletion floor. If nonzero,
+pass the validated inherited value with `build --initial-deletion-floor N` and
+`promote --initial-deletion-floor N`. This seeds a real first candidate, not a
+synthetic accepted receipt. A floor argument cannot override established
+history; default zero must never substitute for unavailable legacy evidence.

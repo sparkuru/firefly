@@ -36,7 +36,7 @@ usage() {
 		"  stop     Stop only this repository's preview web containers (alias: down)." \
 		'  status   Probe the current preview; never start a service.' \
 		'  render   Run a command through sam with pinned Playwright and host IPC.' \
-		'  verify   Run the tracked-fixture gate, then the host Memo lifecycle.' \
+		'  verify   Run the tracked-fixture gate, then independent Memo deployment checks.' \
 		'  package  Build and validate the runtime-only publication image.' \
 		'' \
 		'Set up preview configuration: cp .env.example .env' \
@@ -74,9 +74,15 @@ render_command() {
 	SAM_IMAGE="${PLAYWRIGHT_IMAGE}" SAM_IPC=host "${REPO_ROOT}/sam" "$@"
 }
 
+validate_selected_memos() {
+	[[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || return 0
+	[[ "${FIREFLY_MEMOS_CANDIDATE}" == /* && -d "${FIREFLY_MEMOS_CANDIDATE}" && ! -L "${FIREFLY_MEMOS_CANDIDATE}" ]] || die 'FIREFLY_MEMOS_CANDIDATE must select an existing regular candidate directory'
+	SAM_CONTENT_MODE=none "${REPO_ROOT}/sam" node tooling/publish-memos/src/cli.mjs validate --candidate-root "${FIREFLY_MEMOS_CANDIDATE}" >/dev/null
+}
+
 build_publication() {
 	local target=build:m4
-	[[ -z "${FIREFLY_COMMENTS_EXPORT:-}" && -z "${FIREFLY_MEMOS_EXPORT:-}" ]] || target=build:m51
+	[[ -z "${FIREFLY_COMMENTS_EXPORT:-}" ]] || target=build:m51
 	render_command npm run "${target}"
 }
 
@@ -88,7 +94,7 @@ verify_repository() {
 	done
 	require_sam
 	FIREFLY_CONTENT_ROOT="${REPO_ROOT}/content" SAM_IMAGE="${VERIFY_IMAGE}" SAM_IPC="${VERIFY_IPC}" "${REPO_ROOT}/sam" npm run verify:m51
-	"${REPO_ROOT}/services/memos/ops/check-runtime.sh"
+	"${REPO_ROOT}/tooling/publish-memos/ops/check-runtime.sh"
 }
 
 preview_configuration() {
@@ -360,8 +366,10 @@ preview_status() {
 start_preview() {
 	local mode=$1 ids id attempt config_hash image=${SAM_IMAGE:-node:22-alpine} ipc=${SAM_IPC-private}
 	local -a service_command=()
+	[[ "${mode}" != dev || -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || die 'Memo composition requires the static publication preview; use start or preview instead of dev'
 	preview_configuration
 	preflight_addresses
+	validate_selected_memos
 	if [[ "${mode}" == dev ]]; then
 		image=${PLAYWRIGHT_IMAGE} ipc=host
 		[[ -x "${REPO_ROOT}/apps/site/node_modules/.bin/astro" ]] || die 'dependencies are missing; run: ./sam npm run install:m51'
@@ -374,7 +382,7 @@ start_preview() {
 		service_command=(env "PUBLICATION_PORT=${WEB_CONTAINER_PORT}" "PUBLICATION_HOST=${WEB_BIND_HOST}" npm --prefix tooling/assemble-publication run start:e2e)
 	fi
 	require_command sha256sum
-	config_hash=$(printf '%s\0' "${mode}" "${image}" "${ipc}" "${SAM_BIND_HOST}" "${WEB_BIND_HOST}" "${WEB_HOST_PORT}" "${WEB_CONTAINER_PORT}" "${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}" "${FIREFLY_SITE_CONFIG_PATH:-}" | sha256sum)
+	config_hash=$(printf '%s\0' "${mode}" "${image}" "${ipc}" "${SAM_BIND_HOST}" "${WEB_BIND_HOST}" "${WEB_HOST_PORT}" "${WEB_CONTAINER_PORT}" "${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}" "${FIREFLY_SITE_CONFIG_PATH:-}" "${FIREFLY_MEMOS_CANDIDATE:-}" | sha256sum)
 	config_hash=${config_hash%% *}
 	ids=$(owned_containers)
 	preview_mode=${mode}
@@ -396,7 +404,9 @@ start_preview() {
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
 	[[ "${mode}" != dev ]] || rm -f -- "${REPO_ROOT}/apps/site/.astro/dev.json"
-	if ! SAM_DETACH=1 SAM_CONTAINER_NAME="${startup_name}" SAM_SCOPE=preview.sh SAM_SERVICE=web SAM_PREVIEW_MODE="${mode}" SAM_PREVIEW_CONFIG="${config_hash}" \
+	local memo_public_root=""
+	[[ -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || memo_public_root="${FIREFLY_MEMOS_CANDIDATE}/public"
+	if ! FIREFLY_MEMOS_CANDIDATE="" FIREFLY_MEMOS_PUBLIC_ROOT="${memo_public_root}" SAM_DETACH=1 SAM_CONTAINER_NAME="${startup_name}" SAM_SCOPE=preview.sh SAM_SERVICE=web SAM_PREVIEW_MODE="${mode}" SAM_PREVIEW_CONFIG="${config_hash}" \
 		SAM_IMAGE="${image}" SAM_IPC="${ipc}" SAM_BIND_HOST="${SAM_BIND_HOST}" \
 		WEB_HOST_PORT="${WEB_HOST_PORT}" WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT}" \
 		"${REPO_ROOT}/sam" "${service_command[@]}" >"${startup_dir}/container" 2>"${startup_dir}/startup.log"; then
@@ -503,6 +513,7 @@ assert_no_non_authored_private_data() {
 }
 
 package_runtime() {
+	local runtime_target=runtime-publication
 	local IMAGE_NAME="${FIREFLY_RUNTIME_IMAGE:-firefly:runtime}"
 	CONTEXT_ROOT=""
 	CONTAINER_ID=""
@@ -531,11 +542,12 @@ package_runtime() {
 		return 1
 	}
 
+	validate_selected_memos
 	cd "${REPO_ROOT}"
 	trap cleanup_package EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
-	if [[ -n "${FIREFLY_COMMENTS_EXPORT:-}" || -n "${FIREFLY_MEMOS_EXPORT:-}" ]]; then
+	if [[ -n "${FIREFLY_COMMENTS_EXPORT:-}" ]]; then
 		render_command npm run build:m51
 	else
 		render_command npm run build:m4
@@ -575,7 +587,11 @@ package_runtime() {
 	mkdir -p "${CONTEXT_ROOT}/dist"
 	cp Dockerfile nginx.conf "${CONTEXT_ROOT}/"
 	cp -R dist/. "${CONTEXT_ROOT}/dist/"
-	docker build --target runtime-publication --tag "${IMAGE_NAME}" "${CONTEXT_ROOT}"
+	if [[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
+		cp -R "${FIREFLY_MEMOS_CANDIDATE}/public" "${CONTEXT_ROOT}/memos-public"
+		runtime_target=runtime-publication-memos
+	fi
+	docker build --target "${runtime_target}" --tag "${IMAGE_NAME}" "${CONTEXT_ROOT}"
 
 	runtime_user=$(docker image inspect --format '{{.Config.User}}' "${IMAGE_NAME}")
 	[[ "${runtime_user}" == nginx ]]
@@ -627,6 +643,21 @@ package_runtime() {
 			return 1
 		}
 	done
+	if [[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
+		local expected_memos actual_memos memo_file memo_route
+		expected_memos=$(jq -r '.inventory[].path | sub("^public/"; "")' "${FIREFLY_MEMOS_CANDIDATE}/receipt.json" | sort)
+		actual_memos=$(docker exec "${CONTAINER_ID}" find /usr/share/nginx/memos -type f | sed 's#^/usr/share/nginx/memos/##' | sort)
+		[[ "${expected_memos}" == "${actual_memos}" ]] || die 'runtime Memo public inventory differs from validated candidate'
+		probe_status 301 /memos
+		while IFS= read -r memo_file; do
+			memo_route=$(jq -nr --arg file "${memo_file}" '$file | split("/") | map(@uri) | join("/")')
+			probe_status 200 "/memos/${memo_route}"
+			assert_header "/memos/${memo_route}" '^cache-control: no-cache, no-store'
+			[[ "$(curl --fail --silent "${RUNTIME_ORIGIN}/memos/${memo_route}" | sha256sum | cut -d ' ' -f 1)" == "$(sha256sum "${FIREFLY_MEMOS_CANDIDATE}/public/${memo_file}" | cut -d ' ' -f 1)" ]] || die 'runtime Memo public file changed'
+		done <<<"${expected_memos}"
+		probe_status 404 /memos/receipt.json
+		[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "${RUNTIME_ORIGIN}/memos/")" == 403 ]] || die 'Memo mount accepted a write'
+	fi
 	probe_status 200 /
 	probe_status 200 /posts/
 	probe_status 200 /posts/ai/llm-workflow-with-trellis/
@@ -727,6 +758,7 @@ main() {
 	preview)
 		preview_configuration
 		preflight_addresses
+		validate_selected_memos
 		build_publication
 		start_preview publication
 		;;

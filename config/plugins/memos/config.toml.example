@@ -1,37 +1,4 @@
-# Site activation in config/site.toml (disabled by default):
-# [plugins.memos]
-# enabled = false
-# configPath = "config/plugins/memos/config.toml"
-
+# Optional discovery description. Site activation needs only plugins.memos.enabled;
+# blog builds never read owner Memo source, export or connection settings.
 [public]
-# Required only when enabled:
-# writeOrigin = "https://example.com"
-exportPath = "artifacts/memos/memos.public.v1.json"
-consentVersion = "memos-v1"
-
-[runtime]
-allowedOrigins = []
-# Service requires a nonempty allowlist and an HTTPS public origin:
-# allowedOrigins = ["https://example.com"]
-# publicOrigin = "https://example.com"
-# dataRoot = "/var/lib/firefly-memos"
-# databasePath = "/var/lib/firefly-memos/memos.sqlite"
-# encryptionKeyId = "primary"
-# Omit outboxPath: the service's encrypted outbox lives in SQLite.
-
-# Service transport is required; no network probe runs during readiness.
-# [runtime.smtp]
-# host = "smtp.example.com"
-# port = 587
-# secure = false  # false requires STARTTLS; true uses implicit TLS
-# user = "mail-login"
-# from = "memos@example.com"
-# connectionTimeoutMs = 10000
-# commandTimeoutMs = 10000
-
-# References only; actual values come from environment or an owner-only file.
-# [runtime.secretEnv]
-# encryptionKey = "MEMOS_ENCRYPTION_KEY"
-# smtpPassword = "MEMOS_SMTP_PASSWORD"
-# adminToken = "MEMOS_ADMIN_TOKEN"
-# tokenKey = "MEMOS_TOKEN_KEY"
+route = "/memos/"

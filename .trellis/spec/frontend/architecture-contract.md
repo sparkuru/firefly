@@ -31,6 +31,11 @@ site artifact + Experiment artifacts
   -> Publication Assembler validation and fresh candidate
   -> coordinated repository artifacts/ + dist/ promotion
   -> operator-owned immutable deployment release
+
+separate owner Memo Markdown + retained private receipt
+  -> tooling/publish-memos sanitized static candidate
+  -> independent Memo releases/current (public/ + private receipt)
+  -> static /memos/ mount; blog activation controls navigation only
 ```
 
 The key interfaces are `PresentationAdapter.transform(input:
@@ -53,10 +58,10 @@ types, errors, and validation rules live in the linked contracts.
 | `experiments/<id>/` | Own source, lockfile, assets, build command, and static output | Main-site source imports or writes to root `dist/` |
 | `tooling/validate-experiments/` | Validate manifests and project the safe public catalog | Build arbitrary browser/remote manifests |
 | `tooling/assemble-publication/` | Validate and combine static artifacts as one repository candidate | Rewrite Experiment HTML or switch a deployed release |
-| `tooling/shared/` | Framework-independent contained build-input file reading | Astro/site source imports, wire/domain rules or service state |
+| `tooling/shared/` | Framework-independent contained input reading and HTML sanitation policy | Astro/site source imports, wire/domain rules or service state |
 | `plugins/comments/`, `services/comments/` | Site-owned comments integration and private write/moderation service | Direct database access from static site generation |
 | `plugins/memos/` | Independent memo public export and configuration contract | Site registration, HTTP handlers, private state, or publication promotion |
-| `services/memos/` | Independent memo submission, verification, encrypted private state, moderation, mail and export runtime | Comments state, site rendering, public runtime reads, or static release writes |
+| `tooling/publish-memos/` | Owner Markdown authoring, static rendering, independent receipt/history and automatic push | Blog source/build/pointer/mirror, visitor identity, comments state or mail |
 
 Use a Presentation when an implementation renders the shared Markdown document
 contract. Use an Experiment when it owns a complete page, global style, or
@@ -85,8 +90,9 @@ adapters may be used without changing the source document.
   arbitrary stylesheet URLs, or Experiment dependencies into authored content.
   New content directives require a documented semantic contract and fixtures.
 - The site owns `/`, canonical `/posts/<category...>/<slug>/` and
-  `/pages/<slug>/` routes, directory routes, `/lab/`, optional plugin-owned
-  `/memos/`, and its 404. Each
+  `/pages/<slug>/` routes, directory routes, `/lab/`, and its 404.
+  `/memos/` is always reserved for the separate static publisher; enabling its
+  navigation does not make the site builder own its output. Each
   Experiment owns only its validated `/lab/<id>/...` mount. Public paths,
   aliases, and route reservations are derived from the selected workspace and
   must be collision-free. Slugs do not change automatically with titles.
@@ -128,20 +134,17 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
   moderation, and export. The public site consumes a controlled static read
   projection; static pages never query its database. Tracked example config
   stays disabled by default, while owner-local activation is independent.
-- The memo service owns a separate package, database and mail lifecycle. Its
-  public read projection is the exact `plugins/memos/` export contract;
-  verification alone never publishes a record. Service delivery does not
-  activate a site route or publication adapter. Historical Typecho memo data
-  remains outside this new-submission workflow.
-- The optional memo site adapter loads a strict public export only at build
-  time. Disabled activation reads no memo config/export and emits no route;
-  enabled activation renders `/memos/` with a native visitor form. The memo
-  route/records remain independent of posts, pages, search and Terminal entries.
-  Site delivery alone does not establish proxy or publication integration.
-  The independent publication adapter binds staged HTML to its export, retains
-  deletion epochs across disablement and stores a canonical public snapshot
-  only under artifacts. Opt-in private proxy and delivery-worker wiring do not
-  change static reading or authorize production deployment. See
+- Owner Memo files use a separate source root and processor, with schema-2
+  Markdown public records. The visitor HTTP/mail service is retired; retained
+  private operational data is not imported. Normal Memo publication builds and
+  automatically pushes only its own static candidate and private receipt.
+- Blog activation adds native navigation and sitemap discovery only. Neither
+  enabled nor disabled blog builds read Memo config/source/export. The blog
+  assembler reserves the namespace and retains validated legacy deletion-floor
+  metadata only as migration evidence. It never owns current Memo output or
+  history. Explicit combined preview consumes an already validated public
+  artifact; deployment selects public bytes and private receipt with one
+  independent Memo pointer. Static runtime mounts public bytes only. See
   [Memo Site](./memo-site-contract.md) and
   [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 
@@ -161,10 +164,12 @@ boundaries.
   dependency enters an ordinary article by default.
 - Reject or sanitize authored raw HTML at the declared processor boundary.
   Enhancement props are JSON-safe. No drafts, private workspace paths,
-  backups, credentials, email, IP, user-agent, moderation fields, or historical
-  Typecho memo data enter the public release. New owner-approved memos have a
+  backups, credentials, email, IP, user-agent, moderation fields, or unreviewed
+  historical data enter the public release. Owner-approved memos have a
   separate exact-field contract; adding that contract alone does not activate
-  a public route or authorize historical import. `.private/` stays outside Git
+  a public route or authorize historical import. A separately approved offline
+  conversion may project the bounded owner corpus defined in the Memo contract;
+  private identity/correspondence fields remain excluded. `.private/` stays outside Git
   and CI inputs.
 - The site generates per-document title, description, SEO metadata, RSS, and
   sitemap from validated public content. Canonical URLs require either an

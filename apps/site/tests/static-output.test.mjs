@@ -213,7 +213,6 @@ test('static build emits only the implemented route surface', async () => {
     '404.html',
     'index.html',
     'lab/index.html',
-    ...(SITE_CONFIG.plugins.memos.enabled ? ['memos/index.html'] : []),
     'pages/index.html',
     'posts/index.html',
     ...(await collectContentRoutes(generatedPagesRoot, 'pages', false)),

@@ -1,5 +1,6 @@
 .git
 .private
+tooling/private/
 .devhome
 .env
 config.dev
@@ -20,3 +21,7 @@ services/comments/staging.env
 **/*.jsonl
 experiments/nerv/reference
 prototypes
+
+.firefly/memos/
+config/memos-publisher.json
+content/memos/

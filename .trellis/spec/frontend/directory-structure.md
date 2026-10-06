@@ -19,16 +19,19 @@ experiments/nerv/                independent NERV static project
 experiments/majo/                independent MAJO static project
 tooling/validate-experiments/    manifest decoder and public catalog
 tooling/assemble-publication/    static artifact validation and assembly
+tooling/publish-memos/           independent owner Markdown publisher and push orchestration
 tooling/shared/                  framework-independent contained build-input files
 tooling/sync-server/             authoring workspace synchronization
 plugins/comments/                site-owned comments integration
-plugins/memos/                   independent memo public/config contract and runtime template/docs
+plugins/memos/                   independent Markdown public/config contract
 services/comments/               private comments write/moderation runtime
-services/memos/                  independent private memo write/moderation runtime
 config/                          public site and plugin configuration templates
 .trellis/spec/                   durable engineering contracts
 artifacts/, dist/                ignored repository build outputs
 .private/                        ignored private inputs and backups
+content/memos/                  repository/clone-local Memo originals; independent processor
+.firefly/memos/                  ignored Memo candidates and private local publication state
+tooling/private/                ignored owner adapters; excluded from Docker build context
 ```
 
 `content/` is a sample input. `FIREFLY_CONTENT_ROOT` can select another blog
@@ -49,21 +52,17 @@ package. Build outputs and private inputs are not public source contracts.
 - Put public static comments integration under `plugins/comments/` or the site
   bridge, and private write/database work under `services/comments/`. No site
   build reads the private database.
-- Put the independent memo wire/config contract under `plugins/memos/`.
-  Its consumers own site registration, service behavior, and publication
-  integration separately; do not import comments record or route semantics.
-  Put memo HTTP, private SQLite state, encrypted mail, admin CLI and local
-  backup/restore operations under `services/memos/`. Its site and publication
-  consumers import only the pure plugin contract and shared build-input tools,
-  never the service database or runtime modules. The memo-specific publication
-  adapter/history modules live under `tooling/assemble-publication/src/plugins/`;
-  its independent worker/trusted-address boundary stays in `services/memos/`.
-- Put memo build adaptation and UI under `apps/site/src/plugins/memos/`, with
-  the manifest-aligned `index.mjs` entrypoint and conditional
-  `apps/site/src/pages/memos/[...stream].astro` route. Config/export file safety
-  uses `tooling/shared/contained-file.mjs` through the existing site facade;
-  publication state/proxy wiring stays with the publication/runtime consumer.
-  Keep the helper independent of Astro, service state and the pure wire module.
+- Put the independent Markdown Memo wire/config contract under `plugins/memos/`
+  and source/rendering/history/deployment logic under `tooling/publish-memos/`.
+  The former private Memo service is retired. Repository-local Memo originals
+  live under `content/memos/`; ignored owner adapters select external reading
+  explicitly. Generated candidates and private receipts stay in ignored
+  `.firefly/memos/`, outside root blog artifacts/dist.
+- Site Memo integration owns navigation only, with no content loader or route
+  renderer. The reserved static mount is served from the publisher's `public/`;
+  private receipt/history, authoring sources and SSH inputs never enter a web
+  image. Shared sanitation and contained-file helpers live under
+  `tooling/shared/`, with a narrow site facade where compatibility is needed.
   See [Memo Site](./memo-site-contract.md) and
   [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
 - Put shared publication rules in `tooling/validate-experiments/` or

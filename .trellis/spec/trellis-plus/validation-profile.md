@@ -22,7 +22,7 @@ Required package gates are:
 | `apps/site` | `./sam npm --prefix apps/site ci`; `run test:content`; `run test:x-core`; `run check`; `run build` |
 | `experiments/nerv` | `./sam npm --prefix experiments/nerv ci`; `run check`; `run build` |
 | `plugins/memos` | `./sam npm run test:memos-contract` |
-| `services/memos` | `./sam npm --prefix services/memos ci`; `run check`; `run test`; `run build` |
+| `tooling/publish-memos` | `SAM_CONTENT_MODE=none ./sam npm --prefix tooling/publish-memos ci`; `run check`; `run test`; `run build` |
 | Memo integration | `./sam npm run test:memos:site`; `run test:memos-publication`; `run prepare:test:memos`; pinned browser `run test:e2e:memos` |
 
 For a main-publication run, materialize the configured content workspace,
@@ -50,7 +50,7 @@ with its exact error; it is not counted as a pass.
   `./preview.sh render npm --prefix tooling/assemble-publication run test:e2e`;
   `./preview.sh render npm run test:e2e:memos` after preparing its fixture.
 - full/CI-equivalent gate: `./preview.sh verify`. No separate CI browser job
-  is declared in this repository. The maintained host Memo lifecycle runs
+  is declared in this repository. The maintained host static Memo fixture runs
   only after the inner package/build/browser gate succeeds.
 - tests/config: `apps/site/tests/` and `playwright.config.ts` plus
   `playwright.memos.config.ts`; `experiments/nerv/tests/` and its config;
@@ -70,7 +70,7 @@ with its exact error; it is not counted as a pass.
   --project=chromium-mobile-interactive` to the existing `test:e2e` command.
   Device/touch emulation does not prove physical phones/browser engines.
 - fixtures/data: tracked `content/`, disabled plugin baseline, isolated public
-  Memo fixture and disposable CA/SMTP/private lifecycle. No owner credentials,
+  Markdown Memo fixture and disposable independent-publication/static mount. No owner credentials,
   production data, real mail delivery or personal browser sessions.
 - accessibility: use existing role/name/focus/keyboard assertions; no separate
   accessibility scanner is configured. Assistive technology remains human-only.
@@ -118,20 +118,64 @@ teardown checks. Runtime/package checks must prove the expected artifact,
 labels, isolation, and cleanup; a deployment-only check cannot replace local
 package or browser evidence.
 
-`./preview.sh verify` runs the inner `verify:m51` Node/browser gate through `sam`, then
-the host `services/memos/ops/check-runtime.sh` fixture only after that succeeds.
-The inner gate runs service and pure-contract checks, site and assembler
-regressions, an isolated real Memo publication, the Memo browser fixture, then
-restores the default publication before ordinary site/NERV/publication browsers.
-The host fixture owns a disposable HTTPS proxy, persistence root, and validated
-TLS SMTP sink; it never starts the owner/default Compose stack. Its native
-desktop/mobile form flow covers email verification, moderation, export,
-publication, deletion, and stale restore refusal without disabling TLS checks.
-The browser fixture rejects its certificate before importing the synthetic CA
-into disposable NSS trust. Its owned Playwright-derived image installs
-`libnss3-tools`, so fixture preparation requires the image package repository.
+`./preview.sh verify` runs the inner `verify:m51` Node/browser gate through `sam`,
+then `tooling/publish-memos/ops/check-runtime.sh` only after that succeeds.
+The inner gate checks comments, pure contracts, owner publisher, site and
+assembler, then the Markdown Memo browser fixture and ordinary publication/
+site/NERV browsers. The host fixture verifies independent Memo promotion/history,
+reciprocal byte preservation and an actual read-only Nginx static mount, with no
+Memo HTTP/SMTP process. It never starts the owner/default Compose stack.
+Synthetic host SSH/dry-run/failure fixtures do not prove production access.
 
 Host Docker is also the explicit boundary for `docker compose config --quiet`,
-`services/memos/ops/check-image.sh`, and `./preview.sh package`. Syntax checks
+the static Memo image fixture, and `./preview.sh package`. Syntax checks
 do not start services. Image and lifecycle fixtures must remove only their own
 exact labeled resources and leave default publication history untouched.
+Publisher work selects `SAM_CONTENT_MODE=none` with narrow explicit source/
+assets/history/output/deployment mounts; SSH credentials remain with host-only
+`tooling/publish-memos/publish.sh`. `FIREFLY_MEMOS_CANDIDATE` selects explicit
+combined preview/package; default blog commands do not build/read Memo.
+Publisher image preparation uses its minimal allowlist, not the whole workspace.
+
+## Runtime packaging with private logs
+
+### 1. Scope / Trigger
+
+Apply when capturing `./preview.sh package` output in owner-only logs.
+
+### 2. Signatures
+
+Precreate a 0600 log in a 0700 temporary directory, then invoke
+`(umask 022; ./preview.sh package) > "$package_log" 2>&1`.
+
+### 3. Contracts
+
+The public-only build context copies `nginx.conf`; its image copy remains
+root-owned and must be readable by image user `nginx`. Restrict logs and
+operational inputs independently rather than applying `umask 077` to this
+public build subprocess. Never relax private service/config/secret modes.
+
+### 4. Validation & Error Matrix
+
+| Invocation | Observed result |
+| --- | --- |
+| Packaging under `umask 077` | Copied config becomes 0600; Nginx exits with permission denied; later port discovery fails |
+| Packaging under `umask 022`, precreated private log | Full runtime gate passes; log remains 0600 |
+
+### 5. Good / Base / Bad Cases
+
+Good: private logs and readable public context. Base: normal public packaging
+without captured logs. Bad: assume a missing port proves a network fault when
+the container may have exited before inspection.
+
+### 6. Tests Required
+
+Inspect actual runtime startup/config readability when port discovery fails;
+rerun the full corrected gate and verify exact resource cleanup, unchanged
+publication metadata and retained log permissions. A trivial HTTP container
+does not reproduce the publication image's configuration permissions.
+
+### 7. Wrong vs Correct
+
+Wrong: `umask 077; ./preview.sh package > "$package_log" 2>&1`.
+Correct: precreate the private log, then scope `umask 022` to packaging as above.

@@ -1,0 +1,20 @@
+{
+  "name": "@firefly/publish-memos",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.mjs",
+  "types": "./src/index.d.mts",
+  "scripts": {
+    "check": "tsc --noEmit && node scripts/check-syntax.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build": "npm run check",
+    "memos": "node src/cli.mjs"
+  },
+  "dependencies": {
+    "rehype-raw": "7.0.0", "rehype-sanitize": "6.0.0", "rehype-stringify": "10.0.1",
+    "remark-gfm": "4.0.1", "remark-parse": "11.0.0", "remark-rehype": "11.1.2",
+    "unified": "11.0.5", "yaml": "2.9.0"
+  },
+  "devDependencies": { "@types/node": "24.3.0", "typescript": "6.0.3" }
+}

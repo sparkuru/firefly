@@ -225,3 +225,83 @@ local results do not certify production deployment, real SMTP or owner edge
 topology. Historical Typecho import and new domain rules remain excluded.
 No next product task is created or started automatically; the next product
 direction requires a fresh owner decision.
+
+## Owner Memo Static Publication
+
+On 2026-10-06 the owner replaced interactive Memo production enablement with
+local owner-only Markdown authoring and an independent static publisher. The
+reviewed revised plan was explicitly approved. Implementation and actual
+production acceptance now pass in `.trellis/tasks/10-05-memo-production-enablement/`;
+final commit/archive bookkeeping was approved with the historical import batch.
+Visitor submission,
+verification and mail are superseded; comments retain their own boundary.
+
+The maintained full gate, focused final-source deltas, default/combined
+packages, exact preview lifecycle and real host workflows passed. Actual SSH
+publishing and HTTPS/no-JS desktop/mobile reading passed, including a narrow
+Memo cache correction verified at both origin and CDN. Routine Memo publishing
+preserved complete blog state; a subsequent ordinary blog build/deployment
+preserved complete Memo history, ownership and pointers. Production starts
+empty; nonempty authoring/media/deletion/rollback use isolated synthetic checks.
+The owner-selected external source switch passed an independent local build,
+then was superseded by an explicit repository/clone-oriented correction:
+generic creation/default build uses repo-local originals; ignored private
+tooling selects the external directory for reading/publication only. This
+bounded follow-up passed independent review, 13 focused host regressions,
+26 real-jq rejection cases and four real local builds. It leaves the actual
+production acceptance/history and external originals intact; no remote promotion
+occurred in the follow-up. Scoped Git/finish approval was subsequently granted
+for the combined publisher and historical import batch.
+
+The exact former private HTTP/worker pair is stopped cleanly. Private data,
+keys and recovery material remain retained; comments and the source mirror
+remain unchanged at the observed host baseline. Operational values remain
+owner-local. At the close of this production-enablement scope, no historical
+data import was authorized; the subsequent owner decision is recorded below.
+
+## Historical Owner Notes Import Decision
+
+On 2026-10-06 the owner explicitly confirmed authorship of the retained notes
+and authorized preparing them as public-eligible Memo sources in the selected
+external authoring directory. The owner approved implementation with UTC+8
+source timestamps. Task `10-06-typecho-memos-migration` is in progress;
+the external source migration, browser checks and independent review have passed;
+the owner approved the scoped Git/commit/archive batch, now being completed. No production
+publication has occurred.
+
+The retained 376-record memo ledger comes from HedgeDoc `Notes` bundled with
+the Typecho SQL backup, rather than a Typecho memo table. Read-only comparison
+verified the two ledger copies are identical and agree with current SQL content.
+There are 89 nonempty notes and 287 genuinely empty notes. Revision inspection
+found no meaningful content recoverable for the empty notes. The owner chose to
+skip those 287 records and process only the 89 nonempty notes, including notes
+with historically restricted permission labels. Local public eligibility is
+authorized; remote publishing remains a separate action.
+
+Exactly 89 `draft: false` Markdown files and 211 verified local images have been
+installed using exclusive creation, with all 300 source/asset hashes checked.
+The pure body limit is now 128 KiB, source reads are capped at 256 KiB, and
+UTC+8 dates are converted to canonical UTC without changing accepted identity.
+The actual external-source candidate validates all 89 records; originals remain
+unchanged. Of 224 image uses, 221 render locally, one HTTP 404 remains an ordinary
+link and two absent relative images retain their caption/original target as text.
+Thirty-seven verified old-note links are rewritten; 40 unknown old-note targets
+and one malformed relative target remain explicit text rather than fabricated
+destinations. Browser validation caught and drove repair of bare/angle autolinks;
+only five unchanged files created by this task needed guarded correction.
+
+Final focused evidence: contract 11/11, publisher 16/16 with syntax/type checks,
+publication 4/4, site integration 4/4 under the pinned rendering image, and the
+maintained desktop/mobile browser matrix 6/6 passed. Real-corpus no-JS desktop
+and mobile each verified all 89 records, 221 decoded images, 37 mapped anchors,
+zero horizontal overflow and zero failed/external requests. Independent review
+reconstructed all 343 conversion patches and verified unchanged code, both
+original ledger hashes, UTC+8 mapping and all 300 source/asset files. Mechanical
+acceptance is `human-not-needed`; no physical-device/remote acceptance is claimed.
+Later publication needs a validator image supporting the enlarged body contract.
+
+This decision supersedes historical-import exclusions only for this bounded
+owner corpus. Retained private originals, identity data and historical task
+snapshots remain unchanged. Current evidence and implementation status belong
+to the new task's PRD and research; they must not be reported as completed
+source migration or production acceptance.

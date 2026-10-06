@@ -21,6 +21,7 @@ presentations/terminal/dist/
 .DS_Store
 *.log
 tooling/.gitignore
+tooling/private/
 
 config/site.toml
 config.dev
@@ -37,3 +38,6 @@ plugins/memos/data/
 *.sqlite
 *.sqlite-*
 *.jsonl
+
+.firefly/memos/
+config/memos-publisher.json

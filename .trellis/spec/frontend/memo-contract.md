@@ -1,162 +1,116 @@
-# Memo Public and Configuration Contract
+# Owner Markdown Memo Contract
 
 ## 1. Scope / Trigger
 
-Read this when changing `plugins/memos/` or implementing its service, site,
-or publication consumers. The contract is independent of comments, posts,
-pages, and Experiments. It does not register the plugin with the site, expose
-HTTP routes, read a database, or promote a publication. Consumer entrypoints
-in the manifest describe subsequent integrations, not automatic discovery.
-
-Historical Typecho memo data remains private. Only the separately approved
-new-submission workflow may supply public records; shape validation alone
-does not prove owner approval or authorize historical import.
+Read when changing `plugins/memos/` or the independent owner publisher.
+Memo is owner-authored Markdown, separate from posts, pages, comments and
+Experiments. The pure module neither reads files nor publishes releases.
+The former visitor submission/mail service is retired; its private records
+remain operational recovery data. Historical owner notes require separate
+explicit corpus/visibility approval and offline conversion; the pure decoder
+never imports or reinterprets a legacy export.
 
 ## 2. Signatures
 
-`plugins/memos/public.mjs` and `public.d.mts` expose:
+`plugins/memos/public.mjs` and its declaration expose
+`normalizeDisplayName`, `normalizeBody`, `normalizePublicId`, `timestamp`,
+`validatePublicMemo`, `comparePublicMemos`, `digestForExport`,
+`decodePublicMemosExport`, `createPublicExport`, and `serializePublicExport`.
+`MAX_BODY_BYTES` is the shared literal `131072` (128 KiB) UTF-8 body bound.
+Decoding accepts an object, JSON string or UTF-8 `Uint8Array`; producer helpers
+accept a payload without its digest. The producer returns an immutable export.
 
-```ts
-normalizeDisplayName(value: unknown): string
-normalizeBody(value: unknown): string
-normalizePublicId(value: unknown): string
-validatePublicMemo(value: unknown): PublicMemo
-comparePublicMemos(left: PublicMemo, right: PublicMemo): number
-digestForExport(value: PublicMemosPayload): string
-decodePublicMemosExport(value: unknown, source?: string): PublicMemosExport
-createPublicExport(value: PublicMemosPayload): PublicMemosExport
-serializePublicExport(value: PublicMemosExport): string
-```
-
-The decoder accepts a parsed object, JSON string, or UTF-8 `Uint8Array`.
-The producer and digest helpers accept an envelope without `digest`.
-
-`plugins/memos/config.mjs` and `config.d.mts` expose
-`parseMemosActivation(value?, source?)`,
-`parseMemosConfig(value?, source?, { enabled? }?)`,
-`parseMemosPublicConfig(value?, source?, { enabled? }?)`, and
-`resolveMemosConfigPath(configPath?, repositoryRoot?)`.
+Configuration exposes `parseMemosActivation(value?, source?)`,
+`parseMemosConfig(value?, source?)`, `parseMemosPublicConfig(value?, source?)`,
+and `resolveMemosConfigPath(configPath?, repositoryRoot?)`.
 
 ## 3. Contracts
 
-### Public wire format
-
-- Envelope keys are exactly `schemaVersion`, `sourceRevision`, `generatedAt`,
-  `tombstoneEpoch`, `memos`, and `digest`; every key is required.
-- Record keys are exactly `id`, `displayName`, `body`, and `createdAt`.
-  Never export email, consent, tokens, moderation state, abuse metadata, or
-  local paths. Comments keys such as `postPath` and `parentId` are invalid.
-- Schema version is `1`. IDs match `^m_[A-Za-z0-9_-]{3,128}$`; source revisions
-  match `^[A-Za-z0-9._~-]{1,256}$`. Dates use valid four-digit-year UTC
+- Envelope keys, in digest order, are exactly `schemaVersion`, `bodyFormat`,
+  `sourceRevision`, `generatedAt`, `tombstoneEpoch`, `memos`; serialized output
+  appends `digest`. Schema is **2**, format is **markdown**. Schema 1 plain text
+  is rejected, never silently interpreted as Markdown.
+- Record keys are exactly `id`, `displayName`, `body`, `createdAt`.
+  Private identity, paths, consent, moderation and comments fields are rejected.
+  IDs match `^m_[A-Za-z0-9_-]{3,128}$`; revisions are 1–256 ASCII characters
+  from letters, digits, `.`, `_`, `~`, `-`. UTC dates use valid canonical
   `YYYY-MM-DDTHH:mm:ss.sssZ` strings.
-- Producer normalization applies NFC, converts CRLF/CR to LF, and trims outer
-  whitespace. Names contain 1–80 Unicode code points and are single-line;
-  bodies contain 1–8192 UTF-8 bytes. Malformed Unicode and unsafe control or
-  formatting characters are rejected. Bodies are text, never trusted HTML;
-  downstream renderers must escape text rather than interpolate markup.
-- The wire decoder rejects noncanonical text instead of normalizing it. It
-  rejects malformed UTF-8, duplicate IDs, sparse/decorated arrays, unknown
-  fields, and accessor-backed data. Accepted records, arrays and envelopes
-  are immutable copies.
-- Order is descending timestamp, then ascending ASCII ID. Producer helpers
-  sort; the decoder rejects wrong order. Do not reuse comments' permissive
-  order/digest compatibility behavior.
-- Digest input is compact UTF-8 JSON in property order `schemaVersion`,
-  `sourceRevision`, `generatedAt`, `tombstoneEpoch`, `memos`, with record
-  order `id`, `displayName`, `body`, `createdAt`. Exclude `digest` and any final
-  newline. Digest is exactly 64 lowercase SHA-256 hex characters. File
-  serialization adds one final newline.
-- Tombstone epochs are non-negative safe integers; negative zero is invalid.
-  Publication consumers must compare with prior promoted state to reject
-  rollback. The pure module does not maintain publication history.
-  The independent assembler binds the actual staged memo DOM to this envelope,
-  retains deletion history while disabled and stores a canonical public-only
-  snapshot under artifacts. See
-  [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
+- Display names are NFC, trimmed, single-line, 1–80 Unicode code points.
+  Markdown bodies contain 1–131072 UTF-8 bytes with meaningful nonwhitespace
+  input. Normalize CRLF/CR to LF only: preserve authored code points, leading
+  indentation, trailing spaces and outer line breaks. Reject malformed Unicode,
+  unsafe controls and formatting characters. Rendering separately rejects a
+  body whose sanitized result has no visible content.
+- Decoding rejects noncanonical input, malformed UTF-8, unpaired surrogates,
+  unknown fields, accessor-backed objects, sparse/decorated arrays, duplicate
+  IDs, wrong ordering and incorrect digests. No repair, sorting or partial
+  projection occurs at this boundary. Producers may normalize and sort.
+- Records sort newest timestamp first, then ascending ASCII ID. SHA-256 hashes
+  compact UTF-8 JSON in the property order above, with record order
+  `id`, `displayName`, `body`, `createdAt`. Exclude the digest and final newline;
+  serialization adds one newline. Digest is 64 lowercase hex characters.
+- `tombstoneEpoch` is a nonnegative safe integer; negative zero is invalid.
+  Its retained floor and retired IDs belong to the independent private receipt,
+  described in [publication/runtime](./memo-publication-runtime-contract.md).
+- Activation allows only `enabled` and legacy-compatible `configPath`;
+  defaults are false and `config/plugins/memos/config.toml`.
+  `configPath` is a safe repository-relative TOML path. It is compatibility
+  metadata, not a physical file dependency for either enabled or disabled blog
+  builds. The site flag controls navigation only.
+- Optional plugin configuration permits only `public.route`, fixed `/memos/`.
+  Unknown runtime, SMTP, secret, consent, write-origin and export-path keys fail.
+  Publisher source/display/output/deployment settings belong to its own CLI
+  and owner-local operational configuration, not site props.
 
-### Configuration
+Host authoring defaults are defined by the independent publication runtime
+contract: generic `new` creates under the actual checkout's `content/memos/`.
+Owner-specific external reading is supplied by ignored private tooling; it does
+not become the default creation path for clones or a site content collection.
 
-- Activation has only `enabled` and `configPath`. Defaults are `false` and
-  `config/plugins/memos/config.toml`. The site loader accepts memo activation
-  and projects its public config independently of comments; see
-  [Memo Site](./memo-site-contract.md) for conditional route/loading behavior.
-- Plugin configuration has only `public` and `runtime`. Public settings are
-  `writeOrigin` (nullable, required when enabled), `exportPath` (default
-  `artifacts/memos/memos.public.v1.json`), and `consentVersion` (default
-  `memos-v1`). Origins must be HTTPS without credentials, path, query or
-  fragment. Export/config paths are repository-relative with the required
-  `.json`/`.toml` suffix.
-- Runtime settings are `allowedOrigins`, `publicOrigin`, `dataRoot`,
-  `databasePath`, `outboxPath`, `secretEnv`, `smtp`, and `encryptionKeyId`.
-  Origin lists are unique;
-  private paths may be absolute. Paths reject traversal, empty segments,
-  backslashes, whitespace, controls and unsupported characters.
-- `secretEnv` contains only optional `smtpPassword`, `adminToken`, `tokenKey`,
-  and `encryptionKey` environment-name references. The module never reads
-  environment values or secret files. Secret loading belongs to the service.
-- `smtp` defaults to null. When supplied it requires `host`, `user`, and
-  `from`; accepts `port`, `secure`, `connectionTimeoutMs`, and
-  `commandTimeoutMs`; and rejects every other field. Port defaults to 587,
-  `secure` defaults to true only on port 465, and both timeouts default to
-  10000 ms (range 100–120000). Passwords remain separate secret inputs.
-  Sender mailboxes have at most 64 local-part characters, 253 domain
-  characters and 320 total characters, matching the service mailbox checks.
-  The runtime requires certificate-validated implicit TLS or STARTTLS.
-- `encryptionKeyId` defaults to `primary`, matches
-  `^[A-Za-z0-9_-]{1,64}$`, and identifies the encryption envelope. It is a
-  nonsecret identifier; changing keys requires a separate migration procedure.
-- The pure parser preserves nullable `outboxPath` for contract compatibility.
-  The memo service uses its transactional SQLite outbox and rejects nonnull
-  file-outbox settings instead of silently ignoring them.
-- Public projection validates the supplied config but returns only public
-  values. It does not read configuration files. Disabled consumers must
-  short-circuit before loading plugin files or exports.
-- Path resolution is lexical, not a filesystem security check. Future file
-  loaders must reject symlink escapes/non-regular files and establish real
-  containment before reading; do not infer that this module does so. The site
-  loader enforces those filesystem checks at its own read boundary.
+An explicitly approved historical owner corpus may be converted to the same
+exact source/wire contract, keeping private identities and source correspondence
+outside public output. The 2026-10-06 owner decision covers only 89 nonempty
+HedgeDoc Notes retained with the Typecho backup; 287 empty notes are skipped.
+Current Notes content is authoritative, not an arbitrary nonempty old revision.
+The owner confirmed UTC+8 for source DATETIME values: subtract eight hours to
+emit canonical UTC `createdAt`, retaining the raw value/policy privately.
+This decision does not authorize other historical datasets or remote publishing.
 
 ## 4. Validation & Error Matrix
 
 | Condition | Result |
 | --- | --- |
-| Missing/extra/private field, invalid date/ID/text, duplicate ID | `PublicMemosContractError`; no partial projection |
-| Noncanonical wire order/text or mismatched/missing digest | Reject; do not silently repair |
-| Malformed UTF-8 or unpaired surrogate | Reject before hashing; no replacement decoding |
-| Invalid epoch or unsupported schema | Reject export |
-| Epoch below previous publication | Consumer must refuse promotion |
-| Unknown config key, unsafe path/origin, literal secret field | `TypeError`; no value-bearing diagnostics |
-| Enabled public config has no write origin | Reject config |
-| Disabled activation with no supplied config | Pure defaults; no filesystem/service dependency |
+| Schema 1, missing format, private/extra fields | Reject the entire export |
+| Invalid Unicode/date/order/digest/ID or duplicate ID | `PublicMemosContractError`; no repair |
+| Noncanonical name or CR-containing wire body | Reject rather than normalize |
+| Significant Markdown whitespace or decomposed body Unicode | Preserve exactly |
+| Body exactly 131072 UTF-8 bytes / one byte above | Accept / reject for producers and every strict wire form |
+| Unapproved historical source or private metadata projection | No automatic import; require explicit bounded conversion |
+| Unknown config/runtime key or unsafe config path | `TypeError` without input values |
+| Missing physical Memo config with either activation value | Blog remains independent |
 
 ## 5. Good / Base / Bad Cases
 
-- **Good:** service selects approved records, builds an export through the
-  producer helper, and consumers decode exactly that wire format.
-- **Base:** an empty memos array is valid with a matching digest; the default
-  activation remains disabled without private inputs.
-- **Bad:** spread database rows into public records, pass an unsigned export,
-  repair wire order before checking it, or interpret body strings as HTML.
+- Good: owner Markdown sources become schema-2 records, then sanitized static
+  HTML and a separately validated publication receipt.
+- Base: a validated empty schema-2 stream is valid; default navigation is disabled.
+- Bad: reinterpret a legacy text export, trim code indentation, expose a private
+  receipt or spread historical database rows into public fields.
 
 ## 6. Tests Required
 
-Run `./sam node --test plugins/memos/tests/*.test.mjs`. Assert exact text
-boundaries with supplementary Unicode names and multibyte bodies; malformed
-dates/UTF-8/surrogates; required fields; private-field and accessor rejection;
-duplicate IDs; ordering; independently calculated digest; deterministic
-round trips; immutable output; and strict public/runtime configuration.
-
-Validate declaration consumption using the repository TypeScript compiler
-through `./sam`. This contract-only gate requires no running application
-service, SMTP, secrets or database. Later consumer tasks own static build,
-moderation, publication rollback, and runtime integration tests.
+Run the maintained Memo contract and publisher commands through `./sam` with
+an explicit no-blog-content profile. Assert exact schema/format/fields,
+Unicode and whitespace preservation, strict byte decoding, digest/order and
+immutable output; reject legacy/private/accessor/sparse input. Check declaration
+consumption, ASCII/multibyte exact-body bounds and pure config defaults/rejections. Full reading, deployment
+history and blog-preservation checks belong to the linked consumer contracts.
 
 ## 7. Wrong vs Correct
 
-Wrong: `decodePublicMemosExport({ ...databaseRow, email: privateEmail })`, or
-sorting an incoming export before decoding to hide invalid wire order.
+Wrong: normalize a Markdown body with `.trim().normalize('NFC')`, or accept
+schema 1 as Markdown because its body is a string.
 
-Correct: explicitly select the four approved public fields, pass the unsigned
-envelope to `createPublicExport`, then call `serializePublicExport`. At the
-read boundary, call `decodePublicMemosExport(bytes)` before rendering or
-publication and compare its epoch with the prior promoted metadata.
+Correct: preserve the body except LF normalization, require explicit schema 2
+and `bodyFormat: 'markdown'`, decode before rendering, and maintain publication
+history at the independent Memo pointer.

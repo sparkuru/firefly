@@ -44,3 +44,7 @@ COPY --from=builder --chown=nginx:nginx /app/dist/ /usr/share/nginx/html/
 FROM runtime-base AS runtime-publication
 
 COPY --chown=nginx:nginx dist/ /usr/share/nginx/html/
+
+# Explicit composition of a prevalidated public-only Memo artifact.
+FROM runtime-publication AS runtime-publication-memos
+COPY --chown=nginx:nginx memos-public/ /usr/share/nginx/memos/

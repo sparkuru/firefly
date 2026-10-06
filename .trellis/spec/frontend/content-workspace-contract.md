@@ -449,9 +449,9 @@ createDocumentNavigationLookup(
   breadcrumbs, aliases, Terminal entries, templates, and route generation.
   Consumers do not reinterpret raw collection IDs or operands.
 - The route reservation table includes `/`, every directory, document, and
-  alias, plus the plugin-owned `/memos/` page only while memo activation is
-  enabled. That reservation prevents authored aliases overwriting the static
-  plugin page; memo records remain outside the canonical content model. All
+  alias, plus the independently published `/memos/` namespace regardless of
+  the navigation flag. That reservation prevents authored aliases overwriting
+  the independent static mount; memo records remain outside the content model. All
   routes are canonical trailing-slash paths and reject case/Unicode,
   file/directory, canonical/alias, and duplicate-alias collisions.
 - Directory indexes list only immediate guest-visible children. Private-only

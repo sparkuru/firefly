@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { denseArray, exactObject } from './validation.mjs';
 
-export const PUBLIC_EXPORT_SCHEMA_VERSION = 1;
+export const PUBLIC_EXPORT_SCHEMA_VERSION = 2;
 export const MAX_DISPLAY_NAME_CODE_POINTS = 80;
-export const MAX_BODY_BYTES = 8192;
-const PAYLOAD_KEYS = ['schemaVersion', 'sourceRevision', 'generatedAt', 'tombstoneEpoch', 'memos'];
+export const MAX_BODY_BYTES = 131072;
+const PAYLOAD_KEYS = ['schemaVersion', 'bodyFormat', 'sourceRevision', 'generatedAt', 'tombstoneEpoch', 'memos'];
 const EXPORT_KEYS = [...PAYLOAD_KEYS, 'digest'];
 const RECORD_KEYS = ['id', 'displayName', 'body', 'createdAt'];
 const UNSAFE_TEXT = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u2028\u2029\p{Cf}\p{Cs}]/u;
@@ -31,8 +31,10 @@ export function normalizeDisplayName(value) {
 }
 
 export function normalizeBody(value) {
-  const result = text(value, 'body');
-  if (Buffer.byteLength(result, 'utf8') > MAX_BODY_BYTES) fail('body must contain 1–8192 UTF-8 bytes.');
+  if (typeof value !== 'string' || /\p{Cs}/u.test(value)) fail('body must be well-formed Unicode text.');
+  const result = value.replace(/\r\n?/gu, '\n');
+  if (!result.trim() || UNSAFE_TEXT.test(result)) fail('body contains empty or unsafe text.');
+  if (Buffer.byteLength(result, 'utf8') > MAX_BODY_BYTES) fail(`body must contain 1–${MAX_BODY_BYTES} UTF-8 bytes.`);
   return result;
 }
 
@@ -41,7 +43,7 @@ export function normalizePublicId(value) {
   return value;
 }
 
-function timestamp(value, label) {
+export function timestamp(value, label = 'timestamp') {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(value)) fail(`${label} must be a canonical UTC timestamp.`);
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString() !== value) fail(`${label} must be a valid canonical UTC timestamp.`);
@@ -64,7 +66,8 @@ export function comparePublicMemos(left, right) {
 }
 
 function payload(value, normalize = false) {
-  if (value.schemaVersion !== PUBLIC_EXPORT_SCHEMA_VERSION) fail('schemaVersion must be 1.');
+  if (value.schemaVersion !== PUBLIC_EXPORT_SCHEMA_VERSION) fail('schemaVersion must be 2; legacy plain text is not Markdown.');
+  if (value.bodyFormat !== 'markdown') fail('bodyFormat must be markdown.');
   if (typeof value.sourceRevision !== 'string' || !/^[A-Za-z0-9._~-]{1,256}$/u.test(value.sourceRevision)) fail('sourceRevision must be an opaque ASCII revision.');
   const generatedAt = timestamp(value.generatedAt, 'generatedAt');
   if (!Number.isSafeInteger(value.tombstoneEpoch) || value.tombstoneEpoch < 0 || Object.is(value.tombstoneEpoch, -0)) fail('tombstoneEpoch must be a non-negative safe integer.');
@@ -76,7 +79,7 @@ function payload(value, normalize = false) {
   }
   if (normalize) memos.sort(comparePublicMemos);
   else if (memos.some((memo, index) => index > 0 && comparePublicMemos(memos[index - 1], memo) > 0)) fail('memos must be newest-first with ascending ASCII ID ties.');
-  return Object.freeze({ schemaVersion: PUBLIC_EXPORT_SCHEMA_VERSION, sourceRevision: value.sourceRevision, generatedAt, tombstoneEpoch: value.tombstoneEpoch, memos: Object.freeze(memos) });
+  return Object.freeze({ schemaVersion: PUBLIC_EXPORT_SCHEMA_VERSION, bodyFormat: 'markdown', sourceRevision: value.sourceRevision, generatedAt, tombstoneEpoch: value.tombstoneEpoch, memos: Object.freeze(memos) });
 }
 
 const hash = (value) => createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
@@ -86,7 +89,7 @@ export function digestForExport(value) {
   return hash(payload(value));
 }
 
-export function decodePublicMemosExport(value, source = 'memos.public.v1.json') {
+export function decodePublicMemosExport(value, source = 'memos.public.v2.json') {
   try {
     if (value instanceof Uint8Array) value = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(value);
     if (typeof value === 'string') {

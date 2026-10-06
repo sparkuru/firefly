@@ -1,7 +1,3 @@
-# Public-only alternative to config.toml.example for static site builds.
-# Copy to the repository-relative plugins.memos.configPath before enabling.
+# Independent static mount; no visitor submission or private runtime config.
 [public]
-# Required when enabled; use the site's HTTPS origin for the planned proxy.
-# writeOrigin = "https://notes.example.com"
-exportPath = "artifacts/memos/memos.public.v1.json"
-consentVersion = "memos-v1"
+route = "/memos/"

@@ -17,8 +17,7 @@ import type { CommentsActivationConfig } from '../../../../plugins/comments/conf
 const COMMENTS_PLUGIN_ID = 'comments' as const;
 
 // Standalone routes do not participate in the post-extension registry.
-export { loadMemoStream } from '../plugins/memos/index.mjs';
-export const MEMOS_SITE_PLUGIN = Object.freeze({ id: 'memos', route: '/memos/', capability: 'site-page' });
+export const MEMOS_SITE_PLUGIN = Object.freeze({ id: 'memos', route: '/memos/', capability: 'external-static-page' });
 
 export interface CommentsPostExtension {
   readonly pluginId: typeof COMMENTS_PLUGIN_ID;

@@ -28,10 +28,10 @@
 | [X Core and Presentation](./x-core-contract.md) | Document transform, adapter, metadata, and enhancement contracts | Established |
 | [Experiment Publication](./publication-contract.md) | Manifests, isolated builds, safe static assembly, and runtime inventory | Established |
 | [Comments and Publication](./comments-publication-contract.md) | Private write service and static public read projection | Established |
-| [Memo Contract](./memo-contract.md) | Independent memo wire/config contract, strict decoding, and consumer boundaries | Established |
-| [Memo Service](./memo-service-contract.md) | Independent private submission, verification, moderation, encrypted mail, export and recovery | Established |
-| [Memo Site](./memo-site-contract.md) | Conditional static memo stream, strict export loading, native visitor form and independent navigation | Established |
-| [Memo Publication and Runtime](./memo-publication-runtime-contract.md) | Staged DOM/export identity, retained deletion history, public snapshots, private proxy/worker and integrated validation | Established |
+| [Memo Contract](./memo-contract.md) | Owner Markdown schema-2 wire/config contract and strict decoding | Owner publisher |
+| [Memo Service](./memo-service-contract.md) | Retired visitor/mail boundary and retained private recovery | Retired |
+| [Memo Site](./memo-site-contract.md) | Navigation-only blog integration and independent static reading | Owner publisher |
+| [Memo Publication and Runtime](./memo-publication-runtime-contract.md) | Independent candidate/receipt/pointer, automatic push, retained history and blog preservation | Owner publisher |
 | [Site Configuration](./site-configuration-contract.md) | Public TOML, SEO, and content themes | Established |
 | [Homepage Search](./homepage-search-contract.md) | Public metadata/body search, mobile UI lifecycle, failure recovery and validation | Established |
 | [Mobile Experience](./mobile-experience-contract.md) | Native mobile homepage, absent Terminal ownership, input-mode transitions and article-reading policy | Established |

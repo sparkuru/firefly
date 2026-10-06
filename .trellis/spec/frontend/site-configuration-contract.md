@@ -13,7 +13,7 @@ also contain non-secret runtime settings. It is never a secret store.
 ### 2. Signatures
 
 ```js
-parseSiteConfig(value: unknown, source?: string, options?: { commentsConfig?: unknown; memosConfig?: unknown }): Readonly<SiteConfig>
+parseSiteConfig(value: unknown, source?: string, options?: { commentsConfig?: unknown }): Readonly<SiteConfig>
 loadSiteConfig(filePath?: string): Readonly<SiteConfig>
 resolveSiteConfigOverridePath(value: unknown, repositoryRoot?: string): string | null
 terminalIdentityFromConfig(config?: SiteConfig): Readonly<TerminalIdentity>
@@ -142,13 +142,13 @@ configPath = "config/plugins/memos/config.toml"
   public site projection. Explicit service environment variables may override
   file values at the runtime boundary; the static build does not read the
   secret file.
-- The independent memo plugin owns `[plugins.memos]` with the same activation
-  field names but its own strict contract. The loader exposes only `config.memos`
-  public values, skips its config/export entirely disabled, and never reads
-  memo secrets. Preserve the complete service config template; the separate
-  `config/plugins/memos/site-public.toml.example` illustrates static-only public
-  settings. Enabled memo inputs require non-symlink contained regular files and
-  strict UTF-8. See [Memo Site](./memo-site-contract.md) for form/route/gates.
+- The independent Memo publisher uses `[plugins.memos]` strictly for navigation
+  and sitemap discovery. Its activation field names remain compatible, but
+  neither enabled nor disabled loading reads a Memo config/source/export or
+  projects content/runtime settings. `/memos/` and descendants remain reserved
+  regardless of visibility. Optional pure Memo config allows only the fixed
+  public route; source and deployment configuration belong to its owner-local
+  publisher. See [Memo Site](./memo-site-contract.md) for independence/gates.
 - Plugin-owned private runtime paths use the same strict decoder as the public
   projection: absolute or relative slash-separated paths are allowed, but
   backslashes, traversal segments, empty interior segments, controls, and
@@ -464,7 +464,10 @@ from Astro's final build page records: the root may be `''`, route names may
 lack a leading slash, and `index.html`/`.html` forms become trailing-slash
 routes. `/404` is excluded; `/lab/` is retained, while non-main `/lab/*`
 experiment routes are excluded. Paths are deduplicated and sorted before XML
-generation. Only the final public static route set is an input; drafts,
+generation. The final public static route set supplies ordinary entries. When
+`plugins.memos.enabled` is true, the owning SEO integration also adds the
+reserved external `/memos/` route served by the independent static mount. No
+Memo source/state is loaded for discovery. Drafts,
 private documents, source paths, and unlisted/non-main experiment routes must
 not be added manually.
 
@@ -499,7 +502,7 @@ page-generation phase alone does not mean the strict static-output gate passed.
 | malformed `data-terminal-identity-about`, `data-terminal-identity-prompt-marker`, or identity shape | browser enhancement fails closed; native recovery remains usable |
 | root/no-leading-slash/`.html` sitemap input | normalize to one canonical trailing-slash path |
 | `/404` or non-main `/lab/<experiment>/` sitemap input | exclude from sitemap |
-| missing public route in final build | do not invent a sitemap entry from source paths |
+| missing public route in final build | do not invent source-path entries; enabled external `/memos/` is the explicit owning-integration exception |
 | favicon missing from build or shared head | fail the static-output inventory or shared-head assertion |
 
 ### 5. Good / Base / Bad Cases

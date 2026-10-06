@@ -20,8 +20,8 @@ async function fixture() {
     await mkdir(path.dirname(path.join(root, file)), { recursive: true });
     await writeFile(path.join(root, file), 'fixture');
   }
-  for (const folder of ['content/posts', 'content/pages', 'services/memos/ops']) await mkdir(path.join(root, folder), { recursive: true });
-  await writeFile(path.join(root, 'services/memos/ops/check-runtime.sh'), '#!/usr/bin/env bash\nprintf "host-memo\\n" >> "$FIXTURE_LOG"\n', { mode: 0o755 });
+  for (const folder of ['content/posts', 'content/pages', 'tooling/publish-memos/ops']) await mkdir(path.join(root, folder), { recursive: true });
+  await writeFile(path.join(root, 'tooling/publish-memos/ops/check-runtime.sh'), '#!/usr/bin/env bash\nprintf "host-memo\\n" >> "$FIXTURE_LOG"\n', { mode: 0o755 });
   await writeFile(path.join(root, 'sam'), `#!/usr/bin/env bash
 printf 'sam:%s:%s:%s:%s\\n' "$SAM_IMAGE" "$SAM_IPC" "\${FIREFLY_CONTENT_ROOT:-}" "$*" >> "$FIXTURE_LOG"
 if [[ "\${SAM_DETACH:-}" == 1 ]]; then
@@ -128,14 +128,25 @@ test('help and invalid arguments need no config or Docker', () => withFixture(as
 
 test('build chooses publication gate without starting services, including export builds', () => withFixture(async (f) => {
   await f.run(['build']);
-  await f.run(['build'], { FIREFLY_MEMOS_EXPORT: '/fixture/export.json' });
+  await f.run(['build'], { FIREFLY_COMMENTS_EXPORT: 'fixture/export.json' });
   const calls = await f.log();
   assert.match(calls, /npm run build:m4/u);
   assert.match(calls, /npm run build:m51/u);
   assert.doesNotMatch(calls, /docker:/u);
 }));
 
-test('verify forces tracked content and runs Memo lifecycle only after the inner gate', () => withFixture(async (f) => {
+test('dev rejects selected static Memo composition before validation or Docker startup', () => withFixture(async (f) => {
+  const candidate = path.join(f.root, 'memo-candidate');
+  await mkdir(candidate);
+  await assert.rejects(f.run(['dev'], { FIREFLY_MEMOS_CANDIDATE: candidate }), (error) => {
+    assert.match(error.stderr, /Memo composition requires the static publication preview; use start or preview instead of dev/u);
+    return true;
+  });
+  await assert.rejects(f.log(), { code: 'ENOENT' });
+  await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
+}));
+
+test('verify forces tracked content and runs independent Memo static fixture only after the inner gate', () => withFixture(async (f) => {
   await f.run(['verify'], { FIREFLY_CONTENT_ROOT: '/private/owner' });
   let calls = await f.log();
   assert.match(calls, new RegExp(`sam:mcr\\.microsoft\\.com/playwright:v1\\.62\\.0-noble:host:${f.root}/content:npm run verify:m51\\nhost-memo\\n`, 'u'));

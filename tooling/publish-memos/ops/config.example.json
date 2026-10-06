@@ -1,0 +1,10 @@
+{
+  "displayName": "Owner",
+  "deploymentRoot": "/absolute/independent-memo-deployment",
+  "sshTarget": "operator@deployment.example.invalid",
+  "knownHosts": "/absolute/known_hosts",
+  "sshConfig": "/dev/null",
+  "remoteImage": "sha256:REPLACE_WITH_REVIEWED_IMAGE_CONTENT_ID",
+  "remoteSudo": false,
+  "initialDeletionFloor": 0
+}

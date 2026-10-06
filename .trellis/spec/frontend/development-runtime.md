@@ -7,7 +7,7 @@
 Use this contract for dependency installation, Astro/Node commands, development
 servers, browser validation, publication tooling, or changes to `sam` / `preview.sh`.
 It applies to the validator, X Core, semantic, Terminal, assembler, main site,
-NERV, and private comments/Memo service checks.
+NERV, private comments checks, and the independent owner Memo publisher.
 
 The unified CLI, root dotenv setup and lifecycle output are maintained in
 [Trellis Plus development](../trellis-plus/development.md). Read that profile
@@ -76,7 +76,10 @@ FIREFLY_CONTENT_ROOT="$PWD/content" \
   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
   ./sam npm run verify:m51
 ./preview.sh package
-services/memos/ops/check-runtime.sh
+tooling/publish-memos/ops/check-runtime.sh
+SAM_CONTENT_MODE=none ./sam npm run check:memos
+SAM_CONTENT_MODE=none ./sam npm run test:memos
+tooling/publish-memos/publish.sh publish --config <owner-only-json>
 ```
 
 Browser signatures are recorded in the single Playwright profile in
@@ -85,7 +88,7 @@ Root npm scripts are delegators and are valid only when already invoked inside
 `./sam` with the appropriate image. `preview.sh verify` is the host-facing complete
 repository-fixture gate; it pins the tracked root before `sam` loads the
 optional root `.env`. After the inner gate succeeds, it runs the host-owned
-disposable Memo lifecycle fixture. Its inner `verify:m51` form is for phase-level
+disposable independent Memo publication/static fixture. Its inner `verify:m51` form is for phase-level
 diagnosis and is valid only through `./sam`; it does not include that Docker
 fixture.
 
@@ -107,7 +110,9 @@ syntax check.
 | `SAM_SCOPE` / `SAM_SERVICE` | Wrapper labels; service is empty or `web`. `preview.sh` uses scope `preview.sh` and service `web`. |
 | `.env` | Ignored literal root settings loaded by `tooling/shared/dev-env.sh` in both `sam` and `preview.sh`; copy `.env.example`. Explicit environment variables take precedence. The old local `config.dev` is preserved but no longer loaded. |
 | `FIREFLY_CONTENT_ROOT` | Optional absolute readable blog root containing `posts/` and `pages/`; it may be set in `.env` and empty/omitted selects `<repo>/content`. `sam` resolves and passes it into the container. |
-| `preview.sh verify` / `verify:m51` | `preview.sh verify` fixes tracked `<repo>/content`, defaults to pinned Playwright Noble and host IPC, runs the inner gate, then the host disposable Memo lifecycle. The inner gate uses `/app/content`, runs checks/service/contract/site tests → isolated real Memo publication → Memo browser fixture → default publication build → site/NERV/publication browsers, short-circuiting on failure. Direct host npm is not evidence. |
+| `preview.sh verify` / `verify:m51` | Fixes tracked `<repo>/content`, defaults to pinned Playwright Noble and host IPC, runs comments/contract/publisher/site/assembler checks and static Memo plus ordinary site/NERV/publication browsers, then the host independent-publication/Nginx fixture. Short-circuit on failure; direct host npm is not evidence. |
+| `SAM_CONTENT_MODE` | `blog` default discovers existing blog mounts; `none` skips blog, comments export and site override probing for independent publisher commands. Explicit Memo source/assets/history/output/deployment mounts remain narrowly validated. |
+| `FIREFLY_MEMOS_CANDIDATE` | Explicit existing validated candidate for combined preview/package; only public bytes enter the static runtime. Missing selected input fails, default blog operation remains independent. |
 | `FIREFLY_SITE_CONFIG_PATH` | Optional repository-relative `.toml` override for contained build/test projections. `sam` requires an existing readable file whose real path stays inside the repository, then passes the same relative path into the container; the site loader additionally rejects a symlinked file and unsafe segments. |
 | Repository mount | `/app` with caller UID/GID; HOME is ignored `/app/.devhome`. |
 | Content mounts | Same-path read-only configured root plus recursively discovered link hops/targets only; never `/`, a broad home/system ancestor, or repository ancestor. |
@@ -115,7 +120,7 @@ syntax check.
 | Package-local development | `npm run dev:nerv` is the autonomous NERV hot-development entry at `/lab/nerv/`; it must not be presented as the root publication because its Astro base does not own `/` or `/lab/`. |
 | Package boundary | Validator, X Core, semantic, Terminal, assembler, site, and NERV use separate manifests, lockfiles, tests, and artifacts; root is not a workspace. |
 | Publication dependency order | Plan content mounts before Docker; materialize before every site collection command. Build validator and validate manifests first; then X Core, semantic, Terminal, assembler, site, declared Experiments, and fresh assembly. |
-| Runtime packaging | `preview.sh package` runs the assembled publication build, requires exact manifest/release equality, creates a minimal context containing only Dockerfile/Nginx/release, then probes the non-root read-only image and tears down its exact labeled container. |
+| Runtime packaging | Runs the assembled blog build and exact manifest/release checks, creates a minimal Dockerfile/Nginx/release context, optionally copies only selected validated Memo public bytes into the separate static mount, probes non-root/read-only confinement and exact inventories, then tears down exact owned resources. |
 | Main-site browser server | Run the site build/static scan first. Playwright owns `astro preview` of that same `dist/` at `/`; `start:e2e` must not rebuild or run `astro dev`. |
 | NERV browser server | Playwright owns Astro at `/lab/nerv/`. |
 | Publication browser server | Build/assemble first; assembler Playwright owns a static server for unchanged root `dist/`. |
@@ -141,6 +146,7 @@ ordinary commands retain foreground output and exit status.
 | a required package binary is missing in build mode | preserve the build failure; preparation remains explicit with `./sam npm run install:m51` |
 | the assembled publication output is missing for default `preview.sh`/`start`/`up` | fail before stopping existing services and tell the developer to run `./preview.sh render npm run build:m4` or `./preview.sh preview` |
 | root publication build fails | preserve the wrapped failure and do not start a new web service |
+| `dev` selects a combined Memo candidate | Refuse before startup and direct the caller to static `start`/`preview` |
 | lifecycle .env keys are absent/empty, addresses cannot be discovered, or readiness fails | return nonzero without a success banner; remove only the new failed-start container |
 | repeated start requests a different configuration/mode | preserve the running preview and require explicit stop/start |
 | a developer needs fast main-site hot reload | use `preview.sh dev`; the default `preview.sh` serves the existing assembled publication without rebuilding, while browser/static evidence still uses the dedicated build and Playwright gates |

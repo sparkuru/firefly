@@ -61,6 +61,7 @@ enabled = false
 configPath = "config/plugins/comments/config.toml"
 
 [plugins.memos]
-# Enable after accepting the independent memo runtime and publication gates.
+# Discovery only: /memos/ is served by the independent static publisher.
 enabled = false
+# configPath is retained for activation compatibility; blog builds never read it.
 configPath = "config/plugins/memos/config.toml"

@@ -1,64 +1,6 @@
 name: firefly
 
-x-memos-runtime: &memos-runtime
-  profiles: [memos]
-  build:
-    context: .
-    dockerfile: services/memos/Dockerfile
-  image: firefly-memos:local
-  init: true
-  depends_on:
-    web:
-      condition: service_started
-  network_mode: service:web
-  restart: unless-stopped
-  stop_grace_period: 200s
-  read_only: true
-  tmpfs:
-    - /tmp:size=16m,mode=1777
-  cap_drop: [ALL]
-  security_opt: [no-new-privileges:true]
-  user: "${MEMOS_RUNTIME_USER:-1000:1000}"
-  environment:
-    NODE_ENV: production
-    MEMOS_BIND: 127.0.0.1
-    MEMOS_PORT: 8788
-    MEMOS_TRUST_PROXY: loopback
-    MEMOS_CONFIG_PATH: config/plugins/memos/config.toml
-    MEMOS_SECRETS_FILE: /run/secrets/memos.env
-  volumes:
-    - type: bind
-      source: ${MEMOS_DATA_ROOT:-./plugins/memos/data}
-      target: /var/lib/firefly-memos
-      bind:
-        create_host_path: false
-    - type: bind
-      source: ${MEMOS_CONFIG_ROOT:-./config/plugins/memos}/config.toml
-      target: /app/config/plugins/memos/config.toml
-      read_only: true
-      bind:
-        create_host_path: false
-    - type: bind
-      source: ${MEMOS_CONFIG_ROOT:-./config/plugins/memos}/secrets.env
-      target: /run/secrets/memos.env
-      read_only: true
-      bind:
-        create_host_path: false
-
 services:
-  memos:
-    <<: *memos-runtime
-
-  memos-worker:
-    <<: *memos-runtime
-    command: [dist/src/worker-server.js]
-    healthcheck:
-      test: [CMD, node, dist/src/worker-health.js]
-      interval: 15s
-      timeout: 3s
-      start_period: 5s
-      retries: 3
-
   web:
     build:
       context: .

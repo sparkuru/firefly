@@ -1,232 +1,214 @@
-# Memo Publication and Private Runtime Integration
+# Independent Owner Memo Publication and Static Runtime
 
 ## 1. Scope / Trigger
 
-Read this when changing memo assembly, static build evidence, publication
-history, shared input files, proxy/Compose wiring, delivery scheduling or their
-integration tests. The pure [memo contract](./memo-contract.md), private
-[service](./memo-service-contract.md) and [site](./memo-site-contract.md) retain
-their domain owners. No historical Typecho input, production credential,
-deployment switch, public runtime listing or SSR is part of this boundary.
+Read when changing `tooling/publish-memos/`, static Memo mounting, combined
+preview/packaging or blog/Memo preservation. Memo publication is separate from
+root blog `artifacts/`, `dist/`, deployment pointer and source mirror. The
+[public contract](./memo-contract.md), [site navigation](./memo-site-contract.md)
+and [retired private boundary](./memo-service-contract.md) retain their owners.
 
 ## 2. Signatures
 
-`tooling/assemble-publication/src/plugins/memos.ts` exposes:
+Core entrypoint `tooling/publish-memos/src/index.mjs` exposes:
 
 ```ts
-interface MemoPublicationOptions {
-  readonly siteConfigPath?: string;
-  readonly exportPath?: string;
-  readonly environment?: Readonly<Record<string, string | undefined>>;
-}
-loadMemoPublication(repositoryRoot: string, options?: MemoPublicationOptions):
-  MemoPublicationInput | null
-validateMemoTree(root: string, files: readonly string[],
-  input: MemoPublicationInput | null): Promise<void>
-decodeMemoMetadata(value: unknown): MemosPublicationMetadata
+buildCandidate({ sourceRoot, assetsRoot?, outputRoot, displayName,
+  history?: MemoReceipt | null, generatedAt?, initialDeletionFloor? })
+validateCandidate(candidateRoot)
+readCurrentHistory(deploymentRoot): Promise<MemoReceipt | null>
+promoteCandidate({ deploymentRoot, candidateRoot, expectedBase,
+  initialDeletionFloor? })
+buildRollbackCandidate({ priorCandidateRoot, history, outputRoot, generatedAt? })
+newMemo({ sourceRoot, name, now? })
 ```
 
-`assemblePublication` accepts optional `memoOptions` and independently loads
-the input. Its `PublicationResult` and schema-1 `artifacts/publication.json`
-contain exactly six memo metadata fields: `enabled`, `schemaVersion`,
-`sourceRevision`, `generatedAt`, `digest`, `tombstoneEpoch`. No caller-supplied
-metadata can replace export/HTML validation. `beforePromotionRename(step)` is a
-test seam for caught filesystem failures, not a deployment operation.
-
-`tooling/shared/contained-file.mjs` supplies
-`readContainedFile(relativePath, repositoryRoot, label, maxBytes?): Buffer`.
-The site retains its existing helper path as a facade. The assembler owns
-direct pinned TOML/HTML parser dependencies and never imports Astro/site source.
-
-The memo HTTP factory keeps its diagnostic argument and adds the policy last:
-
-```ts
-createMemoServer(service, adminHash, diagnostic?, trustProxy?: 'none' | 'loopback')
-startDeliveryWorker({ deliver, close, diagnostic?, heartbeat?, schedule? }):
-  { stop(): Promise<void> }
-```
-
-Host Docker validates Compose; Node/browser commands use `./sam` and
-diagram-capable site commands use `./preview.sh render`. Runtime commands in the image
-remain `npm run start`, `npm run worker`, private `admin`, maintenance,
-one-shot delivery and backup/restore. Default image startup is still HTTP.
+CLI commands are `new`, `build`, `validate`, `state`, `promote`, `rollback`.
+`state --deployment-root ROOT` emits a receipt or literal null. `build --history
+FILE` accepts that output; bootstrap may pass `--initial-deletion-floor N`.
+`promote --candidate-root ROOT --deployment-root ROOT --expected-base DIGEST|null`
+requires the matching explicit bootstrap floor when inherited. Host orchestration
+exposes `new NAME` and `build` without config, using the actual checkout's
+`content/memos/` and `.firefly/memos/candidates/`. It also owns `publish` and
+its automatic SSH push, with explicit `--config`, `--dry-run` and isolated local
+publication. Core generation/checks run through `sam`; bounded remote
+validation/state/promotion run in the reviewed ephemeral publisher image.
 
 ## 3. Contracts
 
-### Input and actual static identity
+### Sources and rendering
 
-- Read the selected contained site TOML, parse memo activation through the
-  pure config module, then return null disabled before memo config/export/
-  environment getters. An unusable unused memo override is irrelevant.
-- Enabled loading projects public plugin values independently, checks safe
-  `.toml`/`.json` paths and raw UTF-8 bytes, and decodes the exact public wire
-  without normalization, sorting, replacement characters or optional digest.
-  Files and path components must be contained, regular and nonsymlink.
-  Configuration reads are capped at 1 MiB, raw memo exports at 64 MiB, and
-  prior publication manifests at 4 MiB. Oversized inputs fail before promotion.
-- Share the regular-descriptor reader rather than duplicating comments' older
-  permissive input pattern. It applies no-follow/nonblocking flags and optional
-  size limits. It does not claim hostile concurrent-parent race protection.
-- The existing stream emits five public envelope attributes for schema,
-  revision, generated time, digest and epoch; record articles emit only opaque
-  public IDs. The route passes the immutable envelope, without a new UI or
-  runtime endpoint.
-- Parse the copied candidate HTML. Require one live memo stream/form at the
-  owning index route and exact ordered IDs, displayed names/bodies/time text
-  and datetime against the decoded records. Validate empty state, native
-  action/fields and public consent settings. A current marker on stale rendered
-  text is not sufficient. Hidden/template counterfeit evidence, duplicates,
-  active/nested record markup, private structural fields and shadow routes fail.
-- Compare decoded text faithfully, including Unicode/LF/entities. Approved
-  literal HTML or email-looking words remain text; they are not executable
-  markup or proof of private identity. Existing global credential/source-path
-  policies still apply. Actual asset references remain validated.
-- Disabled authored aliases remain allowed when they have no plugin-owned memo
-  surface. Memo records never become post/page/search/Lab/Terminal records.
+- An independent Memo source root contains Markdown and optional `assets/`.
+  Each file has exact YAML `id`, `createdAt`, `draft`, followed by Markdown.
+  No aliases/custom executable directives or article/Experiment import hooks.
+- Generic host `new` always creates in the actual checkout's `content/memos/`,
+  even when a source-selecting operator config is supplied. It needs no config
+  and cannot redirect creation to an external authoring root. The low-level
+  core API retains explicit roots for controlled fixtures/operators.
+- Repository-local originals and the tracked empty source directory belong to
+  authoring; generated candidates/private operational inputs remain ignored.
+  Default local build uses that source and owner display `Owner`. Missing
+  default directories are initialized only after their canonical parent and
+  nonsymlink checks. Resolve paths from the script root, never caller cwd.
+- `new` creates a private absent-only draft with random stable ID and UTC time.
+  Draft bodies may be empty; public bodies require visible sanitized content.
+  Drafting/removing an accepted ID withdraws it at the next publication.
+  Duplicate IDs include drafts; accepted creation timestamps are immutable.
+- Strict raw UTF-8, contained regular nonsymlink files and bounded body/media
+  reads precede rendering. URI-encoded contained local media and Unicode author
+  filenames are supported; traversal/controls/nonregular inputs fail.
+- Markdown source reads are bounded to 256 KiB including front matter. Bodies
+  use the shared 128 KiB UTF-8 contract, including whitespace-only draft size
+  checks. Above-limit bodies/source files fail; no legacy validation bypass.
+- Reuse pinned Unified/remark/rehype and the shared HTML policy. Render safe
+  Markdown links, lists, tables and fenced code, without script/diagram/article
+  extensions. Remote images are rejected; explicit HTTP(S) links are allowed.
+  Referenced local assets are contained, allowlisted and copied only as needed.
+  Styles and assets use `/memos/`; no blog `_astro` filenames or runtime JS.
+- Owner-approved historical conversion stages and validates its exact corpus
+  before absent-only promotion to authoring sources. Recover only referenced
+  local/HTTP(S) images as contained validated assets; preserve unavailable image
+  captions and original targets as ordinary links/text with a private outcome
+  report. Rewrite old-note links only through verified source correspondence and
+  origin. Never invent destinations for missing targets or rewrite code examples.
+  Original backup/export hashes and raw time values remain private and unchanged.
+- A bare GFM or angle autolink converted to a relative Memo target must become
+  an explicit Markdown link retaining its visible label. A relative string alone
+  is not an autolink. Verify rendered anchor targets against the migration mapping,
+  including shared reference definitions and raw HTML links.
+- Generated candidates default below ignored `.firefly/memos/`. Output cannot
+  overlap blog source/build/release roots or the selected Memo source/assets.
 
-### Publication history and target replacement
+### Public candidate and private acceptance history
 
-- Enabled metadata reflects the exact validated envelope; epoch must be at
-  least the retained prior memo epoch. Disabled metadata uses false, schema 1,
-  `sourceRevision='empty'`, epoch date and null digest, while retaining the prior epoch.
-  No runtime/export dependency or duplicate floor field is needed to disable.
-- Read prior history through strict contained regular-file/fatal-UTF-8 checks.
-  Validate present memo keys/date/revision/digest/boolean/safe epoch exactly.
-  Malformed, partial, symlinked or special evidence never becomes epoch zero.
-- A valid memo-free legacy schema-1 manifest has zero history. Memo-bearing
-  legacy output without memo history requires recovery. Fresh bootstrap permits
-  only explicitly selected, decoded memo/comments public inputs in the target
-  directories, with no prior publication/HTML/staged trees or unrelated files.
-- Load once before target replacement and compare the staged site and final
-  release against that same envelope. Serialize only its canonical public
-  snapshot to `artifacts/memos/memos.public.v1.json`; no raw siblings/private
-  source trees are retained. The snapshot stays out of `dist` and the web image.
-- Overrides outside promotion targets stay unchanged. Inputs inside either
-  target are consumed on success and preserved on failure; the canonical memo
-  snapshot remains under artifacts. Disabled promotion may omit the snapshot
-  but preserves history. A fresh export after moderation is explicit.
-- Validate before `promoteTogether`; caught promotion failures restore the
-  prior artifact/release pair and clean owned candidates. This is coordinated
-  repository promotion, not crash-atomic, concurrent or external deployment
-  recovery. Deleting/replacing history or downgrading to history-unaware tooling
-  is not an accepted rollback procedure.
-- The full root Docker builder excludes `artifacts/` and `dist/`, so it starts
-  fresh and cannot establish a prior host/deployment epoch. Use the maintained
-  wrapped host publication with durable history and the minimal
-  `preview.sh package` release context when validating retained deletion state.
-  Fresh Docker assembly is not evidence of cross-release rollback protection.
+- Candidate layout is `public/index.html`, `public/memos.public.v2.json`,
+  `public/assets/...`, with private `receipt.json` at candidate root.
+  Public files are 0644, traversable public directories 0755, receipt 0600.
+  Source/config/keys/receipt never belong in a web image or served subtree.
+- Validate strict export fields/digest, canonical sanitized rendered HTML,
+  exact asset bytes, complete sorted inventory and no extra/empty directories.
+  A marker or digest alone is not proof of rendered identity.
+- Receipt schema 1 is exact: `schemaVersion`, `sequence`, `deletionFloor`,
+  `retiredIds`, `acceptedMemos`, `exportDigest`, `expectedBase`, `inventory`,
+  `digest`. Accepted entries contain `id`, `createdAt`, `digest`; inventory
+  entries contain `path`, `bytes`, `digest`. All hashes use SHA-256.
+- One Memo `current` symlink selects both public bytes and their receipt in
+  `releases/r_SEQUENCE_DIGEST`. A private `established` marker prevents loss
+  of the pointer and release directory from silently becoming a fresh store.
+  Missing/corrupt established history fails closed; there is no reset command.
+- Under an exclusive Memo-only lock, re-read current and compare expected base,
+  sequence, immutable times, retired IDs and deletion floor. Copy validated
+  candidate bytes into an absent release within the deployment filesystem,
+  validate again, then atomically rename the current symlink there. Upload and
+  release mounts may differ; do not rename an incoming directory across mounts.
+- Fresh bootstrap permits null history only at a never-established boundary.
+  Main migration independently validates applicable legacy history and passes
+  an inherited floor at least that high to build and promote. Nonzero bootstrap
+  options cannot override established history; missing history is not floor zero.
+- Withdrawal increments the floor and retires IDs; stale candidates, conflicting
+  bases and resurrection of retired IDs fail. Rollback builds a *new* candidate
+  against current history from a validated older publication. It never selects
+  an old pointer or lowers the floor. Inspect ambiguous results before retrying.
 
-### Private proxy and rate identity
+### Host/deployment and static mount
 
-- Root `memos` and `memos-worker` services are opt-in. HTTP shares the web
-  namespace on loopback 8788, distinct from comments 8787; private services
-  publish no host port. Standalone operator Compose uses same-host loopback.
-- Both share owner-only persistent data and read-only config/secrets, read-only
-  root filesystems, bounded tmpfs, dropped capabilities and no-new-privileges.
-  Missing bind inputs are not created automatically. Root identity defaults
-  nonroot 1000:1000 with an explicit override; standalone requires an operator
-  UID:GID. Inactive root interpolation needs no memo inputs. Align ownership
-  instead of broadening private modes. Web/build contexts receive no secrets/DB.
-- `MEMOS_TRUST_PROXY` is exactly none (default) or loopback. Loopback requires
-  loopback bind, local socket and peer. Accept exactly one literal X-Real-IP
-  from raw headers, canonicalize IPv4/mapped IPv6/IPv6, and reject missing,
-  duplicate/list/port/invalid addresses before write/rates. Direct mode ignores
-  forwarded identity; Forwarded/X-Forwarded-For are not rate inputs.
-- The memo Nginx prefix overwrites X-Real-IP, clears forwarded chains, retains
-  Host/Origin, and uses bounded timeouts. Unknown v1 remains bounded 404 and
-  an absent memo upstream fails closed. Owner operations still authenticate
-  at the service; health/unrelated routes are not added as public proxies.
-- Memo responses have no-store, restrictive CSP/referrer, nosniff and frame
-  denial without duplicate weaker headers. Disable memo access/error URI logs
-  so verification tokens cannot reach proxy logs. Diagnostic codes contain no
-  recipient/body/Authorization/token. A real outer edge is operator-validated,
-  never implicitly trusted through arbitrary forwarded chains.
-
-### Bounded private delivery
-
-- Worker cycles wrap existing SQLite claims/retry/transport, one message every
-  15 seconds with one in-flight drain. Errors report bounded status codes;
-  scheduled cycles recover, including synchronous injected transport failures,
-  without changing moderation or schema. Assign the active promise before
-  invoking delivery so synchronous failure cannot suppress later cycles.
-- Stop cancels scheduling, awaits active work and closes once. Forced stop
-  relies on lease expiry/retry and at-least-once delivery; verification remains
-  single-use. Compose provides a 200-second grace against the SMTP total
-  180-second deadline.
-- Worker health is its private process/tick file, not the image's default HTTP
-  healthcheck. Idle freshness is 45 seconds, active freshness 190 seconds.
-  A healthy HTTP sibling cannot conceal a dead worker. No health/readiness
-  operation probes real SMTP or exposes queued payloads.
-- Existing private backup/restore commands retain key/schema/integrity and
-  absent-destination rules. Restored old epochs remain subject to publication
-  history. Service state never lives under artifact/release targets.
+- Host-only authenticated SSH uses owner-only operational configuration and
+  strict host-key checks. No SSH config/key, blog root or credential is mounted
+  into generation containers. Push only validated candidate public files plus
+  its private receipt to the independent deployment root.
+- Explicit owner host config requires display identity; missing source/output
+  keys resolve to the actual checkout defaults. Present invalid/null values
+  are rejected. Deploying and rollback still require explicit operator config.
+- An ignored owner-only tooling adapter may project an external read/build/
+  publication source into a private 0600 temporary config, forwarding to the
+  shared host entry. It excludes `new`, keeps external originals untouched,
+  refuses caller config replacement and cleans only its own temporary root.
+  No actual external path belongs in tracked defaults or clone examples.
+- Owner-local host configuration selects source/assets/output/display name,
+  immutable remote image, SSH target/config/known-hosts, remote deployment root
+  and bounded sudo-Docker choice. No operational identities belong in tracked
+  templates, Trellis records, build contexts or public output.
+- Choose the Memo deployment root outside the blog deployer's recursive copy/
+  chown/cleanup scope, not merely outside its current release. Review the actual
+  owner-local helper without running broad ownership commands. Independent
+  pointers alone do not protect a private 0600 receipt from a recursive chown;
+  normal blog deployment preserves Memo ownership as well as bytes.
+- Existing Nginx serves `/memos/` from the independent current `public/`, with
+  trailing-slash canonicalization, GET/HEAD-only reading and static security
+  headers and `Cache-Control: no-cache, no-store` on every Memo response.
+  Check actual edge response headers as well as origin headers. No Memo HTTP/mail listener, worker, API proxy, DNS or certificate
+  change is required. Keep comments and unrelated locations intact.
+- Blog builds never read current Memo input/state. The assembler reserves the
+  namespace and retains strict legacy Memo metadata solely as migration
+  evidence. Explicit combined preview/package consumes already validated
+  `public/` read-only; a missing selected artifact fails rather than fabricating
+  an empty stream. Default blog-only operation remains independent.
+- First navigation activation is intentional blog integration. Establish the
+  preservation baseline afterwards: routine Memo push must leave every non-Memo
+  byte, blog pointer and source mirror unchanged; a normal blog deployment must
+  leave the Memo pointer and history unchanged. Fixture evidence and actual
+  production evidence are reported separately.
 
 ## 4. Validation & Error Matrix
 
 | Condition | Required behavior |
 | --- | --- |
-| Disabled with unusable memo config/export/override | Skip input; reject only stale plugin-owned output |
-| Bad raw export/config/path/digest/order/private key | Bounded failure, no value-bearing output or promotion |
-| Fresh export with stale/changed/hidden rendered records | Reject before replacing either target |
-| Candidate epoch below retained history | Refuse rollback; keep prior pair |
-| Disabled then stale re-enable | Retained epoch still blocks old export |
-| Lost/corrupt/unsafe existing metadata | Require recovery, never auto-zero |
-| Valid memo-free legacy or input-only initial bootstrap | Compatible zero floor |
-| Caught promotion rename failure | Restore prior targets; exact candidate cleanup |
-| Forged/invalid/duplicate proxy address | Reject before submission persistence or use authoritative direct peer |
-| Memo service absent or unknown route | Fail closed; last static stream remains readable |
-| Missing/unreadable private mounts | Fail startup; do not create/broaden inputs |
-| Worker retry/error/forced termination | Bounded private diagnostics and leased retry; no concurrent drain |
-| Real deployment/SMTP acceptance unperformed | Report local evidence only |
+| Invalid Markdown metadata/UTF-8/draft ID/path/visible body | Fail before upload |
+| Source above 256 KiB or body above shared 128 KiB | Reject before candidate emission |
+| Generic host new with external source config | Create only repo-local draft, leave external source unchanged |
+| Clone/caller cwd differs | Resolve default authoring/candidates from actual checkout |
+| Default source/output ancestor is symlink/noncanonical | Fail before directory creation or draft/output effects |
+| Private external adapter receives new or caller config override | Refuse before projection or publication |
+| Canonical render/export/assets/inventory differ | Reject candidate |
+| Changed accepted timestamp, stale base, retired ID or lower floor | Refuse promotion |
+| Lost/malformed established pointer/receipt/marker | Require recovery, never auto-zero |
+| Transfer or promotion interrupted | Retain current; inspect owned staging/release before retry |
+| Old rollback contains withdrawn content | Refuse new rollback publication |
+| Selected combined artifact missing or invalid | Explicit combined-input error |
+| Selected combined candidate in Astro dev | Refuse explicitly; use static start/preview |
+| Present optional config field has wrong type/null | Refuse before wrapper/transport; absence alone gets defaults |
+| Blog source/config unavailable during Memo build | Independent Memo build still succeeds |
+| Production checks not performed | Report local evidence only |
 
 ## 5. Good / Base / Bad Cases
 
-- **Good:** synthetic verification and owner approval produce a strict export;
-  actual staged records match it; a retained epoch prevents old restored state
-  from replacing a later deletion release.
-- **Base:** memo activation/profile remain disabled and no memo input/service is
-  required. Existing comments/static defaults stay compatible.
-- **Bad:** trust forwarded chains, copy private artifact siblings, validate only
-  a digest marker, use sibling HTTP health as worker health, log verification
-  URIs, or erase publication history to make stale output pass.
+Good: build and automatically push an owner edit; one Memo pointer advances
+without touching the blog. Base: valid empty static stream with no private
+service. Bad: publish root `dist/`, serve a receipt, erase history or import a
+legacy text body as Markdown.
 
 ## 6. Tests Required
 
-- Loader/path/raw-byte and malformed/empty/disabled configuration matrices;
-  direct assembler API cannot accept unchecked metadata as evidence.
-- Actual built site plus parsed staged/final DOM: exact text/order/form,
-  swapped export, current markers on stale records, hidden/template/duplicate
-  evidence, active markup, Unicode/entities and escaped attribute-looking text.
-- Legacy/fresh/lost/malformed/symlink/special history; enabled → disabled →
-  stale re-enable; independent comments epochs; public snapshot/input lifecycle;
-  injected prepared/promoted rename failures and pair preservation.
-- Trust defaults/bind/peer/raw header/IP normalization/spoofed rates;
-  worker schedule/no-overlap/retry/stop/health diagnostics; existing service tests.
-- Default/memo/comments/combined and standalone Compose syntax, disposable
-  nonroot/private/read-only/no-port/health/persistence checks, actual proxy
-  headers/auth/unknown/absent behavior and exact-label cleanup.
-- Actual no-JavaScript desktop/mobile native POST through a fixture HTTPS edge,
-  local certificate-validated mail sink, verification/moderation/export/build/
-  publication/deletion/old-restore refusal. No intercepted acceptance response
-  substitutes for this integration. Private sentinels stay outside artifacts,
-  HTML and proxy/service logs; fixtures never contact real recipients.
-  Browser evidence first refuses the untrusted certificate, then trusts only
-  the synthetic fixture CA in a disposable NSS store and repeats the native
-  flow with normal certificate checks. The owned browser image adds
-  `libnss3-tools`; preparing it requires access to the image package repository.
-  Neither browser nor service disables TLS validation. Anonymous volumes from
-  exact-owned fixture containers must be removed along with those containers.
-- Maintained package/root gates, shell syntax/ShellCheck/shfmt, minimal runtime
-  image/manifest/inventory equivalence and document/search/Lab regressions.
-  Parent completion maps all source acceptance criteria to actual child/joint
-  evidence. Local fixtures do not prove operator TLS/SMTP/deployment topology.
+Cover copied/fresh checkout defaults and unrelated caller cwd, no-config new/
+build, no-overwrite drafts, supplied external config unable to redirect host
+new, present-type validation and missing source/output defaults. Exercise the
+private external read-only adapter and assert original file inventories and
+blog outputs remain exact, without a remote promotion for local checks.
+Run focused contract/publisher/site/assembler checks through wrappers, then
+maintained m51/full/package gates. Cover draft/new/ID/time/Unicode/whitespace,
+128 KiB body and 256 KiB source exact/overflow boundaries for ASCII/Unicode
+filenames, long-body round trips and the same strict limits for nonempty drafts,
+safe real Markdown/media, unsafe HTML/URL/UTF-8/escapes, actual canonical render
+and inventory; add/edit/withdraw/stale/conflict/history loss/rollback and failed
+transfer/promotion/retry. Assert no-blog Memo build and no-Memo blog build,
+no-JS desktop/mobile empty/nonempty reading, focus/zoom/code/table overflow,
+static mount closure, two-way publication preservation and exact Docker cleanup.
+Historical owner conversion additionally verifies exact approved record count,
+UTC+8-to-UTC mapping, unchanged code/untouched spans, all media/link outcomes,
+actual clickable bare/angle/inline/reference link destinations,
+private-original hashes and byte-identical absent-only retries. Real corpus
+evidence stays private; synthetic regression fixtures contain no owner data.
+Actual cutover additionally verifies HTTPS/headers/assets, retained private
+recovery, exact stopped legacy processes and unchanged comments/blog boundaries.
+The host runtime fixture's `--config-check-only` runs real-jq negative cases
+and local build positives without the static image/deployment phase; synthetic
+jq adapters do not prove actual jq-expression correctness.
 
 ## 7. Wrong vs Correct
 
-Wrong: decode the latest export, compare only its epoch, and promote an older
-prebuilt memo page that still contains deleted text. Set the disabled epoch to
-zero or recover missing history by silently accepting a fresh empty record.
+Wrong: swap back to an old Memo symlink or call the full blog sync script to
+publish one Memo; accept missing private history as a new empty store.
 
-Correct: decode once, compare the actual copied DOM with the exact public
-envelope, retain the prior epoch while disabled, serialize only the validated
-snapshot and promote the coordinated candidate after all privacy/history gates.
+Correct: build a new validated Memo-only candidate against current history,
+check expected base under its lock, atomically switch its independent pointer,
+and prove the blog pointer/mirror and non-Memo bytes remain unchanged.
