@@ -266,10 +266,11 @@ data import was authorized; the subsequent owner decision is recorded below.
 On 2026-10-06 the owner explicitly confirmed authorship of the retained notes
 and authorized preparing them as public-eligible Memo sources in the selected
 external authoring directory. The owner approved implementation with UTC+8
-source timestamps. Task `10-06-typecho-memos-migration` is in progress;
-the external source migration, browser checks and independent review have passed;
-the owner approved the scoped Git/commit/archive batch, now being completed. No production
-publication has occurred.
+source timestamps. The external source migration, browser checks and independent
+review have passed. The owner-approved work was committed as `82131db`; task
+`10-06-typecho-memos-migration` is complete and archived under
+`.trellis/tasks/archive/2026-10/10-06-typecho-memos-migration/`.
+No production publication has occurred for this historical corpus.
 
 The retained 376-record memo ledger comes from HedgeDoc `Notes` bundled with
 the Typecho SQL backup, rather than a Typecho memo table. Read-only comparison
@@ -304,6 +305,6 @@ Later publication needs a validator image supporting the enlarged body contract.
 
 This decision supersedes historical-import exclusions only for this bounded
 owner corpus. Retained private originals, identity data and historical task
-snapshots remain unchanged. Current evidence and implementation status belong
-to the new task's PRD and research; they must not be reported as completed
-source migration or production acceptance.
+snapshots remain unchanged. The archived task's PRD and research record the
+completed local source migration. Local acceptance does not establish production
+publication of this corpus.

@@ -1,7 +1,8 @@
 # Execution and Acceptance Evidence
 
 Implementation is complete and independently checked. Git/commit/archive
-bookkeeping has received the required one-shot owner confirmation. No production
+bookkeeping received the required one-shot owner confirmation and the combined
+work was committed as `82131db`. The completed task is archived. No production
 publication, remote validator installation or SSH operation was performed.
 
 ## Corpus and Preservation
@@ -80,6 +81,6 @@ evidence above is from the corrected real candidate.
 No unresolved implementation defect or user content decision remains. Review
 classifies the mechanical import as `human-not-needed`; physical devices and
 production access were outside scope. Later remote publication must use a
-validator image supporting the enlarged body contract. Existing prior publisher
-work is still uncommitted; a coherent commit/finish plan must be owner-approved
-without silently including unrelated dirty files.
+validator image supporting the enlarged body contract. The owner approved the
+exact combined publisher/import commit scope; work commit `82131db` contains
+that reviewed scope and excludes external authoring content and private artifacts.
