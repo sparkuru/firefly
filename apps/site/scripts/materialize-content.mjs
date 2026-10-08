@@ -18,6 +18,7 @@ import {
   decideFireflyIgnore,
   loadFireflyIgnorePolicy
 } from './firefly-ignore.mjs';
+import { stageMemoSource, memoAggregateSource, copyMemoAssets } from './memo-source.mjs';
 import { addRuntimeFrontmatter } from '../src/lib/content-metadata.mjs';
 
 const siteRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -25,7 +26,7 @@ const defaultContentRoot = path.resolve(siteRoot, '../../content');
 export const generatedContentRoot = path.join(siteRoot, '.generated-content');
 export const generatedPostsRoot = path.join(generatedContentRoot, 'posts');
 export const generatedPagesRoot = path.join(generatedContentRoot, 'pages');
-const collections = Object.freeze(['posts', 'pages']);
+const collections = Object.freeze(['posts', 'pages', 'memos']);
 const unsafeSegment = /[\\/?#%\u0000-\u001f\u007f]/u;
 
 function safeDiagnosticPath(segments, collection = 'posts') {
@@ -287,7 +288,8 @@ async function copyFiles(files, targetRoot) {
       }
       const sourceBytes = await sourceHandle.readFile();
       const sourceText = sourceBytes.toString('utf8');
-      const withFrontmatter = addRuntimeFrontmatter(sourceText, {
+      if (Buffer.from(sourceText, 'utf8').compare(sourceBytes) !== 0) throw new Error('Invalid UTF-8 content source.');
+      const withFrontmatter = file.collection === 'memos' ? stageMemoSource(sourceText, 'memos/' + file.virtualPath).markdown : addRuntimeFrontmatter(sourceText, {
         collection: file.collection ?? 'posts',
         filename: path.basename(file.virtualPath),
         mtimeMs: file.mtimeMs
@@ -397,6 +399,10 @@ export async function scanContentWorkspace(sourceRoot = process.env.FIREFLY_CONT
   const inventory = {};
   for (const collection of collections) {
     const collectionRoot = path.join(root, collection);
+    if (collection === 'memos') {
+      const memoRoot = await lstat(collectionRoot).catch((error) => { if (error.code === 'ENOENT') return null; throw error; });
+      if (memoRoot === null) { inventory.memos = Object.freeze([]); continue; }
+    }
     const scanned = await scanMarkdownWorkspace(collectionRoot, {
       collection,
       policyRoot: root,
@@ -418,14 +424,31 @@ export async function materializeContentWorkspace({
     beforeCopy,
     beforePromote,
     copy: async (candidate) => {
+      const memoIds = new Set();
+      let latestMemoDate;
+      for (const file of inventory.memos) {
+        const handle = await open(file.sourcePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+        try {
+          const { id, data } = stageMemoSource(await handle.readFile('utf8'), 'memos/' + file.virtualPath);
+          const key = collisionKey(id);
+          if (memoIds.has(key)) throw new Error('Duplicate Memo ID.');
+          memoIds.add(key);
+          if (!data.draft && data.access.visibility === 'public' && (!latestMemoDate || data.date > latestMemoDate)) latestMemoDate = data.date;
+        } finally { await handle.close(); }
+      }
       for (const collection of collections) {
         const collectionTarget = path.join(candidate, collection);
         await mkdir(collectionTarget, { recursive: true });
         await copyFiles(inventory[collection], collectionTarget);
+        if (collection === 'memos') await copyMemoAssets(path.join(sourceRoot, 'memos'), collectionTarget);
+      }
+      if (!inventory.pages.some(({ virtualPath }) => virtualPath === 'memos.md')) {
+        await writeFile(path.join(candidate, 'pages/memos.md'), memoAggregateSource(latestMemoDate?.toISOString()));
       }
     }
   });
   return Object.freeze({
+    memos: inventory.memos.map(({ virtualPath }) => virtualPath),
     pages: inventory.pages.map(({ virtualPath }) => virtualPath),
     posts: inventory.posts.map(({ virtualPath }) => virtualPath)
   });

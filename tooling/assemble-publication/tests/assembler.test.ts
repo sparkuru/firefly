@@ -372,6 +372,7 @@ test('activation and emitted comment evidence agree across all four states', asy
     await writeAccess(site, { comments, memos });
     await writeFile(path.join(site, 'index.html'), comments ? '<section class="comment-section">Approved</section>' : '<h1>Home</h1>');
     const result = await assemblePublication({ repositoryRoot: root, discovery, ...(comments ? { comments: evidence } : {}) });
+    assert.ok(result.pluginAccess.schemaVersion === 1);
     assert.equal(result.pluginAccess.plugins.comments.enabled, comments);
     assert.equal(result.pluginAccess.plugins.memos.enabled, memos);
     assert.equal(result.memos.enabled, false);
@@ -412,6 +413,9 @@ test('caught promotion failure restores the prior release activation together wi
   await assert.rejects(assemblePublication({ repositoryRoot: root, discovery, beforePromotionRename: (step) => { if (step === 3) throw new Error('caught fixture rename'); } }), /caught fixture rename/u);
   assert.deepEqual(await readFile(path.join(root, 'artifacts/publication.json')), priorMetadata);
   assert.equal(JSON.parse(await readFile(path.join(root, 'dist/plugins.public.v1.json'), 'utf8')).plugins.memos.enabled, false);
+  assert.ok(prior.pluginAccess.schemaVersion === 1);
   assert.equal(prior.pluginAccess.plugins.memos.enabled, false);
-  assert.equal((await assemblePublication({ repositoryRoot: root, discovery })).pluginAccess.plugins.memos.enabled, true);
+  const current = await assemblePublication({ repositoryRoot: root, discovery });
+  assert.ok(current.pluginAccess.schemaVersion === 1);
+  assert.equal(current.pluginAccess.plugins.memos.enabled, true);
 });

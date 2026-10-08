@@ -36,7 +36,7 @@ snapshot still exists.
   image isolation, runtime packaging, and the maintained disposable static Memo
   lifecycle fixture use the explicit host Docker boundaries in the validation
   profile; their containers require exact ownership labels and cleanup.
-- The approved dependency direction is X Core → semantic/Terminal → site.
+- The approved dependency direction is X Core → semantic/Terminal/Memo → site.
   The validator feeds the site and assembler at build time; the assembler
   depends on the validator; NERV remains isolated.
 - The restored mainline is guided: the main session owns task

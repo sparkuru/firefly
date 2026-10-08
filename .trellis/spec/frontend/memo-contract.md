@@ -1,5 +1,11 @@
 # Owner Markdown Memo Contract
 
+Status: legacy recovery contract. New owner Memo documents follow
+[Memo Documents](./memo-document-contract.md), approved on 2026-10-07, including
+optional article metadata, exact source-body preservation and ordinary draft/
+access visibility. The wire restrictions below apply to retained exports only;
+they must not trim/reject new document bodies to satisfy the retired format.
+
 ## 1. Scope / Trigger
 
 Read when changing `plugins/memos/` or the independent owner publisher.

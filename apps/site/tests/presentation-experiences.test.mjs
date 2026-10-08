@@ -26,6 +26,7 @@ test('presentation experiences keep adapter registration and document dispatch t
       documentNavigator
     })),
     [
+      { id: 'memo', adapterId: 'memo', documentKind: 'memo', documentNavigatorId: 'none', documentNavigator: { kind: 'document-navigator', entry: 'fragment', supportsMobile: false } },
       {
         id: 'firefly',
         adapterId: 'firefly',

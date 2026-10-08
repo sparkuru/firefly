@@ -198,6 +198,13 @@ discover_content_mounts() {
 	content_mounts+=(--mount "type=bind,src=${content_root},dst=${content_root},readonly")
 	mounted_paths["${content_root}"]=1
 	directory_queue+=("${content_root}/posts" "${content_root}/pages")
+	if [[ -e "${content_root}/memos" || -L "${content_root}/memos" ]]; then
+		[[ -d "${content_root}/memos" && -r "${content_root}/memos" ]] || {
+			printf '[sam] optional memos/ must be a readable directory when present\n' >&2
+			return 1
+		}
+		directory_queue+=("${content_root}/memos")
+	fi
 
 	while ((queue_index < ${#directory_queue[@]})); do
 		current_directory=${directory_queue[queue_index]}

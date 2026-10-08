@@ -1,5 +1,24 @@
 # Firefly Validation Profile
 
+## Current Integrated Memo Gate
+
+New Memo is coordinated document content (2026-10-07), not an independent mount.
+Add `./sam npm --prefix presentations/memo ci`, `run check`, `run test`, `run build`
+before site consumers; run root `check:memo-documents`/`test:memo-documents` for
+offline import/authoring/install tools. Root maintained graphs include these.
+The integrated Memo fixture prepares static timeline/details plus empty/single
+variants; its browser matrix now includes desktop-static, desktop-interactive,
+mobile-static and mobile-interactive. Exercise vertical/horizontal scrubbing,
+native scroll, keyboard/touch, detail return, geometry and no-JS fallback.
+
+`./preview.sh verify` runs the integrated reader/build gate, then retained
+independent recovery and real version-1/version-2 Nginx checks. Runtime packaging
+uses version-2 site-owned Memo routes and rejects old combined-candidate input.
+Retain all failure artifacts and private source-correspondence evidence. Earlier
+independent publisher/mount descriptions below apply only to recovery fixtures.
+Real installed corpus build/asset/body checks supplement synthetic gates; none
+of these imply production deployment or physical-device certification.
+
 This is a project-specific command profile. It records the existing runtime
 boundary and does not authorize dependency installation, deployment, or
 credential use.

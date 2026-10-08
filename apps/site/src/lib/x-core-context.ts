@@ -8,6 +8,7 @@ import { projectCanonicalRoute } from './canonical-route.mjs';
 
 interface AuthoredDocumentMetadata {
   readonly slug?: string;
+  readonly id?: string;
   readonly layout: DocumentContext['layout'];
   readonly presentation?: string;
 }
@@ -18,6 +19,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isDocumentLayout(value: unknown): value is DocumentContext['layout'] {
   return (
+    value === 'memo' ||
     value === 'post' ||
     value === 'page' ||
     value === 'timeline' ||
@@ -37,9 +39,10 @@ function getFrontmatter(
     );
   }
 
-  const { slug, layout, presentation } = astro.frontmatter;
+  const { id, slug, layout, presentation } = astro.frontmatter;
 
   if (
+    (id !== undefined && typeof id !== 'string') ||
     (slug !== undefined && typeof slug !== 'string') ||
     !isDocumentLayout(layout) ||
     (presentation !== undefined && typeof presentation !== 'string')
@@ -51,13 +54,14 @@ function getFrontmatter(
   }
 
   return {
+    ...(id ? { id } : {}),
     ...(slug ? { slug } : {}),
     layout,
     ...(presentation ? { presentation } : {})
   };
 }
 
-function stagedRelativePath(filePath: string | undefined, collection: 'posts' | 'pages'): string | undefined {
+function stagedRelativePath(filePath: string | undefined, collection: 'posts' | 'pages' | 'memos'): string | undefined {
   if (!filePath) {
     return undefined;
   }
@@ -75,11 +79,11 @@ function stagedRelativePath(filePath: string | undefined, collection: 'posts' | 
 
 export const resolveDocumentContext: DocumentContextResolver = (file) => {
   const metadata = getFrontmatter(file.data);
-  const collection = metadata.layout === 'post' ? 'posts' : 'pages';
+  const collection = metadata.layout === 'memo' ? 'memos' : metadata.layout === 'post' ? 'posts' : 'pages';
   const relativePath = stagedRelativePath(file.path, collection);
   const slug = (collection === 'posts'
     ? metadata.slug ?? relativePath?.split('/').at(-1)?.replace(/\.md$/u, '')
-    : metadata.slug);
+    : collection === 'memos' ? metadata.id : metadata.slug);
   if (slug === undefined) {
     throw xCoreError('XCORE_CONTEXT_RESOLUTION', 'Astro document path cannot be mapped to a canonical route.');
   }

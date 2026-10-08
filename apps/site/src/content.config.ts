@@ -1,23 +1,20 @@
 import { defineCollection } from 'astro:content';
-import { glob } from 'astro/loaders';
-import { pageSchema, postSchema } from './lib/content-schema.mjs';
+import { memoSchema, pageSchema, postSchema } from './lib/content-schema.mjs';
+import { workspaceCollectionLoader } from './lib/workspace-collection-loader.mjs';
 
 const posts = defineCollection({
-  loader: glob({
-    pattern: '**/*.md',
-    base: '.generated-content/posts',
-    generateId: ({ entry }) => entry.replaceAll('\\', '/')
-  }),
+  loader: workspaceCollectionLoader('posts'),
   schema: postSchema
 });
 
 const pages = defineCollection({
-  loader: glob({
-    pattern: '**/*.md',
-    base: '.generated-content/pages',
-    generateId: ({ entry }) => entry.replaceAll('\\', '/')
-  }),
+  loader: workspaceCollectionLoader('pages'),
   schema: pageSchema
 });
 
-export const collections = { posts, pages };
+const memos = defineCollection({
+  loader: workspaceCollectionLoader('memos'),
+  schema: memoSchema
+});
+
+export const collections = { posts, pages, memos };

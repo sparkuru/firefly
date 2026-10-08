@@ -1,5 +1,73 @@
 # Plugin Public Access Contract
 
+## Current Version-2 Contract
+
+### 1. Scope / Trigger
+
+New coordinated releases follow the 2026-10-07 Memo document decision. Comments
+remains gated; Memo is site-owned document content. The version-1 contract below
+applies to retained releases. Its comments privacy/origin/floor rules still apply
+to current releases. Never apply old independent Memo sync to a new release;
+production cutover requires separate operator approval.
+
+### 2. Signatures
+
+`decodePluginAccess` strictly accepts versions 1 and 2; config projection emits
+version 2. Every active server calls `pluginForPublicPath(pathname, access)` with
+the validated release; omitting access retains legacy version-1 classification.
+`PLUGIN_ACCESS_PATH` is `plugins.public.v2.json`; `LEGACY_PLUGIN_ACCESS_PATH` is
+`plugins.public.v1.json`. Version 2 is exactly
+`{ schemaVersion: 2, plugins: { comments: { enabled: boolean } } }`.
+
+### 3. Contracts
+
+`readPluginAccess` requires exactly one snapshot, matching filename/schema and
+marker closure. Version 2 never emits Memo markers. Reserve both filenames and
+the marker root. Cross-version rewriting of an existing release fails; build a
+fresh candidate. Deprecated Memo TOML is validated input with guidance and no
+new document visibility effect. Snapshots contain no paths/origins/owner data.
+
+Comments false still gates every `/v1/comments` branch/method before proxy/CORS,
+without erasing private history. Version 2 serves `/pages/memos/` details/assets
+and the site-owned `/memos/` compatibility index. Version 1 retains independent
+Memo gating. Nginx follows current release state without cached marker decisions;
+no old receipt/export path becomes public. Active preview/package requires v2
+and rejects `FIREFLY_MEMOS_CANDIDATE`; v1 recovery fixtures stay intact. See
+[Memo Documents](./memo-document-contract.md).
+
+### 4. Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Mixed snapshot files, wrong filename/schema or markers | Reject release |
+| Version 2 contains Memo/extra fields/nonboolean enabled | Strict decode error |
+| Version 1 disabled Memo with retained bytes | Preserve historical 404 |
+| Version 2 with deprecated Memo flag false | Public Memo follows document rules |
+| Version 2 comments false with responding upstream | Gate before proxy/method handling |
+| Version 1 selected for active preview/package | Require rebuild; no reinterpretation |
+
+### 5. Good / Base / Bad Cases
+
+Good: coordinated Memo and comments-only v2 alongside intact retained v1 meaning.
+Base: comments false and an empty Memo timeline. Bad: assume `.plugins.memos`
+exists on v2 or emit both versions to evade release closure.
+
+### 6. Tests Required
+
+Assert exact shapes/filenames, mixed markers, reserved routes and current server
+classification. Real disposable Nginx tests cover all v1 combinations, v2 comments
+on/off, repeated version switches without reload, headers/methods/redirects and
+private paths. Verify retained bytes/history and exact labeled cleanup. Run new
+integrated browser/full/package gates as well as legacy recovery coverage.
+
+### 7. Wrong vs Correct
+
+Wrong: omit release state from the active classifier and read Memo activation.
+Correct: pass validated state; only read Memo activation after explicit
+`schemaVersion === 1` narrowing, keeping new document visibility separate.
+
+## Retained Version-1 Contract
+
 ## 1. Scope / Trigger
 
 Read when changing plugin registration/activation, site build state, assembler

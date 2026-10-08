@@ -2,10 +2,9 @@
   "id": "memos",
   "version": "0.2.0",
   "configNamespace": "plugins.memos",
-  "capabilities": ["site-navigation", "independent-publication"],
+  "capabilities": ["legacy-recovery"],
   "entrypoints": {
     "config": "plugins/memos/config.mjs",
-    "site": "apps/site/src/lib/site-plugins.ts",
     "publication": "tooling/publish-memos/src/index.mjs",
     "cli": "tooling/publish-memos/src/cli.mjs"
   }

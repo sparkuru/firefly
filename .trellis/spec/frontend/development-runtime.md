@@ -1,5 +1,17 @@
 # Frontend Development Runtime
 
+## Current Memo Development Path
+
+New Memo uses the coordinated content build and registered Memo adapter.
+Root maintained delegates install/build/check/test `presentations/memo` before
+site consumers; historical M2 names delegate to the complete M3 graph. Pinned
+integrated fixtures/browser tests exercise the new reader. Active preview and
+package require version-2 access and refuse `FIREFLY_MEMOS_CANDIDATE`. Independent
+publisher/runtime commands below remain recovery tooling only, and old owner
+README command guidance is intentionally pending owner-controlled maintenance.
+Use [Memo Documents](./memo-document-contract.md) and the current
+[validation profile](../trellis-plus/validation-profile.md) for new work.
+
 ## Scenario: Containerized Frontend Commands and Browser Validation
 
 ### 1. Scope / Trigger

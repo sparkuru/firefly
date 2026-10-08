@@ -117,10 +117,11 @@ function contextFromResolver(
     !isNonEmptyString(resolved.slug) ||
     (resolved.sourcePath !== undefined &&
       !isNonEmptyString(resolved.sourcePath)) ||
-    (resolved.collection !== 'posts' && resolved.collection !== 'pages') ||
+    (resolved.collection !== 'posts' && resolved.collection !== 'pages' && resolved.collection !== 'memos') ||
     (resolved.layout !== 'post' &&
       resolved.layout !== 'page' &&
       resolved.layout !== 'timeline' &&
+      resolved.layout !== 'memo' &&
       resolved.layout !== 'files') ||
     (resolved.presentation !== undefined &&
       typeof resolved.presentation !== 'string')

@@ -20,7 +20,7 @@ async function fixture() {
     await mkdir(path.dirname(path.join(root, file)), { recursive: true });
     await writeFile(path.join(root, file), 'fixture');
   }
-  await writeFile(path.join(root, 'dist/plugins.public.v1.json'), JSON.stringify({ schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled: false } } }));
+  await writeFile(path.join(root, 'dist/plugins.public.v2.json'), JSON.stringify({ schemaVersion: 2, plugins: { comments: { enabled: false } } }));
   for (const folder of ['content/posts', 'content/pages', 'tooling/publish-memos/ops', 'tooling/plugin-access']) await mkdir(path.join(root, folder), { recursive: true });
   await writeFile(path.join(root, 'tooling/publish-memos/ops/check-runtime.sh'), '#!/usr/bin/env bash\nprintf "host-memo\\n" >> "$FIXTURE_LOG"\n', { mode: 0o755 });
   await writeFile(path.join(root, 'tooling/plugin-access/check-runtime.sh'), '#!/usr/bin/env bash\nprintf "host-plugins\\n" >> "$FIXTURE_LOG"\n', { mode: 0o755 });
@@ -79,9 +79,7 @@ console.log(JSON.stringify([{State:{Running:true},Config:{Image:'node:22-alpine'
   // The browser image does not require host jq. The fixture supplies Docker's
   // inspection projections, keeping Docker/address behavior independent of it.
   await writeFile(path.join(root, 'bin/jq'), `#!/usr/bin/env node
-import { readFileSync } from 'node:fs';
 const args=process.argv.slice(2);
-if(args[1]==='.plugins.memos.enabled') { console.log(JSON.parse(readFileSync(args[2],'utf8')).plugins.memos.enabled);process.exit(0); }
 let input='';for await (const part of process.stdin) input+=part;
 const json=JSON.parse(input)[0];const vars={};
 for(let i=0;i<args.length;i++) if(args[i]==='--arg'){vars[args[i+1]]=args[i+2];i+=2;}
@@ -143,13 +141,15 @@ test('build chooses publication gate without starting services, including export
   assert.doesNotMatch(calls, /docker:/u);
 }));
 
-test('dev rejects selected static Memo composition before validation or Docker startup', () => withFixture(async (f) => {
+test('active preview rejects retired independent Memo composition before Docker startup', () => withFixture(async (f) => {
   const candidate = path.join(f.root, 'memo-candidate');
   await mkdir(candidate);
-  await assert.rejects(f.run(['dev'], { FIREFLY_MEMOS_CANDIDATE: candidate }), (error) => {
-    assert.match(error.stderr, /Memo composition requires the static publication preview; use start or preview instead of dev/u);
-    return true;
-  });
+  for (const command of ['dev', 'start', 'preview', 'package']) {
+    await assert.rejects(f.run([command], { FIREFLY_MEMOS_CANDIDATE: candidate }), (error) => {
+      assert.match(error.stderr, /FIREFLY_MEMOS_CANDIDATE is retired for active previews\/packages/u);
+      return true;
+    });
+  }
   await assert.rejects(f.log(), { code: 'ENOENT' });
   await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
 }));
@@ -191,17 +191,18 @@ test('mode/config changes preserve the running preview and require explicit stop
   assert.doesNotMatch(await f.log(), /docker:(stop|rm)/u);
 }));
 
-test('static preview rejects unsafe activation and enabled Memo without a selected artifact before service startup', () => withFixture(async (f) => {
+test('static preview rejects unsafe activation and retained v1 releases before service startup', () => withFixture(async (f) => {
   await assert.rejects(f.run([], { FIXTURE_METADATA_EXIT: '26' }), { code: 26 });
   assert.doesNotMatch(await f.log(), /:env PUBLICATION_PORT=/u);
+  await rm(path.join(f.root, 'dist/plugins.public.v2.json'));
   await writeFile(path.join(f.root, 'dist/plugins.public.v1.json'), JSON.stringify({ schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled: true } } }));
-  await assert.rejects(f.run(), (error) => error.code === 1 && /enabled Memo preview\/package requires/u.test(error.stderr));
+  await assert.rejects(f.run(), (error) => error.code === 1 && /requires an integrated version-2 release/u.test(error.stderr));
   assert.doesNotMatch(await f.log(), /:env PUBLICATION_PORT=/u);
 }));
 
 test('activation changes require a fresh preview instead of silently reusing its old gate snapshot', () => withFixture(async (f) => {
   await f.run();
-  await writeFile(path.join(f.root, 'dist/plugins.public.v1.json'), JSON.stringify({ schemaVersion: 1, plugins: { comments: { enabled: true }, memos: { enabled: false } } }));
+  await writeFile(path.join(f.root, 'dist/plugins.public.v2.json'), JSON.stringify({ schemaVersion: 2, plugins: { comments: { enabled: true } } }));
   await assert.rejects(f.run(['start']), (error) => error.code === 1 && /configuration differs/u.test(error.stderr));
   assert.doesNotMatch(await f.log(), /docker:(stop|rm)/u);
 }));

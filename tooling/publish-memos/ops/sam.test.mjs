@@ -21,7 +21,30 @@ test('sam publisher mode ignores absent blog and adds only selected narrow Memo 
   assert.ok(args.includes(`type=bind,src=${root}/.firefly/memos/work,dst=${root}/.firefly/memos/work`));
   assert.ok(!args.some((arg) => arg.includes('FIREFLY_CONTENT_ROOT') || arg.includes('FIREFLY_COMMENTS_EXPORT') || arg.includes('FIREFLY_SITE_CONFIG_PATH')));
   assert.ok(!args.some((arg) => arg.includes('/missing/')));
+  const writable = JSON.parse((await execute(path.join(root, 'sam'), ['node', '--version'], { env: { ...env, SAM_MEMOS_SOURCE_WRITABLE: '1' } })).stdout);
+  assert.ok(writable.includes(`type=bind,src=${root}/source,dst=${root}/source`));
+  assert.ok(!writable.includes(`type=bind,src=${root}/source,dst=${root}/source,readonly`));
   await symlink(path.join(root, 'source'), path.join(root, 'linked-source'));
   await assert.rejects(execute(path.join(root, 'sam'), ['node', '--version'], { env: { ...env, SAM_MEMOS_SOURCE_ROOT: path.join(root, 'linked-source') } }), /canonical regular directory/u);
   await assert.rejects(execute(path.join(root, 'sam'), ['node', '--version'], { env: { ...env, SAM_MEMOS_WORK_ROOT: '/tmp' } }), /broad system/u);
+});
+
+test('blog mode scans optional Memo links read-only and rejects broken Memo inputs', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-sam-documents-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const dir of ['tooling/shared', 'bin', 'content/posts', 'content/pages', 'content/memos', 'external']) await mkdir(path.join(root, dir), { recursive: true });
+  await copyFile(path.join(realRoot, 'sam'), path.join(root, 'sam'));
+  await copyFile(path.join(realRoot, 'tooling/shared/dev-env.sh'), path.join(root, 'tooling/shared/dev-env.sh'));
+  await writeFile(path.join(root, 'bin/docker'), '#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify(process.argv.slice(2)));\n', { mode: 0o755 });
+  await writeFile(path.join(root, 'external/linked.md'), 'Fixture');
+  await symlink(path.join(root, 'external/linked.md'), path.join(root, 'content/memos/linked.md'));
+  const env = { ...process.env, PATH: `${root}/bin:${process.env.PATH}`, SAM_CONTENT_MODE: 'blog', FIREFLY_CONTENT_ROOT: path.join(root, 'content'), FIREFLY_COMMENTS_EXPORT: '', FIREFLY_SITE_CONFIG_PATH: '', SAM_MEMOS_SOURCE_ROOT: '', SAM_MEMOS_WORK_ROOT: '', FIREFLY_MEMOS_CANDIDATE: '' };
+  const args = JSON.parse((await execute(path.join(root, 'sam'), ['node', '--version'], { env })).stdout);
+  assert.ok(args.includes(`type=bind,src=${root}/external/linked.md,dst=${root}/external/linked.md,readonly`));
+  await symlink(path.join(root, 'missing'), path.join(root, 'content/memos/broken.md'));
+  await assert.rejects(execute(path.join(root, 'sam'), ['node', '--version'], { env }), /broken content symlink/u);
+  await rm(path.join(root, 'content/memos'), { recursive: true });
+  await assert.doesNotReject(execute(path.join(root, 'sam'), ['node', '--version'], { env }));
+  await writeFile(path.join(root, 'content/memos'), 'not a directory');
+  await assert.rejects(execute(path.join(root, 'sam'), ['node', '--version'], { env }), /optional memos/u);
 });

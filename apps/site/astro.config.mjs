@@ -1,3 +1,6 @@
+import { rehypeMemoMarkdown } from './src/build/memo-markdown.mjs';
+import { rehypeMemoBodyCompatibility } from './src/build/memo-body-compatibility.mjs';
+import { createMemoAssetsIntegration } from './src/build/memo-assets.mjs';
 import { diagramPipelineVersion, rehypeMermaid } from './src/build/mermaid-markdown.mjs';
 import { createMermaidIntegration } from './src/build/mermaid-assets.mjs';
 import { createPluginAccessIntegration } from './src/build/plugin-access.mjs';
@@ -32,7 +35,7 @@ export default defineConfig({
   // Content HTML and generated diagrams share the same cold-cache boundary.
   cacheDir: './.astro/cache/',
   trailingSlash: 'always',
-  integrations: [createSiteSeoIntegration(), createMermaidIntegration(), createPluginAccessIntegration()],
+  integrations: [createSiteSeoIntegration(), createMermaidIntegration(), createPluginAccessIntegration(), createMemoAssetsIntegration()],
   markdown: {
     syntaxHighlight: siteSyntaxHighlight,
     processor: unified({
@@ -40,9 +43,11 @@ export default defineConfig({
       rehypePlugins: [
         rehypeRaw,
         [rehypeSanitize, markdownHtmlSchema],
+        [rehypeMemoBodyCompatibility, { resolveContext: resolveDocumentContext }],
         siteRehypeShiki,
         [rehypeMermaid, { resolveContext: resolveDocumentContext, pipelineVersion: diagramPipelineVersion }],
-        xCorePlugins.rehypePlugin
+        xCorePlugins.rehypePlugin,
+        [rehypeMemoMarkdown, { resolveContext: resolveDocumentContext }]
       ],
       remarkRehype: { allowDangerousHtml: true }
     })

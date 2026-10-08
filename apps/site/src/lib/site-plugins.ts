@@ -16,8 +16,8 @@ import type { CommentsActivationConfig } from '../../../../plugins/comments/conf
 
 const COMMENTS_PLUGIN_ID = 'comments' as const;
 
-// Standalone routes do not participate in the post-extension registry.
-export const MEMOS_SITE_PLUGIN = Object.freeze({ id: 'memos', route: '/memos/', capability: 'external-static-page' });
+// Memo document pages do not participate in the post-extension registry.
+export const MEMOS_SITE_PLUGIN = Object.freeze({ id: 'memos', route: '/pages/memos/', capability: 'document-page' });
 
 export interface CommentsPostExtension {
   readonly pluginId: typeof COMMENTS_PLUGIN_ID;
@@ -78,6 +78,7 @@ const commentsPlugin: SitePlugin<SitePluginConfig> = {
 export const SITE_PLUGIN_REGISTRY = new SitePluginRegistry<SitePluginConfig>().register(commentsPlugin);
 
 function toBuildDocument(canonical: CanonicalDocument): SiteBuildDocument {
+  if (canonical.collection === 'memos') throw new TypeError('Memo documents do not participate in post extensions.');
   return {
     id: canonical.href,
     route: canonical.href,

@@ -23,6 +23,30 @@ test('on/off/on emission removes only validated stale markers and preserves ordi
   }
 });
 
+test('integrated snapshots preserve comments gating without a Memo marker', async (context) => {
+  const root = await fixture(context);
+  for (const enabled of [false, true, false]) {
+    const access = { schemaVersion: 2, plugins: { comments: { enabled } } };
+    await writePluginAccess(root, access);
+    assert.deepEqual(await readPluginAccess(root), access);
+    assert.deepEqual((await readdir(root)).sort(), (enabled ? ['plugin-access', 'plugins.public.v2.json'] : ['plugins.public.v2.json']).sort());
+  }
+  await assert.rejects(writePluginAccess(root, state()), /fresh release/u);
+  await writeFile(path.join(root, 'plugins.public.v1.json'), JSON.stringify(state()));
+  await assert.rejects(readPluginAccess(root), /exactly one/u);
+});
+
+test('versioned snapshot names and schema must agree; Memo markers contradict v2', async (context) => {
+  const root = await fixture(context);
+  await writeFile(path.join(root, 'plugins.public.v2.json'), JSON.stringify(state()));
+  await assert.rejects(readPluginAccess(root), /schema and filename/u);
+  await rm(path.join(root, 'plugins.public.v2.json'));
+  await writePluginAccess(root, { schemaVersion: 2, plugins: { comments: { enabled: false } } });
+  await mkdir(path.join(root, 'plugin-access'));
+  await writeFile(path.join(root, 'plugin-access/memos.enabled'), 'enabled\n');
+  await assert.rejects(readPluginAccess(root), /disagree/u);
+});
+
 test('missing activation and contradictory positive markers fail closed', async (context) => {
   const root = await fixture(context);
   await assert.rejects(readPluginAccess(root), /rebuild/u);

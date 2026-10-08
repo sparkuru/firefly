@@ -4,9 +4,9 @@ import {
   xCoreError,
   type OutlineItem
 } from '@firefly/x-core';
-import type { PublicPage, PublicPost } from './content';
+import type { PublicPage, PublicPost, PublicMemo } from './content';
 
-export type PublicDocument = PublicPost | PublicPage;
+export type PublicDocument = PublicPost | PublicPage | PublicMemo;
 
 function normalizeHeadingText(text: string) {
   return text.replace(/\s+/gu, ' ').trim();
@@ -67,6 +67,7 @@ export async function renderDocument(entry: PublicDocument) {
   return {
     Content: rendered.Content,
     headings: rendered.headings,
-    metadata
+    metadata,
+    memoPreview: rendered.remarkPluginFrontmatter.memoPreview as undefined | { html: string; truncated: boolean }
   };
 }

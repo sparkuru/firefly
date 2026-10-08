@@ -33,7 +33,7 @@ check_host_config() {
 		'{"assetsRoot":null}' '{"assetsRoot":false}' '{"deploymentRoot":null}' \
 		'{"sshTarget":null}' '{"knownHosts":null}' '{"sshConfig":null}' '{"remoteImage":null}'; do
 		jq --argjson invalid "${invalid}" '. + $invalid' "${base_config}" >"${config_file}"
-		if "${REPO_ROOT}/tooling/publish-memos/publish.sh" publish --local --config "${config_file}" >"${config_log}" 2>&1; then
+		if "${REPO_ROOT}/tooling/publish-memos/publish.sh" build --config "${config_file}" >"${config_log}" 2>&1; then
 			printf '[memos-runtime] invalid publisher config was accepted\n' >&2
 			return 1
 		fi
@@ -108,6 +108,6 @@ main() {
 	[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "${origin}/memos/receipt.json")" == 404 ]]
 	[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "${origin}/memos/")" == 403 ]]
 	[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "${origin}/v1/memos/submissions")" == 404 ]]
-	printf '[memos-runtime] independent publication, reciprocal preservation and read-only static mount passed\n'
+	printf '[memos-runtime] retained legacy publication, reciprocal preservation and read-only recovery mount passed\n'
 }
 main "$@"

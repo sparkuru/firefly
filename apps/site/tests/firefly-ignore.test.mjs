@@ -164,6 +164,7 @@ test('materializer filters both collections before reservation and never copies 
 
   const inventory = await materializeContentWorkspace({ sourceRoot: source, targetRoot: target });
   assert.deepEqual(inventory, {
+    memos: [],
     posts: ['collision.md', 'notes/keep.md', 'public.md'],
     pages: ['about.md', 'internal/keep.md']
   });

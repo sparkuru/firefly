@@ -16,8 +16,19 @@ test('all four activation states are exact frozen deterministic public projectio
     assert.ok(Object.isFrozen(decoded) && Object.isFrozen(decoded.plugins) && Object.isFrozen(decoded.plugins.comments));
     assert.deepEqual(enabledMarkerPaths(decoded), [comments && 'plugin-access/comments.enabled', memos && 'plugin-access/memos.enabled'].filter(Boolean));
     assert.equal(serializePluginAccess(decoded), serializePluginAccess({ plugins: { memos: { enabled: memos }, comments: { enabled: comments } }, schemaVersion: 1 }));
-    assert.deepEqual(pluginAccessFromConfig({ plugins: { comments: { enabled: comments, configPath: 'private.toml' }, memos: { enabled: memos, configPath: 'private.toml' } } }), value);
+    assert.deepEqual(pluginAccessFromConfig({ plugins: { comments: { enabled: comments, configPath: 'private.toml' }, memos: { enabled: memos, configPath: 'private.toml' } } }), { schemaVersion: 2, plugins: { comments: { enabled: comments } } });
     assert.ok(!serializePluginAccess(decoded).includes('private'));
+  }
+});
+
+test('integrated releases own Memo as documents and reject mixed plugin namespaces', () => {
+  for (const enabled of [true, false]) {
+    const access = decodePluginAccess({ schemaVersion: 2, plugins: { comments: { enabled } } });
+    assert.equal(pluginForPublicPath('/memos/', access), null);
+    assert.equal(pluginForPublicPath('/pages/memos/m_example/', access), null);
+    assert.equal(pluginForPublicPath('/v1/comments/', access), 'comments');
+    assert.deepEqual(enabledMarkerPaths(access), enabled ? ['plugin-access/comments.enabled'] : []);
+    assert.throws(() => decodePluginAccess({ ...state(), schemaVersion: 2 }), /exactly/u);
   }
 });
 

@@ -1,5 +1,69 @@
 # Content Workspace, Virtual Filesystem, and Document Navigator Contract
 
+## Current Memo Document Extension
+
+The 2026-10-07 [Memo Documents](./memo-document-contract.md) contract extends the
+selected workspace with optional `memos/`, a separate public Memo collection,
+minimal metadata and native Memo reading routes. It supersedes older statements
+here restricting every document to posts/pages or reserving Memo for independent
+publication. Ordinary post/page authoring, exact homepage templates, guest
+projection, containment and diagnostics below remain unchanged. The aggregate
+is one compact Pages entry; Memo bodies do not enter home templates or a new
+VFS root. Memo-only/empty inputs still own native posts/pages directory mounts;
+private nested branches stay excluded. Read full applicable sections, not only
+the truncated injected prefix.
+
+## Scenario: Warm Empty Collection Withdrawal
+
+### 1. Scope / Trigger
+
+Apply when clearing a collection, changing selected sources, or changing Astro
+loaders/cache behavior. Astro 7.1.6 glob returns before pruning untouched entries
+when no Markdown matches; retained cache records can otherwise republish removed
+content. Exact source/output inventory caught this real failure.
+
+### 2. Signatures
+
+`workspaceCollectionLoader(collection: 'posts' | 'pages' | 'memos'): Loader` in
+`apps/site/src/lib/workspace-collection-loader.mjs` and its `.d.mts` facade wrap
+the normal glob loader over `.generated-content/<collection>/**/*.md`.
+
+### 3. Contracts
+
+Inspect staged regular Markdown matches, not directory nonemptiness. Before
+delegating an empty match set, call the collection-scoped `context.store.clear()`.
+Keep standard glob loading/watch/diagnostics for populated inputs. Apply to all
+three collections. Retained assets do not preserve withdrawn records; private
+source projection and native top-level directories keep their existing rules.
+
+### 4. Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Warm populated collection becomes empty | No previous document route/body remains |
+| Empty Markdown set with retained source assets | Empty content; no unreferenced public media |
+| Current staged metadata has no ID present in dist | Exact inventory failure, never accept cache output |
+| Invalid staged input/schema | Existing input/build failure; no empty fallback |
+
+### 5. Good / Base / Bad Cases
+
+Good: delete the last Memo/post and rebuild normally; its route disappears.
+Base: an empty clone has native directory indexes and an empty Memo page.
+Bad: add a stale ID to expected output, or require users to wipe `.astro`.
+
+### 6. Tests Required
+
+Build populated synthetic Memo and posts, remove both while retaining an
+unreferenced asset, rebuild without `--force`/cache deletion, and assert no old
+IDs/routes/media plus honest empty views. Static tests derive visible Memo
+routes from independently validated staged metadata and compare exact sets.
+Run site check/build/static plus full publication/browser gates.
+
+### 7. Wrong vs Correct
+
+Wrong: broaden the output whitelist after finding cached IDs absent from source.
+Correct: repair scoped loader state and keep exact source-derived equality.
+
 ## Scenario: Workspace-Backed Static Content
 
 ### 1. Scope / Trigger

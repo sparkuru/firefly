@@ -301,13 +301,13 @@ test('bootstrap explicitly preserves inherited legacy deletion floors without sy
   for (const initialDeletionFloor of [-1, -0, 1.5, Number.MAX_SAFE_INTEGER + 1, '7']) await assert.rejects(f.build({ initialDeletionFloor }));
 });
 
-test('CLI enforces arguments and emits usable build/state/validate/new output without source bodies', async (t) => {
+test('legacy CLI provides explicit recovery and refuses retired creation/push paths', async (t) => {
   const f = fixture(t);
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const run = (...args) => spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
   const draft = run('new', 'cli-note', '--source-root', f.sourceRoot);
-  assert.equal(draft.status, 0, draft.stderr);
-  assert.equal(JSON.parse(draft.stdout).filename, 'cli-note.md');
+  assert.notEqual(draft.status, 0);
+  assert.match(draft.stderr, /memo-documents\/cli.mjs new/u);
   f.write('Sensitive source body');
   const output = path.join(f.root, 'cli-candidate');
   const built = run('build', '--source-root', f.sourceRoot, '--output-root', output, '--display-name', 'Owner');

@@ -29,10 +29,11 @@
 | [Experiment Publication](./publication-contract.md) | Manifests, isolated builds, safe static assembly, and runtime inventory | Established |
 | [Comments and Publication](./comments-publication-contract.md) | Private write service and static public read projection | Established |
 | [Plugin Public Access](./plugin-public-access-contract.md) | Unified public activation, release-bound markers, route gates and retained history | Established |
-| [Memo Contract](./memo-contract.md) | Owner Markdown schema-2 wire/config contract and strict decoding | Owner publisher |
+| [Memo Documents](./memo-document-contract.md) | Unified document collection, independent reader, time scrubbing and coordinated import/build | Active |
+| [Memo Contract](./memo-contract.md) | Retained schema-2 wire/config decoding for recovery | Legacy recovery |
 | [Memo Service](./memo-service-contract.md) | Retired visitor/mail boundary and retained private recovery | Retired |
-| [Memo Site](./memo-site-contract.md) | Public activation, blog discovery and independent static reading | Owner publisher |
-| [Memo Publication and Runtime](./memo-publication-runtime-contract.md) | Independent candidate/receipt/pointer, automatic push, retained history and blog preservation | Owner publisher |
+| [Memo Site](./memo-site-contract.md) | Retained v1 independent reader/gate meaning | Legacy recovery |
+| [Memo Publication and Runtime](./memo-publication-runtime-contract.md) | Retained candidates/receipts/deletion history and recovery runtime | Legacy recovery |
 | [Site Configuration](./site-configuration-contract.md) | Public TOML, SEO, and content themes | Established |
 | [Homepage Search](./homepage-search-contract.md) | Public metadata/body search, mobile UI lifecycle, failure recovery and validation | Established |
 | [Mobile Experience](./mobile-experience-contract.md) | Native mobile homepage, absent Terminal ownership, input-mode transitions and article-reading policy | Established |

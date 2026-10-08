@@ -1,9 +1,10 @@
+import { memoPresentation } from '@firefly/presentation-memo';
 import { semanticPresentation } from '@firefly/presentation-semantic';
 import { terminalPresentation } from '@firefly/presentation-terminal';
 import type { PresentationAdapter } from '@firefly/x-core';
 import type { DocumentNavigatorProfile, ResolvedDocumentNavigatorProfile } from './document-navigation.ts';
 
-export type PresentationDocumentKind = 'semantic' | 'terminal';
+export type PresentationDocumentKind = 'semantic' | 'terminal' | 'memo';
 export type DocumentNavigatorExitPolicy = 'home' | 'local';
 
 export interface PresentationExperienceDefinition {
@@ -142,7 +143,7 @@ function freezeExperience(definition: PresentationExperienceDefinition): Present
     );
   }
 
-  if (definition.documentKind !== 'semantic' && definition.documentKind !== 'terminal') {
+  if (definition.documentKind !== 'semantic' && definition.documentKind !== 'terminal' && definition.documentKind !== 'memo') {
     throw new TypeError(`Presentation experience "${definition.id}" has an unsupported document kind.`);
   }
 
@@ -201,6 +202,7 @@ export function createPresentationExperienceRegistry(
 }
 
 export const PRESENTATION_EXPERIENCES = createPresentationExperienceRegistry([
+  { id: 'memo', adapter: memoPresentation, documentKind: 'memo', documentNavigatorId: 'none', documentNavigatorExit: 'local', documentNavigator: { kind: 'document-navigator', entry: 'fragment' } },
   {
     id: 'firefly',
     adapter: terminalPresentation,

@@ -1,0 +1,14 @@
+---
+import DocumentPresentation from '../../../components/DocumentPresentation.astro';
+import { getCanonicalContent, type CanonicalDocument } from '../../../lib/content';
+import { renderDocument } from '../../../lib/render-document';
+export async function getStaticPaths() {
+  return (await getCanonicalContent()).memos.map((canonical) => ({
+    params: { id: canonical.entry.collection === 'memos' ? canonical.entry.data.id : '' }, props: { canonical }
+  }));
+}
+interface Props { canonical: CanonicalDocument; }
+const { canonical } = Astro.props;
+const document = await renderDocument(canonical.entry);
+---
+<DocumentPresentation canonical={canonical} document={document} />

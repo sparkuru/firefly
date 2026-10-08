@@ -1,0 +1,37 @@
+---
+import SiteHead from '../components/SiteHead.astro';
+import { SITE_CONFIG } from '../lib/site-config.mjs';
+import stylesheet from '../styles/memo.css?url';
+
+interface Props {
+  title?: string;
+  description: string;
+  pathname: string;
+  htmlTitle?: string;
+  canonical?: string;
+  seoImage?: string;
+  noindex?: boolean;
+  date?: Date;
+  updated?: Date;
+  collection?: 'posts' | 'pages' | 'memos';
+}
+const { title, description, ...head } = Astro.props;
+---
+<!doctype html>
+<html lang={SITE_CONFIG.site.language}>
+  <head>
+    <SiteHead title={title} description={description} {...head} />
+    <link rel="stylesheet" href={stylesheet} />
+  </head>
+  <body class="memo-page">
+    <a class="memo-skip" href="#main-content">Skip to content</a>
+    <header class="memo-header" data-memo-header>
+      <nav aria-label="Primary navigation">
+        <a class="memo-site-name" href="/">{SITE_CONFIG.site.name}</a>
+        <div><a href="/">Home</a><a href="/pages/">Pages</a><a href="/pages/memos/" aria-current={Astro.url.pathname.startsWith("/pages/memos/") ? "page" : undefined}>Memos</a></div>
+      </nav>
+    </header>
+    <main id="main-content" class="memo-main" tabindex="-1"><slot /></main>
+    <footer class="memo-footer">Notes, through time.</footer>
+  </body>
+</html>

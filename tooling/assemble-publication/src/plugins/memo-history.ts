@@ -2,7 +2,7 @@ import { lstat, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { normalizeCommentsPublicationMetadata, walkSafeTree, type CommentsPublicationMetadata } from '../index.js';
-import { decodePluginAccess, enabledMarkerPaths, PLUGIN_ACCESS_PATH, PLUGIN_MARKER_ROOT, readPluginAccess } from './access.js';
+import { decodePluginAccess, enabledMarkerPaths, PLUGIN_ACCESS_PATH, LEGACY_PLUGIN_ACCESS_PATH, PLUGIN_MARKER_ROOT, readPluginAccess } from './access.js';
 import { decodeMemoMetadata, hasMemoSurface, publicationContractRoot, readContainedFile } from './memos.js';
 
 async function exists(candidate: string): Promise<boolean> {
@@ -30,7 +30,9 @@ function decodeManifest(bytes: Buffer): { memos?: unknown; pluginAccess?: unknow
     const access = decodePluginAccess(value.pluginAccess, 'prior publication activation');
     if (comments === undefined || comments.enabled !== access.plugins.comments.enabled) return invalid();
     const markers = value.inventory.filter((file) => file.startsWith(`${PLUGIN_MARKER_ROOT}/`)).sort();
-    if (!value.inventory.includes(PLUGIN_ACCESS_PATH) || JSON.stringify(markers) !== JSON.stringify([...enabledMarkerPaths(access)].sort())) return invalid();
+    const snapshotPath = access.schemaVersion === 1 ? LEGACY_PLUGIN_ACCESS_PATH : PLUGIN_ACCESS_PATH;
+    const otherPath = access.schemaVersion === 1 ? PLUGIN_ACCESS_PATH : LEGACY_PLUGIN_ACCESS_PATH;
+    if (!value.inventory.includes(snapshotPath) || value.inventory.includes(otherPath) || JSON.stringify(markers) !== JSON.stringify([...enabledMarkerPaths(access)].sort())) return invalid();
   }
   const catalogKeys = ['id', 'title', 'kind', 'href', 'entryHref', 'tags'];
   if (value.catalog.some((item) => item === null || typeof item !== 'object' || Array.isArray(item) ||

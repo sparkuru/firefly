@@ -21,14 +21,14 @@ export async function createPublicationServer(options: { releaseRoot: string; me
     }
     catch { response.writeHead(400); response.end('Invalid request'); return; }
     let plugin;
-    try { plugin = pluginForPublicPath(requestPath); }
+    try { plugin = pluginForPublicPath(requestPath, pluginAccess); }
     catch { response.writeHead(400); response.end('Invalid request'); return; }
-    if (plugin !== null && (!pluginAccess.plugins[plugin].enabled || plugin === 'comments')) {
+    if (plugin !== null && (plugin === 'comments' || (pluginAccess.schemaVersion === 1 && !pluginAccess.plugins.memos.enabled))) {
       response.writeHead(404, { 'Cache-Control': 'no-cache, no-store', 'X-Content-Type-Options': 'nosniff' }); response.end(); return;
     }
     if (!['GET', 'HEAD'].includes(request.method ?? '')) { response.writeHead(405, { Allow: 'GET, HEAD', ...(plugin === 'memos' ? { 'Cache-Control': 'no-cache, no-store' } : {}) }); response.end(); return; }
     if (requestPath === '/memos') { response.writeHead(301, { Location: '/memos/', 'Cache-Control': 'no-cache, no-store' }); response.end(); return; }
-    if (requestPath.startsWith('/memos/')) {
+    if (requestPath.startsWith('/memos/') && pluginAccess.schemaVersion === 1) {
       try {
         if (!memoPublicRoot) throw new Error('independent Memo mount not selected');
         const relative = requestPath.slice('/memos/'.length) || 'index.html';
@@ -58,6 +58,6 @@ export async function createPublicationServer(options: { releaseRoot: string; me
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const server = await createPublicationServer({ releaseRoot: path.join(repositoryRoot, 'dist'), memoPublicRoot: process.env.FIREFLY_MEMOS_PUBLIC_ROOT });
   server.listen(Number(process.env.PUBLICATION_PORT ?? '4322'), process.env.PUBLICATION_HOST ?? '0.0.0.0', () => {
-    process.stdout.write('Publication server ready; Memo composition is explicit and read-only\n');
+    process.stdout.write('Publication server ready; release-bound access validated and static reading available\n');
   });
 }

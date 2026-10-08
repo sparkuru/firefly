@@ -13,6 +13,8 @@ RUN npm --prefix tooling/validate-experiments ci --ignore-scripts \
     && npm --prefix presentations/semantic run build \
     && npm --prefix presentations/terminal ci --ignore-scripts \
     && npm --prefix presentations/terminal run build \
+    && npm --prefix presentations/memo ci --ignore-scripts \
+    && npm --prefix presentations/memo run build \
     && npm --prefix tooling/assemble-publication ci --ignore-scripts \
     && npm --prefix tooling/assemble-publication run build \
     && npm --prefix apps/site ci --ignore-scripts \
@@ -45,6 +47,6 @@ FROM runtime-base AS runtime-publication
 
 COPY --chown=nginx:nginx dist/ /usr/share/nginx/html/
 
-# Explicit composition of a prevalidated public-only Memo artifact.
+# Legacy v1 recovery composition only; new Memo routes live in dist.
 FROM runtime-publication AS runtime-publication-memos
 COPY --chown=nginx:nginx memos-public/ /usr/share/nginx/memos/

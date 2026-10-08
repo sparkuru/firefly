@@ -40,7 +40,7 @@ function validateRelativePath(value) {
  * public directory route. This helper has no Astro, filesystem, or X Core
  * dependencies; callers retain ownership of loading and validating entries.
  *
- * @param {{ collection: 'posts' | 'pages', relativePath?: string, slug: string }} input
+ * @param {{ collection: 'posts' | 'pages' | 'memos', relativePath?: string, slug: string }} input
  * @returns {string}
  */
 export function projectCanonicalRoute(input) {
@@ -49,12 +49,17 @@ export function projectCanonicalRoute(input) {
   }
 
   const { collection, relativePath, slug } = input;
-  if (collection !== 'posts' && collection !== 'pages') {
-    fail('collection must be posts or pages.');
+  if (collection !== 'posts' && collection !== 'pages' && collection !== 'memos') {
+    fail('collection must be posts, pages or memos.');
   }
 
   const normalizedSlug = normalizeSlug(slug);
   const validatedPath = relativePath === undefined ? undefined : validateRelativePath(relativePath);
+
+  if (collection === 'memos') {
+    if (!/^m_[A-Za-z0-9_-]{3,128}$/u.test(normalizedSlug)) fail('invalid Memo identity.');
+    return `/pages/memos/${normalizedSlug}/`;
+  }
 
   if (collection === 'pages') return `/pages/${normalizedSlug}/`;
   if (validatedPath === undefined) fail('posts require a relative Markdown path.');

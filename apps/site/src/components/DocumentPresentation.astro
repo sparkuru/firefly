@@ -10,6 +10,7 @@ import { SITE_CONFIG } from '../lib/site-config.mjs';
 import { resolveContentThemeId } from '../lib/content-theme.mjs';
 import type { renderDocument } from '../lib/render-document';
 import { commentsPresentationFromPostExtensions } from '../lib/site-plugins';
+import MemoDocument from './MemoDocument.astro';
 import SemanticDocument from './SemanticDocument.astro';
 import TerminalDocument from './TerminalDocument.astro';
 import DocumentLayout from '../layouts/DocumentLayout.astro';
@@ -36,10 +37,12 @@ const contentTheme = resolveContentThemeId(entry.data.contentTheme);
 ---
 
 {
-  experience.documentKind === 'semantic' ? (
+  experience.documentKind === 'memo' ? (
+    <MemoDocument canonical={canonical} document={document} />
+  ) : experience.documentKind === 'semantic' ? (
     <DocumentLayout
       title={entry.data.title}
-      description={entry.data.description}
+      description={entry.data.description ?? document.metadata.summary}
       pathname={canonical.href}
       htmlTitle={entry.data.htmlTitle}
       canonical={entry.data.canonical}
@@ -54,7 +57,7 @@ const contentTheme = resolveContentThemeId(entry.data.contentTheme);
   ) : (
     <TerminalLayout
       title={entry.data.title}
-      description={entry.data.description}
+      description={entry.data.description ?? document.metadata.summary}
       path={formatResourcePath(`/${canonical.virtualPath}`)}
       pathname={canonical.href}
       htmlTitle={entry.data.htmlTitle}

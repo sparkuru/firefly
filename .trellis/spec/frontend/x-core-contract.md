@@ -1,5 +1,18 @@
 # X Core and Presentation Contract
 
+## Current Memo Context Extension
+
+The current document context includes collection `memos` and layout `memo`.
+The registry adds `presentations/memo` alongside Firefly and Semantic; adapters
+remain framework-neutral, non-mutating and independently locked. Memo's native
+site composition uses navigator `none`. Memo-only pre-XCore HAST compatibility
+repairs legacy heading structure/generated footnote labels while preserving
+source/code/anchors; ordinary diagnostics stay strict. The post-transform preview
+is a separate balanced sanitized projection, never canonical body replacement.
+See [Memo Documents](./memo-document-contract.md) for exact routes/rendering and
+new adapter tests; older references below to two production adapters describe
+the retained ordinary Firefly/Semantic pair, not an exhaustive registry.
+
 ## Scenario: Build-Time Document Presentation
 
 ### 1. Scope / Trigger

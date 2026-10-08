@@ -43,6 +43,17 @@ if (process.argv[3] === '--verify') {
     await mkdir(path.join(release, '_astro'));
     await writeFile(path.join(release, '_astro/fixture.js'), '/* fixture */');
   }
+  for (const comments of [false, true]) {
+    const release = path.join(root, 'blog', `integrated-c${Number(comments)}`);
+    await mkdir(path.join(release, 'pages/memos/m_integrated_fixture'), { recursive: true, mode: 0o755 });
+    await mkdir(path.join(release, 'memos'), { mode: 0o755 });
+    await writePluginAccess(release, { schemaVersion: 2, plugins: { comments: { enabled: comments } } });
+    await writeFile(path.join(release, 'index.html'), '<h1>Integrated site</h1>');
+    await writeFile(path.join(release, '404.html'), '<h1>Missing</h1>');
+    await writeFile(path.join(release, 'pages/memos/index.html'), '<h1>Integrated Memo timeline</h1>');
+    await writeFile(path.join(release, 'pages/memos/m_integrated_fixture/index.html'), '<h1>Integrated Memo detail</h1>');
+    await writeFile(path.join(release, 'memos/index.html'), '<a href="/pages/memos/">Integrated Memo compatibility</a>');
+  }
   await mkdir(path.join(root, 'blog/legacy'));
   await writeFile(path.join(root, 'blog/legacy/index.html'), '<h1>Legacy</h1>');
   await writeFile(path.join(root, 'blog/legacy/404.html'), '<h1>Missing</h1>');

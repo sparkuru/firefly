@@ -1,0 +1,23 @@
+---
+import MemoLayout from '../layouts/MemoLayout.astro';
+import MemoTimeline from './MemoTimeline.astro';
+import MemoEntry from './MemoEntry.astro';
+import { getCanonicalContent, type CanonicalDocument } from '../lib/content';
+import type { renderDocument } from '../lib/render-document';
+interface Props { canonical: CanonicalDocument; document: Awaited<ReturnType<typeof renderDocument>>; }
+const { canonical, document } = Astro.props;
+const { entry } = canonical;
+const title = entry.data.title ?? canonical.displayName;
+const description = entry.data.description ?? ([...document.metadata.summary].slice(0, 240).join('') || title);
+const timeline = entry.collection === 'pages' && canonical.href === '/pages/memos/';
+const memos = timeline ? (await getCanonicalContent()).memos : [];
+const id = entry.collection === 'memos' ? entry.data.id : null;
+const { Content } = document;
+---
+<MemoLayout title={title} description={description} pathname={canonical.href} htmlTitle={entry.data.htmlTitle} canonical={entry.data.canonical} seoImage={entry.data.seoImage} noindex={entry.data.noindex} date={entry.data.date} updated={entry.data.updated} collection={entry.collection}>
+  <div class="memo-intro">
+    {id ? <a class="memo-return" href={'/pages/memos/#' + id}>← Return to timeline</a> : <h1>{title}</h1>}
+    {timeline && <p>Thoughts and notes. Move through time to find an entry.</p>}
+  </div>
+  {timeline ? <MemoTimeline memos={memos} /> : id ? <div class="memo-detail"><MemoEntry canonical={canonical} document={document} /><a class="memo-return" href={'/pages/memos/#' + id}>← Return to timeline</a></div> : <article class="memo-detail"><div class="memo-body" data-article-content data-content-theme={entry.data.contentTheme}><Content /></div></article>}
+</MemoLayout>

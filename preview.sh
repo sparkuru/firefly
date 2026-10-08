@@ -36,7 +36,7 @@ usage() {
 		"  stop     Stop only this repository's preview web containers (alias: down)." \
 		'  status   Probe the current preview; never start a service.' \
 		'  render   Run a command through sam with pinned Playwright and host IPC.' \
-		'  verify   Run tracked-fixture, independent Memo and plugin-access runtime checks.' \
+		'  verify   Run integrated publication, retained recovery and access checks.' \
 		'  package  Build and validate the runtime-only publication image.' \
 		'' \
 		'Set up preview configuration: cp .env.example .env' \
@@ -76,16 +76,13 @@ render_command() {
 
 validate_selected_memos() {
 	[[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || return 0
-	[[ "${FIREFLY_MEMOS_CANDIDATE}" == /* && -d "${FIREFLY_MEMOS_CANDIDATE}" && ! -L "${FIREFLY_MEMOS_CANDIDATE}" ]] || die 'FIREFLY_MEMOS_CANDIDATE must select an existing regular candidate directory'
-	SAM_CONTENT_MODE=none "${REPO_ROOT}/sam" node tooling/publish-memos/src/cli.mjs validate --candidate-root "${FIREFLY_MEMOS_CANDIDATE}" >/dev/null
+	die 'FIREFLY_MEMOS_CANDIDATE is retired for active previews/packages. Memo documents now build from the selected content workspace; clear this setting and run ./preview.sh build. Retained independent artifacts remain recovery inputs.'
 }
 
 validate_release_access() {
 	require_command jq
 	SAM_CONTENT_MODE=none "${REPO_ROOT}/sam" node tooling/assemble-publication/scripts/check-runtime-metadata.mjs >/dev/null
-	if [[ "$(jq -r '.plugins.memos.enabled' "${REPO_ROOT}/dist/plugins.public.v1.json")" == true && -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
-		die 'enabled Memo preview/package requires FIREFLY_MEMOS_CANDIDATE selecting a validated publication'
-	fi
+	[[ -f "${REPO_ROOT}/dist/plugins.public.v2.json" ]] || die 'active preview/package requires an integrated version-2 release; run ./preview.sh build. Version-1 releases remain recovery evidence.'
 }
 
 build_publication() {
@@ -375,10 +372,9 @@ preview_status() {
 start_preview() {
 	local mode=$1 ids id attempt config_hash image=${SAM_IMAGE:-node:22-alpine} ipc=${SAM_IPC-private}
 	local -a service_command=()
-	[[ "${mode}" != dev || -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || die 'Memo composition requires the static publication preview; use start or preview instead of dev'
+	validate_selected_memos
 	preview_configuration
 	preflight_addresses
-	validate_selected_memos
 	if [[ "${mode}" == dev ]]; then
 		image=${PLAYWRIGHT_IMAGE} ipc=host
 		[[ -x "${REPO_ROOT}/apps/site/node_modules/.bin/astro" ]] || die 'dependencies are missing; run: ./sam npm run install:m51'
@@ -393,7 +389,7 @@ start_preview() {
 	fi
 	require_command sha256sum
 	local access_digest=""
-	[[ "${mode}" == dev ]] || access_digest=$(sha256sum -- "${REPO_ROOT}/dist/plugins.public.v1.json")
+	[[ "${mode}" == dev ]] || access_digest=$(sha256sum -- "${REPO_ROOT}/dist/plugins.public.v2.json")
 	config_hash=$(printf '%s\0' "${mode}" "${image}" "${ipc}" "${SAM_BIND_HOST}" "${WEB_BIND_HOST}" "${WEB_HOST_PORT}" "${WEB_CONTAINER_PORT}" "${FIREFLY_CONTENT_ROOT:-${REPO_ROOT}/content}" "${FIREFLY_SITE_CONFIG_PATH:-}" "${FIREFLY_MEMOS_CANDIDATE:-}" "${access_digest}" | sha256sum)
 	config_hash=${config_hash%% *}
 	ids=$(owned_containers)
@@ -416,9 +412,7 @@ start_preview() {
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
 	[[ "${mode}" != dev ]] || rm -f -- "${REPO_ROOT}/apps/site/.astro/dev.json"
-	local memo_public_root=""
-	[[ -z "${FIREFLY_MEMOS_CANDIDATE:-}" ]] || memo_public_root="${FIREFLY_MEMOS_CANDIDATE}/public"
-	if ! FIREFLY_MEMOS_CANDIDATE="" FIREFLY_MEMOS_PUBLIC_ROOT="${memo_public_root}" SAM_DETACH=1 SAM_CONTAINER_NAME="${startup_name}" SAM_SCOPE=preview.sh SAM_SERVICE=web SAM_PREVIEW_MODE="${mode}" SAM_PREVIEW_CONFIG="${config_hash}" \
+	if ! FIREFLY_MEMOS_CANDIDATE="" FIREFLY_MEMOS_PUBLIC_ROOT="" SAM_DETACH=1 SAM_CONTAINER_NAME="${startup_name}" SAM_SCOPE=preview.sh SAM_SERVICE=web SAM_PREVIEW_MODE="${mode}" SAM_PREVIEW_CONFIG="${config_hash}" \
 		SAM_IMAGE="${image}" SAM_IPC="${ipc}" SAM_BIND_HOST="${SAM_BIND_HOST}" \
 		WEB_HOST_PORT="${WEB_HOST_PORT}" WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT}" \
 		"${REPO_ROOT}/sam" "${service_command[@]}" >"${startup_dir}/container" 2>"${startup_dir}/startup.log"; then
@@ -546,6 +540,7 @@ package_runtime() {
 	local -A release_files=()
 	local -A runtime_files=()
 
+	validate_selected_memos
 	for dependency in chmod curl cut docker find jq mktemp rg sed sha256sum sort; do
 		require_command "${dependency}"
 	done
@@ -554,7 +549,6 @@ package_runtime() {
 		return 1
 	}
 
-	validate_selected_memos
 	cd "${REPO_ROOT}"
 	trap cleanup_package EXIT
 	trap 'exit 130' INT
@@ -600,10 +594,6 @@ package_runtime() {
 	cp Dockerfile nginx.conf "${CONTEXT_ROOT}/"
 	chmod 644 -- "${CONTEXT_ROOT}/Dockerfile" "${CONTEXT_ROOT}/nginx.conf"
 	cp -R dist/. "${CONTEXT_ROOT}/dist/"
-	if [[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
-		cp -R "${FIREFLY_MEMOS_CANDIDATE}/public" "${CONTEXT_ROOT}/memos-public"
-		runtime_target=runtime-publication-memos
-	fi
 	docker build --target "${runtime_target}" --tag "${IMAGE_NAME}" "${CONTEXT_ROOT}"
 
 	runtime_user=$(docker image inspect --format '{{.Config.User}}' "${IMAGE_NAME}")
@@ -656,32 +646,17 @@ package_runtime() {
 			return 1
 		}
 	done
-	if [[ -n "${FIREFLY_MEMOS_CANDIDATE:-}" ]]; then
-		local expected_memos actual_memos memo_file memo_route
-		expected_memos=$(jq -r '.inventory[].path | sub("^public/"; "")' "${FIREFLY_MEMOS_CANDIDATE}/receipt.json" | sort)
-		actual_memos=$(docker exec "${CONTAINER_ID}" find /usr/share/nginx/memos -type f | sed 's#^/usr/share/nginx/memos/##' | sort)
-		[[ "${expected_memos}" == "${actual_memos}" ]] || die 'runtime Memo public inventory differs from validated candidate'
-		local memo_status=404 memo_redirect=404 memo_write=404
-		if [[ "$(jq -r '.plugins.memos.enabled' dist/plugins.public.v1.json)" == true ]]; then
-			memo_status=200 memo_redirect=301 memo_write=403
+	probe_status 200 /pages/memos/
+	probe_status 200 /memos/
+	for file in "${manifest_inventory[@]}"; do
+		if [[ "${file}" =~ ^pages/memos/m_[A-Za-z0-9_-]+/index\.html$ ]]; then
+			probe_status 200 "/${file%index.html}"
+			break
 		fi
-		probe_status "${memo_redirect}" /memos
-		while IFS= read -r memo_file; do
-			memo_route=$(jq -nr --arg file "${memo_file}" '$file | split("/") | map(@uri) | join("/")')
-			probe_status "${memo_status}" "/memos/${memo_route}"
-			if [[ "${memo_status}" == 200 ]]; then
-				assert_header "/memos/${memo_route}" '^cache-control: no-cache, no-store'
-				[[ "$(curl --fail --silent "${RUNTIME_ORIGIN}/memos/${memo_route}" | sha256sum | cut -d ' ' -f 1)" == "$(sha256sum "${FIREFLY_MEMOS_CANDIDATE}/public/${memo_file}" | cut -d ' ' -f 1)" ]] || die 'runtime Memo public file changed'
-			fi
-		done <<<"${expected_memos}"
-		probe_status 404 /memos/receipt.json
-		[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' --request POST "${RUNTIME_ORIGIN}/memos/")" == "${memo_write}" ]] || die 'Memo mount write handling contradicts activation'
-	fi
-	if [[ "$(jq -r '.plugins.memos.enabled' dist/plugins.public.v1.json)" == false ]]; then
-		probe_status 404 /memos
-		probe_status 404 /memos/
-	fi
-	if [[ "$(jq -r '.plugins.comments.enabled' dist/plugins.public.v1.json)" == false ]]; then
+	done
+	probe_status 404 /memos/receipt.json
+	probe_status 404 /memos/memos.public.v2.json
+	if [[ "$(jq -r '.plugins.comments.enabled' dist/plugins.public.v2.json)" == false ]]; then
 		probe_status 404 /v1/comments
 		probe_status 404 /v1/comments/submissions
 	fi
@@ -783,9 +758,9 @@ main() {
 	start | up) start_preview publication ;;
 	dev) start_preview dev ;;
 	preview)
+		validate_selected_memos
 		preview_configuration
 		preflight_addresses
-		validate_selected_memos
 		build_publication
 		start_preview publication
 		;;

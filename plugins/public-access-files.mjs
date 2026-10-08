@@ -3,7 +3,7 @@ import path from 'node:path';
 import { readContainedFile } from '../tooling/shared/contained-file.mjs';
 import {
   decodePluginAccess, enabledMarkerPaths, PLUGIN_ACCESS_PATH, PLUGIN_ENABLED_MARKER_CONTENTS,
-  PLUGIN_IDS, PLUGIN_MARKER_ROOT, serializePluginAccess
+  PLUGIN_IDS, PLUGIN_MARKER_ROOT, LEGACY_PLUGIN_ACCESS_PATH, serializePluginAccess
 } from './public-access.mjs';
 
 async function regularRoot(root) {
@@ -39,10 +39,15 @@ async function markerInventory(root) {
 
 export async function readPluginAccess(root) {
   const resolved = await regularRoot(root);
+  const snapshots = [];
+  for (const name of [PLUGIN_ACCESS_PATH, LEGACY_PLUGIN_ACCESS_PATH]) if (await optionalStats(path.join(resolved, name))) snapshots.push(name);
+  if (snapshots.length !== 1) throw new Error('Expected exactly one plugin activation snapshot; rebuild the blog release.');
+  const selected = snapshots[0];
   let value;
-  try { value = JSON.parse(readContainedFile(PLUGIN_ACCESS_PATH, resolved, 'plugin activation snapshot', 4096).toString('utf8')); }
+  try { value = JSON.parse(readContainedFile(selected, resolved, 'plugin activation snapshot', 4096).toString('utf8')); }
   catch (error) { throw new Error(`Unable to read plugin activation snapshot; rebuild the blog release: ${error.message}`); }
-  const access = decodePluginAccess(value, PLUGIN_ACCESS_PATH);
+  const access = decodePluginAccess(value, selected);
+  if ((access.schemaVersion === 1) !== (selected === LEGACY_PLUGIN_ACCESS_PATH)) throw new Error('Plugin activation schema and filename disagree; rebuild the blog release.');
   const markers = await markerInventory(resolved);
   if (JSON.stringify(markers) !== JSON.stringify([...enabledMarkerPaths(access)].sort())) {
     throw new Error('Plugin activation snapshot and enabled markers disagree; rebuild the blog release.');
@@ -53,7 +58,10 @@ export async function readPluginAccess(root) {
 export async function writePluginAccess(root, access) {
   const decoded = decodePluginAccess(access);
   const resolved = await regularRoot(root);
-  const snapshot = await optionalStats(path.join(resolved, PLUGIN_ACCESS_PATH));
+  const snapshotName = decoded.schemaVersion === 1 ? LEGACY_PLUGIN_ACCESS_PATH : PLUGIN_ACCESS_PATH;
+  const snapshot = await optionalStats(path.join(resolved, snapshotName));
+  const otherName = decoded.schemaVersion === 1 ? PLUGIN_ACCESS_PATH : LEGACY_PLUGIN_ACCESS_PATH;
+  if (await optionalStats(path.join(resolved, otherName))) throw new Error('Cannot reinterpret an existing activation version; build a fresh release.');
   if (snapshot) await readPluginAccess(resolved);
   else if (await optionalStats(path.join(resolved, PLUGIN_MARKER_ROOT))) {
     throw new Error('Reserved plugin marker directory already exists without an owned activation snapshot.');
@@ -70,7 +78,7 @@ export async function writePluginAccess(root, access) {
       await chmod(markerPath, 0o644);
     }
   }
-  const snapshotPath = path.join(resolved, PLUGIN_ACCESS_PATH);
+  const snapshotPath = path.join(resolved, snapshotName);
   await writeFile(snapshotPath, serializePluginAccess(decoded), { flag: snapshot ? 'w' : 'wx', mode: 0o644 });
   await chmod(snapshotPath, 0o644);
   return decoded;

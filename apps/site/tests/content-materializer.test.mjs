@@ -187,7 +187,7 @@ test('blog materializer scans posts and pages into one ordinary-file stage', asy
   assert.deepEqual(scanned.pages.map(({ virtualPath }) => virtualPath), ['about.md']);
 
   const inventory = await materializeContentWorkspace({ sourceRoot: source, targetRoot: target });
-  assert.deepEqual(inventory, { pages: ['about.md'], posts: ['acg/legacy title.md', 'ai/workflow.md'] });
+  assert.deepEqual(inventory, { memos: [], pages: ['about.md'], posts: ['acg/legacy title.md', 'ai/workflow.md'] });
   assert.match(await readFile(path.join(target, 'posts/ai/workflow.md'), 'utf8'), /^---\ntitle: "workflow"[\s\S]*\n## workflow\n\n```text\n# keep this code\n```\n$/u);
   assert.match(await readFile(path.join(target, 'posts/acg/legacy title.md'), 'utf8'), /^---\ntitle: "legacy title"[\s\S]*\n## legacy\n$/u);
   assert.match(await readFile(path.join(target, 'pages/about.md'), 'utf8'), /^---\ntitle: "about"[\s\S]*layout: "page"\nslug: "about"\n---\n\n## about\n$/u);

@@ -1,4 +1,4 @@
-export type SiteCollection = 'posts' | 'pages';
+export type SiteCollection = 'posts' | 'pages' | 'memos';
 
 export interface CanonicalRouteInput {
   readonly collection: SiteCollection;

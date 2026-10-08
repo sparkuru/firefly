@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readdir, readFile } from 'node:fs/promises';
+import { lstat, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mjs';
@@ -13,12 +13,16 @@ import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 import { createRobotsText } from '../src/lib/site-seo.mjs';
 import { enabledMarkerPaths, PLUGIN_ACCESS_PATH, pluginAccessFromConfig } from '../../../plugins/public-access.mjs';
 import { readPluginAccess } from '../../../plugins/public-access-files.mjs';
+import { parseDocument } from 'yaml';
+import { memoSchema } from '../src/lib/content-schema.mjs';
+import { parse } from 'parse5';
 
 const siteRoot = path.resolve(import.meta.dirname, '..');
 const distRoot = path.join(siteRoot, 'dist');
 const sourceRoot = path.join(siteRoot, 'src');
 const generatedPagesRoot = path.join(siteRoot, '.generated-content/pages');
 const generatedPostsRoot = path.join(siteRoot, '.generated-content/posts');
+const generatedMemosRoot = path.join(siteRoot, '.generated-content/memos');
 const workflowSlug = 'llm-workflow-with-trellis';
 const workflowRoute = 'posts/ai/llm-workflow-with-trellis/index.html';
 
@@ -166,6 +170,62 @@ async function collectContentRoutes(directory, prefix, includeDirectories) {
 
 let workflowDocumentPromise;
 
+async function collectMemoRoutes() {
+  const routes = [];
+  for (const relative of await listFiles(generatedMemosRoot)) {
+    if (!relative.endsWith('.md')) continue;
+    const source = await readFile(path.join(generatedMemosRoot, relative), 'utf8');
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(source);
+    assert.ok(frontmatter, 'Staged Memo requires front matter.');
+    const yaml = parseDocument(frontmatter[1], { uniqueKeys: true });
+    assert.deepEqual(yaml.errors, []);
+    const metadata = memoSchema.parse(yaml.toJS());
+    if (!metadata.draft && metadata.access.visibility === 'public') {
+      routes.push(`pages/memos/${metadata.id}/index.html`);
+    }
+  }
+  return routes;
+}
+
+function collectMemoAssetReferences(html) {
+  const references = new Set();
+  const pending = [parse(html)];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    for (const { name, value } of node.attrs ?? []) {
+      const prefix = '/pages/memos/assets/';
+      if (!['href', 'src'].includes(name) || !value.startsWith(prefix)) continue;
+      const segments = value.slice(prefix.length).split(/[?#]/u)[0].split('/').map(decodeURIComponent);
+      for (const segment of segments) {
+        assert.ok(segment.length > 0 && !segment.startsWith('.') && segment.normalize('NFC') === segment &&
+          !/[\\/%?#\p{Cc}\p{Cf}\p{Cs}\u2028\u2029]/u.test(segment), 'Memo reference must decode to safe contained canonical segments.');
+      }
+      references.add('pages/memos/assets/' + segments.join('/'));
+    }
+    pending.push(...(node.childNodes ?? []));
+    if (node.content) pending.push(node.content);
+  }
+  return references;
+}
+
+async function assertMemoAssetIdentity(relative) {
+  const segments = relative.slice('pages/memos/assets/'.length).split('/');
+  let source = path.join(generatedMemosRoot, 'assets');
+  const root = await lstat(source);
+  assert.ok(root.isDirectory() && !root.isSymbolicLink(), 'Staged Memo assets must be a regular directory.');
+  for (const [index, segment] of segments.entries()) {
+    source = path.join(source, segment);
+    const stats = await lstat(source);
+    assert.ok(!stats.isSymbolicLink() && (index === segments.length - 1 ? stats.isFile() : stats.isDirectory()),
+      'Referenced Memo assets must remain contained regular inputs.');
+  }
+  const original = await readFile(source);
+  const emitted = await readFile(path.join(distRoot, relative));
+  assert.equal(emitted.length, original.length, 'Memo asset byte length must match its staged source.');
+  assert.equal(createHash('sha256').update(emitted).digest('hex'), createHash('sha256').update(original).digest('hex'),
+    'Memo asset bytes must match their staged source.');
+}
+
 async function findWorkflowDocument() {
   if (workflowDocumentPromise === undefined) {
     workflowDocumentPromise = (async () => {
@@ -215,30 +275,43 @@ test('static build emits only the implemented route surface', async () => {
     '404.html',
     'index.html',
     'lab/index.html',
+    'memos/index.html',
     'pages/index.html',
     'posts/index.html',
     ...(await collectContentRoutes(generatedPagesRoot, 'pages', false)),
-    ...(await collectContentRoutes(generatedPostsRoot, 'posts', true))
+    ...(await collectContentRoutes(generatedPostsRoot, 'posts', true)),
+    ...(await collectMemoRoutes())
   ].sort();
 
   assert.deepEqual(htmlFiles, expectedHtmlFiles);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
-  assert.equal(scripts.length, 3);
+  assert.equal(scripts.length, 4);
   assert.equal(scripts.filter((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/DocumentNavigationStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/document-navigation\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
-  assert.equal(files.filter((file) => file.endsWith('.css')).length, 1);
+  assert.equal(files.filter((file) => file.endsWith('.css')).length, 2);
+  assert.equal(scripts.filter((file) => /^_astro\/MemoTimeline\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  const compatibility = await readFile(path.join(distRoot, 'memos/index.html'), 'utf8');
+  assert.match(compatibility, /data-legacy-memo-ids/u);
+  assert.match(compatibility, /<script type="module">/u);
+  assert.doesNotMatch(compatibility, /MemoTimeline|DocumentNavigationStatus/u);
   const diagrams = files.filter((file) => /^diagrams\/[a-f0-9]{64}\.svg$/u.test(file));
   const diagramReferences = new Set();
+  const memoAssets = new Set();
   for (const file of htmlFiles) {
     const html = await readFile(path.join(distRoot, file), 'utf8');
+    for (const asset of collectMemoAssetReferences(html)) memoAssets.add(asset);
     for (const [, asset] of html.matchAll(/(?:src|href)="\/(diagrams\/[a-f0-9]{64}\.svg)"/gu)) {
       diagramReferences.add(asset);
     }
   }
   assert.deepEqual(diagrams, [...diagramReferences].sort(), 'publish exactly the diagrams referenced by public HTML');
+  assert.deepEqual(files.filter((file) => file.startsWith('pages/memos/assets/')), [...memoAssets].sort(),
+    'Publish exactly the Memo assets referenced by parsed public HTML, without orphan assets.');
+  for (const asset of memoAssets) await assertMemoAssetIdentity(asset);
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
     ...diagrams,
+    ...memoAssets,
     'favicon.ico',
     'favicon.png',
     'fonts/JetBrainsMono-Medium-v2.304.woff2',
@@ -698,10 +771,10 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   const script = await readFile(path.join(distRoot, scriptPath), 'utf8');
   const rootNavigation = /<nav\b[^>]*data-home-root-navigation[^>]*>[\s\S]*?<\/nav>/u.exec(home)?.[0] ?? '';
   assert.deepEqual([...rootNavigation.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/gu)].map((match) => [match[1], match[2]]),
-    [['/pages/', 'pages/'], ['/lab/', 'lab/'], ['/posts/', 'posts/'], ...(SITE_CONFIG.plugins.memos.enabled ? [['/memos/', 'memos/']] : [])]);
-  const rootLinkCount = SITE_CONFIG.plugins.memos.enabled ? 4 : 3;
+    [['/pages/', 'pages/'], ['/lab/', 'lab/'], ['/posts/', 'posts/'], ...[]]);
+  const rootLinkCount = 3;
   assert.deepEqual([...rootNavigation.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]), Array.from({ length: rootLinkCount }, (_, index) => index === rootLinkCount - 1 ? '└──' : '├──'));
-  if (SITE_CONFIG.plugins.memos.enabled) assert.match(rootNavigation, /<a href="\/memos\/">memos\/<\/a>/u);
+  assert.doesNotMatch(rootNavigation, /href="\/memos\/"/u);
   for (const [, contents] of home.matchAll(/<template\b[^>]*data-home-browse-template[^>]*>([\s\S]*?)<\/template>/gu)) {
     const prefixes = [...contents.matchAll(/<span data-home-browse-tree-prefix aria-hidden="true">([^<]+)<\/span>/gu)].map((match) => match[1]);
     const rowCount = (contents.match(/<li\b/gu) ?? []).length;

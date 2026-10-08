@@ -329,3 +329,27 @@ test('site policy preserves safe relative and HTTP(S) resource links only', asyn
   assert.match(rendered.code, /<a href="https:\/\/safe\.test\/">external<\/a>/u);
   assert.match(rendered.code, /<a>removed<\/a>/u);
 });
+
+test('Memo legacy generated hierarchy and footnotes keep shared outline/anchors without changing code', async () => {
+  const { memoPresentation } = await import('@firefly/presentation-memo');
+  const { memoSchema } = await import('../src/lib/content-schema.mjs');
+  const { rehypeMemoBodyCompatibility } = await import('../src/build/memo-body-compatibility.mjs');
+  const metadata = memoSchema.parse({ id: 'm_compatibility', date: '2024-01-01T00:00:00Z', draft: false });
+  const resolve = () => ({ documentId: 'memos/fixture.md', route: '/pages/memos/m_compatibility/', collection: 'memos', slug: metadata.id, layout: 'memo', presentation: 'memo' });
+  const plugins = createXCorePlugins({ registry: new PresentationRegistry().register(memoPresentation), resolveContext: resolve, allowAuthoredHtml: true });
+  const processor = await createMarkdownProcessor({
+    syntaxHighlight: false,
+    remarkPlugins: [plugins.remarkPlugin],
+    rehypePlugins: [rehypeRaw, [rehypeSanitize, markdownHtmlSchema], [rehypeMemoBodyCompatibility, { resolveContext: resolve }], plugins.rehypePlugin]
+  });
+  const source = 'Legacy setext\n=============\n\n##### A jump\n\nA reference[^example].\n\n    # code stays a comment\n\n[^example]: A footnote.';
+  const result = await processor.render(source, { frontmatter: metadata });
+  const parsed = parseXCoreMetadata(result.metadata.frontmatter.xCore);
+  assert.deepEqual(parsed.outline.map(({ depth }) => depth), [2, 3]);
+  assert.deepEqual(result.metadata.headings.map(({ depth, slug, text }) => ({ depth, id: slug, text })), parsed.outline);
+  assert.match(result.code, /<p class="sr-only" id="footnote-label"[^>]*>Footnotes<\/p>/u);
+  assert.match(result.code, /aria-describedby="footnote-label"/u);
+  assert.match(result.code, /# code stays a comment/u);
+  assert.match(result.code, /href="#user-content-fn-example"/u);
+  assert.deepEqual(result.metadata.frontmatter.memoCompatibility, { headings: 2, footnotes: 1 });
+});

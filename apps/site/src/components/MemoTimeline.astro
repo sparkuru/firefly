@@ -1,0 +1,42 @@
+---
+import MemoEntry from './MemoEntry.astro';
+import type { CanonicalDocument } from '../lib/content';
+import { createMemoTimeIndex } from '../lib/memo-time.mjs';
+import { renderDocument } from '../lib/render-document';
+interface Props { memos: readonly CanonicalDocument[]; }
+const { memos } = Astro.props;
+const records = memos.map(({ entry }) => {
+  if (entry.collection !== 'memos') throw new Error('Memo timeline requires Memo entries.');
+  return { id: entry.data.id, date: entry.data.date.toISOString() };
+});
+const index = createMemoTimeIndex(records);
+const rendered = await Promise.all(memos.map(async (canonical) => ({ canonical, document: await renderDocument(canonical.entry) })));
+const stride = Math.max(1, Math.ceil(index.months.length / 12));
+---
+<section class="memo-timeline" data-memo-timeline>
+  <aside class="memo-time-control" data-memo-time-control aria-label="Timeline navigation">
+    <div class="memo-time-heading">
+      <span>Through time</span>
+      <output data-memo-current-date>{index.entries[0]?.label ?? 'No entries'}</output>
+    </div>
+    <p class="memo-time-hint" id="memo-time-hint">Drag to a date. Arrow keys move between entries.</p>
+    <div class="memo-time-slider" role="slider" tabindex={index.entries.length > 1 ? 0 : -1} aria-label="Historical time" aria-describedby="memo-time-hint" aria-valuemin="0" aria-valuemax={Math.max(0, index.entries.length - 1)} aria-valuenow="0" aria-valuetext={index.entries[0]?.label ?? 'No entries'} aria-orientation="vertical" aria-disabled={index.entries.length < 2 ? 'true' : undefined} data-memo-slider hidden={index.entries.length === 0}>
+      <div class="memo-time-line"></div>
+      {index.months.map((month, ordinal) => <div class:list={['memo-time-tick', { 'memo-time-tick-labeled': ordinal % stride === 0 || ordinal === index.months.length - 1 }]} data-memo-month-tick={month.key} data-memo-segment-start={month.start} data-memo-segment-end={month.end} style={'--memo-tick-position:' + ((month.start + month.end) / 2)}>
+        <span>{month.key}</span>
+      </div>)}
+      <div class="memo-time-cursor" aria-hidden="true"><span></span></div>
+    </div>
+    {index.months.length > 0 && <div class="memo-time-bounds" aria-hidden="true"><span>{index.months[0]?.key}</span><span>{index.months.at(-1)?.key}</span></div>}
+    <details class="memo-month-index">
+      <summary>Browse months</summary>
+      <nav aria-label="Month index"><ul>{index.months.map((month) => <li><a href={'#' + month.first}>{month.key}</a></li>)}</ul></nav>
+    </details>
+  </aside>
+  <div class="memo-feed" data-memo-feed>
+    {memos.length === 0 ? <p class="memo-empty">No Memo entries have been published yet.</p> : rendered.map(({ canonical, document }) => <MemoEntry canonical={canonical} document={document} preview />)}
+  </div>
+</section>
+<script>
+  import '../scripts/memo-timeline.ts';
+</script>

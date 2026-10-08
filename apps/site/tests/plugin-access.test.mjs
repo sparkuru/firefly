@@ -10,6 +10,7 @@ import { prepareMemoFixture, repositoryRoot } from './memos-fixture.mjs';
 import { loadSiteConfig } from '../src/lib/site-config.mjs';
 import { pathToFileURL } from 'node:url';
 
+const integrated = (comments = false) => ({ schemaVersion: 2, plugins: { comments: { enabled: comments } } });
 const state = (comments = false, memos = false) => ({ schemaVersion: 1, plugins: { comments: { enabled: comments }, memos: { enabled: memos } } });
 async function fixture(context) {
   const parent = path.join(repositoryRoot, '.firefly/plugin-access-tests');
@@ -21,15 +22,16 @@ async function fixture(context) {
 
 test('site producer uses the supplied frozen selected configuration and removes stale markers', async (context) => {
   const root = await fixture(context);
+  await writePluginAccess(root, integrated(true));
   for (const enabled of [true, false, true]) {
     const selected = await prepareMemoFixture(root, { enabled });
     const config = loadSiteConfig(selected.configPath);
     const hook = createPluginAccessIntegration(config).hooks['astro:build:done'];
     await hook({ dir: pathToFileURL(`${root}/`) });
-    const snapshot = JSON.parse(await readFile(path.join(root, 'plugins.public.v1.json'), 'utf8'));
-    assert.deepEqual(snapshot, state(false, enabled));
-    const marker = readFile(path.join(root, 'plugin-access/memos.enabled'), 'utf8');
-    if (enabled) assert.equal(await marker, 'enabled\n'); else await assert.rejects(marker, { code: 'ENOENT' });
+    const snapshot = JSON.parse(await readFile(path.join(root, 'plugins.public.v2.json'), 'utf8'));
+    assert.deepEqual(snapshot, integrated());
+    await assert.rejects(readFile(path.join(root, 'plugin-access/memos.enabled'), 'utf8'), { code: 'ENOENT' });
+    await assert.rejects(readFile(path.join(root, 'plugins.public.v1.json'), 'utf8'), { code: 'ENOENT' });
   }
 });
 
@@ -77,22 +79,31 @@ test('CLI checks a release independently and compares selected flags before no-b
   const selected = await prepareMemoFixture(root, { enabled: true });
   const release = path.join(root, 'release');
   await mkdir(release);
-  await writePluginAccess(release, state(false, true));
+  await writePluginAccess(release, integrated());
   const cli = path.join(repositoryRoot, 'apps/site/scripts/plugin-access.mjs');
   const env = { ...process.env, FIREFLY_SITE_CONFIG_PATH: selected.configRelative };
   const run = (args, overrides = {}) => spawnSync(process.execPath, [cli, ...args], { cwd: root, env: { ...env, ...overrides }, encoding: 'utf8' });
   for (const args of [['current'], ['check', '--release-root', release], ['compare', '--release-root', path.relative(repositoryRoot, release)]]) {
     const result = run(args);
     assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(JSON.parse(result.stdout), state(false, true));
+    assert.deepEqual(JSON.parse(result.stdout), integrated());
   }
   const independent = run(['check', '--release-root', release], { FIREFLY_SITE_CONFIG_PATH: 'config/absent.toml' });
   assert.equal(independent.status, 0, independent.stderr);
   await prepareMemoFixture(root, { enabled: false });
+  assert.equal(run(['compare', '--release-root', release]).status, 0, 'Deprecated Memo flag has no new release effect.');
+  await writePluginAccess(release, integrated(true));
   const stale = run(['compare', '--release-root', release]);
   assert.notEqual(stale.status, 0);
   assert.equal(stale.stdout, '');
   assert.match(stale.stderr, /without --no-build/u);
+  const retainedRoot = path.join(root, 'retained-v1');
+  await mkdir(retainedRoot);
+  await writePluginAccess(retainedRoot, state(false, true));
+  const retained = run(['check', '--release-root', retainedRoot]);
+  assert.equal(retained.status, 0);
+  assert.deepEqual(JSON.parse(retained.stdout), state(false, true));
+  assert.notEqual(run(['compare', '--release-root', retainedRoot]).status, 0, 'Retained v1 ownership cannot be reinterpreted as integrated.');
   for (const args of [['current', '--release-root', release], ['check', '--expected-comments-origin', 'https://site.fixture.invalid'], ['compare', '--release-root'], ['current', '--unknown', 'value']]) assert.notEqual(run(args).status, 0);
 });
 

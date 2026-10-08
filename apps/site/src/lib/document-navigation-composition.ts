@@ -99,6 +99,7 @@ function validateDocumentNavigationTable(
       throw new TypeError(`${field} must be an enumerable data property.`);
     }
     assertOverride(descriptor.value, field);
+    if (presentation === 'memo' && descriptor.value.navigator !== 'none') throw new Error('Memo pages use native time navigation; documentNavigation.memo.navigator must be none.');
     if (descriptor.value.navigator !== 'none') {
       try {
         resolveDocumentNavigator(descriptor.value.navigator, navigatorRegistry);

@@ -44,6 +44,19 @@ switch_release() {
 	mv -Tf -- "${fixture_root}/blog/next" "${fixture_root}/blog/current"
 }
 
+probe_reading_headers() {
+	local route=$1 headers
+	headers=$(curl --fail --silent --show-error --head "${origin}${route}")
+	rg --ignore-case --quiet '^content-security-policy: ' <<<"${headers}"
+	rg --ignore-case --quiet '^referrer-policy: strict-origin-when-cross-origin' <<<"${headers}"
+	rg --ignore-case --quiet '^x-content-type-options: nosniff' <<<"${headers}"
+	rg --ignore-case --quiet '^x-frame-options: sameorigin' <<<"${headers}"
+	if rg --ignore-case --quiet '^cache-control: .*immutable' <<<"${headers}"; then
+		printf '[plugins-runtime] Memo HTML must not receive immutable caching: %s\n' "${route}" >&2
+		return 1
+	fi
+}
+
 check_state() {
 	local comments=$1 memos=$2 method route
 	local -a memo_routes=(/memos /memos/ /memos/index.html /memos/memos.public.v2.json /memos/assets/style.css)
@@ -88,6 +101,38 @@ check_state() {
 	probe 404 GET /memos/.private/state.json
 	probe 404 GET /v1/unknown
 	printf '[plugins-runtime] comments=%s memos=%s passed routes, methods and retained artifacts\n' "${comments}" "${memos}"
+}
+
+check_integrated_state() {
+	local comments=$1 method route
+	probe 200 GET /
+	probe 301 GET /memos
+	probe 301 HEAD /memos
+	for method in POST OPTIONS PUT DELETE; do probe 403 "${method}" /memos; done
+	for route in /memos/ /memos/index.html; do
+		probe 200 GET "${route}"
+		probe 200 HEAD "${route}"
+		probe_reading_headers "${route}"
+		for method in POST OPTIONS PUT DELETE; do probe 403 "${method}" "${route}"; done
+	done
+	for route in /pages/memos/ /pages/memos/m_integrated_fixture/; do
+		probe 200 GET "${route}"
+		probe 200 HEAD "${route}"
+		probe_reading_headers "${route}"
+	done
+	curl --fail --silent "${origin}/memos/" | rg --quiet 'Integrated Memo compatibility'
+	for route in /memos/memos.public.v2.json /memos/assets/style.css "${media_route}" /memos/receipt.json /memos/.private/state.json; do
+		probe 404 GET "${route}"
+		probe 404 HEAD "${route}"
+		for method in POST OPTIONS PUT DELETE; do probe 403 "${method}" "${route}"; done
+	done
+	if [[ "${comments}" == 0 ]]; then
+		for method in GET HEAD POST OPTIONS PUT DELETE; do probe 404 "${method}" /v1/comments/submissions; done
+	else
+		probe 200 POST /v1/comments/submissions
+		probe 204 OPTIONS /v1/comments/submissions
+	fi
+	printf '[plugins-runtime] integrated Memo is site-owned; comments=%s retains its gate\n' "${comments}"
 }
 
 main() {
@@ -142,8 +187,12 @@ main() {
 	done
 	switch_release legacy
 	check_state 0 0
+	for state in integrated-c0 integrated-c1 integrated-c0 c0m0 integrated-c1; do
+		switch_release "${state}"
+		if [[ "${state}" == c0m0 ]]; then check_state 0 0; else check_integrated_state "${state: -1}"; fi
+	done
 	SAM_CONTENT_MODE=none SAM_MEMOS_WORK_ROOT="${fixture_root}" "${REPO_ROOT}/sam" node tooling/plugin-access/runtime-fixture.mjs "${fixture_root}" --verify
-	printf '[plugins-runtime] four states, on/off/on without reload and missing legacy markers passed\n'
+	printf '[plugins-runtime] retained v1 states, integrated v2 ownership, version switches without reload and missing legacy markers passed\n'
 }
 
 main "$@"

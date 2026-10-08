@@ -19,7 +19,7 @@ const normalizeTitle = (value: string) => value.toLocaleLowerCase('en-US').repla
 const firstHeading = document.metadata.outline[0];
 const startsWithHeading = /^\s*(?:<!--[\s\S]*?-->\s*)*<h[2-6]\b/u.test(entry.rendered?.html ?? '');
 const repeatedTitle = startsWithHeading && firstHeading !== undefined &&
-  normalizeTitle(firstHeading.text) === normalizeTitle(entry.data.title);
+  normalizeTitle(firstHeading.text) === normalizeTitle(entry.data.title ?? terminalEntry.title);
 ---
 
 <article

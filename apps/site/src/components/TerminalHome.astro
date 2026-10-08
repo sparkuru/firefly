@@ -242,8 +242,7 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
       <ul class="home-browse-tree">
         <DirectoryEntryRow homeBrowse><a href="/pages/" data-home-browse-directory>pages/</a></DirectoryEntryRow>
         <DirectoryEntryRow homeBrowse><a href="/lab/" data-home-browse-directory>lab/</a></DirectoryEntryRow>
-        <DirectoryEntryRow homeBrowse last={!SITE_CONFIG.plugins.memos.enabled}><a href="/posts/" data-home-browse-directory>posts/</a></DirectoryEntryRow>
-        {SITE_CONFIG.plugins.memos.enabled && <DirectoryEntryRow homeBrowse last><a href="/memos/">memos/</a></DirectoryEntryRow>}
+        <DirectoryEntryRow homeBrowse last><a href="/posts/" data-home-browse-directory>posts/</a></DirectoryEntryRow>
       </ul>
     </nav>
 
@@ -253,12 +252,6 @@ const TERMINAL_HOME_STARTUP_DURATION_MS =
     </section>
 
     <nav class="terminal-index" aria-label="Public document index">
-      {SITE_CONFIG.plugins.memos.enabled && (
-        <section class="terminal-group" data-home-shell-only aria-labelledby="terminal-memos-heading">
-          <h3 id="terminal-memos-heading"><a href="/memos/">memos/</a></h3>
-          <p class="terminal-meta">Read the owner’s short notes.</p>
-        </section>
-      )}
       <section class="terminal-group" data-home-expanded-group aria-labelledby="terminal-posts-heading">
         <h3 id="terminal-posts-heading">posts/</h3>
         {

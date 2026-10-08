@@ -220,7 +220,7 @@ function isAuthoredSiteDocument(relative: string, contents: string): boolean {
   const collection = segments[0];
   return (
     ((collection === 'posts' && segments.length >= 4) ||
-      (collection === 'pages' && segments.length === 3)) &&
+      (collection === 'pages' && (segments.length === 3 || (segments.length === 4 && segments[1] === 'memos' && /^m_[A-Za-z0-9_-]{3,128}$/u.test(segments[2]!))))) &&
     segments.at(-1) === 'index.html'
   );
 }
@@ -447,7 +447,7 @@ export async function validateRelease(
 ): Promise<readonly string[]> {
   const tree = await walkSafeTree(releaseRoot);
   const pluginAccess = await readPluginAccess(releaseRoot);
-  await validateMemoTree(releaseRoot, tree.files);
+  await validateMemoTree(releaseRoot, tree.files, pluginAccess);
   assertNoCaseCollisions([...tree.directories, ...tree.files]);
   const requiredSiteFiles = ['index.html', '404.html', 'lab/index.html'];
   for (const required of requiredSiteFiles) {
@@ -622,7 +622,7 @@ export async function assemblePublication(options: {
       if (/<section\b[^>]*\bclass=["'](?:terminal-)?comment-section["']/iu.test(await readFile(path.join(stagedSite, file), 'utf8'))) hasCommentSurface = true;
     }
     if (comments.enabled !== hasCommentSurface) throw new TypeError('Comments activation and publication evidence must match the emitted comment surface.');
-    await validateMemoTree(stagedSite, (await walkSafeTree(stagedSite)).files);
+    await validateMemoTree(stagedSite, (await walkSafeTree(stagedSite)).files, pluginAccess);
     for (const manifest of discovery.manifests) {
       await requireRealContained(repositoryRoot, manifest.directory, `${manifest.id} directory`);
       const sourceOutput = path.resolve(manifest.directory, manifest.build.outputDir);

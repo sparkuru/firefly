@@ -1,5 +1,18 @@
 # Experiment Publication Contract
 
+## Current Integrated Memo Ownership
+
+New releases include site-owned `/pages/memos/`, nested Memo detail/assets and
+the `/memos/` compatibility index, with strict version-2 comments-only access.
+The assembler validates these known surfaces and parsed retired-submission
+guards rather than allowing arbitrary Memo-like HTML. Legacy six-field metadata
+and deletion floors remain recovery evidence. Independent current Memo content,
+receipt/pointer or private database is never read by a build. Statements below
+reserving Memo solely for an independent mount describe the legacy baseline;
+[Memo Documents](./memo-document-contract.md) and [Plugin Public Access](./plugin-public-access-contract.md)
+supersede them for current routes/config/preview/package. Experiment isolation,
+inventory, reference/containment, rollback and comments floor rules remain.
+
 ## Scenario: Manifest-Driven Static Publication
 
 ### 1. Scope / Trigger

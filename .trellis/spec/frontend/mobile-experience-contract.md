@@ -136,10 +136,11 @@ actual desktop controller is installed, not on mobile-first entry.
   Boot logs, prompts, command input/transcript/completion, shell instructions,
   and Terminal failure announcements are absent from the mobile interface.
 - The homepage section entries are exactly `pages/`, `lab/`, `posts/`, in that
-  order when optional plugins are disabled, with native `/pages/`, `/lab/`,
-  `/posts/` destinations. An enabled memo plugin appends a native `memos/` link
-  to `/memos/`, without `data-home-browse-directory`; it is not an inline
-  directory or document/search record. Their article,
+  order, with native `/pages/`, `/lab/`, `/posts/` destinations. Current Memo
+  discovery is one compact Pages aggregate at `/pages/memos/`, opening its
+  independent reader through native document navigation. The deprecated Memo
+  flag never appends a separate root plugin link. Memo entries/feed bodies stay
+  outside home templates and global body search. Their article,
   page and experiment lists are not expanded on mobile home. Retain the existing
   configured `friend links` group below, including names, descriptions, native
   URLs, configured order and empty feedback. Friends are outside article search.

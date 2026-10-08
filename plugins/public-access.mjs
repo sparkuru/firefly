@@ -1,5 +1,7 @@
 export const PLUGIN_IDS = Object.freeze(['comments', 'memos']);
-export const PLUGIN_ACCESS_PATH = 'plugins.public.v1.json';
+export const INTEGRATED_PLUGIN_IDS = Object.freeze(['comments']);
+export const LEGACY_PLUGIN_ACCESS_PATH = 'plugins.public.v1.json';
+export const PLUGIN_ACCESS_PATH = 'plugins.public.v2.json';
 export const PLUGIN_MARKER_ROOT = 'plugin-access';
 export const PLUGIN_ENABLED_MARKER_CONTENTS = 'enabled\n';
 export const PLUGIN_PUBLIC_ROUTES = Object.freeze([
@@ -27,30 +29,35 @@ function exactDataObject(value, keys, source) {
 
 export function decodePluginAccess(value, source = 'plugin access') {
   const envelope = exactDataObject(value, ['schemaVersion', 'plugins'], source);
-  if (envelope.schemaVersion !== 1) throw new TypeError(`Invalid ${source}.schemaVersion: expected 1.`);
-  const plugins = exactDataObject(envelope.plugins, PLUGIN_IDS, `${source}.plugins`);
+  if (![1, 2].includes(envelope.schemaVersion)) throw new TypeError(`Invalid ${source}.schemaVersion: expected 1 or 2.`);
+  const ids = envelope.schemaVersion === 1 ? PLUGIN_IDS : INTEGRATED_PLUGIN_IDS;
+  const plugins = exactDataObject(envelope.plugins, ids, `${source}.plugins`);
   const normalized = {};
-  for (const id of PLUGIN_IDS) {
+  for (const id of ids) {
     const activation = exactDataObject(plugins[id], ['enabled'], `${source}.plugins.${id}`);
     if (typeof activation.enabled !== 'boolean') {
       throw new TypeError(`Invalid ${source}.plugins.${id}.enabled: expected a boolean.`);
     }
     normalized[id] = Object.freeze({ enabled: activation.enabled });
   }
-  return Object.freeze({ schemaVersion: 1, plugins: Object.freeze(normalized) });
+  return Object.freeze({ schemaVersion: envelope.schemaVersion, plugins: Object.freeze(normalized) });
 }
 
 export function pluginAccessFromConfig(config) {
-  const plugins = exactDataObject(config?.plugins, PLUGIN_IDS, 'site configuration plugins');
-  const projection = { schemaVersion: 1, plugins: {} };
-  for (const id of PLUGIN_IDS) {
+  const descriptor = config !== null && typeof config === 'object' ? Object.getOwnPropertyDescriptor(config, 'plugins') : undefined;
+  if (!descriptor || !('value' in descriptor)) throw new TypeError('Invalid site configuration plugins: expected a data field.');
+  const raw = descriptor.value;
+  const keys = raw !== null && typeof raw === 'object' ? Reflect.ownKeys(raw) : [];
+  const plugins = exactDataObject(raw, keys.includes('memos') ? PLUGIN_IDS : INTEGRATED_PLUGIN_IDS, 'site configuration plugins');
+  const projection = { schemaVersion: 2, plugins: {} };
+  for (const id of Object.keys(plugins)) {
     const activation = plugins[id];
     const descriptor = activation !== null && typeof activation === 'object'
       ? Object.getOwnPropertyDescriptor(activation, 'enabled') : undefined;
     if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'boolean') {
       throw new TypeError(`Invalid site configuration plugins.${id}.enabled: expected a boolean data field.`);
     }
-    projection.plugins[id] = { enabled: descriptor.value };
+    if (id === 'comments') projection.plugins[id] = { enabled: descriptor.value };
   }
   return decodePluginAccess(projection);
 }
@@ -61,11 +68,12 @@ export function serializePluginAccess(access) {
 
 export function enabledMarkerPaths(access) {
   const decoded = decodePluginAccess(access);
-  return Object.freeze(PLUGIN_IDS.filter((id) => decoded.plugins[id].enabled)
+  const ids = decoded.schemaVersion === 1 ? PLUGIN_IDS : INTEGRATED_PLUGIN_IDS;
+  return Object.freeze(ids.filter((id) => decoded.plugins[id].enabled)
     .map((id) => `${PLUGIN_MARKER_ROOT}/${id}.enabled`));
 }
 
-export function pluginForPublicPath(pathname) {
+export function pluginForPublicPath(pathname, access = { schemaVersion: 1, plugins: { comments: { enabled: false }, memos: { enabled: false } } }) {
   if (typeof pathname !== 'string' || !pathname.startsWith('/') || /[\\?#\u0000-\u001f\u007f]/u.test(pathname)) {
     throw new TypeError('Expected a decoded public pathname without query, fragment, backslash or controls.');
   }
@@ -76,5 +84,6 @@ export function pluginForPublicPath(pathname) {
     if (segment === '..') segments.pop(); else segments.push(segment);
   }
   const normalized = `/${segments.join('/')}${pathname.endsWith('/') && segments.length ? '/' : ''}`;
-  return PLUGIN_PUBLIC_ROUTES.find((route) => normalized === route.exact || normalized.startsWith(route.prefix))?.pluginId ?? null;
+  const decoded = decodePluginAccess(access);
+  return PLUGIN_PUBLIC_ROUTES.find((route) => (decoded.schemaVersion === 1 || route.pluginId === 'comments') && (normalized === route.exact || normalized.startsWith(route.prefix)))?.pluginId ?? null;
 }

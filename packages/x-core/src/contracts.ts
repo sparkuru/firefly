@@ -11,8 +11,8 @@ export type JsonValue =
   | readonly JsonValue[]
   | { readonly [key: string]: JsonValue };
 
-export type DocumentCollection = 'posts' | 'pages';
-export type DocumentLayout = 'post' | 'page' | 'timeline' | 'files';
+export type DocumentCollection = 'posts' | 'pages' | 'memos';
+export type DocumentLayout = 'post' | 'page' | 'timeline' | 'files' | 'memo';
 export type EnhancementLoadingStrategy = 'eager' | 'idle' | 'visible';
 export type ReferenceKind = 'fragment' | 'internal' | 'relative' | 'external';
 export type ReferenceRole = 'link' | 'resource';

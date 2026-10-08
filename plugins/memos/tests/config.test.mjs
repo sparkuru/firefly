@@ -3,9 +3,10 @@ import { lstatSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { DEFAULT_MEMOS_CONFIG_PATH, parseMemosActivation, parseMemosConfig, parseMemosPublicConfig, resolveMemosConfigPath } from '../config.mjs';
 
-test('plugin descriptor points to existing regular navigation and publisher entrypoints', () => {
+test('legacy plugin descriptor exposes only retained recovery entrypoints', () => {
   const descriptor = JSON.parse(readFileSync(new URL('../plugin.json', import.meta.url), 'utf8'));
-  assert.equal(descriptor.entrypoints.site, 'apps/site/src/lib/site-plugins.ts');
+  assert.deepEqual(descriptor.capabilities, ['legacy-recovery']);
+  assert.equal(Object.hasOwn(descriptor.entrypoints, 'site'), false);
   const repositoryRoot = new URL('../../../', import.meta.url);
   for (const entry of Object.values(descriptor.entrypoints)) {
     assert.equal(lstatSync(new URL(entry, repositoryRoot)).isFile(), true, entry);

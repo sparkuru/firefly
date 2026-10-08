@@ -5,12 +5,14 @@ import {
 } from './content-access.mjs';
 import { projectCanonicalRoute } from './canonical-route.mjs';
 import { resolveContentMarkers } from './content-markers.mjs';
+import { memoDateLabel } from './memo-time.mjs';
 import { displayNameForDocument } from './content-metadata.mjs';
-import { PLUGIN_ACCESS_PATH, PLUGIN_MARKER_ROOT, pluginForPublicPath } from '../../../../plugins/public-access.mjs';
+import { PLUGIN_ACCESS_PATH, LEGACY_PLUGIN_ACCESS_PATH, PLUGIN_MARKER_ROOT, pluginForPublicPath } from '../../../../plugins/public-access.mjs';
 
 export type PublicPost = CollectionEntry<'posts'>;
 export type PublicPage = CollectionEntry<'pages'>;
-export type PublicDocumentEntry = PublicPost | PublicPage;
+export type PublicMemo = CollectionEntry<'memos'>;
+export type PublicDocumentEntry = PublicPost | PublicPage | PublicMemo;
 export type ContentMarker = ReturnType<typeof resolveContentMarkers>[number];
 
 export type ContentPrincipal =
@@ -25,7 +27,7 @@ export interface CanonicalBreadcrumb {
 
 export interface CanonicalDocument {
   readonly entry: PublicDocumentEntry;
-  readonly collection: 'posts' | 'pages';
+  readonly collection: 'posts' | 'pages' | 'memos';
   readonly relativePath: string;
   readonly virtualPath: string;
   readonly filename: `${string}.md`;
@@ -57,6 +59,7 @@ export interface CanonicalContent {
   readonly documents: readonly CanonicalDocument[];
   readonly posts: readonly CanonicalDocument[];
   readonly pages: readonly CanonicalDocument[];
+  readonly memos: readonly CanonicalDocument[];
   readonly tree: ContentDirectory;
   readonly directories: readonly ContentDirectory[];
 }
@@ -94,7 +97,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     throw new Error(`Invalid Markdown identity for ${collection}/${entry.id}.`);
   }
   const stem = filename.slice(0, -3);
-  const routeSlug = entry.data.slug ?? stem;
+  const routeSlug = entry.collection === 'memos' ? entry.data.id : entry.data.slug ?? stem;
   const virtualPath = `${collection}/${relativePath}`;
   const markers = resolveContentMarkers(entry.data.firefly?.markers);
   const parentSegments = [collection, ...pathSegments.slice(0, -1)];
@@ -112,7 +115,7 @@ export function createCanonicalDocument(entry: PublicDocumentEntry): CanonicalDo
     relativePath,
     virtualPath,
     filename: filename as `${string}.md`,
-    displayName: displayNameForDocument({ title: entry.data.title, filename }),
+    displayName: entry.collection === 'memos' ? entry.data.title ?? ('Memo · ' + memoDateLabel(entry.data.date).slice(0, 10)) : displayNameForDocument({ title: entry.data.title, filename }),
     href: projectCanonicalRoute({ collection, relativePath, slug: routeSlug }),
     directoryHrefs: Object.freeze(directoryHrefs),
     breadcrumbs,
@@ -158,6 +161,11 @@ interface MutableDirectory {
 
 function buildTree(documents: readonly CanonicalDocument[]) {
   const root: MutableDirectory = { name: '/', virtualPath: '', href: '/', directories: new Map(), files: [] };
+  // The native collection indexes own these mounts even when no document is
+  // public. Hidden-only nested directories are still never constructed.
+  for (const collection of ['pages', 'posts']) {
+    root.directories.set(collection, { name: collection, virtualPath: collection, href: '/' + collection + '/', directories: new Map(), files: [] });
+  }
   for (const document of documents) {
     const segments = document.virtualPath.split('/');
     const filename = segments.pop();
@@ -194,22 +202,24 @@ function assertRouteReservations(documents: readonly CanonicalDocument[], direct
       throw new Error(`Noncanonical route reservation: ${route}`);
     }
     const key = collisionKey(route);
-    if (owner !== 'independent Memo namespace' && (key === '/memos/' || key.startsWith('/memos/'))) {
-      throw new Error(`Route collision between independent Memo namespace and ${owner}.`);
+    if (owner !== 'legacy Memo namespace' && (key === '/memos/' || key.startsWith('/memos/'))) {
+      throw new Error(`Route collision between legacy Memo namespace and ${owner}.`);
     }
     if (pluginForPublicPath(key) === 'comments') {
       throw new Error(`Route collision between comments public namespace and ${owner}.`);
     }
-    if (key === `/${PLUGIN_ACCESS_PATH}/` || key.startsWith(`/${PLUGIN_ACCESS_PATH}/`) ||
+    if (key === `/${LEGACY_PLUGIN_ACCESS_PATH}/` || key.startsWith(`/${LEGACY_PLUGIN_ACCESS_PATH}/`) || key === `/${PLUGIN_ACCESS_PATH}/` || key.startsWith(`/${PLUGIN_ACCESS_PATH}/`) ||
         key === `/${PLUGIN_MARKER_ROOT}/` || key.startsWith(`/${PLUGIN_MARKER_ROOT}/`)) {
       throw new Error(`Route collision between plugin activation artifact namespace and ${owner}.`);
     }
+    if ((key === '/pages/memos/' || key.startsWith('/pages/memos/')) && !(owner === 'Memo assets namespace' || owner.startsWith('document memos/') || owner === 'document pages/memos.md')) throw new Error('Route collision with reserved Memo namespace: ' + owner);
     const existing = reservations.get(key);
     if (existing !== undefined) throw new Error(`Route collision between ${existing} and ${owner}.`);
     reservations.set(key, owner);
   };
   reserve('/', 'site root');
-  reserve('/memos/', 'independent Memo namespace');
+  reserve('/memos/', 'legacy Memo namespace');
+  reserve('/pages/memos/assets/', 'Memo assets namespace');
   for (const directory of directories) reserve(directory.href, `directory ${directory.virtualPath}`);
   for (const document of documents) {
     reserve(document.href, `document ${document.virtualPath}`);
@@ -218,23 +228,28 @@ function assertRouteReservations(documents: readonly CanonicalDocument[], direct
 }
 
 function assertSupportedPageLayouts(pages: readonly CanonicalDocument[]) {
-  const unsupported = pages.filter(({ entry }) => entry.data.layout !== 'page');
+  const unsupported = pages.filter(({ entry, href, relativePath }) => entry.data.layout !== 'page' && !(href === '/pages/memos/' && relativePath === 'memos.md' && entry.data.layout === 'timeline' && entry.data.presentation === 'memo'));
+  const aggregate = pages.find(({ href }) => href === '/pages/memos/');
+  if (!aggregate || aggregate.entry.data.layout !== 'timeline' || aggregate.entry.data.presentation !== 'memo') throw new Error('Memo aggregate must use timeline layout and memo presentation.');
   if (unsupported.length > 0) {
     throw new Error(`Unsupported public page layout: ${unsupported.map(({ virtualPath }) => virtualPath).join(', ')}.`);
   }
 }
 
 export async function getCanonicalContent(): Promise<CanonicalContent> {
-  const [postEntries, pageEntries] = await Promise.all([getCollection('posts'), getCollection('pages')]);
+  const [postEntries, pageEntries, memoEntries] = await Promise.all([getCollection('posts'), getCollection('pages'), getCollection('memos')]);
   const all = [...postEntries, ...pageEntries].map(createCanonicalDocument);
   const documents = [...projectContent(all, GUEST_PRINCIPAL)].sort((left, right) => compareCodePoint(left.virtualPath, right.virtualPath));
+  const memos = [...projectContent(memoEntries.map(createCanonicalDocument), GUEST_PRINCIPAL)].sort((a,b) => b.entry.data.date.getTime() - a.entry.data.date.getTime() || compareCodePoint(a.entry.collection === 'memos' ? a.entry.data.id : '', b.entry.collection === 'memos' ? b.entry.data.id : ''));
+  const ids = new Set<string>();
+  for (const memo of memoEntries) { const key = collisionKey(memo.data.id); if (ids.has(key)) throw new Error('Duplicate Memo ID.'); ids.add(key); }
   const tree = buildTree(documents);
   const directories = flattenDirectories(tree);
   const posts = documents.filter(({ collection }) => collection === 'posts');
   const pages = documents.filter(({ collection }) => collection === 'pages');
   assertSupportedPageLayouts(pages);
-  assertRouteReservations(documents, directories);
-  return Object.freeze({ documents: Object.freeze(documents), posts: Object.freeze(posts), pages: Object.freeze(pages), tree, directories });
+  assertRouteReservations([...documents, ...memos], directories);
+  return Object.freeze({ documents: Object.freeze(documents), posts: Object.freeze(posts), pages: Object.freeze(pages), memos: Object.freeze(memos), tree, directories });
 }
 
 export async function getPublicContent() {

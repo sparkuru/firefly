@@ -258,6 +258,8 @@ function assembleSiteConfig(rawValue, source, commentsConfig, siteData) {
   let memosActivation;
   try {
     commentsProjection = commentsSiteProjection(rawValue, source, commentsConfig);
+    // Deprecated activation is validated for retained configuration compatibility.
+    // New Memo document visibility is exclusively draft/access projection.
     memosActivation = parseMemosActivation(rawValue.plugins?.memos, source);
   } catch (error) {
     throw new Error(`Invalid site configuration in ${source}: ${error instanceof Error ? error.message : String(error)}`);

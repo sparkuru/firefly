@@ -11,11 +11,11 @@ remote_stage=""
 ssh_args=()
 
 usage() {
-	printf '%s\n' 'Usage: publish.sh new NAME [--config FILE] | build [--config FILE]' \
-		'       publish.sh publish|rollback --config FILE [--local] [--dry-run] [--prior-candidate PATH]' \
-		'new always authors checkout-local content/memos; a supplied config is ignored.' \
-		'publish automatically pushes only Memo. build never promotes. --local selects a local deployment.' \
-		'Use an owner-only JSON config; SSH uses keys and strict known-host checking.' >&2
+	printf '%s\n' 'Usage: publish.sh build [--config FILE]' \
+		'Legacy recovery only: build validates an independent retained candidate without promotion.' \
+		'new, publish, push and rollback are retired and refuse before transport or writes.' \
+		'Author with ./sam node tooling/memo-documents/cli.mjs new; build with ./preview.sh build.' \
+		'Use an owner-only JSON config for explicit retained recovery inputs.' >&2
 }
 die() {
 	printf '[memos] %s\n' "$*" >&2
@@ -163,6 +163,11 @@ main() {
 	local default_source=true default_output=true
 	local local_deployment="" ssh_target remote_image docker_prefix candidate expected_base candidate_digest accepted_digest
 	operation=${1:-}
+	case "${operation}" in
+	new | publish | push | rollback)
+		die 'Independent Memo authoring/publishing is retired. Use ./sam node tooling/memo-documents/cli.mjs new, then ./preview.sh build; deployment belongs to the coordinated site release. Retained build/validate/history tools are for recovery only.'
+		;;
+	esac
 	[[ "${operation}" != --help && "${operation}" != -h ]] || {
 		usage
 		return 0

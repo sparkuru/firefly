@@ -12,6 +12,6 @@ assert.deepEqual(await readPluginAccess(path.join(root, 'dist')), decodePluginAc
 assert.deepEqual(await readPluginAccess(path.join(root, 'artifacts/site')), decodePluginAccess(publication.pluginAccess));
 assert.equal(publication.comments.enabled, publication.pluginAccess.plugins.comments.enabled);
 assert.deepEqual([...publication.inventory].sort(), [...releaseFiles].sort());
-await validateMemoTree(path.join(root, 'dist'), releaseFiles);
-await validateMemoTree(path.join(root, 'artifacts/site'), (await walkSafeTree(path.join(root, 'artifacts/site'))).files);
+await validateMemoTree(path.join(root, 'dist'), releaseFiles, decodePluginAccess(publication.pluginAccess));
+await validateMemoTree(path.join(root, 'artifacts/site'), (await walkSafeTree(path.join(root, 'artifacts/site'))).files, decodePluginAccess(publication.pluginAccess));
 process.stdout.write('[package-runtime] blog inventory, plugin activation and retained legacy Memo floor passed\n');

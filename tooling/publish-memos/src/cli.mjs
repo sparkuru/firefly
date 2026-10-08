@@ -1,22 +1,21 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildCandidate, buildRollbackCandidate, decodeReceipt, newMemo, promoteCandidate, readCurrentHistory, validateCandidate } from './index.mjs';
+import { buildCandidate, buildRollbackCandidate, decodeReceipt, promoteCandidate, readCurrentHistory, validateCandidate } from './index.mjs';
 import { decodeUtf8, readFile } from './files.mjs';
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
-const usage = 'Usage: memos new <name> | build | validate | state | promote | rollback [--source-root PATH] [--assets-root PATH] [--output-root PATH] [--display-name NAME] [--history PATH] [--candidate-root PATH] [--deployment-root PATH] [--expected-base DIGEST|null] [--initial-deletion-floor N]';
+const usage = 'Legacy Memo recovery only: build | validate | state | promote | rollback [--source-root PATH] [--assets-root PATH] [--output-root PATH] [--display-name NAME] [--history PATH] [--candidate-root PATH] [--deployment-root PATH] [--expected-base DIGEST|null] [--initial-deletion-floor N]. Author new documents with tooling/memo-documents/cli.mjs new; publish through the coordinated site build.';
 function argumentsFor(argv) {
   const [command, ...rest] = argv;
   if (command === '--help' || command === 'help') return { command: 'help', options: {} };
-  if (!['new', 'build', 'validate', 'state', 'promote', 'rollback'].includes(command)) throw new TypeError(usage);
+  if (!['build', 'validate', 'state', 'promote', 'rollback'].includes(command)) throw new TypeError(usage);
   const allowed = {
-    new: ['source-root'], build: ['source-root', 'assets-root', 'output-root', 'display-name', 'history', 'initial-deletion-floor'],
+    build: ['source-root', 'assets-root', 'output-root', 'display-name', 'history', 'initial-deletion-floor'],
     validate: ['candidate-root'], state: ['deployment-root'],
     promote: ['deployment-root', 'candidate-root', 'expected-base', 'initial-deletion-floor'],
     rollback: ['candidate-root', 'history', 'output-root']
   }[command];
   const options = {};
-  if (command === 'new') options.name = rest.shift();
   while (rest.length) {
     const flag = rest.shift();
     const key = flag?.startsWith('--') ? flag.slice(2) : '';
@@ -44,10 +43,10 @@ function bootstrapFloor(options) {
 }
 
 export async function runCli(argv) {
+  if (['publish', 'push', 'new'].includes(argv[0])) throw new TypeError('Independent Memo authoring/publishing is retired. Use ./sam node tooling/memo-documents/cli.mjs new, then ./preview.sh build. Legacy build/validate/state/promote/rollback remain explicit recovery tools only.');
   const { command, options } = argumentsFor(argv);
   switch (command) {
     case 'help': return usage;
-    case 'new': return newMemo({ sourceRoot: options['source-root'] ?? path.join(repo, 'content/memos'), name: options.name });
     case 'build': {
       const outputRoot = options['output-root'] ? path.resolve(options['output-root']) : path.join(repo, '.firefly/memos', `candidate-${Date.now()}`);
       const result = await buildCandidate({ sourceRoot: options['source-root'] ?? path.join(repo, 'content/memos'), assetsRoot: options['assets-root'], outputRoot, displayName: options['display-name'] ?? 'Owner', history: historyFile(options.history), initialDeletionFloor: bootstrapFloor(options) });

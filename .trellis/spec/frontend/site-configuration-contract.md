@@ -1,5 +1,18 @@
 # Site Configuration and SEO Contract
 
+## Current Memo Presentation and Configuration
+
+`memo` is a registered full-page document experience with native navigator
+`none`; Firefly/Semantic defaults remain unchanged. Deprecated `[plugins.memos]`
+is still strictly parsed but has no visibility/discovery effect on new Memo
+documents. Current comments-only access uses version 2, and the build itself
+owns Memo routes and sitemap entries; it does not append an independent enabled
+Memo mount. Derived untitled Memo SEO uses body prose and the same UTC+8 date as
+visible labels. The aggregate uses a deterministic latest-public-entry date
+(documented inception fallback when empty). See [Memo Documents](./memo-document-contract.md).
+Older Memo flag/mount examples below are compatibility history, not current
+publication instructions. Ordinary configuration/SEO/theme rules still apply.
+
 ## Scenario: Public Build-Time Site Configuration
 
 ### 1. Scope / Trigger

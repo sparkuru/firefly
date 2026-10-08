@@ -1,5 +1,12 @@
 # Memo Public Activation and Independent Static Reading
 
+Status: retained version-1 recovery behavior. The current coordinated reader is
+defined by [Memo Documents](./memo-document-contract.md). New releases own
+`/pages/memos/` and `/memos/` compatibility inside the site, use comments-only
+version-2 access, and ignore the deprecated Memo flag for document visibility.
+The independent activation/rendering statements below describe retained releases
+and historical fixtures; they are not the new site build contract.
+
 ## 1. Scope / Trigger
 
 Read when changing site Memo activation/navigation/sitemap, reserved routes,

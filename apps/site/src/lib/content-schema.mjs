@@ -107,3 +107,14 @@ export const pageSchema = withChronology(
     layout: z.enum(['page', 'timeline', 'files'])
   }).strict()
 );
+
+// Memo shares document policy while keeping short-form authoring minimal.
+export const memoSchema = withChronology(z.object({
+  ...sharedMetadata,
+  id: z.string().regex(/^m_[A-Za-z0-9_-]{3,128}$/u, 'Memo ID must be a stable opaque token'),
+  title: htmlTitle.optional(),
+  description: requiredText.optional(),
+  layout: z.literal('memo').default('memo'),
+  presentation: z.literal('memo').default('memo'),
+  aliases: z.array(alias).max(0).optional()
+}).strict());

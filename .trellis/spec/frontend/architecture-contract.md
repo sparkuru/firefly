@@ -17,10 +17,10 @@ multi-user CMS, or a shared theme/Experiment marketplace.
 ## 2. Signatures and Data Flow
 
 ```text
-chosen Markdown workspace (posts/, pages/, managed resources)
+chosen Markdown workspace (posts/, pages/, optional memos/, managed resources)
   -> site workspace materialization and strict Content Collections schema
   -> X Core normalize/validate/transform
-  -> registered firefly or semantic Presentation
+  -> registered firefly, semantic or memo Presentation
   -> apps/site static output
 
 experiments/<id>/experiment.json + independent source
@@ -32,10 +32,9 @@ site artifact + Experiment artifacts
   -> coordinated repository artifacts/ + dist/ promotion
   -> operator-owned immutable deployment release
 
-separate owner Memo Markdown + retained private receipt
-  -> tooling/publish-memos sanitized static candidate
-  -> independent Memo releases/current (public/ + private receipt)
-  -> static /memos/ mount; blog release activation gates public access
+retained independent Memo sources/receipts
+  -> owner-approved offline verified document import
+  -> same coordinated site build; legacy formats stay recovery-only
 ```
 
 The key interfaces are `PresentationAdapter.transform(input:
@@ -54,15 +53,16 @@ types, errors, and validation rules live in the linked contracts.
 | `content/` or a selected external blog root | Markdown, front matter, managed resources | Astro imports, client directives, presentation CSS classes, Experiment code |
 | `apps/site/` | Static Astro shell, content loading, routes, SEO, presentation dispatch, public catalog, site plugins | Experiment source or private comments database |
 | `packages/x-core/` | Framework-neutral document normalization, adapter selection, diagnostics, JSON-safe enhancement metadata | Routes, browser Terminal state, Experiment builds, plugins, deployment |
-| `presentations/semantic/`, `presentations/terminal/` | Transform the same normalized document into semantic HTML | Mutation of source Markdown/tree, database reads, cross-imports between adapters |
+| `presentations/semantic/`, `presentations/terminal/`, `presentations/memo/` | Transform the shared normalized document into semantic HTML | Mutation of source Markdown/tree, database reads, cross-imports between adapters |
 | `experiments/<id>/` | Own source, lockfile, assets, build command, and static output | Main-site source imports or writes to root `dist/` |
 | `tooling/validate-experiments/` | Validate manifests and project the safe public catalog | Build arbitrary browser/remote manifests |
 | `tooling/assemble-publication/` | Validate and combine static artifacts as one repository candidate | Rewrite Experiment HTML or switch a deployed release |
 | `tooling/shared/` | Framework-independent contained input reading and HTML sanitation policy | Astro/site source imports, wire/domain rules or service state |
 | `plugins/comments/`, `services/comments/` | Site-owned comments integration and private write/moderation service | Direct database access from static site generation |
-| `plugins/memos/` | Independent memo public export and configuration contract | Site registration, HTTP handlers, private state, or publication promotion |
+| `plugins/memos/` | Retained independent Memo wire/config recovery contract | New document visibility, site rendering or active publication |
 | `plugins/public-access*` | Exact shared activation, route ownership and release marker closure | Content rendering, private state or deployment switching |
-| `tooling/publish-memos/` | Owner Markdown authoring, static rendering, independent receipt/history and automatic push | Blog source/build/pointer/mirror, visitor identity, comments state or mail |
+| `tooling/publish-memos/` | Retained strict independent candidate/history recovery | Active new Memo publish/push, visitor identity, comments state or mail |
+| `tooling/memo-documents/` | Offline verified import and exclusive document authoring/install | Website database access, destructive source cleanup or deployment |
 
 Use a Presentation when an implementation renders the shared Markdown document
 contract. Use an Experiment when it owns a complete page, global style, or
@@ -92,8 +92,9 @@ adapters may be used without changing the source document.
   New content directives require a documented semantic contract and fixtures.
 - The site owns `/`, canonical `/posts/<category...>/<slug>/` and
   `/pages/<slug>/` routes, directory routes, `/lab/`, and its 404.
-  `/memos/` is always reserved for the separate static publisher; enabling its
-  navigation does not make the site builder own its output. Each
+  New releases also own `/pages/memos/`, nested Memo details/assets and the
+  `/memos/` compatibility page. Retained version-1 releases preserve their
+  independent gated mount meaning. Each
   Experiment owns only its validated `/lab/<id>/...` mount. Public paths,
   aliases, and route reservations are derived from the selected workspace and
   must be collision-free. Slugs do not change automatically with titles.
@@ -135,20 +136,18 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
   moderation, and export. The public site consumes a controlled static read
   projection; static pages never query its database. Tracked example config
   stays disabled by default, while owner-local activation is independent.
-- Owner Memo files use a separate source root and processor, with schema-2
-  Markdown public records. The visitor HTTP/mail service is retired; retained
-  private operational data is not imported. Normal Memo publication builds and
-  automatically pushes only its own static candidate and private receipt.
-- Blog activation controls native navigation, sitemap discovery and public
-  route gating through the [plugin-access contract](./plugin-public-access-contract.md). Neither
-  enabled nor disabled blog builds read Memo config/source/export. The blog
-  assembler reserves the namespace and retains validated legacy deletion-floor
-  metadata only as migration evidence. It never owns current Memo output or
-  history. Explicit combined preview consumes an already validated public
-  artifact; deployment selects public bytes and private receipt with one
-  independent Memo pointer. Static runtime mounts public bytes only. See
-  [Memo Site](./memo-site-contract.md) and
-  [Memo Publication and Runtime](./memo-publication-runtime-contract.md).
+- Memo files are documents under the same selected workspace, sharing build-time
+  processing with optional brief-entry metadata. A separate registered reader
+  owns the responsive time stream and details; home embeds only its Pages intro.
+  Document draft/access governs visibility, and ordinary coordinated publication
+  emits the routes/assets. No separate Memo global switch or push is active.
+- The [plugin-access contract](./plugin-public-access-contract.md) versions the
+  change explicitly: current version 2 gates comments only, while retained
+  version 1 preserves independent Memo gating/history. Old artifacts, receipts,
+  originals and deletion floors remain recovery evidence; no build queries a
+  private database or implicitly imports historical content. See
+  [Memo Documents](./memo-document-contract.md) for the approved offline import,
+  route/preview/runtime, body preservation and time navigation contracts.
 
 See [Experiment Publication](./publication-contract.md), [Comments and
 Publication](./comments-publication-contract.md), and [Development

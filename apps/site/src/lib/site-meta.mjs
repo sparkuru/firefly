@@ -34,7 +34,7 @@ export function resolveSiteMetadata(options, config = SITE_CONFIG) {
       title: htmlTitle,
       description,
       ...(canonical === undefined ? {} : { url: canonical }),
-      type: options.collection === 'posts' ? 'article' : 'website',
+      type: (options.collection === 'posts' || options.collection === 'memos') ? 'article' : 'website',
       ...(image === undefined ? {} : { image })
     },
     twitter: {
@@ -43,7 +43,7 @@ export function resolveSiteMetadata(options, config = SITE_CONFIG) {
       description,
       ...(image === undefined ? {} : { image })
     },
-    ...(options.collection === 'posts' && options.date instanceof Date ? {
+    ...((options.collection === 'posts' || options.collection === 'memos') && options.date instanceof Date ? {
       article: {
         publishedTime: options.date.toISOString(),
         ...(options.updated instanceof Date ? { modifiedTime: options.updated.toISOString() } : {}),

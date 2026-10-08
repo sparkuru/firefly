@@ -1,5 +1,12 @@
 # Independent Owner Memo Publication and Static Runtime
 
+Status: retained independent-publisher recovery contract. New documents follow
+[Memo Documents](./memo-document-contract.md) and coordinated site publication.
+Active legacy authoring/publish/push/rollback entrypoints refuse with migration
+guidance before effects. Keep the strict candidate/receipt/deletion-floor internals
+and version-1 runtime tests below for recovery; never reset or reinterpret them
+as current version-2 access ownership. Remote cutover requires separate approval.
+
 ## 1. Scope / Trigger
 
 Read when changing `tooling/publish-memos/`, static Memo mounting, combined

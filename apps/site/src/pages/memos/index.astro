@@ -1,0 +1,23 @@
+---
+import MemoLayout from '../../layouts/MemoLayout.astro';
+import { getCanonicalContent } from '../../lib/content';
+const memos = (await getCanonicalContent()).memos;
+const ids = memos.map(({ entry }) => entry.collection === 'memos' ? entry.data.id : '');
+---
+<MemoLayout title="Memos" description="The Memo timeline has moved." pathname="/memos/" noindex>
+  <section class="memo-detail" data-legacy-memo-ids={JSON.stringify(ids)}>
+    <h1>Memos</h1>
+    <p>The timeline now lives in Pages.</p>
+    <a class="memo-return" href="/pages/memos/" data-legacy-memo-link>Open the timeline →</a>
+  </section>
+</MemoLayout>
+<script>
+  const root = document.querySelector<HTMLElement>('[data-legacy-memo-ids]');
+  const link = root?.querySelector<HTMLAnchorElement>('[data-legacy-memo-link]');
+  if (root && link) {
+    const ids: string[] = JSON.parse(root.dataset.legacyMemoIds ?? '[]');
+    const id = window.location.hash.slice(1);
+    if (ids.includes(id)) link.href = '/pages/memos/#' + id;
+    window.location.replace(link.href);
+  }
+</script>

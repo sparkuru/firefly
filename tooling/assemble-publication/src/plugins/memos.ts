@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse, type DefaultTreeAdapterTypes as HTML } from 'parse5';
+import type { PluginAccess } from '../../../../plugins/public-access.mjs';
 
 const packageRoot = existsSync(path.resolve(import.meta.dirname, '../../package.json'))
   ? path.resolve(import.meta.dirname, '../..') : path.resolve(import.meta.dirname, '../../..');
@@ -35,19 +36,37 @@ export function decodeMemoMetadata(value: unknown): MemosPublicationMetadata {
   return Object.freeze({ enabled: v.enabled, schemaVersion: 1, sourceRevision: v.sourceRevision, generatedAt: v.generatedAt, digest: v.digest, tombstoneEpoch: v.tombstoneEpoch });
 }
 
-export function hasMemoSurface(contents: string): boolean {
-  const visit = (node: HTML.Node): boolean => {
-    if ('attrs' in node && (node.attrs.some((a) => a.name.startsWith('data-memos-') || a.name.startsWith('data-memo-')) || node.attrs.some((a) => a.name === 'class' && /(?:^|\s)memo-(?:stream|submission)(?:\s|$)/u.test(a.value)))) return true;
-    if ('content' in node && visit(node.content)) return true;
-    return 'childNodes' in node && node.childNodes.some(visit);
-  };
-  return visit(parse(contents));
+function hasSurface(node: HTML.Node, predicate: (attributes: HTML.Element['attrs']) => boolean): boolean {
+  if ('attrs' in node && predicate(node.attrs)) return true;
+  if ('content' in node && hasSurface(node.content, predicate)) return true;
+  return 'childNodes' in node && node.childNodes.some((child) => hasSurface(child, predicate));
 }
 
-export async function validateMemoTree(root: string, files: readonly string[]): Promise<void> {
+function isMemoSurface(attributes: HTML.Element['attrs']): boolean {
+  return attributes.some((attribute) => attribute.name.startsWith('data-memos-') || attribute.name.startsWith('data-memo-') ||
+    (attribute.name === 'class' && /(?:^|\s)memo-(?:stream|submission)(?:\s|$)/u.test(attribute.value)));
+}
+
+function isMemoSubmission(attributes: HTML.Element['attrs']): boolean {
+  return attributes.some((attribute) => /^data-memos?-submission(?:-|$)/u.test(attribute.name) ||
+    (attribute.name === 'class' && /(?:^|\s)memo-submission(?:\s|$)/u.test(attribute.value)));
+}
+
+export function hasMemoSurface(contents: string): boolean {
+  return hasSurface(parse(contents), isMemoSurface);
+}
+
+export async function validateMemoTree(root: string, files: readonly string[], access?: PluginAccess): Promise<void> {
   for (const relative of files) {
     const route = relative.split('/').map((segment) => decodeURIComponent(segment)).join('/').normalize('NFKC').toLowerCase();
-    if (route === 'memos.html' || route.startsWith('memos/')) throw new TypeError('Blog output cannot own the independent Memo namespace.');
-    if (relative.endsWith('.html') && hasMemoSurface(new TextDecoder('utf-8', { fatal: true }).decode(await readFile(path.join(root, relative))))) throw new TypeError('Blog output cannot contain a retired Memo stream or submission surface.');
+    if (access?.schemaVersion === 2 && (route === 'memos.html' || route.startsWith('memos/')) && relative !== 'memos/index.html') throw new TypeError('Integrated Memo compatibility namespace may contain only its site-owned index.html.');
+    if (access?.schemaVersion !== 2 && (route === 'memos.html' || route.startsWith('memos/'))) throw new TypeError('Blog output cannot own the independent Memo namespace.');
+    if (relative.endsWith('.html')) {
+      const html = new TextDecoder('utf-8', { fatal: true }).decode(await readFile(path.join(root, relative)));
+      const integratedRoute = route === 'memos/index.html' || route === 'pages/memos/index.html' || route.startsWith('pages/memos/');
+      const document = parse(html);
+      if (hasSurface(document, isMemoSurface) && !(access?.schemaVersion === 2 && integratedRoute)) throw new TypeError('Blog output cannot contain a retired Memo stream or submission surface.');
+      if (hasSurface(document, isMemoSubmission)) throw new TypeError('Retired Memo submission surface is forbidden.');
+    }
   }
 }
