@@ -52,7 +52,8 @@
 ## Ordered Work
 
 The owner approved the complete Memo document/timeline plan on 2026-10-07.
-Active task: `.trellis/tasks/10-07-memo-presentation-meta-terminal/`.
+Archived task:
+`.trellis/tasks/archive/2026-10/10-07-memo-presentation-meta-terminal/`.
 Its 269-entry unified document family uses coordinated builds, a distinct
 Memo presentation at `/pages/memos/`, responsive occupied-month scrubbing,
 individual detail reading and ordinary draft/access visibility. This explicitly
@@ -63,9 +64,20 @@ feed/details, 211 exact assets, actual desktop/mobile/no-JS/loaded-media reading
 fixtures and isolated actual-source packaging. The final repeat's original
 process exit was lost to daemon restart; all stage logs and 95 source hashes
 survived, and both host fixtures were repeated with zero exit. All 491 original
-input snapshots and 637 workspace identities remain exact. The task stays
-in_progress pending the concrete three-commit plan and archive/journal approval;
-no commit, archival, production deployment or next product task is authorized.
+input snapshots and 637 workspace identities remain exact. The owner accepted
+the visible result and approved archival on 2026-10-08. Work commit `8a21ab4`
+contains the coherent implementation, tests, specs and accepted task evidence.
+The supported archive route completed; the separate archive/journal commits
+follow the reviewed batch. No production deployment or next product task is
+authorized.
+
+The owner then explicitly chose the original 180 historical short entries as
+the active Memo corpus, replacing the 269-entry demonstration/import baseline.
+After archival, apply this bounded content-only change: preserve those original
+bodies/dates and remove the 89 imported notes and their 211 attachments from the
+selected Memo source. Retain private originals/recovery correspondence, leave
+posts/pages unchanged, rebuild the ordinary release and verify exact withdrawal.
+This is owner-authorized content maintenance, without a new product task.
 
 The owner approved unified plugin public-access switches on 2026-10-06. The
 completed `plugin-public-access` task makes comments and Memo false close
