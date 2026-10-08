@@ -200,3 +200,40 @@ is claimed by this change.
 ### Status
 
 [OK] **Completed**
+
+
+## Session 87: Memo time reader and historical short-entry corpus
+
+**Date**: 2026-10-08
+**Task**: Memo time reader and historical short-entry corpus
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed and owner-accepted the coordinated Memo reader; archived it, then applied the owner-requested 180-entry short corpus with reversible private withdrawal.
+
+### Main Changes
+
+- Implemented optional Memo article metadata, independent responsive time-scrubbing reader, Pages discovery, shared publishing and retained legacy recovery.
+- Archived memo-presentation-meta-terminal after owner acceptance; work 8a21ab4 and separate archive e29127c.
+- Post-archive owner maintenance retains exactly 180 original short entries; privately withdraws 89 notes and 211 assets without altering original bodies, timestamps or unrelated content.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8a21ab4` | (see git log) |
+
+### Testing
+
+- [OK] 398 Node tests and 184 browser passes with 146 applicability skips; final stage logs recovered honestly after daemon restart, both host fixtures rerun with zero exit; isolated actual-source runtime package passed.
+- [OK] Short-only coordinated rebuild: all 18 static assertions, both Experiments and assembler passed; exact 180 original bodies/IDs/dates/source identities and 300 private backup identities independently verified.
+- [OK] Short-only actual desktop/mobile interactive/no-JS acceptance passed four contexts over 32 occupied months, with zero withdrawn IDs/assets in public output and stable scrolling/detail return.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Local review preview remains running on the existing profile; no production deployment or new product task is authorized.

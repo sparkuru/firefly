@@ -68,16 +68,25 @@ input snapshots and 637 workspace identities remain exact. The owner accepted
 the visible result and approved archival on 2026-10-08. Work commit `8a21ab4`
 contains the coherent implementation, tests, specs and accepted task evidence.
 The supported archive route completed; the separate archive/journal commits
-follow the reviewed batch. No production deployment or next product task is
+follow the reviewed batch; archive commit `e29127c` records the supported move
+and its required Codex attribution. No production deployment or next product task is
 authorized.
 
 The owner then explicitly chose the original 180 historical short entries as
-the active Memo corpus, replacing the 269-entry demonstration/import baseline.
-After archival, apply this bounded content-only change: preserve those original
-bodies/dates and remove the 89 imported notes and their 211 attachments from the
-selected Memo source. Retain private originals/recovery correspondence, leave
-posts/pages unchanged, rebuild the ordinary release and verify exact withdrawal.
-This is owner-authorized content maintenance, without a new product task.
+the active Memo corpus, replacing the initial 269-entry imported baseline.
+After archival this bounded content-only change completed: all 180 original
+bodies/dates and retained source identities/modes/mtimes remain exact; the 89
+notes and 211 attachments moved to an owner-only, same-filesystem private sibling
+backup with all 300 original file identities preserved. The operation lock is
+absent, and originals/recovery histories/posts/pages remain unchanged. The ordinary
+coordinated build passed all 18 static checks and both Experiment builds. An
+independent audit found exactly 180 feed/details over 32 occupied UTC+8 months,
+no withdrawn identity anywhere in the release/legacy mapping and no owned Memo
+asset or private backup leakage. Actual desktop/mobile interactive/no-JS reading,
+pointer/keyboard/natural-scroll sync, month spacing, detail/Back/return and source
+body comparisons passed in all four contexts. The local review preview is
+refreshed. This is owner-authorized content maintenance, without a new product
+task; historical 269-entry task evidence remains an accurate archived baseline.
 
 The owner approved unified plugin public-access switches on 2026-10-06. The
 completed `plugin-public-access` task makes comments and Memo false close
