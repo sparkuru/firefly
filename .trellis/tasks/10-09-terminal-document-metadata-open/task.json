@@ -1,0 +1,29 @@
+{
+  "id": "terminal-document-metadata-open",
+  "name": "terminal-document-metadata-open",
+  "title": "Terminal document metadata and new-tab opening",
+  "description": "Unified date/bytes/license metadata in standalone and inline Terminal reading, canonical Share and new-tab document opening with the source session retained.",
+  "status": "in_progress",
+  "dev_type": "frontend",
+  "scope": null,
+  "package": "apps/site",
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-10-09",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Owner explicitly requested task creation and continued implementation, then selected date/bytes/license order. Verified work reuses prior commit authorization; no push or production deployment.",
+  "meta": {
+    "review_status": "passed",
+    "submit_ready_review": "human-optional"
+  }
+}

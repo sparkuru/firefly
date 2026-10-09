@@ -1176,7 +1176,7 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - An inline `cat` stream ends after its trusted document content; the existing
   prompt remains below its file-information footer. A bounded centered sticky
   action bar offers Command, Collapse/Expand, Open and Share during long reads.
-  The approved footer contains virtual file path, bytes, date and post license;
+  The approved footer contains virtual file path, date, bytes and post license;
   command input continues to be owned by the existing prompt. Return preserves
   the draft and selection;
   collapse retains the body DOM and scopes state and aria-controls per clone.
@@ -1433,8 +1433,14 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   `open` operands never reach this
   helper, and ordinary breadcrumbs, directory links, permalinks, and authored
   `cat` body links remain fragment-free. The explicit inline Open document
-  action shares this destination-aware helper and retains native link behavior;
-  its static href remains canonical without a fragment.
+  action shares this destination-aware helper and retains native target-blank
+  noopener behavior; its static href remains canonical without a fragment.
+  Terminal `open` opens a separate document tab, clears its opener and keeps
+  the original session's URL/cwd/history/transcript and next input. A successful
+  command record has only the submitted command line; blocked opening exposes
+  a native retry instead of replacing the source tab. Experiment `launch`
+  retains its established same-tab intent. Popup-local navigator `:q` and
+  Back/Forward policies remain unchanged.
 - A semantic document uses `data-document-navigator-entry="fragment"`; its status
   stays hidden and its region is not focusable until `window.location.hash ===
   '#document-navigator'`. When available, it exposes a visible native

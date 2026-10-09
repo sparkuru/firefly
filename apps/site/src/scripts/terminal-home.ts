@@ -128,6 +128,7 @@ interface RenderContext {
 interface RenderResult {
   readonly focusTarget: HTMLElement | null;
   readonly navigationHref?: string;
+  readonly documentNavigationHref?: string;
 }
 
 interface CompletionPanel {
@@ -936,13 +937,7 @@ function renderEffect(
         effect.entry.href,
         context.documentNavigationLookup
       );
-      const link = document.createElement('a');
-      link.href = destination.href;
-      link.textContent = destination.navigatorEnabled
-        ? `Open ${effect.entry.title} with the document navigator`
-        : `Open ${effect.entry.title}`;
-      record.append(link);
-      return { focusTarget: null, navigationHref: destination.href };
+      return { focusTarget: null, documentNavigationHref: destination.href };
     }
     case 'document': {
       const template = context.templates.byPath.get(effect.entry.virtualPath);
@@ -1449,6 +1444,30 @@ function initializeTerminalHome(
       nodes.announcer.textContent = result.announcement;
       if (rendered.navigationHref !== undefined) {
         window.location.assign(rendered.navigationHref);
+        return;
+      }
+      if (rendered.documentNavigationHref !== undefined) {
+        settleCommandOutput(record, nodes.input);
+        let opened = false;
+        let tab: Window | null = null;
+        try { tab = window.open('about:blank', '_blank'); } catch { /* Native retry remains available. */ }
+        if (tab !== null) {
+          try {
+            tab.opener = null;
+            tab.location.replace(rendered.documentNavigationHref);
+            opened = true;
+          } catch { try { tab.close(); } catch { /* Keep the source session usable. */ } }
+        }
+        if (!opened) {
+          const retry = document.createElement('a');
+          retry.href = rendered.documentNavigationHref;
+          retry.target = '_blank';
+          retry.rel = 'noopener';
+          retry.setAttribute('data-terminal-open', '');
+          retry.textContent = 'Open document in a new tab';
+          record.append(retry);
+          nodes.announcer.textContent = 'Could not open a new tab. Use the document link to retry.';
+        }
         return;
       }
       if (rendered.focusTarget === null) {

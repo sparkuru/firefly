@@ -7,6 +7,8 @@ import type { renderDocument } from '../lib/render-document';
 import CommentSection from '../plugins/comments/CommentSection.astro';
 import ContentMarkers from './ContentMarkers.astro';
 import DocumentNavigationStatus from './DocumentNavigationStatus.astro';
+import { getPostLicense } from '../lib/post-license.mjs';
+import { resolveDocumentShareUrl } from '../lib/document-share-url.mjs';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
@@ -29,6 +31,9 @@ const navigationState = enabled ? navigationInitialState(documentNavigation.prof
 const navigatorProfile = enabled ? documentNavigation.profile : null;
 const showOutline = metadata.outline.length >= 2;
 const outlineRootDepth = metadata.outline[0]?.depth ?? 0;
+const license = entry.collection === 'posts' ? getPostLicense(entry.data.license) : undefined;
+const shareUrl = resolveDocumentShareUrl(canonical.href, entry.data.canonical);
+const date = entry.data.date.toISOString().slice(0, 10);
 
 function hasLaterSibling(index: number, depth: number) {
   for (const item of metadata.outline.slice(index + 1)) {
@@ -50,6 +55,7 @@ function outlinePrefix(index: number, depth: number) {
 
 <article
   class="terminal-document"
+  data-document-sharing
   data-document-navigator={enabled ? '' : undefined}
   data-document-navigator-entry={navigatorProfile?.entry}
   data-document-navigator-supports-mobile={enabled ? String(navigatorProfile?.supportsMobile) : undefined}
@@ -58,30 +64,16 @@ function outlinePrefix(index: number, depth: number) {
   <header class="terminal-document-header">
     <ContentMarkers markers={canonical.markers} />
     <h1>{entry.data.title}</h1>
-    {
-      entry.collection === 'posts' && (
-        <p class="terminal-meta">
-          published{' '}
-          <time datetime={entry.data.date.toISOString()}>
-            {entry.data.date.toLocaleDateString('en', {
-              dateStyle: 'long',
-              timeZone: 'UTC'
-            })}
-          </time>
-          {entry.data.updated && (
-            <>
-              {' · updated '}
-              <time datetime={entry.data.updated.toISOString()}>
-                {entry.data.updated.toLocaleDateString('en', {
-                  dateStyle: 'long',
-                  timeZone: 'UTC'
-                })}
-              </time>
-            </>
-          )}
-        </p>
-      )
-    }
+    <p class="terminal-meta" data-document-file-metadata>
+      <time datetime={entry.data.date.toISOString()}>{date}</time>
+      <span aria-hidden="true"> · </span>
+      <span data-terminal-source-bytes={document.sourceByteLength} data-terminal-source-kind={document.sourceKind}>{document.sourceByteLength} bytes</span>
+      {license && <><span aria-hidden="true"> · </span><a href={license.href} data-terminal-license={entry.data.license}>{license.label}</a></>}
+      <span class="terminal-document-share-group" hidden data-document-share-group>
+        <span aria-hidden="true"> · </span><button type="button" class="terminal-document-share" data-document-share data-document-share-url={shareUrl} hidden>Share</button>
+      </span>
+      <span class="terminal-visually-hidden" data-document-share-announcer aria-live="polite" aria-atomic="true"></span>
+    </p>
   </header>
 
   {
@@ -118,3 +110,9 @@ function outlinePrefix(index: number, depth: number) {
     <DocumentNavigationStatus profile={navigatorProfile} variant="terminal" exitPolicy={documentNavigation.exitPolicy} assets={documentNavigation.assets} />
   )}
 </article>
+
+<script>
+  import { startDocumentShare } from '../scripts/document-share';
+  const root = document.querySelector<HTMLElement>('[data-document-sharing]');
+  if (root !== null) startDocumentShare(root);
+</script>

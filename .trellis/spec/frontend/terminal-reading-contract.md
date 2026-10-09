@@ -73,7 +73,9 @@ contrast from the palette's base text color.
 ## Inline article navigation
 
 `TerminalStreamDocument.astro` uses the owner's centered four-action bar, body
-and file-footer composition; see [Terminal file metadata](./terminal-file-metadata-contract.md).
+and file-footer composition; standalone and inline metadata share the ordered
+date/bytes/post-license fields. Terminal command and inline Open preserve the
+original session and use a new tab. See [Terminal file metadata](./terminal-file-metadata-contract.md).
 Validated repeated metadata titles use a hidden inert-template label. Cloning
 promotes the matching first authored heading as the visible reading focus and
 article label, preserving its scoped ID/text and strict unique template checks.

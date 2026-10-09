@@ -460,3 +460,28 @@ Completion repair committed as `8617d83`; completed evidence is archived at
 `.trellis/tasks/archive/2026-10/10-09-terminal-completion-viewport-stability/`.
 The developer journal references this work commit only. No new product work is
 inferred from this completion.
+
+### Terminal article metadata and new-tab opening
+
+On 2026-10-09 the owner explicitly requested task creation and continued
+implementation for standalone Terminal article metadata and retained-session
+document opening. The owner then selected date/bytes/license ordering for both
+standalone and inline cat metadata; standalone adds Share at the end, while
+inline keeps its virtual file path and existing Share action.
+Active task: `10-09-terminal-document-metadata-open`. Successful Terminal open
+will launch a new tab and leave only its command record and next prompt in the
+original session; inline Open also uses a native new tab. Capability-aware
+navigator destinations/exit policies, raw-byte provenance, actual post licenses,
+canonical Share and native mobile browsing remain established boundaries.
+Implementation and independent review passed: 18 static checks, isolated actual
+license/canonical/nav-none coverage, 156 affected browser passes and 67
+applicability skips with no retries. Desktop/mobile/200%-text captures were
+reviewed; Share separator wrapping/spacing was polished. A new static-test
+basename assumption was corrected using the physical document mapping and
+actual date/license; both owner and tracked-fixture static gates passed without
+app-source changes. The final configured publication build and ready existing
+preview passed, serving exact rebuilt homepage/bundle/OpenWrt metadata. All
+13 app/test fingerprints remained unchanged through rebuilding. Evidence is
+task `research/validation.md`. Commit/archive/journal reuse prior authorization
+after human-optional review. No lab redesign, authored content change, remote
+push or production deployment is included.

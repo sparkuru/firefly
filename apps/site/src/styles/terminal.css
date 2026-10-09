@@ -1293,6 +1293,40 @@
   font-size: 0.875rem;
 }
 
+.terminal-document-share-group {
+  display: inline-block;
+  margin-inline-start: 1ch;
+  white-space: nowrap;
+}
+
+.terminal-document-share {
+  min-width: calc(6ch + 0.7rem + 2px);
+  padding: 0.125rem 0.35rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--terminal-color-link);
+  font: inherit;
+  cursor: pointer;
+}
+
+.terminal-document-share:focus-visible {
+  outline: 2px solid var(--terminal-color-focus);
+  outline-offset: 2px;
+}
+
+.terminal-document-share:hover {
+  background: var(--terminal-color-surface-subtle);
+}
+
+.terminal-document-share[hidden],
+.terminal-document-share-group[hidden] {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .terminal-document-share { min-height: 44px; }
+}
+
 .terminal-directory a,
 .terminal-directory-list a {
   text-decoration: underline;

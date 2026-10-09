@@ -714,39 +714,52 @@ test('open resolves a canonical destination and :q exits directly to home', asyn
   }
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill(`open ./${workflowRelativePath}`);
+  const opened = page.context().waitForEvent('page');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#document-navigator$/u);
-  const region = page.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
+  const documentPage = await opened;
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toHaveValue('');
+  await expect(documentPage).toHaveURL(/\/posts\/ai\/llm-workflow-with-trellis\/#document-navigator$/u);
+  expect(await documentPage.evaluate(() => window.opener)).toBeNull();
+  const region = documentPage.getByRole('region', { name: /Document navigator for llm-workflow-with-trellis/u });
   await expect(region).toBeFocused();
   await region.press('G');
-  await expect(page.locator('[data-navigation-position]')).not.toHaveText(/^1\//u);
+  await expect(documentPage.locator('[data-navigation-position]')).not.toHaveText(/^1\//u);
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Navigation command' });
+  const command = documentPage.getByRole('textbox', { name: 'Navigation command' });
   await command.fill('q');
   await command.press('Enter');
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(documentPage).toHaveURL(/\/$/u);
+  await expect(page.locator('.terminal-command-row')).toBeVisible();
+  await documentPage.close();
 });
 
 test('open opens a Terminal document navigator with the unified presentation', async ({ page }) => {
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill('open ~/blog/pages/about.md');
+  const opened = page.context().waitForEvent('page');
   await input.press('Enter');
-
-  await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
-  await expect(page.locator('.terminal-document')).toHaveCount(1);
-  await expect(page.locator('.semantic-document')).toHaveCount(0);
-  const region = page.getByRole('region', { name: /Document navigator for About this foundation/u });
+  const documentPage = await opened;
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toHaveValue('');
+  await expect(documentPage).toHaveURL(/\/pages\/about\/#document-navigator$/u);
+  await expect(documentPage.locator('.terminal-document')).toHaveCount(1);
+  await expect(documentPage.locator('.semantic-document')).toHaveCount(0);
+  const region = documentPage.getByRole('region', { name: /Document navigator for About this foundation/u });
   await expect(region).toBeFocused();
-  await expect(page.locator('[data-document-navigator-status]')).toBeVisible();
+  await expect(documentPage.locator('[data-document-navigator-status]')).toBeVisible();
   await region.press('G');
-  await expect(page.locator('[data-navigation-position]')).not.toHaveText(/^1\//u);
+  await expect(documentPage.locator('[data-navigation-position]')).not.toHaveText(/^1\//u);
 
   await region.press(':');
-  const command = page.getByRole('textbox', { name: 'Navigation command' });
+  const command = documentPage.getByRole('textbox', { name: 'Navigation command' });
   await command.fill('q');
   await command.press('Enter');
+  await expect(documentPage).toHaveURL(/\/$/u);
   await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toBeVisible();
+  await documentPage.close();
 });
 
 test('document navigator fragment focus does not perform a second programmatic scroll', async ({ page }) => {
@@ -940,14 +953,22 @@ test('document navigator entry keeps native Back and Forward route boundaries', 
   await page.goto('/');
   const input = page.getByRole('textbox', { name: terminalPromptName() });
   await input.fill('open ~/blog/pages/about.md');
+  const opened = page.context().waitForEvent('page');
   await input.press('Enter');
-  await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
-
-  await page.goBack();
+  const documentPage = await opened;
+  await expect(documentPage).toHaveURL(/\/pages\/about\/#document-navigator$/u);
   await expect(page).toHaveURL(/\/$/u);
-  await expect(page.getByRole('textbox', { name: terminalPromptName() })).toBeVisible();
+  await input.fill('retained source draft');
+  await documentPage.goto('/');
 
-  await page.goForward();
-  await expect(page).toHaveURL(/\/pages\/about\/#document-navigator$/u);
-  await expect(page.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
+  await documentPage.goBack();
+  await expect(documentPage).toHaveURL(/\/pages\/about\/#document-navigator$/u);
+  await expect(documentPage.getByRole('region', { name: /Document navigator for About this foundation/u })).toBeFocused();
+
+  await documentPage.goForward();
+  await expect(documentPage).toHaveURL(/\/$/u);
+  await expect(documentPage.getByRole('textbox', { name: terminalPromptName() })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toHaveValue('retained source draft');
+  await documentPage.close();
 });

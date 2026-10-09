@@ -2,8 +2,8 @@
 
 ## 1. Scope / Trigger
 
-Use for post licensing, original Markdown byte provenance, inline `cat` footer
-metadata and Share. These are site-owned chrome, independent of X Core,
+Use for post licensing, original Markdown byte provenance, standalone Terminal
+metadata, inline `cat` footer and Share. These are site-owned chrome, independent of X Core,
 presentation/runtime entry payloads, routes, Memo licensing and authored bytes.
 
 ## 2. Signatures
@@ -27,6 +27,13 @@ Post `license` is one of `CC-BY-4.0`, `CC-BY-SA-4.0`, `CC-BY-ND-4.0`,
 `getPostLicense(id: unknown)` validates an own descriptor key and returns its
 typed label/link; components use this boundary instead of indexing with the
 generated Astro metadata's `any` type.
+
+`resolveDocumentShareUrl(pathname: string, canonical?: string): string` in
+`document-share-url.mjs` applies the existing site canonical precedence, strips
+the resolved URL fragment and returns a canonical route only when no absolute
+origin/override is configured. Both Terminal document components use it.
+`startDocumentShare(root: HTMLElement): void` independently enhances the
+standalone `[data-document-sharing]` article, with a WeakSet startup guard.
 
 ## 3. Contracts
 
@@ -56,14 +63,42 @@ allowlist preserves the field during explicit normalization, including default
 and overrides, while preserving body bytes. Footer license links use the fixed
 official mapping, never authored arbitrary HTML/URLs.
 
-Inline navigation contains centered `Command`, `Collapse`/`Expand`, `Open`,
-`Share` actions. The footer follows the body with virtual Markdown path, exact
-bytes, date and post license. Share metadata uses `resolveSiteMetadata` canonical
-precedence, falling back to the canonical route resolved against browser origin
-only when origin/override are absent. Open alone receives navigator fragments;
+Standalone Terminal title metadata is UTC YYYY-MM-DD date, exact source bytes,
+post license and Share, in that order. The compact visible row omits the old
+published/updated wording; existing updated SEO metadata remains unchanged.
+Pages retain applicable date/bytes/Share without acquiring a post license.
+The inline footer follows the body with virtual Markdown path, then the same
+date/bytes/post-license sequence. Inline navigation contains centered `Command`,
+`Collapse`/`Expand`, `Open`, `Share` actions.
+Share metadata uses `resolveSiteMetadata` canonical precedence through the
+shared build-time helper, falling back to the canonical route resolved against
+browser origin only when origin/override are absent. Open alone receives navigator fragments;
 Share remains a permanent, fragment-free HTTP(S) URL without credentials.
 Clipboard feedback reports actual success/failure, preserves draft/selection,
 stays per output and participates in existing timer/transcript cleanup.
+
+Standalone Share starts independently of navigator availability, including
+`navigator = "none"`. Its wrapper/separator and button remain hidden without JS
+and are revealed together only after initialization; explicit hidden CSS must
+outrank any display rule. Keep the separator and button in one nonbreaking
+inline group to avoid an orphan separator on narrow screens. Feedback reserves
+the same button width across Share/Copied/Failed; coarse/no-hover targets are
+at least 44px. Native button focus is protected from navigator keys.
+Concurrent clicks are serialized with a request token. Pagehide retires the
+pending token and timer; pageshow restores the usable action without reviving an
+older promise's feedback or releasing a newer request. Copy failure is honest
+and preserves static metadata and native reading links.
+
+Terminal document Open uses a new tab while the source session remains usable.
+The command controller separates document intent from same-tab Experiment
+navigation. Synchronously acquire a blank tab within the submit gesture, clear
+its opener, then navigate to the validated capability-aware local destination.
+Successful command records contain only the submitted line followed by the next
+prompt. A truly blocked/failed opening retains a native target-blank noopener
+retry link with `[data-terminal-open]`, using the existing href-refresh policy.
+Do not interpret the null return of `window.open(..., 'noopener')` as a reliable
+blocking signal. Inline Open remains a native target-blank noopener anchor,
+preserving modified clicks, original draft/caret and current navigator intent.
 
 ## 4. Validation & Error Matrix
 
@@ -77,6 +112,10 @@ stays per output and participates in existing timer/transcript cleanup.
 | Page/Memo entry | No post license default added |
 | Clipboard unavailable/rejected | Honest failure; native Open remains usable |
 | Clear/fatal transition during pending clipboard | No late detached output feedback or retained timers |
+| Standalone navigator disabled or no JavaScript | Share remains independent when enhanced; static metadata stays readable, no inert visible Share |
+| Pagehide/pageshow during pending standalone Share | Old completion cannot revive feedback or reset a newer pending request |
+| Document Open succeeds | One new tab, opener null, original session retained, command-only successful record |
+| Document Open blocked/throws | Original session remains usable; honest native retry, no same-tab fallback |
 
 ## 5. Good / Base / Bad Cases
 
@@ -95,9 +134,20 @@ rollback/withdrawal, generated aggregate and missing/invalid provenance. Test
 all license overrides/defaults/rejections and metadata-writer body preservation.
 An isolated build verifies source bytes, virtual identity despite slug, footer
 order, no published sidecar/host path, and correct license/canonical override.
+Original-byte output assertions must locate the physical source through the
+content mapping/virtual file identity, not a canonical route slug or hardcoded
+fixture basename. Owner files can have numbered prefixes and independent date
+or license overrides; compare their actual Buffer, date and validated license
+without weakening the separate pinned-fixture default/override assertions.
 Browser checks retain repeated-clone IDs, visible reading focus, native modified
 Open, collapse/body identity, centered controls, narrow sticky clearance and
 Share success/failure/reset/independence with exact copied URL and draft/caret.
+Standalone checks cover actual original-byte/default/override rendering, UTC
+order, no-JS hidden actions, navigator-none build and enhancement, pending
+lifecycle, stable feedback geometry, touch targets and 200% narrow reflow.
+New-tab tests assert both popup destination/opener isolation and unchanged
+source URL/cwd/history/transcript/input; popup-local Back/Forward and `:q` retain
+the existing navigator policies. Experiment launch remains independently tested.
 
 ## 7. Wrong vs Correct
 

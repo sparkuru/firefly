@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { terminalHomeAssetsInlineLimit } from '../src/lib/assets-inline-limit.mjs';
 import { CONTENT_THEME_IDS } from '../src/lib/content-theme.mjs';
+import { DEFAULT_POST_LICENSE, getPostLicense } from '../src/lib/post-license.mjs';
 import {
   resolveContentMarkers,
   supportedContentMarkerIds
@@ -625,6 +626,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, new RegExp(navigationScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
+    assert.match(html, /<script type="module">[\s\S]*?\[data-document-sharing\]/u);
   }
   for (const html of semanticDocumentRoutes) {
     assertSharedFavicon(html, 'semantic document');
@@ -635,6 +637,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
     assertContentThemeBoundary(html, 'semantic document');
+    assert.doesNotMatch(html, /data-document-sharing|data-document-share/u);
   }
   for (const [route, html] of Object.entries({
     home: routes.home,
@@ -876,7 +879,19 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.match(article, /data-diagram="rendered"/u);
   assert.match(article, /class="terminal-document"/u);
   assert.match(article, /class="terminal-root"/u);
-  assert.match(article, /published/u);
+  const originalWorkflow = await readFile(path.join(process.env.FIREFLY_CONTENT_ROOT ?? path.resolve(siteRoot, '../../content'), workflow.virtualPath));
+  const originalFrontmatter = /^(?:\uFEFF)?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(originalWorkflow.toString('utf8'))?.[1] ?? '';
+  const originalMetadata = parseDocument(originalFrontmatter, { uniqueKeys: true });
+  assert.deepEqual(originalMetadata.errors, []);
+  const authoredLicense = originalMetadata.toJS()?.license;
+  const license = getPostLicense(authoredLicense === undefined ? DEFAULT_POST_LICENSE : authoredLicense);
+  const fileMetadata = /<p\b[^>]*data-document-file-metadata[^>]*>([\s\S]*?)<\/p>/u.exec(article)?.[1] ?? '';
+  assert.match(fileMetadata, new RegExp(`${escapeRegExp(workflow.date)}[\\s\\S]*?data-terminal-source-bytes="${originalWorkflow.byteLength}"[\\s\\S]*?${escapeRegExp(license.label)}[\\s\\S]*?data-document-share`, 'u'));
+  assert.match(fileMetadata, new RegExp(`href="${escapeRegExp(license.href)}"[^>]*data-terminal-license`, 'u'));
+  assert.match(fileMetadata, /data-terminal-source-kind="authored"/u);
+  assert.match(fileMetadata, /data-document-share-group[^>]*hidden|hidden[^>]*data-document-share-group/u);
+  assert.doesNotMatch(fileMetadata, /published|updated/u);
+  assert.doesNotMatch(terminalArticle.match(/<p\b[^>]*data-document-file-metadata[^>]*>([\s\S]*?)<\/p>/u)?.[1] ?? '', /data-terminal-license/u);
   assert.match(article, new RegExp(`<span>${escapeRegExp(workflow.visiblePath)}<\\/span>`, 'u'));
   assert.doesNotMatch(article, /class="terminal-path"/u);
 });

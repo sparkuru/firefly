@@ -2225,6 +2225,7 @@ test('inline chrome centers four usable controls and keeps visible reading focus
     await expect(article.locator('.terminal-stream-footer')).toContainText('~/blog/pages/markdown-template.md');
     await expect(article.locator('[data-terminal-source-bytes]')).toHaveAttribute('data-terminal-source-kind', 'authored');
     await expect(article.locator('[data-terminal-license]')).toHaveCount(0);
+    expect(await article.locator('.terminal-stream-footer').evaluate(root => [...root.querySelectorAll('time,[data-terminal-source-bytes],[data-terminal-license]')].map(node => node.hasAttribute('data-terminal-source-bytes') ? 'bytes' : node.tagName.toLowerCase()))).toEqual(['time', 'bytes']);
     await article.locator('.terminal-stream-prose [id]').nth(1).evaluate(element => element.scrollIntoView({ block: 'start' }));
     expect(await article.locator('.terminal-stream-prose [id]').nth(1).evaluate(element =>
       element.getBoundingClientRect().top >= element.closest('article')!.querySelector('.terminal-stream-actions')!.getBoundingClientRect().bottom)).toBe(true);
@@ -2520,13 +2521,79 @@ test('inline open intent respects destinations without a navigator and native ne
   await submit(page, 'cat ~/blog/pages/markdown-template.md');
   const link = page.locator('[data-terminal-open]');
   await expect(link).toHaveAttribute('href', '/pages/markdown-template/');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener');
+  const input = page.locator('#terminal-command');
+  await input.fill('retained inline draft');
+  await input.evaluate((element: HTMLInputElement) => element.setSelectionRange(2, 8));
+  const ordinaryPopup = page.context().waitForEvent('page');
+  await link.click();
+  const ordinary = await ordinaryPopup;
+  await expect(ordinary).toHaveURL(/\/pages\/markdown-template\/$/u);
+  expect(await ordinary.evaluate(() => window.opener)).toBeNull();
+  await ordinary.close();
+  await expect(input).toHaveValue('retained inline draft');
+  expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])).toEqual([2, 8]);
+  await expect(link).toBeFocused();
   const popupPromise = page.context().waitForEvent('page');
   await link.click({ modifiers: ['Control'] });
   const popup = await popupPromise;
   await expect(popup).toHaveURL(/\/pages\/markdown-template\/$/u);
+  expect(await popup.evaluate(() => window.opener)).toBeNull();
   await popup.close();
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.locator('[data-terminal-stream-document]')).toHaveCount(1);
+});
+
+test('open creates a document tab with only its command record and retains the source session', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await submit(page, 'cd infra');
+  const input = page.locator('#terminal-command');
+  const command = 'open ~/blog/pages/about.md';
+  const opened = page.context().waitForEvent('page');
+  await submit(page, command);
+  const documentPage = await opened;
+  await expect(documentPage).toHaveURL(/\/pages\/about\/#document-navigator$/u);
+  expect(await documentPage.evaluate(() => window.opener)).toBeNull();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(input).toHaveAccessibleName(terminalPromptName('~/blog/posts/infra'));
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  const record = page.locator('.terminal-record').last();
+  await expect(record.locator(':scope > *')).toHaveCount(1);
+  await expect(record.locator(':scope > .terminal-command-line')).toContainText(command);
+  await expect(record.getByRole('link')).toHaveCount(0);
+  await input.press('ArrowUp');
+  await expect(input).toHaveValue(command);
+  await input.press('ArrowDown');
+  await expect(input).toHaveValue('');
+  await submit(page, 'pwd');
+  await expect(page.locator('.terminal-record').last()).toContainText('~/blog/posts/infra');
+  await documentPage.close();
+});
+
+test('blocked document opening retains a native retry and a usable source prompt', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => { window.open = () => null; });
+  await submit(page, 'open ~/blog/pages/about.md');
+  await expect(page).toHaveURL(/\/$/u);
+  const input = page.locator('#terminal-command');
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await expect(page.locator('[data-terminal-announcer]')).toContainText('Could not open a new tab');
+  const retry = page.locator('.terminal-record').last().getByRole('link', { name: 'Open document in a new tab' });
+  await expect(retry).toHaveAttribute('href', '/pages/about/#document-navigator');
+  await expect(retry).toHaveAttribute('target', '_blank');
+  await expect(retry).toHaveAttribute('rel', 'noopener');
+  const opened = page.context().waitForEvent('page');
+  await retry.click();
+  const documentPage = await opened;
+  await expect(documentPage).toHaveURL(/\/pages\/about\/#document-navigator$/u);
+  expect(await documentPage.evaluate(() => window.opener)).toBeNull();
+  await documentPage.close();
+  await submit(page, 'pwd');
+  await expect(page.locator('.terminal-record').last()).toContainText('~/blog/posts');
 });
 
 test('a collapse control pointing outside its document rejects the template', async ({ page }) => {

@@ -2,7 +2,7 @@
 import { formatResourcePath, type TerminalEntry } from '@firefly/presentation-terminal/runtime';
 import type { PublicDocument, renderDocument } from '../lib/render-document';
 import { getPostLicense } from '../lib/post-license.mjs';
-import { resolveSiteMetadata } from '../lib/site-meta.mjs';
+import { resolveDocumentShareUrl } from '../lib/document-share-url.mjs';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
@@ -22,8 +22,7 @@ const firstHeading = document.metadata.outline[0];
 const startsWithHeading = /^\s*(?:<!--[\s\S]*?-->\s*)*<h[2-6]\b/u.test(entry.rendered?.html ?? '');
 const repeatedTitle = startsWithHeading && firstHeading !== undefined &&
   normalizeTitle(firstHeading.text) === normalizeTitle(entry.data.title ?? terminalEntry.title);
-const canonicalUrl = resolveSiteMetadata({ pathname: terminalEntry.href, canonical: entry.data.canonical }).canonical;
-const shareUrl = canonicalUrl === undefined ? terminalEntry.href : (() => { const url = new URL(canonicalUrl); url.hash = ''; return url.href; })();
+const shareUrl = resolveDocumentShareUrl(terminalEntry.href, entry.data.canonical);
 const license = entry.collection === 'posts' ? getPostLicense(entry.data.license) : undefined;
 ---
 
@@ -50,7 +49,7 @@ const license = entry.collection === 'posts' ? getPostLicense(entry.data.license
       <span aria-hidden="true" class="terminal-stream-action-separator">|</span>
       <button type="button" data-terminal-collapse aria-expanded="true" aria-controls={bodyId}>Collapse</button>
       <span aria-hidden="true" class="terminal-stream-action-separator">|</span>
-      <a href={terminalEntry.href} data-terminal-open aria-label="Open document">Open</a>
+      <a href={terminalEntry.href} data-terminal-open aria-label="Open document" target="_blank" rel="noopener">Open</a>
       <span aria-hidden="true" class="terminal-stream-action-separator">|</span>
       <button type="button" data-terminal-share data-terminal-share-url={shareUrl}>Share</button>
   </nav>
@@ -67,9 +66,9 @@ const license = entry.collection === 'posts' ? getPostLicense(entry.data.license
   <footer class="terminal-stream-footer">
     <span>{formatResourcePath(`/${terminalEntry.virtualPath}`)}</span>
     <span aria-hidden="true"> · </span>
-    <span data-terminal-source-bytes={document.sourceByteLength} data-terminal-source-kind={document.sourceKind}>{document.sourceByteLength} bytes</span>
-    <span aria-hidden="true"> · </span>
     <time datetime={entry.data.date.toISOString()}>{terminalEntry.date}</time>
+    <span aria-hidden="true"> · </span>
+    <span data-terminal-source-bytes={document.sourceByteLength} data-terminal-source-kind={document.sourceKind}>{document.sourceByteLength} bytes</span>
     {license && <><span aria-hidden="true"> · </span><a href={license.href} data-terminal-license={entry.data.license}>{license.label}</a></>}
   </footer>
 </article>
