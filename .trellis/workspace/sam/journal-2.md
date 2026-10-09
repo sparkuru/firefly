@@ -269,3 +269,33 @@ Completed owner-directed Terminal refinement excluding lab: restored page-wide p
 ### Status
 
 [OK] **Completed**
+
+
+## Session 89: Stationary visible Terminal completion
+
+**Date**: 2026-10-09
+**Task**: Stationary visible Terminal completion
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Fixed completion page jumps: fully visible prompt/panel stays stationary, selection reuses list geometry and settlement space, and obscured/oversized completion still recovers visibility. Independent review passed, local publication rebuilt and served bundles checked; task archived, no remote push or deployment.
+
+### Main Changes
+
+- Visibility-first page scroll guard and retained list/spacer on Tab or Arrow selection.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8617d83` | (see git log) |
+
+### Testing
+
+- [OK] Focused browser 9/9; independent broader Terminal suite 81 passes, 26 intentional skips, zero retries.
+- [OK] Site build and 18 static checks passed with two pre-existing ignored-artifact hints; owner preview build/readiness and exact served entry script passed.
+
+### Status
+
+[OK] **Completed**
