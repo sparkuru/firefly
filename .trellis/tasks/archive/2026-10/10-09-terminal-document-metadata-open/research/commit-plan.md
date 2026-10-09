@@ -45,3 +45,5 @@ After the work commit, archive only this completed task via supported
 destination and stage explicit paths plus continuity evidence. Create the
 separate archive commit with exactly one Codex trailer, then journal referencing
 the work commit only. No push, amend or production deployment.
+
+Work commit executed: `0cc296e`. Final configured build/readiness and exact served homepage/bundle/OpenWrt checks passed. Archive and journal follow this plan.

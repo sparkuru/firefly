@@ -485,3 +485,8 @@ preview passed, serving exact rebuilt homepage/bundle/OpenWrt metadata. All
 task `research/validation.md`. Commit/archive/journal reuse prior authorization
 after human-optional review. No lab redesign, authored content change, remote
 push or production deployment is included.
+
+Metadata/new-tab work committed as `0cc296e`. Completed task evidence is archived
+at `.trellis/tasks/archive/2026-10/10-09-terminal-document-metadata-open/`; the
+developer journal references that work commit only. No further product scope
+is inferred from completion.
