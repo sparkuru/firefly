@@ -1,0 +1,29 @@
+{
+  "id": "terminal-completion-viewport-stability",
+  "name": "terminal-completion-viewport-stability",
+  "title": "Terminal completion viewport stability",
+  "description": "Prevent Tab and Arrow candidate selection from moving an already visible prompt and completion panel; preserve visibility recovery for obscured or oversized completion.",
+  "status": "in_progress",
+  "dev_type": "frontend",
+  "scope": null,
+  "package": "apps/site",
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-10-09",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Owner confirmed task creation for the explicit ongoing Terminal bugfix. Verified repair reuses prior commit authorization; no remote push or deployment.",
+  "meta": {
+    "review_status": "passed",
+    "submit_ready_review": "human-optional"
+  }
+}

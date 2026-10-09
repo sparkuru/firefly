@@ -46,17 +46,24 @@ and uses existing rewrite/selection/acceptance semantics. Presentation settles
 only after an eligible completion action; modified/composing Tab and Tab
 outside the prompt retain their established behavior.
 
-When the command row and candidate panel fit, center them as one group. For
-oversized panels, cap upward prompt placement at the viewport midpoint and
-keep the candidate list in a bounded local scroll region. Repeated Tab and
-Arrow selection reveal the active option locally while preserving the page's
-prompt placement. Retain the input's `aria-activedescendant` and listbox option
+First check the actual viewport bounds: when the command row and candidate
+panel are fully visible, keep the page stationary even if the group is off
+center or inside a preferred settlement margin. Only recover obscured content
+with page scrolling. When recovery is required and the group fits, center it
+as one group; for oversized panels, cap upward prompt placement at the viewport
+midpoint and keep the candidate list in a bounded local scroll region.
+Repeated Tab and Arrow selection retain the existing list, its height cap,
+local scroll and form settlement spacer. Removing that spacer before reading
+geometry can clamp page scroll before any explicit scroll call. Reveal the
+active option locally while preserving the page's prompt placement. Retain the
+input's `aria-activedescendant` and listbox option
 selection; viewport movement never submits or accepts a candidate. Respect
 reduced motion, page boundaries and no horizontal document scroll.
 
 Regression checks must use actual viewport coordinates after long transcript
 output, not only DOM visibility. Cover fitting and oversized candidate sets,
-first/last active options, wrap-around, unique completion, no match, focused
+already-visible off-center groups under normal motion, first/last active
+options, wrap-around, unique completion, no match, focused
 input, unchanged draft, candidate acceptance and modified/composing guards.
 `terminal-refinement.spec.ts` also covers page-wide reading, touch geometry,
 long labels, local code scrolling, enlarged text and hint/history behavior.

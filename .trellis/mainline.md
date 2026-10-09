@@ -437,3 +437,21 @@ passed and source is committed. Task evidence moves through the supported
 no-auto-commit archive to .trellis/tasks/archive/2026-10/10-08-main-site-design-review/;
 final developer journal references both work commits. No further product work
 is inferred from completion; remote push/deployment remain outside this scope.
+
+### Terminal completion viewport stability
+
+On 2026-10-09 the owner accepted the inline composition and reported page jumps
+while using Tab candidates despite ample visible room. The owner confirmed the
+independent lightweight task `10-09-terminal-completion-viewport-stability`.
+This supersedes unconditional completion centering: fully visible prompt/panel
+geometry stays stationary; page movement only recovers obscured content.
+Selection-only Tab/Arrow retains list geometry/local scroll and settlement
+space. Implementation is bounded to the site controller and its existing
+focused browser regressions. Build/static checks passed, focused browsers passed
+9/9, and independent broader Terminal checks passed 81 with 26 applicability
+skips and no retries. The existing configured publication was rebuilt and the
+ready local preview serves its exact rebuilt entry script; reviewed source
+fingerprints are unchanged. Evidence is the task's `research/validation.md`.
+Commit/archive/journal reuse the prior owner commit authorization for this
+ongoing refinement after a human-optional review. No lab/content change, remote
+push or production deployment is included.

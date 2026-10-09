@@ -221,7 +221,7 @@ async function completionGeometry(page: Page) {
       center: (row.top + panel.bottom) / 2, panelBottom: panel.bottom,
       activeVisible: active !== undefined && listRect !== undefined &&
         active.top >= listRect.top - 1 && active.bottom <= listRect.bottom + 1,
-      localScroll: list?.scrollTop ?? 0, horizontalScroll: scrollX
+      localScroll: list?.scrollTop ?? 0, horizontalScroll: scrollX, pageScroll: scrollY
     };
   });
 }
@@ -230,6 +230,10 @@ test('Tab centers fitting completion after long output while preserving selectio
   test.skip(info.project.name !== 'chromium-desktop-interactive', 'Desktop completion viewport ownership.');
   const input = await prepareLongTranscript(page);
   await input.fill('cat ~/blog/p');
+  await page.evaluate(() => {
+    const row = document.querySelector('.terminal-command-row')!.getBoundingClientRect();
+    window.scrollTo({ top: scrollY + row.top - 830, behavior: 'instant' });
+  });
   await input.press('Tab');
   await expect(page.getByRole('option')).toHaveCount(2);
   await expect.poll(async () => Math.abs((await completionGeometry(page)).center - 450)).toBeLessThan(3);
@@ -266,6 +270,70 @@ test('Tab centers fitting completion after long output while preserving selectio
   await expectContainedPage(page);
 });
 
+test('fully visible completion stays off-center through first Tab and repeated selection', async ({ page }, info) => {
+  test.skip(info.project.name !== 'chromium-desktop-interactive', 'Desktop completion viewport ownership.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const input = await prepareLongTranscript(page);
+  await input.fill('theme firefly');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => {
+    const row = document.querySelector('.terminal-command-row')!.getBoundingClientRect();
+    window.scrollTo({ top: scrollY + row.top - 620, behavior: 'instant' });
+    const tracker = window as Window & { completionScrollCalls?: number };
+    tracker.completionScrollCalls = 0;
+    const nativeScrollBy = window.scrollBy;
+    window.scrollBy = (...args: unknown[]) => {
+      tracker.completionScrollCalls = (tracker.completionScrollCalls ?? 0) + 1;
+      Reflect.apply(nativeScrollBy, window, args);
+    };
+  });
+  const before = await completionGeometry(page);
+  expect(before.rowTop).toBeCloseTo(620, 0);
+  await input.press('Tab');
+  await expect(page.getByRole('option')).toHaveText(['firefly-dark', 'firefly-white']);
+  const first = await completionGeometry(page);
+  expect(first.panelBottom).toBeLessThan(900);
+  expect(first.rowTop).toBe(before.rowTop);
+  expect(first.pageScroll).toBe(before.pageScroll);
+  const draft = await input.inputValue();
+  for (const key of ['Tab', 'Tab', 'ArrowDown', 'ArrowUp', 'Tab', 'ArrowDown']) {
+    await input.press(key);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const geometry = await completionGeometry(page);
+    expect(geometry.rowTop).toBe(before.rowTop);
+    expect(geometry.pageScroll).toBe(before.pageScroll);
+    expect(geometry.activeVisible).toBe(true);
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue(draft);
+  }
+  expect(await page.evaluate(() => (window as Window & { completionScrollCalls?: number }).completionScrollCalls)).toBe(0);
+});
+
+test('visible completion at page end retains settlement space and selection placement', async ({ page }, info) => {
+  test.skip(info.project.name !== 'chromium-desktop-interactive', 'Desktop completion viewport ownership.');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const input = await prepareLongTranscript(page);
+  await input.fill('theme firefly');
+  await page.evaluate(() => {
+    const row = document.querySelector('.terminal-command-row')!.getBoundingClientRect();
+    window.scrollTo({ top: scrollY + row.top - 830, behavior: 'instant' });
+  });
+  await input.press('Tab');
+  await expect(page.locator('[data-terminal-form]')).toHaveAttribute('data-terminal-completion-settled', '');
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const before = await completionGeometry(page);
+  expect(before.rowTop).toBeGreaterThanOrEqual(0);
+  expect(before.panelBottom).toBeLessThan(900);
+  for (const key of ['Tab', 'ArrowDown', 'Tab', 'ArrowUp']) {
+    await input.press(key);
+    const after = await completionGeometry(page);
+    expect(after.pageScroll).toBe(before.pageScroll);
+    expect(after.rowTop).toBe(before.rowTop);
+    expect(after.activeVisible).toBe(true);
+    await expect(page.locator('[data-terminal-form]')).toHaveAttribute('data-terminal-completion-settled', '');
+  }
+});
+
 test('oversized completion caps the prompt at midpoint and scrolls selected options locally', async ({ page }, info) => {
   test.skip(info.project.name !== 'chromium-desktop-interactive', 'Desktop completion viewport ownership.');
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -294,6 +362,15 @@ test('oversized completion caps the prompt at midpoint and scrolls selected opti
   expect((await completionGeometry(page)).activeVisible).toBe(true);
   await expect(input).toBeFocused();
   await expect(input).toHaveValue('cat ~/blog/posts/');
+  await page.setViewportSize({ width: 768, height: 260 });
+  await input.press('Tab');
+  geometry = await completionGeometry(page);
+  expect(geometry.rowCenter).toBeCloseTo(130, 0);
+  expect(geometry.panelBottom).toBeLessThanOrEqual(geometry.height - Math.min(24, geometry.height * .05) + .5);
+  expect(geometry.activeVisible).toBe(true);
+  await input.press('ArrowUp');
+  expect((await completionGeometry(page)).activeVisible).toBe(true);
+  await expect(input).toBeFocused();
   await input.press('Space');
   await expect(input).not.toHaveValue('cat ~/blog/posts/');
   await expect(page.getByRole('option')).toHaveCount(0);

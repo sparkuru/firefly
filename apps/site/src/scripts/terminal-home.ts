@@ -1142,22 +1142,26 @@ function settleCompletionViewport(nodes: TerminalNodes): void {
   const bottom = nodes.completion.childElementCount > 0
     ? nodes.completion.getBoundingClientRect().bottom
     : rowRect.bottom;
-  const span = bottom - rowRect.top;
-  const oversized = span > window.innerHeight - margin * 2;
-  const targetTop = oversized
-    ? (window.innerHeight - rowRect.height) / 2
-    : (window.innerHeight - span) / 2;
-  if (list !== null && oversized) {
-    const gap = list.getBoundingClientRect().top - rowRect.bottom;
-    list.style.maxHeight = `${Math.max(44, window.innerHeight - margin - targetTop - rowRect.height - gap)}px`;
-  }
-  nodes.form.setAttribute('data-terminal-completion-settled', '');
   nodes.input.focus({ preventScroll: true });
-  window.scrollBy({
-    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-    left: 0,
-    top: row.getBoundingClientRect().top - targetTop
-  });
+  const fullyVisible = rowRect.top >= -0.5 && bottom <= window.innerHeight + 0.5;
+  if (!fullyVisible) {
+    const naturalBottom = list === null ? bottom : list.getBoundingClientRect().top + list.scrollHeight;
+    const span = naturalBottom - rowRect.top;
+    const oversized = span > window.innerHeight - margin * 2;
+    const targetTop = oversized
+      ? (window.innerHeight - rowRect.height) / 2
+      : (window.innerHeight - span) / 2;
+    if (list !== null && oversized) {
+      const gap = list.getBoundingClientRect().top - rowRect.bottom;
+      list.style.maxHeight = `${Math.max(44, window.innerHeight - margin - targetTop - rowRect.height - gap)}px`;
+    }
+    nodes.form.setAttribute('data-terminal-completion-settled', '');
+    window.scrollBy({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      left: 0,
+      top: row.getBoundingClientRect().top - targetTop
+    });
+  }
   const active = list?.querySelector<HTMLElement>('[data-active]');
   if (list !== null && active !== null && active !== undefined) {
     const optionRect = active.getBoundingClientRect();
@@ -1188,7 +1192,18 @@ function renderCompletionMessage(nodes: TerminalNodes, message: string): void {
   nodes.completion.append(notice);
 }
 
-function renderCompletionPanel(nodes: TerminalNodes, panel: CompletionPanel): void {
+function renderCompletionPanel(nodes: TerminalNodes, panel: CompletionPanel, retainLayout = false): void {
+  const existing = retainLayout ? nodes.completion.querySelector<HTMLElement>('.terminal-completion-list') : null;
+  if (existing !== null) {
+    existing.querySelectorAll<HTMLElement>('.terminal-completion-option').forEach((option, index) => {
+      const active = panel.activeIndex === index;
+      option.setAttribute('aria-selected', String(active));
+      option.toggleAttribute('data-active', active);
+    });
+    if (panel.activeIndex === null) nodes.input.removeAttribute('aria-activedescendant');
+    else nodes.input.setAttribute('aria-activedescendant', `terminal-completion-option-${panel.activeIndex}`);
+    return;
+  }
   clearCompletionDisplay(nodes);
   const list = document.createElement('ul');
   list.id = 'terminal-completion-list';
@@ -1531,7 +1546,7 @@ function initializeTerminalHome(
           ? 0
           : (completionPanel.activeIndex + 1) % completionPanel.candidates.length;
         completionPanel = { ...completionPanel, activeIndex };
-        renderCompletionPanel(nodes, completionPanel);
+        renderCompletionPanel(nodes, completionPanel, true);
         settleCompletionViewport(nodes);
         return;
       }
@@ -1670,7 +1685,7 @@ function initializeTerminalHome(
           ? (event.key === 'ArrowUp' ? candidateCount - 1 : 0)
           : (completionPanel.activeIndex + (event.key === 'ArrowUp' ? -1 : 1) + candidateCount) % candidateCount;
         completionPanel = { ...completionPanel, activeIndex };
-        renderCompletionPanel(nodes, completionPanel);
+        renderCompletionPanel(nodes, completionPanel, true);
         settleCompletionViewport(nodes);
       }
       return;
