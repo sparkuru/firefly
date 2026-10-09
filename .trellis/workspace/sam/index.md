@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 87
-- **Last Active**: 2026-10-08
+- **Total Sessions**: 88
+- **Last Active**: 2026-10-09
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~239 | Active |
+| `journal-2.md` | ~271 | Active |
 | `journal-1.md` | ~1934 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 88 | 2026-10-09 | Terminal refinement and inline file metadata | `1a1fc31`, `1d26fed` | `anti-entropy-loss-syndrome` |
 | 87 | 2026-10-08 | Memo time reader and historical short-entry corpus | `8a21ab4` | `anti-entropy-loss-syndrome` |
 | 86 | 2026-10-06 | Unified plugin access and deployment closure | `c04b09f` | `anti-entropy-loss-syndrome` |
 | 85 | 2026-10-06 | Owner Memo publisher and historical note import | `82131db` | `anti-entropy-loss-syndrome` |

@@ -237,3 +237,35 @@ Completed and owner-accepted the coordinated Memo reader; archived it, then appl
 ### Next Steps
 
 - Local review preview remains running on the existing profile; no production deployment or new product task is authorized.
+
+
+## Session 88: Terminal refinement and inline file metadata
+
+**Date**: 2026-10-09
+**Task**: Terminal refinement and inline file metadata
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed owner-directed Terminal refinement excluding lab: restored page-wide prose, first-visit help, visible Tab completion, compact centered four-action inline navigation, source-byte footer and default post license. Full verification and normal package/preview passed; task archived, no remote push or production deployment.
+
+### Main Changes
+
+- Centered Command, Collapse/Expand, Open and Share; removed duplicate inline chrome and retained authored heading focus.
+- Added exact Markdown UTF-8 source-byte provenance and validated post license metadata defaulting to CC-BY-NC-4.0.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1a1fc31` | (see git log) |
+| `1d26fed` | (see git log) |
+
+### Testing
+
+- [OK] Full preview verify: 213 browser passes, 166 intentional skips, no failures or retries; package/runtime checks passed.
+- [OK] Final served preview checked for four actions, source bytes, default license, clipboard controller and first-visit hint.
+
+### Status
+
+[OK] **Completed**
