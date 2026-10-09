@@ -52,7 +52,7 @@ Trackable artifacts of this newly created task:
 
 The context JSONL files are intentionally ignored project-local manifests. Stage no ignored captures, logs, build outputs, owner configuration/content or managed runtime files. Recheck status/diff and authorized paths before committing. Record the owner's acceptance and Git authorization in these artifacts first.
 
-## 2. Owner-defined follow-up work commit
+## 2. Owner-defined follow-up work commit (executed: 1d26fed)
 
 `feat(site): add compact inline navigation and file metadata`
 
@@ -126,3 +126,9 @@ Record verified session progress through `add_session.py --no-commit`, using the
 ## Unrecognized changes and limits
 
 None found in final review: every dirty trackable path belongs to this task. Recheck at execution and preserve any later user edits. This batch contains no remote push or production deployment. Physical-device/assistive-technology acceptance is not claimed by the local evidence.
+
+## Execution record
+
+Accepted work 1a1fc31 and owner-defined follow-up 1d26fed are committed.
+Worktree source is clean. Supported no-auto-commit archive and journal steps
+execute next under the owner's existing authorization; neither pushes remote.

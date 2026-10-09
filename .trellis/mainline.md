@@ -430,3 +430,10 @@ package and existing preview readiness passed. Nineteen app/test/config source
 fingerprints stayed unchanged through the gates. The owner explicitly authorized task commits and provided the
 final layout, so the concrete follow-up/archive/journal batch reuses that
 authorization after gates. No push or production deployment is included.
+
+Completed work commits: 1a1fc31 (accepted Terminal refinement) and 1d26fed
+(owner-defined inline navigation/file metadata). Full gate/package/preview
+passed and source is committed. Task evidence moves through the supported
+no-auto-commit archive to .trellis/tasks/archive/2026-10/10-08-main-site-design-review/;
+final developer journal references both work commits. No further product work
+is inferred from completion; remote push/deployment remain outside this scope.

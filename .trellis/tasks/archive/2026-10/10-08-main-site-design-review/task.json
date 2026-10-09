@@ -3,7 +3,7 @@
   "name": "main-site-design-review",
   "title": "Firefly Terminal 细节精修（排除 lab）",
   "description": "Owner-approved Terminal refinement: page-wide reading, first-visit hint, visible completion, touch geometry and restrained feedback, excluding lab.",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": "frontend",
   "scope": null,
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "sam",
   "assignee": "sam",
   "createdAt": "2026-10-08",
-  "completedAt": null,
+  "completedAt": "2026-10-09",
   "branch": null,
   "base_branch": "anti-entropy-loss-syndrome",
   "worktree_path": null,
-  "commit": null,
+  "commit": "1d26fed",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -23,8 +23,12 @@
   "relatedFiles": [],
   "notes": "Owner authorized commit and explicitly defined the four-action nav/body/file-footer and default post license. Accepted work1a1fc31 plus tested follow-up ready for work/archive/journal completion; no remote push/deployment.",
   "meta": {
-    "review_status": "inline_nav_footer_passed_authorized_commit",
+    "review_status": "complete_passed_committed",
     "accepted_work_commit": "1a1fc31",
-    "submit_ready_review": "human-optional"
+    "submit_ready_review": "human-optional",
+    "work_commits": [
+      "1a1fc31",
+      "1d26fed"
+    ]
   }
 }
