@@ -813,6 +813,14 @@ test('home emits an exact safe entry/template map with inert build-rendered bodi
   assert.ok(templatePaths.includes(workflow.virtualPath));
   const templateBodies = [...home.matchAll(/<template\b[^>]*data-terminal-template[^>]*>([\s\S]*?)<\/template>/gu)].map((match) => match[1] ?? '');
   assert.equal(templateBodies.length, entryPaths.length);
+  for (const body of templateBodies) {
+    assert.equal((body.match(/\bdata-terminal-stream-title(?:\s|>|=)/gu) ?? []).length, 1);
+    assert.equal((body.match(/\bdata-terminal-open(?:\s|>|=)/gu) ?? []).length, 1);
+    assert.match(body, /class="terminal-stream-actions"/u);
+    assert.equal((body.match(/\bdata-terminal-share(?:\s|>|=)/gu) ?? []).length, 1);
+    assert.match(body, /class="terminal-stream-footer"/u);
+    assert.doesNotMatch(body, /terminal-stream-permalink|terminal-stream-guidance/u);
+  }
   assert.match(templateBodies.join('\n'), /data-diagram="rendered"/u);
   assert.match(templateBodies.join('\n'), /Future presentations can change how the site looks/u);
   const withoutTemplates = home.replace(/<template\b[^>]*>[\s\S]*?<\/template>/gu, '');

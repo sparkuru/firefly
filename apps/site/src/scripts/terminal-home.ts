@@ -459,9 +459,16 @@ function readTemplates(
       ? streamDocument.querySelectorAll<HTMLElement>('.terminal-stream-prose')
       : [];
     const prose = proseNodes.length === 1 ? proseNodes[0] : null;
+    const repeatedTitle = streamDocument?.hasAttribute('data-terminal-repeated-title') ?? false;
+    const firstBodyHeading = prose?.firstElementChild;
+    const normalizeTitle = (value: string) => value.toLocaleLowerCase('en-US').replace(/[\s_-]+/gu, ' ').trim();
     const returnControl = template.content.querySelectorAll('[data-terminal-return]');
     const collapseControl = template.content.querySelectorAll('[data-terminal-collapse]');
     const openControl = template.content.querySelectorAll('[data-terminal-open]');
+    const shareControl = template.content.querySelectorAll('[data-terminal-share]');
+    const shareReference = shareControl[0]?.getAttribute('data-terminal-share-url');
+    const shareDestination = shareReference === null || shareReference === undefined
+      ? null : new URL(shareReference, window.location.origin);
     if (
       virtualPath === null ||
       !expected.has(virtualPath) ||
@@ -473,6 +480,13 @@ function readTemplates(
       prose === null ||
       streamTitle.id.length === 0 ||
       streamDocument.getAttribute('aria-labelledby') !== streamTitle.id ||
+      (repeatedTitle && (
+        !streamTitle.hasAttribute('data-terminal-stream-title-placeholder') ||
+        !(firstBodyHeading instanceof HTMLElement) ||
+        !firstBodyHeading.matches('h2, h3, h4, h5, h6') ||
+        firstBodyHeading.id.length === 0 ||
+        normalizeTitle(firstBodyHeading.textContent ?? '') !== normalizeTitle(streamTitle.textContent ?? '')
+      )) ||
       returnControl.length !== 1 ||
       !(returnControl[0] instanceof HTMLButtonElement) ||
       returnControl[0].type !== 'button' ||
@@ -485,6 +499,15 @@ function readTemplates(
       openControl.length !== 1 ||
       !(openControl[0] instanceof HTMLAnchorElement) ||
       openControl[0].getAttribute('href') !== entries.find((entry) => entry.virtualPath === virtualPath)?.href ||
+      shareControl.length !== 1 ||
+      !(shareControl[0] instanceof HTMLButtonElement) ||
+      shareControl[0].type !== 'button' ||
+      shareDestination === null ||
+      !['http:', 'https:'].includes(shareDestination.protocol) ||
+      shareDestination.username.length > 0 || shareDestination.password.length > 0 ||
+      shareDestination.hash.length > 0 ||
+      !/^(?:https?:\/\/|\/(?!\/))/u.test(shareReference ?? '') ||
+      (shareReference?.startsWith('/') && shareReference.startsWith('//')) ||
       template.content.querySelector('script') !== null
     ) {
       throw new TypeError('Terminal document templates must exactly match the public index.');
@@ -934,11 +957,20 @@ function renderEffect(
       for (const link of fragment.querySelectorAll<HTMLAnchorElement>('a[data-terminal-open]')) {
         link.href = documentDestination(link.href, context.documentNavigationLookup).href;
       }
-      const title = requireElement(
+      let title = requireElement(
         fragment,
         '[data-terminal-stream-title]',
         HTMLElement
       );
+      const article = requireElement(fragment, '[data-terminal-stream-document]', HTMLElement);
+      if (article.hasAttribute('data-terminal-repeated-title')) {
+        const authoredTitle = requireElement(fragment, '.terminal-stream-prose > :is(h2, h3, h4, h5, h6):first-child', HTMLElement);
+        authoredTitle.setAttribute('data-terminal-stream-title', '');
+        authoredTitle.tabIndex = -1;
+        article.setAttribute('aria-labelledby', authoredTitle.id);
+        title.remove();
+        title = authoredTitle;
+      }
       record.append(fragment);
       return { focusTarget: title };
     }
@@ -1261,6 +1293,7 @@ function initializeTerminalHome(
   });
   const streamOverflow = createStreamOverflowController();
   const copyFeedbackTimers = new Map<HTMLButtonElement, number>();
+  const shareInFlight = new WeakSet<HTMLButtonElement>();
   const execute: typeof executeCommand = seams.execute ?? ((options) => executeCommand({
     ...options,
     registry: siteTerminalCommandRegistry
@@ -1273,7 +1306,10 @@ function initializeTerminalHome(
   };
   window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY).addEventListener('change', refreshDocumentLinks);
   const clearCopyFeedback = (): void => {
-    for (const timer of copyFeedbackTimers.values()) window.clearTimeout(timer);
+    for (const [button, timer] of copyFeedbackTimers) {
+      window.clearTimeout(timer);
+      if (button.hasAttribute('data-terminal-share')) button.textContent = 'Share';
+    }
     copyFeedbackTimers.clear();
   };
   const copyCode = async (button: HTMLButtonElement): Promise<void> => {
@@ -1295,6 +1331,31 @@ function initializeTerminalHome(
     nodes.announcer.textContent = copied ? 'Code copied.' : 'Could not copy code. Select it manually.';
     copyFeedbackTimers.set(button, window.setTimeout(() => {
       button.textContent = 'Copy code';
+      copyFeedbackTimers.delete(button);
+    }, 2000));
+  };
+  const shareDocument = async (button: HTMLButtonElement): Promise<void> => {
+    const reference = button.dataset.terminalShareUrl;
+    if (reference === undefined || shareInFlight.has(button)) return;
+    shareInFlight.add(button);
+    const previousTimer = copyFeedbackTimers.get(button);
+    if (previousTimer !== undefined) window.clearTimeout(previousTimer);
+    copyFeedbackTimers.delete(button);
+    let copied = false;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(new URL(reference, window.location.origin).href);
+      copied = true;
+    } catch {
+      // The native Open link remains available when clipboard access fails.
+    } finally {
+      shareInFlight.delete(button);
+    }
+    if (!button.isConnected || failed || !available()) return;
+    button.textContent = copied ? 'Copied' : 'Failed';
+    nodes.announcer.textContent = copied ? 'Document link copied.' : 'Could not copy document link. Use Open to view the document.';
+    copyFeedbackTimers.set(button, window.setTimeout(() => {
+      button.textContent = 'Share';
       copyFeedbackTimers.delete(button);
     }, 2000));
   };
@@ -1401,6 +1462,11 @@ function initializeTerminalHome(
       openLink.href = documentDestination(openLink.href, documentNavigationLookup).href;
     }
     if (!isUnmodifiedPrimaryClick(event)) return;
+    const shareButton = target.closest('button[data-terminal-share]');
+    if (shareButton instanceof HTMLButtonElement && nodes.transcript.contains(shareButton)) {
+      void shareDocument(shareButton);
+      return;
+    }
     const copyButton = target.closest('button[data-terminal-copy-code]');
     if (copyButton instanceof HTMLButtonElement && nodes.transcript.contains(copyButton)) {
       void copyCode(copyButton);

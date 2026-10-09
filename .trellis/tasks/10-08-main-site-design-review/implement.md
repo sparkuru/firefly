@@ -77,6 +77,19 @@ These gates include existing lab regression checks as integration evidence; lab 
 
 ## Execution status
 
+The owner accepted the previous revision on 2026-10-09, and work commit
+`1a1fc31` was created before new code changes. The task now returns to Phase 2
+for compact inline article chrome: implement, independently check, synchronize
+contracts, run affected/final gates and update normal preview. Archive/journal
+will follow the task's final completion instead of interleaving with work.
+
+The owner then supplied the navigation/body/footer composition plus Share,
+original-file bytes and default post license. Source-backed metadata research
+identifies trusted materialization provenance and a site-owned rendering
+handoff before implementation resumes. Add targeted schema/materializer/share
+tests, run site/content checks, independent full-scope review and required
+complete gates, then update executable field/provenance contracts.
+
 Owner review reopened Phase 2 on 2026-10-08: restore previous prose width,
 first-visit-only help placeholder, and completion viewport settlement. The
 owner's request directly authorizes these revisions; no additional planning
@@ -89,5 +102,17 @@ revised full verification (208 browser passes / 166 intentional skips), normal
 runtime packaging and local preview readiness passed. See
 `research/owner-revision-validation.md` for current evidence and limits;
 `research/final-validation.md` is the historical first candidate. Stable
-contracts are synchronized. Owner visual/Git approval remains pending; no
-commit, archive or production deployment occurred.
+contracts were synchronized and the owner subsequently accepted/authorized
+work commit `1a1fc31`. No archive or production deployment occurred. The new
+navigation/footer follow-up remains in progress; previous totals apply to the
+accepted snapshot until its own checks are complete.
+
+## Final follow-up completion
+
+The owner-defined navigation/footer, original-file provenance, post license
+and Share are implemented and independently reviewed. Complete verification
+passed 213 browser checks with166 intentional skips/no retries; normal package
+and existing preview readiness passed. See `research/inline-chrome-validation.md`.
+Owner commit authorization persists and the concrete layout is owner-provided;
+submit-ready classification is human-optional. Complete the work/archive/journal
+batch with no push/deployment or new permission loop.

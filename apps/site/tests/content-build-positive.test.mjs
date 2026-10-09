@@ -62,6 +62,8 @@ test('paper routes and nested native directories build with shared content and e
 
 The same Markdown body reaches both presentations with a [safe link](https://example.test/paper).
 
+中文 😀 proves the footer counts UTF-8 bytes rather than characters.
+
 <div class="firefly-content-callout" data-content-theme="future" style="color: red">A paper callout.</div>
 
 <script>alert('unsafe')</script>
@@ -85,6 +87,8 @@ draft: false
 layout: post
 presentation: semantic
 contentTheme: paper
+license: CC-BY-SA-4.0
+canonical: https://example.test/shared/paper/
 ---
 ${body}`;
   const terminalSource = `---
@@ -100,8 +104,8 @@ ${body}`;
 
   await mkdir(path.join(contentRoot, 'posts'), { recursive: true });
   await mkdir(path.join(contentRoot, 'pages'), { recursive: true });
-  await writeFile(path.join(contentRoot, 'posts/paper-semantic.md'), semanticSource);
-  await writeFile(path.join(contentRoot, 'pages/paper-terminal.md'), terminalSource);
+  await writeFile(path.join(contentRoot, 'posts/physical-source.md'), semanticSource);
+  await writeFile(path.join(contentRoot, 'pages/physical-terminal.md'), terminalSource);
   await mkdir(path.join(contentRoot, 'posts/category/deeper'), { recursive: true });
   await writeFile(path.join(contentRoot, 'posts/category/child.md'), semanticSource.replaceAll('paper-semantic', 'child'));
   await writeFile(path.join(contentRoot, 'posts/category/deeper/leaf.md'), semanticSource.replaceAll('paper-semantic', 'leaf'));
@@ -139,6 +143,18 @@ ${body}`;
     assert.doesNotMatch(home, /data-terminal-friend-name=/u);
     assert.match(home, /data-terminal-entry-href="\/posts\/paper-semantic\/"/u);
     assert.match(home, /data-terminal-entry-href="\/posts\/category\/deeper\/leaf\/"/u);
+    const postTemplate = /<template\b[^>]*data-terminal-template-path="posts\/physical-source\.md"[^>]*>([\s\S]*?)<\/template>/u.exec(home)?.[1] ?? '';
+    assert.match(postTemplate, new RegExp(`data-terminal-source-bytes="${Buffer.byteLength(semanticSource)}"`, 'u'));
+    assert.match(postTemplate, /~\/blog\/posts\/physical-source\.md/u);
+    assert.match(postTemplate, /href="\/posts\/paper-semantic\/"[^>]*data-terminal-open/u);
+    assert.match(postTemplate, /data-terminal-license="CC-BY-SA-4\.0"/u);
+    assert.match(postTemplate, /data-terminal-share-url="https:\/\/example\.test\/shared\/paper\/"/u);
+    const pageTemplate = /<template\b[^>]*data-terminal-template-path="pages\/physical-terminal\.md"[^>]*>([\s\S]*?)<\/template>/u.exec(home)?.[1] ?? '';
+    assert.match(pageTemplate, new RegExp(`data-terminal-source-bytes="${Buffer.byteLength(terminalSource)}"`, 'u'));
+    assert.match(pageTemplate, /~\/blog\/pages\/physical-terminal\.md/u);
+    assert.doesNotMatch(pageTemplate, /data-terminal-license/u);
+    assert.match(pageTemplate, /data-terminal-share-url="\/pages\/paper-terminal\/"/u);
+    assert.doesNotMatch(home, /\.source-provenance\.json/u);
 
     for (const [directory, hrefs, parent] of [
       ['posts', ['/posts/category/', '/posts/paper-semantic/'], '/'],
@@ -188,8 +204,8 @@ ${body}`;
     assert.ok(semanticHeadingId);
     assert.ok(terminalHeadingId);
     assert.notEqual(semanticHeadingId, terminalHeadingId);
-    assert.match(semanticHeadingId, /^posts-paper-semantic-md-h2-1$/u);
-    assert.match(terminalHeadingId, /^pages-paper-terminal-md-h2-1$/u);
+    assert.match(semanticHeadingId, /^posts-physical-source-md-h2-1$/u);
+    assert.match(terminalHeadingId, /^pages-physical-terminal-md-h2-1$/u);
     assert.equal(
       (semanticRoute.match(/contentTheme/gu) ?? []).length,
       0,
@@ -205,6 +221,7 @@ ${body}`;
     assert.ok(semanticStylesheet, 'semantic route should link its compiled stylesheet');
     const stylesheetPath = path.join(outputRoot, semanticStylesheet.replace(/^\/+/, ''));
     const stylesheetFiles = await listFiles(outputRoot);
+    assert.equal(stylesheetFiles.some(file => file.includes('source-provenance')), false);
     assert.ok(stylesheetFiles.includes(semanticStylesheet.replace(/^\/+/, '')));
     assert.match(await readFile(stylesheetPath, 'utf8'), paperSelector);
     assert.match(terminalRoute, paperSelector);

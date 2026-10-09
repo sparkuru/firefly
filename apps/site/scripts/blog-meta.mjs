@@ -37,6 +37,7 @@ const outputKeys = Object.freeze([
   'layout',
   'presentation',
   'contentTheme',
+  'license',
   'aliases',
   'access'
 ]);

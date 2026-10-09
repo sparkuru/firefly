@@ -2,6 +2,26 @@
 
 ## Direction
 
+### Inline chrome follow-up
+
+The owner's concrete layout replaces the initial compact metadata/action-row
+idea: a centered four-action bar (`Command`, `Collapse`/`Expand`, `Open`,
+`Share`), then the body, then a quiet file-information footer. The footer owns
+path/bytes/date/post-license; navigation owns actions only. Share copies the
+canonical URL with guarded honest feedback. Original source byte provenance
+and post-only license validation stay in the site-owned loading/rendering
+boundary; implementation follows source-backed metadata research. This design
+is explicitly provided by the owner and authorizes dependent implementation.
+
+The owner identified the stacked inline `cat` header as too complex. Retain
+the Terminal reading model and existing controls; compress redundant interface
+content rather than adding panels or menus. Prefer one compact metadata/action
+row, one native article-opening link, no persistent explanatory paragraph and
+no repeated visible title when the first authored heading already supplies it.
+Keep a visible programmatic focus target and the article's accessible identity.
+Use repeated-title detection already backed by validated outline/HTML; never
+remove or rewrite authored headings. See the PRD follow-up acceptance above.
+
 ### Approved owner revision
 
 The owner's subsequent visual feedback overrides the original reading-measure
@@ -77,3 +97,21 @@ Keep each change small and reviewable. Revert only task-owned edits if a candida
 ## Acceptance and iteration
 
 Map checks to PRD AC1–AC7. Capture a fixture baseline before changing product CSS, then compare after each coherent group. Record what improved and any regressions; discard changes whose benefit is only novelty. Mechanical checks precede the final subjective review. Two consecutive review rounds with no material justified improvement close visual iteration once all required acceptance passes.
+
+## Navigation/footer metadata handoff
+
+Research: `research/inline-metadata-research.md`. Materialization records original
+UTF-8 Buffer lengths before staged transformations in a generated-only sidecar,
+promoted atomically with Markdown. A site-owned helper validates safe virtual
+identity and byte counts; `renderDocument` exposes site-only provenance beside
+Core metadata. No host paths, whole inventory or authored byte field enter HTML.
+Generated aggregate Markdown has explicit generated provenance/its own Buffer
+size; source-authored documents retain original sizes. Avoid stale global caches.
+
+The post schema owns six CC4 license IDs and default `CC-BY-NC-4.0`; synchronize
+blog-meta's existing output allowlist without adding a CLI flag or rewriting
+owner documents during build. Page/Memo schemas keep their existing boundary.
+Readable license labels/links come from a fixed site-owned descriptor map.
+Canonical Share reuses `resolveSiteMetadata`; Open retains navigator policy.
+Clipboard failures are honest, feedback isolated and cleared on existing
+transcript/fatal transitions.

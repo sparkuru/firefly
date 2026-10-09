@@ -48,6 +48,19 @@ async function expectNegativeBuild({ collection, filename, source, patterns }) {
 }
 
 test('negative builds preserve public invariants and X Core diagnostics', async (context) => {
+  await context.test('invalid post license fails before route emission', async () => {
+    await expectNegativeBuild({ collection: 'posts', filename: 'invalid-license-fixture.md', source: `---
+title: Invalid license
+date: 2026-01-01
+description: Must reject unsupported license metadata.
+draft: false
+layout: post
+license: UNKNOWN
+---
+
+## Invalid license
+`, patterns: [/license/iu, /CC-BY-NC-4.0/u] });
+  });
   await context.test('aliases cannot collide with canonical document routes', async () => {
     await expectNegativeBuild({
       collection: 'pages',

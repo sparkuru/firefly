@@ -21,8 +21,10 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Owner accepted the reviewed revision and authorized commit on 2026-10-09; subsequently requested compact cat article chrome. Task stays active for this follow-up before archival.",
+  "notes": "Owner authorized commit and explicitly defined the four-action nav/body/file-footer and default post license. Accepted work1a1fc31 plus tested follow-up ready for work/archive/journal completion; no remote push/deployment.",
   "meta": {
-    "review_status": "owner_revision_visual_and_git_approved"
+    "review_status": "inline_nav_footer_passed_authorized_commit",
+    "accepted_work_commit": "1a1fc31",
+    "submit_ready_review": "human-optional"
   }
 }

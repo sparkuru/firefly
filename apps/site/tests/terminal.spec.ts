@@ -1211,7 +1211,7 @@ test('inline cat Ctrl+L preserves protected, modified, composing, and selected n
   await submit(page, `cat ${workflow.relative}`);
   const streamedDocument = page.locator('[data-terminal-stream-document]').last();
   const title = streamedDocument.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
-  const link = streamedDocument.getByRole('link', { name: 'permalink' });
+  const link = streamedDocument.getByRole('link', { name: 'Open document' });
   await expect(title).toBeFocused();
 
   const modifiedVariants = await title.evaluate((element) => [
@@ -1645,7 +1645,7 @@ test('eligible printable typing returns to the prompt while protected interactio
     await expect(input).toHaveValue('safe');
   }
 
-  const link = streamedDocument.getByRole('link', { name: 'permalink' });
+  const link = streamedDocument.getByRole('link', { name: 'Open document' });
   await input.fill('link-safe');
   await link.focus();
   await page.keyboard.press('q');
@@ -1855,7 +1855,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
   const title = first.getByRole('heading', { level: 2, name: 'llm-workflow-with-trellis' });
   await expect(title).toBeVisible();
   await expect(title).toBeFocused();
-  await expect(first.getByRole('link', { name: 'permalink' })).toHaveAttribute('href', '/posts/ai/llm-workflow-with-trellis/');
+  await expect(first.getByRole('link', { name: 'Open document' })).toHaveAttribute('href', '/posts/ai/llm-workflow-with-trellis/#document-navigator');
   await expect(first.getByRole('link', { name: 'Return to prompt' })).toHaveCount(0);
   await expect(first.locator('[data-scoped-link]')).toHaveAttribute('href', '#terminal-output-1-install');
   await expect(first.locator('[data-scoped-label]')).toHaveAttribute('for', 'terminal-output-1-scoped-field');
@@ -1897,7 +1897,7 @@ test('cat appends trusted inline documents without navigation and scopes repeate
       ids,
       labelledBy: articles.map((article) => article.getAttribute('aria-labelledby')),
       returnControls: articles.map((article) => article.querySelectorAll('[data-terminal-return]').length),
-      permalinks: articles.map((article) => article.querySelector('.terminal-stream-permalink')?.getAttribute('href'))
+      openingLinks: articles.map((article) => article.querySelector('[data-terminal-open]')?.getAttribute('href'))
     };
   });
   expect(new Set(identityEvidence.ids).size).toBe(identityEvidence.ids.length);
@@ -1908,9 +1908,9 @@ test('cat appends trusted inline documents without navigation and scopes repeate
     expect(identityEvidence.ids).toContain(id ?? '');
   }
   expect(identityEvidence.returnControls).toEqual([1, 1]);
-  expect(identityEvidence.permalinks).toEqual([
-    '/posts/ai/llm-workflow-with-trellis/',
-    '/posts/ai/llm-workflow-with-trellis/'
+  expect(identityEvidence.openingLinks).toEqual([
+    '/posts/ai/llm-workflow-with-trellis/#document-navigator',
+    '/posts/ai/llm-workflow-with-trellis/#document-navigator'
   ]);
   await expectNoHorizontalOverflow(page);
 });
@@ -2134,13 +2134,15 @@ test('inline reading controls preserve drafts, body identity and independent out
   const second = articles.nth(1);
   const input = page.locator('#terminal-command');
   await expect(first).toHaveAttribute('data-terminal-repeated-title', '');
-  await expect(first.locator('.terminal-stream-guidance')).toContainText('Typing resumes commands');
+  await expect(first.locator('.terminal-stream-guidance, .terminal-stream-permalink, [data-terminal-stream-title-placeholder]')).toHaveCount(0);
+  await expect(first.getByRole('heading', { name: 'Markdown template', exact: true })).toHaveCount(1);
+  await expect(first).toHaveAccessibleName('Markdown template');
   const touchPrimary = await page.evaluate(() => matchMedia('(hover: none) and (pointer: coarse)').matches);
   await expect(first.locator('[data-terminal-open]')).toHaveAttribute(
     'href',
     touchPrimary ? '/pages/markdown-template/' : '/pages/markdown-template/#document-navigator'
   );
-  await expect(first.locator('.terminal-stream-permalink')).toHaveAttribute('href', '/pages/markdown-template/');
+  await expect(first.getByRole('link', { name: 'Open document' })).toHaveCount(1);
   const controls = await articles.evaluateAll((nodes) => nodes.map((node) => ({
     target: node.querySelector('[data-terminal-collapse]')?.getAttribute('aria-controls'),
     body: node.querySelector('.terminal-stream-prose')?.id
@@ -2183,6 +2185,196 @@ test('inline reading controls preserve drafts, body identity and independent out
   await submit(page, 'cat ~/blog/pages/about.md');
   await expect(articles).toHaveCount(1);
   await expect(articles.first()).not.toHaveAttribute('data-terminal-repeated-title', '');
+});
+
+test('inline chrome centers four usable controls and keeps visible reading focus above its footer', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await submit(page, 'cat ~/blog/pages/markdown-template.md');
+    const article = page.locator('[data-terminal-stream-document]');
+    const title = article.locator('[data-terminal-stream-title]');
+    await expect(title).toBeFocused();
+    await expect(title).toHaveText('Markdown template');
+    await expect(article.getByRole('heading', { name: 'Markdown template', exact: true })).toHaveCount(1);
+    await expect(article).toHaveAccessibleName('Markdown template');
+    await expect(article.locator('[data-terminal-stream-title-placeholder]')).toHaveCount(0);
+    await expect(article.getByRole('navigation').locator('button, a')).toHaveText(['Command', 'Collapse', 'Open', 'Share']);
+    const geometry = await article.evaluate(root => {
+      const nav = root.querySelector('.terminal-stream-actions')!.getBoundingClientRect();
+      const controls = [...root.querySelectorAll('.terminal-stream-actions button, .terminal-stream-actions a')].map(element => element.getBoundingClientRect());
+      const heading = root.querySelector('[data-terminal-stream-title]')!.getBoundingClientRect();
+      const body = root.querySelector('.terminal-stream-prose')!.getBoundingClientRect();
+      const footer = root.querySelector('.terminal-stream-footer')!.getBoundingClientRect();
+      return { center: (controls[0].left + controls[3].right) / 2, navCenter: (nav.left + nav.right) / 2,
+        navBottom: nav.bottom, titleTop: heading.top, titleBottom: heading.bottom, footerTop: footer.top,
+        bodyBottom: body.bottom, height: innerHeight, targets: controls.map(rect => rect.height) };
+    });
+    expect(geometry.center).toBeCloseTo(geometry.navCenter, 0);
+    expect(geometry.titleTop).toBeGreaterThanOrEqual(geometry.navBottom);
+    expect(geometry.titleBottom).toBeLessThan(geometry.height);
+    expect(geometry.footerTop).toBeGreaterThanOrEqual(geometry.bodyBottom);
+    for (const target of geometry.targets) expect(target).toBeGreaterThanOrEqual(44);
+    const collapse = article.locator('[data-terminal-collapse]');
+    const collapseWidth = (await collapse.boundingBox())!.width;
+    await collapse.click();
+    await expect(collapse).toHaveText('Expand');
+    expect((await collapse.boundingBox())!.width).toBeCloseTo(collapseWidth, 1);
+    await collapse.click();
+    await expect(article.locator('.terminal-stream-footer')).toContainText('~/blog/pages/markdown-template.md');
+    await expect(article.locator('[data-terminal-source-bytes]')).toHaveAttribute('data-terminal-source-kind', 'authored');
+    await expect(article.locator('[data-terminal-license]')).toHaveCount(0);
+    await article.locator('.terminal-stream-prose [id]').nth(1).evaluate(element => element.scrollIntoView({ block: 'start' }));
+    expect(await article.locator('.terminal-stream-prose [id]').nth(1).evaluate(element =>
+      element.getBoundingClientRect().top >= element.closest('article')!.querySelector('.terminal-stream-actions')!.getBoundingClientRect().bottom)).toBe(true);
+    await expectNoHorizontalOverflow(page);
+    await submit(page, 'cat ~/blog/pages/about.md');
+    const about = page.locator('[data-terminal-stream-document]').last();
+    await expect(about.locator('.terminal-stream-header h2')).toHaveText('About this foundation');
+    await expect(about.locator('[data-terminal-stream-title]')).toBeFocused();
+    await expect(about.getByRole('heading', { name: 'A deliberately small beginning' })).toBeVisible();
+  }
+});
+
+test('inline chrome wraps centered controls and keeps sticky reading clearance at enlarged text', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto('/');
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const article = page.locator('[data-terminal-stream-document]');
+  await expect(article.locator('[data-terminal-stream-title]')).toBeFocused();
+  const rows = await article.locator('.terminal-stream-actions').evaluate(nav => {
+    const bounds = nav.getBoundingClientRect();
+    const groups = new Map<string, DOMRect[]>();
+    for (const child of nav.children) {
+      const rect = child.getBoundingClientRect();
+      const key = ((rect.top + rect.bottom) / 2).toFixed(1);
+      groups.set(key, [...(groups.get(key) ?? []), rect]);
+    }
+    return [...groups.values()].map(group => ({
+      center: (Math.min(...group.map(rect => rect.left)) + Math.max(...group.map(rect => rect.right))) / 2,
+      navCenter: (bounds.left + bounds.right) / 2,
+      left: Math.min(...group.map(rect => rect.left)), right: Math.max(...group.map(rect => rect.right))
+    }));
+  });
+  expect(rows.length).toBeGreaterThan(1);
+  for (const row of rows) {
+    expect(row.center).toBeCloseTo(row.navCenter, 0);
+    expect(row.left).toBeGreaterThanOrEqual(0);
+    expect(row.right).toBeLessThanOrEqual(375);
+  }
+  for (const control of await article.locator('.terminal-stream-actions button, .terminal-stream-actions a').all()) {
+    expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await article.locator('.terminal-stream-prose [id]').nth(1).evaluate(element => element.scrollIntoView({ block: 'start' }));
+  await expect.poll(() => article.locator('.terminal-stream-prose [id]').nth(1).evaluate(element =>
+    element.getBoundingClientRect().top >= element.closest('article')!.querySelector('.terminal-stream-actions')!.getBoundingClientRect().bottom - 1)).toBe(true);
+  await expectNoHorizontalOverflow(page);
+});
+
+test('inline Share copies canonical links with isolated feedback and preserves draft selection', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+    writeText: async (value: string) => { (window as Window & { sharedLinks?: string[] }).sharedLinks = [...((window as Window & { sharedLinks?: string[] }).sharedLinks ?? []), value]; }
+  } }));
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const articles = page.locator('[data-terminal-stream-document]');
+  const firstShare = articles.first().locator('[data-terminal-share]');
+  const secondShare = articles.last().locator('[data-terminal-share]');
+  const input = page.locator('#terminal-command');
+  await input.fill('unfinished draft');
+  await input.evaluate((element: HTMLInputElement) => element.setSelectionRange(2, 8));
+  const shareWidth = (await firstShare.boundingBox())!.width;
+  await firstShare.click();
+  await expect(firstShare).toHaveText('Copied');
+  expect((await firstShare.boundingBox())!.width).toBeCloseTo(shareWidth, 1);
+  await expect(firstShare).toBeFocused();
+  await expect(secondShare).toHaveText('Share');
+  const expected = new URL('/pages/markdown-template/', SITE_CONFIG.site.url ?? page.url()).href;
+  expect(await page.evaluate(() => (window as Window & { sharedLinks?: string[] }).sharedLinks)).toEqual([expected]);
+  await expect(input).toHaveValue('unfinished draft');
+  expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])).toEqual([2, 8]);
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Document link copied.');
+  await expect(firstShare).toHaveText('Share');
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Denied'); } } }));
+  await secondShare.click();
+  await expect(secondShare).toHaveText('Failed');
+  await expect(page.locator('[data-terminal-announcer]')).toContainText('Could not copy document link');
+  await expect(firstShare).toHaveText('Share');
+  await expect(articles.last().getByRole('link', { name: 'Open document' })).toHaveAttribute('href', '/pages/markdown-template/#document-navigator');
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
+  await firstShare.click();
+  await expect(firstShare).toHaveText('Failed');
+  expect((await firstShare.boundingBox())!.width).toBeCloseTo(shareWidth, 1);
+  await expect(input).toHaveValue('unfinished draft');
+  expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])).toEqual([2, 8]);
+  await submit(page, 'cat ~/blog/posts/ai/llm-workflow-with-trellis.md');
+  await expect(page.locator('[data-terminal-stream-document]').last().locator('[data-terminal-license]')).toHaveText('CC BY-NC 4.0');
+});
+
+test('inline Share keeps explicit canonical and originless route fallback separate from navigator Open', async ({ page }) => {
+  for (const reference of ['https://example.test/shared/fixture/?source=canonical', '/pages/markdown-template/']) {
+    await page.goto('/');
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText: async (value: string) => { (window as Window & { sharedLink?: string }).sharedLink = value; }
+    } }));
+    await submit(page, 'cat ~/blog/pages/markdown-template.md');
+    const article = page.locator('[data-terminal-stream-document]');
+    // Both safe emitted forms are covered; build fixtures verify their source projections.
+    await article.locator('[data-terminal-share]').evaluate((button, value) => button.setAttribute('data-terminal-share-url', value), reference);
+    await article.locator('[data-terminal-share]').click();
+    await expect(article.locator('[data-terminal-share]')).toHaveText('Copied');
+    expect(await page.evaluate(() => (window as Window & { sharedLink?: string }).sharedLink)).toBe(new URL(reference, page.url()).href);
+    await expect(article.getByRole('link', { name: 'Open document' })).toHaveAttribute('href', '/pages/markdown-template/#document-navigator');
+  }
+});
+
+test('inline Share serializes rapid clicks and retires superseded feedback timers', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  await page.clock.install();
+  await page.evaluate(() => {
+    const state = window as Window & { shareCalls?: number; finishShare?: (success: boolean) => void };
+    state.shareCalls = 0;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText: () => new Promise<void>((resolve, reject) => {
+        state.shareCalls = (state.shareCalls ?? 0) + 1;
+        state.finishShare = success => success ? resolve() : reject(new Error('Denied'));
+      })
+    } });
+  });
+  const share = page.locator('[data-terminal-share]');
+  await share.click();
+  await share.click();
+  expect(await page.evaluate(() => (window as Window & { shareCalls?: number }).shareCalls)).toBe(1);
+  await expect(share).toHaveText('Share');
+  await page.evaluate(() => (window as Window & { finishShare?: (success: boolean) => void }).finishShare?.(true));
+  await expect(share).toHaveText('Copied');
+  await page.clock.runFor(1500);
+  await share.click();
+  await share.click();
+  expect(await page.evaluate(() => (window as Window & { shareCalls?: number }).shareCalls)).toBe(2);
+  await page.clock.runFor(700);
+  await expect(share).toHaveText('Copied');
+  await page.evaluate(() => (window as Window & { finishShare?: (success: boolean) => void }).finishShare?.(false));
+  await expect(share).toHaveText('Failed');
+  await expect(share).toBeFocused();
+  await page.clock.runFor(1900);
+  await expect(share).toHaveText('Failed');
+  await page.clock.runFor(101);
+  await expect(share).toHaveText('Share');
+  await share.click();
+  expect(await page.evaluate(() => (window as Window & { shareCalls?: number }).shareCalls)).toBe(3);
+  await submit(page, 'clear');
+  await page.evaluate(() => (window as Window & { finishShare?: (success: boolean) => void }).finishShare?.(true));
+  await page.clock.runFor(3000);
+  await expect(page.locator('[data-terminal-stream-document]')).toHaveCount(0);
+  await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command transcript cleared.');
 });
 
 test('inline code blocks number lines and copy exact source in repeated output', async ({ page }) => {
@@ -2282,7 +2474,7 @@ test('inline wide content wraps prose, preserves code and exposes remaining scro
     return {
       article: bounds(element),
       command: bounds(document.querySelector('.terminal-command-form .terminal-command-row')),
-      header: bounds(element.querySelector('.terminal-stream-header')),
+      header: bounds(element.querySelector('.terminal-stream-actions')),
       toolbar: bounds(element.querySelector('.terminal-stream-actions')),
       paragraph: bounds(element.querySelector('.terminal-stream-prose p')),
       frame: bounds(element.querySelector('.terminal-wide'))

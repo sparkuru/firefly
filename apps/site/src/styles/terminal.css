@@ -1007,7 +1007,7 @@
 }
 
 .terminal-stream-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .terminal-stream-header h2 {
@@ -1021,8 +1021,9 @@
   scroll-margin-block-start: 2rem;
 }
 
-.terminal-stream-meta,
-.terminal-stream-permalink {
+.terminal-stream-meta {
+  margin: 0;
+  flex-shrink: 0;
   font-size: 0.875rem;
 }
 
@@ -1037,6 +1038,10 @@
   font-weight: 500;
   line-height: 1.25;
   text-wrap: balance;
+}
+
+.terminal-stream-prose > :where(h2, h3, h4):first-child {
+  margin-block-start: 0.75rem;
 }
 
 .terminal-stream-prose h2 {
@@ -1666,17 +1671,10 @@
   scroll-margin-block-start: calc(var(--terminal-stream-toolbar-height) + 1rem);
 }
 
-.terminal-stream-header [data-terminal-stream-title]:focus {
+.terminal-stream-document [data-terminal-stream-title]:focus {
   outline: 1px solid var(--terminal-color-focus);
   outline-offset: 4px;
   border-radius: 2px;
-}
-
-.terminal-stream-document[data-terminal-repeated-title] .terminal-stream-header h2 {
-  max-width: 100%;
-  font-size: 0.95rem;
-  color: var(--terminal-color-muted);
-  text-wrap: wrap;
 }
 
 .terminal-stream-actions {
@@ -1685,10 +1683,25 @@
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
   padding-block: 0.25rem;
-  border-block: 1px solid var(--terminal-color-border);
+  margin-bottom: 0.75rem;
   background: var(--terminal-color-canvas);
+}
+
+.terminal-stream-action-separator {
+  color: var(--terminal-color-muted);
+}
+
+.terminal-stream-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--terminal-color-border);
+  color: var(--terminal-color-muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .terminal-stream-actions :is(button, a) {
@@ -1697,7 +1710,7 @@
   justify-content: center;
   min-height: 44px;
   min-width: 44px;
-  padding: 0.4rem 0.65rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid transparent;
   background: transparent;
   color: var(--terminal-color-link);
@@ -1711,15 +1724,23 @@
   background: var(--terminal-color-surface-subtle);
 }
 
+.terminal-stream-actions [data-terminal-share] {
+  min-width: calc(6ch + 1rem + 2px);
+}
+
+.terminal-stream-actions [data-terminal-collapse] {
+  min-width: calc(8ch + 1rem + 2px);
+}
+
 .terminal-stream-actions :is(button, a):focus-visible {
   outline: 2px solid var(--terminal-color-focus);
   outline-offset: -2px;
 }
 
-.terminal-stream-guidance {
-  margin-block: 0.65rem 1.25rem;
-  color: var(--terminal-color-muted);
-  font-size: 0.8rem;
+@media (max-width: 40rem) {
+  .terminal-stream-document {
+    --terminal-stream-toolbar-height: 6rem;
+  }
 }
 
 .terminal-stream-prose :where(p, ul, ol, blockquote) {

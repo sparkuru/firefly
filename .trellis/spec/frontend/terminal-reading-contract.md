@@ -62,3 +62,14 @@ input, unchanged draft, candidate acceptance and modified/composing guards.
 long labels, local code scrolling, enlarged text and hint/history behavior.
 Theme checks verify computed foreground/background pairs rather than inferring
 contrast from the palette's base text color.
+
+## Inline article navigation
+
+`TerminalStreamDocument.astro` uses the owner's centered four-action bar, body
+and file-footer composition; see [Terminal file metadata](./terminal-file-metadata-contract.md).
+Validated repeated metadata titles use a hidden inert-template label. Cloning
+promotes the matching first authored heading as the visible reading focus and
+article label, preserving its scoped ID/text and strict unique template checks.
+Nonrepeated titles stay visible below the action bar. Do not restore stacked
+permalink/guidance chrome or focus a hidden label. Keep draft/caret return,
+per-clone collapse state, local wide scrolling and actual sticky clearance.

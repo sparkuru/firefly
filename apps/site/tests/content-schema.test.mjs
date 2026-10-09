@@ -8,7 +8,8 @@ import {
   isContentThemeId,
   resolveContentThemeId
 } from '../src/lib/content-theme.mjs';
-import { pageSchema, postSchema } from '../src/lib/content-schema.mjs';
+import { memoSchema, pageSchema, postSchema } from '../src/lib/content-schema.mjs';
+import { POST_LICENSE_IDS, POST_LICENSES } from '../src/lib/post-license.mjs';
 
 const validPost = {
   title: 'llm-workflow-with-trellis',
@@ -36,6 +37,21 @@ const validPage = {
   layout: 'page',
   presentation: DEFAULT_PRESENTATION_ID
 };
+
+test('post licenses default narrowly and preserve validated CC4 overrides', () => {
+  assert.equal(postSchema.parse(validPost).license, 'CC-BY-NC-4.0');
+  for (const license of POST_LICENSE_IDS) {
+    assert.equal(postSchema.parse({ ...validPost, license }).license, license);
+    assert.match(POST_LICENSES[license].href, /^https:\/\/creativecommons\.org\/licenses\/[a-z-]+\/4\.0\/$/u);
+  }
+  for (const license of ['', null, 4, 'https://example.test/', 'CC-BY-3.0', 'UNKNOWN']) {
+    assert.equal(postSchema.safeParse({ ...validPost, license }).success, false);
+  }
+  assert.equal(Object.hasOwn(pageSchema.parse(validPage), 'license'), false);
+  assert.equal(pageSchema.safeParse({ ...validPage, license: 'CC-BY-4.0' }).success, false);
+  assert.equal(Object.hasOwn(memoSchema.parse({ id: 'm_license', date: '2026-01-01', draft: false }), 'license'), false);
+  assert.equal(postSchema.safeParse({ ...validPost, sourceByteLength: 1 }).success, false);
+});
 
 test('valid metadata parses and coerces dates', () => {
   const post = postSchema.parse(validPost);

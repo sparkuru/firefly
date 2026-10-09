@@ -464,6 +464,10 @@ createDocumentNavigationLookup(
 
 #### Metadata, projection, and canonical routes
 
+Post-only `license`, generated original-byte provenance and metadata-writer
+preservation follow [Terminal file metadata](./terminal-file-metadata-contract.md).
+
+
 - `access` is an exact discriminated union: omitted means
   `{ visibility: 'public' }`; private requires a safe non-empty `owner`; public
   cannot carry an owner. Unknown keys are rejected.
@@ -1170,9 +1174,11 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   `open` returns `document-navigation` containing the decoded canonical entry;
   the DOM controller uses `entry.href` directly and never concatenates raw input.
 - An inline `cat` stream ends after its trusted document content; the existing
-  prompt remains directly below it. A bounded sticky header action bar offers
-  Command, Collapse/Expand and Open document during long reads, without a
-  redundant footer or second input. Return preserves the draft and selection;
+  prompt remains below its file-information footer. A bounded centered sticky
+  action bar offers Command, Collapse/Expand, Open and Share during long reads.
+  The approved footer contains virtual file path, bytes, date and post license;
+  command input continues to be owned by the existing prompt. Return preserves
+  the draft and selection;
   collapse retains the body DOM and scopes state and aria-controls per clone.
   Clear and fatal recovery release all stream overflow observers/listeners.
 - Inline reading uses the terminal command row's available width for article
@@ -1193,11 +1199,12 @@ if (roots === undefined) return failureResult('grep can search only listed publi
   without adding numbers. A copy result is announced, and failed clipboard
   access never reports success. These controls stay independent across repeated
   `cat` output and preserve local code scrolling and typing protection.
-  Metadata titles are demoted only when the validated first outline heading
-  matches under case/whitespace/separator normalization and rendered HTML starts
-  with that heading; authored headings and IDs are never removed or rewritten.
-  The title remains the output focus target, with a restrained visible outline.
-  Visible guidance explains typing-to-prompt and explicit document navigation.
+  When validated first-body heading/title normalization matches, inline reading
+  shows the authored heading once and gives it visible programmatic focus;
+  authored headings and IDs are preserved. Nonrepeated titles remain meaningful.
+  The centered action bar and file footer follow the site-owned contracts in
+  [Terminal file metadata](./terminal-file-metadata-contract.md); duplicated
+  permalink/guidance chrome is not reintroduced.
 - Syntactically safe `cat`/`open` path completion owns the rewrite decision for
   every result count. Unique completion inserts the next segment; ambiguity
   keeps prompt focus and shows candidates with the user's `./` or `~/blog/`

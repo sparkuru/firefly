@@ -5,6 +5,7 @@ import {
   type OutlineItem
 } from '@firefly/x-core';
 import type { PublicPage, PublicPost, PublicMemo } from './content';
+import { readSourceProvenance } from './source-provenance.mjs';
 
 export type PublicDocument = PublicPost | PublicPage | PublicMemo;
 
@@ -63,11 +64,14 @@ export async function renderDocument(entry: PublicDocument) {
   );
 
   assertHeadingMetadata(metadata.outline, rendered.headings, owner);
+  const provenance = await readSourceProvenance(entry.collection, entry.id);
 
   return {
     Content: rendered.Content,
     headings: rendered.headings,
     metadata,
+    sourceByteLength: provenance.sourceByteLength,
+    sourceKind: provenance.kind,
     memoPreview: rendered.remarkPluginFrontmatter.memoPreview as undefined | { html: string; truncated: boolean }
   };
 }

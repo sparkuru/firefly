@@ -16,6 +16,66 @@ Further source inspection found that the early 82ch stream paragraph declaration
 
 ## Requirements
 
+### Inline article chrome follow-up (2026-10-09)
+
+#### Owner-specified navigation/footer layout
+
+The owner subsequently supplied the exact preferred composition, superseding
+the interim metadata/action-row proposal below:
+
+- A small top navigation bar, centered within the current page/Terminal width,
+  contains `Command`, `Collapse`/`Expand`, `Open` and `Share` only.
+- Body follows directly, with one visible authored title when it already
+  matches the metadata title. Preserve a visible focus target and meaningful
+  title for documents without that match.
+- Footer below the body shows the virtual Markdown path, original UTF-8 file
+  byte count, date, and (for posts) linked Creative Commons license label.
+  Source byte count includes frontmatter and comes from the original validated
+  source Buffer before materializer fallback/normalization; rendered text or
+  transformed/staged size is not a substitute. Generated Markdown requires an
+  explicit provenance contract.
+- `Share` copies the canonical permanent article URL, independent of the
+  navigator fragment used by `Open`. Show honest short success/failure feedback
+  and preserve draft, selection, focus, per-output identity and cleanup.
+- Add post frontmatter `license`, with default `CC-BY-NC-4.0` (displayed as
+  `CC BY-NC 4.0`) and validated supported Creative Commons 4.0 variants.
+  Missing license uses the default without rewriting owner files. Invalid
+  values fail validation; license URLs come from a fixed official mapping.
+- This explicit design extends scope to site-owned content schema/metadata
+  tooling, original-byte provenance and renderer handoff. Prefer a bounded
+  generated sidecar and site-owned field over X Core/runtime API changes.
+  Preserve source bytes, contained-file safety, atomic staging and privacy;
+  no host paths or forged authored size enter public UI.
+- Verify centered four-control bar, post/footer order/default/override,
+  original Unicode/frontmatter byte count, invalid license/provenance rejection,
+  share URL/success/failure/independence, narrow wrapping/sticky clearance and
+  existing command/native link/reading behavior.
+
+The owner accepted the reviewed revision and authorized its work commit, now
+`1a1fc31`, then requested simplification of the crowded inline `cat` article
+header shown in their screenshot. This request authorizes focused implementation
+without repeating the previous acceptance/commit question.
+
+- Reduce repeated article identity, duplicate destination links and persistent
+  explanatory text in the inline reader; preserve authored body/title/IDs.
+- Use one compact metadata/action row. Keep a discoverable native document
+  destination and explicit return-to-command/collapse controls with their
+  draft, selection, focus, scrolling and per-output state contracts intact.
+- If the validated first authored heading repeats the metadata title, show the
+  authored heading once and focus a visible reading target after `cat`. Keep
+  the article's accessible name and unique cloned IDs. Nonrepeated titles must
+  remain visible and meaningful.
+- Verify repeated/nonrepeated titles, keyboard/focus, modified native opening,
+  repeated `cat` outputs, collapse/expand, wide reading and narrow desktop.
+  Compare synthetic before/after header geometry and screenshots.
+- Scope: `TerminalStreamDocument.astro`, related Terminal styles, minimal
+  controller focus wiring only if required, and affected maintained tests.
+  Standalone reading, wide prose preference, hint/completion, mobile no-shell,
+  owner content/configuration and lab designs retain the accepted contracts.
+
+Task archival is deferred until this newly requested work is complete. The
+previous accepted work commit is distinct from the follow-up's visual result.
+
 ### Owner revision after visual review (2026-10-08)
 
 The owner requested these changes after inspecting the implemented preview.
@@ -66,3 +126,8 @@ earlier narrow-measure and recurring-placeholder decisions below.
 `research/assessment.md` records the initial assessment. `design.md` and `implement.md` define the approved bounded refinement and verification plan. Implement/check manifests contain explicit context. Implementation and validation evidence will be recorded separately from the initial existing-build observations.
 
 The initial implementation and verification are recorded in `research/implementation-results.md`, `research/check-results.md` and `research/final-validation.md`. They describe the first candidate. The owner revision is implemented, independently reviewed and verified in `research/owner-revision-validation.md`: complete gate, normal packaging and local preview readiness passed. Final owner visual/Git acceptance remains pending.
+
+The owner-defined follow-up is fully implemented and independently checked.
+Final verify/package/local preview passed; current evidence is
+`research/inline-chrome-validation.md`. The concrete owner's design and existing
+commit authorization permit work/task completion without repeating approval.

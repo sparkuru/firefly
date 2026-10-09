@@ -5,6 +5,7 @@ import {
   isContentThemeId
 } from './content-theme.mjs';
 import { isSafeHttpUrl, isSafeImageReference } from './site-config.mjs';
+import { DEFAULT_POST_LICENSE, POST_LICENSE_IDS } from './post-license.mjs';
 
 const requiredText = z.string().trim().min(1);
 const htmlTitle = requiredText.refine(
@@ -95,6 +96,7 @@ function withChronology(schema) {
 export const postSchema = withChronology(
   z.object({
     ...sharedMetadata,
+    license: z.enum(POST_LICENSE_IDS).default(DEFAULT_POST_LICENSE),
     slug: slug.optional(),
     layout: z.literal('post')
   }).strict()

@@ -1,6 +1,8 @@
 ---
-import type { TerminalEntry } from '@firefly/presentation-terminal/runtime';
+import { formatResourcePath, type TerminalEntry } from '@firefly/presentation-terminal/runtime';
 import type { PublicDocument, renderDocument } from '../lib/render-document';
+import { getPostLicense } from '../lib/post-license.mjs';
+import { resolveSiteMetadata } from '../lib/site-meta.mjs';
 
 type RenderedDocument = Awaited<ReturnType<typeof renderDocument>>;
 
@@ -20,6 +22,9 @@ const firstHeading = document.metadata.outline[0];
 const startsWithHeading = /^\s*(?:<!--[\s\S]*?-->\s*)*<h[2-6]\b/u.test(entry.rendered?.html ?? '');
 const repeatedTitle = startsWithHeading && firstHeading !== undefined &&
   normalizeTitle(firstHeading.text) === normalizeTitle(entry.data.title ?? terminalEntry.title);
+const canonicalUrl = resolveSiteMetadata({ pathname: terminalEntry.href, canonical: entry.data.canonical }).canonical;
+const shareUrl = canonicalUrl === undefined ? terminalEntry.href : (() => { const url = new URL(canonicalUrl); url.hash = ''; return url.href; })();
+const license = entry.collection === 'posts' ? getPostLicense(entry.data.license) : undefined;
 ---
 
 <article
@@ -28,22 +33,43 @@ const repeatedTitle = startsWithHeading && firstHeading !== undefined &&
   data-terminal-repeated-title={repeatedTitle ? '' : undefined}
   aria-labelledby={titleId}
 >
-  <header class="terminal-stream-header">
-    <p class="terminal-stream-meta">
+  {
+    repeatedTitle && (
+      <span id={titleId} class="terminal-visually-hidden" data-terminal-stream-title data-terminal-stream-title-placeholder>
+        {entry.data.title}
+      </span>
+    )
+  }
+  <p class="terminal-stream-meta terminal-visually-hidden" aria-hidden="true">
       {kind}
       <span aria-hidden="true"> · </span>
       <time datetime={entry.data.date.toISOString()}>{terminalEntry.date}</time>
-    </p>
-    <h2 id={titleId} data-terminal-stream-title tabindex="-1">
-      {entry.data.title}
-    </h2>
-    <a class="terminal-stream-permalink" href={terminalEntry.href}>permalink</a>
-  </header>
+  </p>
   <nav class="terminal-stream-actions" aria-label="Article reading actions">
-    <button type="button" data-terminal-return>Command</button>
-    <button type="button" data-terminal-collapse aria-expanded="true" aria-controls={bodyId}>Collapse</button>
-    <a href={terminalEntry.href} data-terminal-open>Open document</a>
+      <button type="button" data-terminal-return>Command</button>
+      <span aria-hidden="true" class="terminal-stream-action-separator">|</span>
+      <button type="button" data-terminal-collapse aria-expanded="true" aria-controls={bodyId}>Collapse</button>
+      <span aria-hidden="true" class="terminal-stream-action-separator">|</span>
+      <a href={terminalEntry.href} data-terminal-open aria-label="Open document">Open</a>
+      <span aria-hidden="true" class="terminal-stream-action-separator">|</span>
+      <button type="button" data-terminal-share data-terminal-share-url={shareUrl}>Share</button>
   </nav>
-  <p class="terminal-stream-guidance">Typing resumes commands. Open document to read the full page.</p>
+  {
+    !repeatedTitle && (
+      <header class="terminal-stream-header">
+        <h2 id={titleId} data-terminal-stream-title tabindex="-1">
+          {entry.data.title}
+        </h2>
+      </header>
+    )
+  }
   <div id={bodyId} class="terminal-stream-prose"><Content /></div>
+  <footer class="terminal-stream-footer">
+    <span>{formatResourcePath(`/${terminalEntry.virtualPath}`)}</span>
+    <span aria-hidden="true"> · </span>
+    <span data-terminal-source-bytes={document.sourceByteLength} data-terminal-source-kind={document.sourceKind}>{document.sourceByteLength} bytes</span>
+    <span aria-hidden="true"> · </span>
+    <time datetime={entry.data.date.toISOString()}>{terminalEntry.date}</time>
+    {license && <><span aria-hidden="true"> · </span><a href={license.href} data-terminal-license={entry.data.license}>{license.label}</a></>}
+  </footer>
 </article>

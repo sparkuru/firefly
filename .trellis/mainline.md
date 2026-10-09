@@ -412,3 +412,21 @@ The owner also requested simpler inline `cat` article chrome; the accepted
 snapshot is committed first and this task remains active for that follow-up.
 Archival/session bookkeeping will follow its completion, keeping work commits
 ahead of task/journal commits. No remote push or deployment is authorized.
+
+### Owner-defined inline navigation and file metadata
+
+Accepted prior work is committed as `1a1fc31`. The owner's follow-up replaces
+stacked inline article chrome with centered Command/Collapse-or-Expand/Open/Share
+actions, title/body and a virtual Markdown file footer. Post-only `license`
+defaults to CC-BY-NC-4.0, original UTF-8 bytes are captured before staging
+transforms, and Share copies canonical URLs independently of navigator Open.
+Sources/configuration and X Core/runtime payloads remain unchanged.
+
+Implementation and independent full-scope review passed. The reviewer
+strengthened rollback/identity fixtures and 200%-text navigation clearance.
+Current evidence is task `research/inline-chrome-validation.md`. Full gates
+passed: 213 browser passes,166 intentional skips, no retry/flaky result; normal
+package and existing preview readiness passed. Nineteen app/test/config source
+fingerprints stayed unchanged through the gates. The owner explicitly authorized task commits and provided the
+final layout, so the concrete follow-up/archive/journal batch reuses that
+authorization after gates. No push or production deployment is included.

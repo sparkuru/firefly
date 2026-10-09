@@ -41,6 +41,7 @@ test('save-as adds schema-valid defaults and preserves a no-frontmatter body byt
   assert.equal(parsed.metadata.description, 'Unicode: 萤火虫');
   assert.equal(parsed.metadata.draft, true);
   assert.equal(parsed.metadata.layout, 'post');
+  assert.equal(parsed.metadata.license, 'CC-BY-NC-4.0');
   assert.equal(parsed.metadata.date, new Date().toISOString().slice(0, 10));
   assert.deepEqual(parsed.body, body);
   assert.match(result.stdout, new RegExp(`Wrote ${destination.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}`));
@@ -103,6 +104,7 @@ test('empty and existing front matter are normalized without losing authored fie
     'draft: true',
     'layout: post',
     'contentTheme: default',
+    'license: CC-BY-SA-4.0',
     'firefly:',
     '  markers:',
     '    - featured',
@@ -117,6 +119,7 @@ test('empty and existing front matter are normalized without losing authored fie
   assert.deepEqual(existingOutput.metadata.tags, ['retained']);
   assert.deepEqual(existingOutput.metadata.firefly, { markers: ['featured'] });
   assert.equal(existingOutput.metadata.contentTheme, 'default');
+  assert.equal(existingOutput.metadata.license, 'CC-BY-SA-4.0');
   assert.equal(existingOutput.body.toString('utf8'), '\nExisting body.\n');
 });
 
@@ -150,6 +153,12 @@ test('schema and output-containment failures do not write a destination', async 
   assert.notEqual(invalid.status, 0);
   assert.match(invalid.stderr, /invalid|unsupported/iu);
   await assert.rejects(readFile(path.join(blog, 'posts', 'bad.md')));
+  const invalidLicense = path.join(blog, 'posts', 'invalid-license.md');
+  const invalidLicenseBytes = Buffer.from('---\ntitle: Invalid\ndescription: Invalid license fixture\ndate: 2026-01-01\ndraft: false\nlayout: post\nlicense: UNKNOWN\n---\n\n中文 😀 body\n');
+  await writeFile(invalidLicense, invalidLicenseBytes);
+  const rejectedLicense = await runCli([invalidLicense, '--blog-root', blog, '--write-back']);
+  assert.notEqual(rejectedLicense.status, 0);
+  assert.deepEqual(await readFile(invalidLicense), invalidLicenseBytes);
 
   const malformed = path.join(root, 'malformed.md');
   await writeFile(malformed, '---\ntitle: [unterminated\n---\nbody\n');

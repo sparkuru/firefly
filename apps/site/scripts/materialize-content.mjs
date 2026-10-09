@@ -20,6 +20,7 @@ import {
 } from './firefly-ignore.mjs';
 import { stageMemoSource, memoAggregateSource, copyMemoAssets } from './memo-source.mjs';
 import { addRuntimeFrontmatter } from '../src/lib/content-metadata.mjs';
+import { SOURCE_PROVENANCE_FILENAME } from '../src/lib/source-provenance.mjs';
 
 const siteRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaultContentRoot = path.resolve(siteRoot, '../../content');
@@ -276,6 +277,7 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
 }
 
 async function copyFiles(files, targetRoot) {
+  const records = Object.create(null);
   for (const file of files) {
     const destination = path.join(targetRoot, ...file.virtualPath.split('/'));
     await mkdir(path.dirname(destination), { recursive: true });
@@ -296,6 +298,7 @@ async function copyFiles(files, targetRoot) {
       });
       const normalizedText = normalizeLegacyBodyHeadings(withFrontmatter);
       await writeFile(destination, normalizedText === sourceText ? sourceBytes : normalizedText);
+      records[file.virtualPath] = { kind: 'authored', sourceByteLength: sourceBytes.length };
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('Content source changed during materialization:')) {
         throw error;
@@ -305,6 +308,11 @@ async function copyFiles(files, targetRoot) {
       await sourceHandle?.close();
     }
   }
+  return records;
+}
+
+async function writeProvenance(targetRoot, records) {
+  await writeFile(path.join(targetRoot, SOURCE_PROVENANCE_FILENAME), JSON.stringify({ version: 1, records }));
 }
 
 function normalizeLegacyBodyHeadings(markdown) {
@@ -387,7 +395,7 @@ export async function materializeMarkdownWorkspace({
   await replaceStage(targetRoot, {
     beforeCopy,
     beforePromote,
-    copy: (candidate) => copyFiles(files, candidate)
+    copy: async (candidate) => writeProvenance(candidate, await copyFiles(files, candidate))
   });
   return files.map(({ virtualPath }) => virtualPath);
 }
@@ -436,15 +444,19 @@ export async function materializeContentWorkspace({
           if (!data.draft && data.access.visibility === 'public' && (!latestMemoDate || data.date > latestMemoDate)) latestMemoDate = data.date;
         } finally { await handle.close(); }
       }
+      const provenance = {};
       for (const collection of collections) {
         const collectionTarget = path.join(candidate, collection);
         await mkdir(collectionTarget, { recursive: true });
-        await copyFiles(inventory[collection], collectionTarget);
+        provenance[collection] = await copyFiles(inventory[collection], collectionTarget);
         if (collection === 'memos') await copyMemoAssets(path.join(sourceRoot, 'memos'), collectionTarget);
       }
       if (!inventory.pages.some(({ virtualPath }) => virtualPath === 'memos.md')) {
-        await writeFile(path.join(candidate, 'pages/memos.md'), memoAggregateSource(latestMemoDate?.toISOString()));
+        const generatedBytes = Buffer.from(memoAggregateSource(latestMemoDate?.toISOString()), 'utf8');
+        await writeFile(path.join(candidate, 'pages/memos.md'), generatedBytes);
+        provenance.pages['memos.md'] = { kind: 'generated', sourceByteLength: generatedBytes.length };
       }
+      for (const collection of collections) await writeProvenance(path.join(candidate, collection), provenance[collection]);
     }
   });
   return Object.freeze({
