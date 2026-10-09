@@ -33,7 +33,7 @@ export async function expectHomeBrowseTree(page: Page, selector: string) {
   }
 }
 
-export async function expectMobileRootBrowsing(page: Page) {
+export async function expectMobileRootBrowsing(page: Page, expectedFriends = SITE_CONFIG.terminal.friends) {
   const navigation = page.locator('[data-home-root-navigation]');
   await expect(navigation).toBeVisible();
   await expect(navigation.locator('a')).toHaveText(['pages/', 'lab/', 'posts/']);
@@ -46,11 +46,11 @@ export async function expectMobileRootBrowsing(page: Page) {
   const friends = page.locator('[data-home-friends]');
   await expect(friends).toBeVisible();
   await expect(friends.getByRole('heading', { name: 'friend links' })).toBeVisible();
-  await expect(page.locator('[data-terminal-friend]')).toHaveCount(SITE_CONFIG.terminal.friends.length);
-  if (SITE_CONFIG.terminal.friends.length === 0) {
+  await expect(page.locator('[data-terminal-friend]')).toHaveCount(expectedFriends.length);
+  if (expectedFriends.length === 0) {
     await expect(friends.getByText('No friend links.')).toBeVisible();
   } else {
-    for (const [index, friend] of SITE_CONFIG.terminal.friends.entries()) {
+    for (const [index, friend] of expectedFriends.entries()) {
       const row = friends.locator('[data-terminal-friend]').nth(index);
       await expect(row.locator('a')).toBeVisible();
       await expect(row.locator('a')).toHaveText(friend.name);

@@ -115,7 +115,6 @@
   .memo-time-cursor { top: 25px; left: calc(var(--memo-position) * 100%); right: auto; width: 44px; transform: translate(-50%, -50%); }
   .memo-time-bounds { display: flex; justify-content: space-between; color: var(--memo-muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
   .memo-month-index { margin-top: 0; font-size: .8rem; }
-  .memo-month-index summary { min-height: 32px; }
   .memo-month-index ul { display: flex; flex-wrap: wrap; gap: 0 1rem; max-height: 25vh; }
   .memo-feed { border-inline: 0; border-radius: 0; }
   .memo-entry { padding: 1.2rem 1rem; scroll-margin-top: 12rem; }

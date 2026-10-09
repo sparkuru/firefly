@@ -236,6 +236,18 @@ actual desktop controller is installed, not on mobile-first entry.
 
 ### Search and reading
 
+- Canonical `.terminal-directory` navigation and `.terminal-outline` anchors
+  use at least 44px touch height under the shared coarse-pointer/no-hover
+  predicate. Expand the interactive anchor itself and keep sibling hit regions
+  non-overlapping, including long mixed-language labels. Fine-pointer desktop
+  retains its dense native links. Keep tree-prefix alignment and native
+  navigation; the homepage's inline tree remains its existing separate variant.
+- Bound the Terminal root's minimum width by the CSS layout viewport. A bare
+  `20rem` minimum becomes 640px when 200% root text is requested, overflowing a
+  375px phone. The current `min(20rem, 100vw)` keeps enlarged text available
+  without making the page wider than the viewport. Verify enlarged text and
+  portrait/landscape/tablet geometry, not only the default font-size capture.
+
 - Preserve the matching/data/failure contract in
   [Homepage Search](./homepage-search-contract.md): public posts/pages, metadata
   and rendered body, literal matching, safe bounded excerpts, IME, clear/count,

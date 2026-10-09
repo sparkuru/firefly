@@ -129,6 +129,15 @@ project retains the complete Terminal regression suite. Fixtures are
 repository-local and must not add credentials, production data, remote services,
 or mutable mocks.
 
+Positive friend-focus/history browser cases must supply public synthetic friend
+data rather than depend on owner configuration: the clone template legitimately
+has `friends = []`. The shared `expectMobileRootBrowsing(page, expectedFriends)`
+helper defaults to the configured collection; a scenario that injects a friend
+passes its complete configured-plus-synthetic expectation explicitly. Preserve
+exact metadata count, name/href/description and hidden-focus/history assertions.
+This keeps contained-config runs meaningful without weakening the empty-state
+contract or reading an owner's friend list as a required fixture.
+
 ## Shell and runtime checks
 
 When `sam`, `preview.sh`, or `tooling/shared/dev-env.sh` changes, run the

@@ -71,6 +71,12 @@ test('scrub, natural scroll, equal months and detail return synchronize in both 
   await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_middle');
   await page.keyboard.press('End');
   await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_oldest');
+  await expect.poll(() => page.locator('#m_fixture_oldest').evaluate((entry) => {
+    const header = document.querySelector('[data-memo-header]')!.getBoundingClientRect();
+    const rail = document.querySelector('[data-memo-time-control]')!.getBoundingClientRect();
+    const clearance = matchMedia('(max-width:48rem)').matches ? rail.bottom : header.bottom;
+    return entry.getBoundingClientRect().top >= clearance - 1;
+  })).toBe(true);
   await page.keyboard.press('Home');
   await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
   const box = await slider.boundingBox();
@@ -145,4 +151,17 @@ test('mobile touch scrubs the rail while content keeps native vertical scrolling
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before + 100);
   await expect(root).toHaveAttribute('data-memo-interaction', 'browsing');
   await session.detach();
+});
+
+test('month disclosure is touch-sized and native month navigation stays available', async ({ page }) => {
+  await page.goto('/pages/memos/');
+  const disclosure = page.getByText('Browse months', { exact: true });
+  expect((await disclosure.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await disclosure.click();
+  const month = page.getByRole('link', { name: '2022-03', exact: true });
+  expect((await month.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await month.click();
+  await expect(page).toHaveURL(/#m_fixture_old$/u);
+  await expect(page.locator('#m_fixture_old')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

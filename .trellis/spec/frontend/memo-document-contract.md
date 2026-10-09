@@ -103,6 +103,11 @@ surrounding ticks without implying a proportional elapsed-time scale.
 
 Desktop uses a sticky left vertical rail and natural document scrolling.
 Narrow viewports use a sticky top horizontal rail and one content column.
+The native month disclosure and month links retain at least 44px interactive
+height in both layouts; do not shorten the mobile summary below its base target.
+When control height changes, verify measured sticky-rail clearance and that
+seeking the oldest entry positions it below the header/rail, including no-JS
+month-anchor navigation.
 The controller distinguishes browsing, dragging and settling ownership: pointer
 seek positions changed targets, native scroll updates the cursor, induced scroll
 cannot trigger feedback seeking. Preserve active ID across orientation changes,

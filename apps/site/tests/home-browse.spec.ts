@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectHomeBrowseTree, expectMobileBaseTypography, expectMobileRootBrowsing } from './mobile-home-assertions';
 import { syntheticDocument, withSyntheticArticles } from './home-search-fixtures';
+import { SITE_CONFIG } from '../src/lib/site-config.mjs';
 
 const panel = '[data-home-browse-panel]';
 const list = '[data-home-browse-list]';
@@ -170,8 +171,35 @@ test('modified and new-tab directories retain native destinations', async ({ pag
 });
 
 test('friends leave accessibility and focus order within directories and return through history', async ({ page }, info) => {
+  const fixtureFriend = { name: 'Synthetic friend', desc: 'Public browser fixture', url: 'https://friend.example.test/' };
+  const expectedFriends = [...SITE_CONFIG.terminal.friends, fixtureFriend];
   await page.goto('/');
+  await page.locator('[data-home-friends]').evaluate((section, friend) => {
+    const list = document.createElement('ul');
+    list.className = 'terminal-entry-list';
+    const entry = document.createElement('li');
+    entry.className = 'terminal-entry-row terminal-entry-row--friend';
+    entry.dataset.terminalFriend = '';
+    entry.dataset.terminalFriendName = friend.name;
+    entry.dataset.terminalFriendDesc = friend.desc;
+    entry.dataset.terminalFriendUrl = friend.url;
+    const link = document.createElement('a');
+    link.href = entry.dataset.terminalFriendUrl;
+    link.textContent = entry.dataset.terminalFriendName;
+    const description = document.createElement('span');
+    description.className = 'terminal-entry-title';
+    description.textContent = friend.desc;
+    const url = document.createElement('span');
+    url.className = 'terminal-link-url';
+    url.textContent = friend.url;
+    entry.append(link, description, url);
+    list.append(entry);
+    section.querySelector('p.terminal-meta')?.remove();
+    section.append(list);
+  }, fixtureFriend);
   const metadataCount = await page.locator('[data-terminal-friend]').count();
+  expect(metadataCount).toBeGreaterThanOrEqual(1);
+  expect(metadataCount).toBe(expectedFriends.length);
   await openSection(page, 'posts');
   await page.locator(`${list} a[href="/posts/infra/"]`).tap();
   await expect(page.locator('[data-home-friends]')).toBeHidden();
@@ -179,9 +207,10 @@ test('friends leave accessibility and focus order within directories and return 
   expect(await page.locator('[data-terminal-friend]').count()).toBe(metadataCount);
   await page.screenshot({ path: info.outputPath('mobile-breadcrumb-infra-touch.png') });
   await page.locator(`${breadcrumbs} a[href="/"]`).tap();
-  await expectMobileRootBrowsing(page);
-  const friend = page.locator('[data-home-friends] a').first();
+  await expectMobileRootBrowsing(page, expectedFriends);
+  const friend = page.locator('[data-home-friends] a[href="https://friend.example.test/"]');
   await friend.focus();
+  await expect(friend).toBeFocused();
   await page.goBack();
   await expect(page.locator(breadcrumbs)).toHaveText('~/blogs/posts/infra');
   await expect(page.locator(breadcrumbs)).toBeFocused();
@@ -189,7 +218,7 @@ test('friends leave accessibility and focus order within directories and return 
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => document.querySelector('[data-home-friends]')?.contains(document.activeElement))).toBe(false);
   await page.goForward();
-  await expectMobileRootBrowsing(page);
+  await expectMobileRootBrowsing(page, expectedFriends);
 });
 
 test('long registered breadcrumb paths wrap without overflow on phone and tablet', async ({ page }, info) => {

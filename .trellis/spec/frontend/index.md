@@ -37,6 +37,7 @@
 | [Site Configuration](./site-configuration-contract.md) | Public TOML, SEO, and content themes | Established |
 | [Homepage Search](./homepage-search-contract.md) | Public metadata/body search, mobile UI lifecycle, failure recovery and validation | Established |
 | [Mobile Experience](./mobile-experience-contract.md) | Native mobile homepage, absent Terminal ownership, input-mode transitions and article-reading policy | Established |
+| [Terminal Reading and Feedback](./terminal-reading-contract.md) | Page-wide prose, independent wide/paper content, first-visit hint and completion viewport | Established |
 
 ---
 

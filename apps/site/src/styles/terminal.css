@@ -42,7 +42,7 @@
 }
 
 .terminal-root {
-  min-width: 20rem;
+  min-width: min(20rem, 100vw);
   min-height: 100%;
   color-scheme: var(--terminal-color-scheme);
   background: var(--terminal-color-canvas);
@@ -884,6 +884,10 @@
   padding-bottom: var(--terminal-space-prompt-settlement);
 }
 
+.terminal-session .terminal-command-form[data-terminal-completion-settled] {
+  padding-bottom: 50vh;
+}
+
 .terminal-command-row,
 .terminal-boot-prompt {
   display: flex;
@@ -939,6 +943,11 @@
   outline: 0;
 }
 
+.terminal-command-input::placeholder {
+  color: var(--terminal-color-muted);
+  opacity: 1;
+}
+
 .terminal-completion {
   min-width: 0;
   margin: 0.35rem 0 0;
@@ -955,6 +964,8 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .terminal-completion-option {
@@ -1043,7 +1054,8 @@
 
 .terminal-stream-prose :where(p, ul, ol, blockquote) {
   max-width: var(--terminal-readable-measure);
-  margin-block: 0 1.15rem;
+  margin-block: 0 1.25rem;
+  overflow-wrap: anywhere;
 }
 
 .terminal-stream-prose blockquote {
@@ -1267,8 +1279,13 @@
 }
 
 .terminal-outline {
-  margin-block: 1.25rem;
-  padding-block: 1rem;
+  margin-block: 1rem;
+  padding-block: 0.5rem;
+}
+
+.terminal-document-header .terminal-meta {
+  margin-block: 0.5rem 0;
+  font-size: 0.875rem;
 }
 
 .terminal-directory a,
@@ -1348,6 +1365,49 @@
 
 .terminal-prose :where(p, ul, ol, blockquote) {
   margin-block: 0 1.25rem;
+}
+
+.terminal-prose[data-content-theme='default'] > :where(h1, h2, h3, h4, h5, h6):first-child {
+  margin-block-start: 0.5rem;
+}
+
+:is(.terminal-directory, .terminal-outline) a:active {
+  background: var(--terminal-color-surface-subtle);
+  color: var(--terminal-color-text);
+}
+
+@media (hover: hover) {
+  :is(.terminal-directory, .terminal-outline) a:hover {
+    background: var(--terminal-color-surface-subtle);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(.terminal-directory, .terminal-outline) a {
+    transition: color 120ms ease-out, background-color 120ms ease-out;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .terminal-directory a {
+    display: inline-flex;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    vertical-align: middle;
+  }
+
+  .terminal-outline li {
+    align-items: center;
+  }
+
+  .terminal-outline li a {
+    display: flex;
+    flex: 1;
+    min-height: 44px;
+    align-items: center;
+    padding-block: 0.4rem;
+  }
 }
 
 .terminal-prose blockquote {

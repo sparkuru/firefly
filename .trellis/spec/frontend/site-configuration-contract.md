@@ -280,6 +280,8 @@ palette, keep the root token contract checked by
 controls, document navigation, and mobile surfaces in browser tests; normal
 text should reach 4.5:1 contrast and visible control boundaries/focus 3:1.
 
+See [Terminal Reading](./terminal-reading-contract.md) for geometry and feedback.
+
 #### Terminal appearance selection contract
 
 ##### 1. Scope / Trigger

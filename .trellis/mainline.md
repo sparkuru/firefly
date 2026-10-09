@@ -366,3 +366,49 @@ owner corpus. Retained private originals, identity data and historical task
 snapshots remain unchanged. The archived task's PRD and research record the
 completed local source migration. Local acceptance does not establish production
 publication of this corpus.
+
+## Owner Terminal Refinement
+
+On 2026-10-08 the owner approved a main-site assessment excluding lab,
+selected preservation of the minimal Terminal mental model, then explicitly
+approved its final refinement plan. Current task:
+`.trellis/tasks/10-08-main-site-design-review/`.
+
+Implemented default prose measure in standalone and `cat` reading, controlled
+outline/body rhythm, coarse-pointer native targets, an empty-command help hint,
+readable state feedback, Memo month touch height and enlarged-text containment.
+Fonts, palettes, commands, authored sources and independent experiment designs
+retain their existing contracts.
+
+Independent review, focused checks, complete maintained verification and static
+runtime packaging passed. The final browser matrix has 203 passes and 151
+intentional applicability skips; local preview remains ready and serves the
+refined styles. Two agent visual rounds found no further material change
+justified by complexity. Evidence and limits are recorded in the task's
+`research/final-validation.md`.
+
+Owner subjective visual acceptance and the proposed work/archive/journal Git
+batch remain pending. Task stays `in_progress`; no commit, archive or production
+deployment is authorized or claimed by these local checks.
+
+### Owner visual-review revision
+
+The owner reviewed the first candidate and explicitly requested restoration of
+previous page-dependent prose width, a first-index-visit-only help hint and
+Tab completion viewport settlement. These decisions supersede the first
+candidate's narrow measure/repeated placeholder. Continued implementation is
+authorized. The previous 203-pass gate is historical evidence. Revised focused checks and
+independent full-scope review passed. The new complete gate passed 208 browser
+checks with 166 intentional applicability skips and no retry/flaky result.
+Normal-publication packaging and local preview readiness passed; eight changed
+app/test/config source fingerprints stayed unchanged through final gates. The
+preview was stopped at readiness inspection, then started using its existing
+configuration without stopping/reconfiguring any container.
+Current evidence: task `research/owner-revision-validation.md`. Owner visual
+acceptance and Git/archive authorization remain pending.
+
+On 2026-10-09 the owner accepted the revised preview and authorized its commit.
+The owner also requested simpler inline `cat` article chrome; the accepted
+snapshot is committed first and this task remains active for that follow-up.
+Archival/session bookkeeping will follow its completion, keeping work commits
+ahead of task/journal commits. No remote push or deployment is authorized.

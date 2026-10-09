@@ -1,0 +1,28 @@
+{
+  "id": "main-site-design-review",
+  "name": "main-site-design-review",
+  "title": "Firefly Terminal 细节精修（排除 lab）",
+  "description": "Owner-approved Terminal refinement: page-wide reading, first-visit hint, visible completion, touch geometry and restrained feedback, excluding lab.",
+  "status": "in_progress",
+  "dev_type": "frontend",
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sam",
+  "assignee": "sam",
+  "createdAt": "2026-10-08",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "anti-entropy-loss-syndrome",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Owner accepted the reviewed revision and authorized commit on 2026-10-09; subsequently requested compact cat article chrome. Task stays active for this follow-up before archival.",
+  "meta": {
+    "review_status": "owner_revision_visual_and_git_approved"
+  }
+}

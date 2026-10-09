@@ -988,6 +988,7 @@ function clearTranscript(nodes: TerminalNodes, announcement: string): void {
   markSessionEmpty(nodes);
   clearSessionInitial(nodes);
   nodes.input.value = '';
+  nodes.input.removeAttribute('placeholder');
   clearCompletionDisplay(nodes);
   nodes.announcer.textContent = announcement;
   settleViewport(nodes.input, 'center');
@@ -1094,9 +1095,57 @@ function isUnmodifiedPrimaryClick(event: MouseEvent): boolean {
 
 function clearCompletionDisplay(nodes: TerminalNodes): void {
   nodes.completion.replaceChildren();
+  nodes.form.removeAttribute('data-terminal-completion-settled');
   nodes.input.setAttribute('aria-controls', 'terminal-transcript');
   nodes.input.setAttribute('aria-expanded', 'false');
   nodes.input.removeAttribute('aria-activedescendant');
+}
+
+function settleCompletionViewport(nodes: TerminalNodes): void {
+  const row = nodes.input.closest('.terminal-command-row');
+  if (!(row instanceof HTMLElement)) return;
+  const margin = Math.min(24, window.innerHeight * 0.05);
+  const rowRect = row.getBoundingClientRect();
+  const list = nodes.completion.querySelector<HTMLElement>('.terminal-completion-list');
+  const bottom = nodes.completion.childElementCount > 0
+    ? nodes.completion.getBoundingClientRect().bottom
+    : rowRect.bottom;
+  const span = bottom - rowRect.top;
+  const oversized = span > window.innerHeight - margin * 2;
+  const targetTop = oversized
+    ? (window.innerHeight - rowRect.height) / 2
+    : (window.innerHeight - span) / 2;
+  if (list !== null && oversized) {
+    const gap = list.getBoundingClientRect().top - rowRect.bottom;
+    list.style.maxHeight = `${Math.max(44, window.innerHeight - margin - targetTop - rowRect.height - gap)}px`;
+  }
+  nodes.form.setAttribute('data-terminal-completion-settled', '');
+  nodes.input.focus({ preventScroll: true });
+  window.scrollBy({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    left: 0,
+    top: row.getBoundingClientRect().top - targetTop
+  });
+  const active = list?.querySelector<HTMLElement>('[data-active]');
+  if (list !== null && active !== null && active !== undefined) {
+    const optionRect = active.getBoundingClientRect();
+    const listRect = list.getBoundingClientRect();
+    if (optionRect.top < listRect.top) list.scrollTop += optionRect.top - listRect.top;
+    else if (optionRect.bottom > listRect.bottom) list.scrollTop += optionRect.bottom - listRect.bottom;
+  }
+}
+
+const TERMINAL_HELP_SEEN_KEY = 'firefly.terminal.help-seen';
+
+function initializeHelpHint(input: HTMLInputElement): void {
+  let seen = false;
+  try {
+    seen = window.localStorage.getItem(TERMINAL_HELP_SEEN_KEY) !== null;
+    window.localStorage.setItem(TERMINAL_HELP_SEEN_KEY, '1');
+  } catch {
+    // Browser storage is optional; it must never prevent command input.
+  }
+  if (!seen) input.placeholder = 'help';
 }
 
 function renderCompletionMessage(nodes: TerminalNodes, message: string): void {
@@ -1207,6 +1256,9 @@ function initializeTerminalHome(
   let interactiveReady = false;
   let cancelBootGate = (): void => {};
   let outputInstance = 0;
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) nodes.input.removeAttribute('placeholder');
+  });
   const streamOverflow = createStreamOverflowController();
   const copyFeedbackTimers = new Map<HTMLButtonElement, number>();
   const execute: typeof executeCommand = seams.execute ?? ((options) => executeCommand({
@@ -1286,6 +1338,7 @@ function initializeTerminalHome(
 
   const submit = (): void => {
     if (!available() || !interactiveReady || failed) return;
+    nodes.input.removeAttribute('placeholder');
     try {
       const command = nodes.input.value;
       const submittedPrompt = formatTerminalPrompt(identity, state);
@@ -1405,6 +1458,7 @@ function initializeTerminalHome(
         return;
       }
       event.preventDefault();
+      nodes.input.removeAttribute('placeholder');
       nodes.input.focus({ preventScroll: true });
       if (completionPanel !== null && completionPanel.inputValue === nodes.input.value) {
         const activeIndex = completionPanel.activeIndex === null
@@ -1412,6 +1466,7 @@ function initializeTerminalHome(
           : (completionPanel.activeIndex + 1) % completionPanel.candidates.length;
         completionPanel = { ...completionPanel, activeIndex };
         renderCompletionPanel(nodes, completionPanel);
+        settleCompletionViewport(nodes);
         return;
       }
       const completion = completeCommand(
@@ -1454,9 +1509,13 @@ function initializeTerminalHome(
           throw new TypeError(`Unsupported completion result: ${String(exhaustive)}`);
         }
       }
+      if (completion.kind !== 'none') settleCompletionViewport(nodes);
       return;
     }
     if (composing || event.isComposing) return;
+    if (event.key !== 'Shift' && event.key !== 'Control' && event.key !== 'Alt' && event.key !== 'Meta') {
+      nodes.input.removeAttribute('placeholder');
+    }
     if (!event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
       if (event.key === 'Escape' && completionPanel !== null) {
         event.preventDefault();
@@ -1546,6 +1605,7 @@ function initializeTerminalHome(
           : (completionPanel.activeIndex + (event.key === 'ArrowUp' ? -1 : 1) + candidateCount) % candidateCount;
         completionPanel = { ...completionPanel, activeIndex };
         renderCompletionPanel(nodes, completionPanel);
+        settleCompletionViewport(nodes);
       }
       return;
     }
@@ -1571,6 +1631,7 @@ function initializeTerminalHome(
   });
   nodes.input.addEventListener('input', () => {
     if (available() && interactiveReady) {
+      nodes.input.removeAttribute('placeholder');
       dismissCompletion();
     }
   });
@@ -1600,6 +1661,7 @@ function initializeTerminalHome(
       return;
     }
     event.preventDefault();
+    nodes.input.removeAttribute('placeholder');
     insertAtPromptSelection(nodes.input, event.key);
     dismissCompletion();
     settleViewport(nodes.input, 'center');
@@ -1616,6 +1678,7 @@ function initializeTerminalHome(
       markSessionInitial(nodes);
       updatePrompt();
       interactiveReady = true;
+      initializeHelpHint(nodes.input);
       setStartupState(nodes.root, 'ready');
       const pendingClear = nodes.root.hasAttribute('data-terminal-pending-clear');
       nodes.root.removeAttribute('data-terminal-pending-clear');
