@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 89
+- **Total Sessions**: 90
 - **Last Active**: 2026-10-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~301 | Active |
+| `journal-2.md` | ~333 | Active |
 | `journal-1.md` | ~1934 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 90 | 2026-10-09 | Terminal metadata and new-tab opening | `0cc296e` | `anti-entropy-loss-syndrome` |
 | 89 | 2026-10-09 | Stationary visible Terminal completion | `8617d83` | `anti-entropy-loss-syndrome` |
 | 88 | 2026-10-09 | Terminal refinement and inline file metadata | `1a1fc31`, `1d26fed` | `anti-entropy-loss-syndrome` |
 | 87 | 2026-10-08 | Memo time reader and historical short-entry corpus | `8a21ab4` | `anti-entropy-loss-syndrome` |

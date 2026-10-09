@@ -299,3 +299,35 @@ Fixed completion page jumps: fully visible prompt/panel stays stationary, select
 ### Status
 
 [OK] **Completed**
+
+
+## Session 90: Terminal metadata and new-tab opening
+
+**Date**: 2026-10-09
+**Task**: Terminal metadata and new-tab opening
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed owner-directed date/bytes/license ordering in standalone and inline Terminal reading, canonical standalone Share and new-tab Open preserving the original session. Independent review and real-content preview passed; task archived without remote push or production deployment.
+
+### Main Changes
+
+- Standalone date/bytes/post-license/Share; inline path/date/bytes/license; independent protected Share with stable feedback and lifecycle cleanup.
+- Command and native inline Open use new tabs; successful command-only records, retained source history/draft and honest blocked retry.
+- Source-byte static expectations follow physical identity and actual date/license instead of fixture basename assumptions.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0cc296e` | (see git log) |
+
+### Testing
+
+- [OK] Final affected browsers156 passed/67 intentional skips, no retries; isolated license/canonical/nav-none fixture and18 static checks passed.
+- [OK] Desktop/mobile/200% visuals reviewed; configured owner publication rebuilt and exact served homepage/bundle/OpenWrt metadata checked;13 source/test fingerprints unchanged.
+
+### Status
+
+[OK] **Completed**
