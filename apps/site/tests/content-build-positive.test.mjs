@@ -203,7 +203,7 @@ ${body}`;
     assert.match(licensedTerminal, /data-document-share-group/u);
     assert.doesNotMatch(licensedTerminal, /data-document-navigator|DocumentNavigationStatus/u);
     assert.match(licensedTerminal, /data-document-sharing/u);
-    assert.match(licensedTerminal, /<script type="module">[\s\S]*?\[data-document-sharing\]/u);
+    assert.match(licensedTerminal, /<script type="module" src="\/_astro\/TerminalDocument\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js"><\/script>/u);
     assert.doesNotMatch(semanticRoute, /data-terminal-theme="paper"/u);
     assert.match(terminalRoute, /data-terminal-theme="firefly"/u);
     assert.doesNotMatch(semanticRoute, /<script>alert\('unsafe'\)<\/script>/u);

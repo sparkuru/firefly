@@ -96,7 +96,7 @@ test('Share reports actual clipboard results without moving focus or feedback wi
   await expect(page.locator('[data-document-share-announcer]')).toHaveText('Document link copied.');
   await page.clock.fastForward(2001);
   await expect(button).toHaveText('Share');
-  await page.evaluate(() => { (window as any).shareClipboard.reject = true; });
+  await page.evaluate(() => { (window as any).shareClipboard.reject = true; document.execCommand = () => false; });
   await button.click();
   await expect(button).toHaveText('Failed');
   expect((await button.boundingBox())!.width).toBeCloseTo(width, 3);
@@ -112,9 +112,12 @@ test('pending Share serializes clicks and retires old lifecycle promises', async
   await page.addInitScript(() => {
     const writes: string[] = [];
     const resolve: Array<() => void> = [];
-    Object.assign(window, { sharePending: { writes, resolve } });
+    const reject: Array<() => void> = [];
+    const state = { writes, resolve, reject, nativeCalls: 0 };
+    Object.assign(window, { sharePending: state });
+    document.execCommand = () => { state.nativeCalls += 1; return false; };
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: (text: string) => {
-      writes.push(text); return new Promise<void>(done => resolve.push(done));
+      writes.push(text); return new Promise<void>((done, fail) => { resolve.push(done); reject.push(() => fail(new Error('Denied'))); });
     } } });
   });
   await page.goto('/pages/about/');
@@ -126,8 +129,9 @@ test('pending Share serializes clicks and retires old lifecycle promises', async
   await page.evaluate(() => { dispatchEvent(new PageTransitionEvent('pagehide')); dispatchEvent(new PageTransitionEvent('pageshow')); });
   await button.click();
   expect(await page.evaluate(() => (window as any).sharePending.writes.length)).toBe(2);
-  await page.evaluate(() => (window as any).sharePending.resolve[0]());
+  await page.evaluate(() => (window as any).sharePending.reject[0]());
   await expect(button).toHaveText('Share');
+  expect(await page.evaluate(() => (window as any).sharePending.nativeCalls)).toBe(0);
   await button.click();
   expect(await page.evaluate(() => (window as any).sharePending.writes.length)).toBe(2);
   await page.evaluate(() => (window as any).sharePending.resolve[1]());
@@ -150,4 +154,81 @@ test('Share starts independently when no document navigator is emitted', async (
   const button = page.locator('[data-document-share]');
   await button.click();
   await expect(button).toHaveText('Copied');
+});
+
+test('HTTP Share copies through the real native clipboard and preserves reading state', async ({ page }, info) => {
+  test.skip(info.project.use.javaScriptEnabled === false, 'Share is progressively enhanced.');
+  await page.route('http://firefly-preview.test/**', async route => {
+    const requested = new URL(route.request().url());
+    const response = await route.fetch({ url: `http://127.0.0.1:4321${requested.pathname}${requested.search}`,
+      headers: { ...route.request().headers(), host: '127.0.0.1:4321' } });
+    await route.fulfill({ response });
+  });
+  const cases = [{ inline: false, rejected: false }, { inline: false, rejected: true }];
+  if (!info.project.name.includes('mobile')) cases.push({ inline: true, rejected: false });
+  for (const { inline, rejected } of cases) {
+    await page.goto(`http://firefly-preview.test${inline ? '/' : '/pages/markdown-template/#document-navigator'}`);
+    expect(await page.evaluate(() => ({ secure: isSecureContext, clipboard: typeof navigator.clipboard }))).toEqual({ secure: false, clipboard: 'undefined' });
+    if (rejected) await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { throw new Error('Denied'); } } }));
+    const input = page.locator('#terminal-command');
+    if (inline) {
+      await expect(input).toBeVisible();
+      await input.fill('cat ~/blog/pages/markdown-template.md'); await input.press('Enter');
+      await input.fill('unfinished draft');
+      await input.evaluate((element: HTMLInputElement) => element.setSelectionRange(2, 8, 'backward'));
+    }
+    const button = page.locator(inline ? '[data-terminal-share]' : '[data-document-share]');
+    const prose = page.locator(inline ? '.terminal-stream-prose' : '.terminal-prose');
+    await button.scrollIntoViewIfNeeded();
+    await button.evaluate(button => button.addEventListener('click', () => {
+      const code = button.closest('article')!.querySelector<HTMLElement>('[data-terminal-wide="code"]')!;
+      code.style.maxWidth = '120px';
+      const textNodes = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+      let text = textNodes.nextNode()!;
+      while ((text.textContent?.length ?? 0) < 8) text = textNodes.nextNode()!;
+      window.getSelection()!.setBaseAndExtent(text, 8, text, 2);
+      code.scrollLeft = 35;
+      (window as any).copyBaseline = { selection: window.getSelection()!.toString(), anchor: window.getSelection()!.anchorOffset,
+        focus: window.getSelection()!.focusOffset, y: scrollY, local: code.scrollLeft };
+    }, { capture: true, once: true }));
+    await button.click();
+    await expect(button).toHaveText('Copied');
+    await expect(button).toBeFocused();
+    const baseline = await page.evaluate(() => (window as any).copyBaseline);
+    expect(baseline.anchor).toBeGreaterThan(baseline.focus);
+    expect(baseline.local).toBeGreaterThan(0);
+    expect(await page.evaluate(() => ({ selection: window.getSelection()!.toString(), anchor: window.getSelection()!.anchorOffset,
+      focus: window.getSelection()!.focusOffset, y: scrollY,
+      local: document.querySelector('[data-terminal-wide="code"]')!.scrollLeft }))).toEqual(baseline);
+    await expect(page.locator('[data-clipboard-copy-buffer]')).toHaveCount(0);
+    if (inline) {
+      await expect(input).toHaveValue('unfinished draft');
+      expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd, element.selectionDirection])).toEqual([2, 8, 'backward']);
+    }
+    await expect(prose).toBeVisible();
+    const expected = new URL('/pages/markdown-template/', SITE_CONFIG.site.url ?? page.url()).href;
+    await page.evaluate(() => {
+      const paste = document.createElement('textarea'); paste.setAttribute('aria-label', 'Clipboard paste verification'); document.body.append(paste);
+    });
+    const paste = page.getByRole('textbox', { name: 'Clipboard paste verification' });
+    await paste.focus(); await paste.press('Control+V');
+    await expect(paste).toHaveValue(expected);
+    await paste.evaluate(element => element.remove());
+  }
+});
+
+test('native copy false and throwing results remain honest failures without temporary state', async ({ page }, info) => {
+  test.skip(info.project.use.javaScriptEnabled === false, 'Share is progressively enhanced.');
+  await page.goto('/pages/about/');
+  const button = page.locator('[data-document-share]');
+  for (const throws of [false, true]) {
+    await page.evaluate(throws => {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+      document.execCommand = () => { if (throws) throw new Error('Denied'); return false; };
+    }, throws);
+    await button.click();
+    await expect(button).toHaveText('Failed');
+    await expect(button).toBeFocused();
+    await expect(page.locator('[data-clipboard-copy-buffer]')).toHaveCount(0);
+  }
 });

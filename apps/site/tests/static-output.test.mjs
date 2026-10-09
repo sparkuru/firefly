@@ -286,10 +286,12 @@ test('static build emits only the implemented route surface', async () => {
 
   assert.deepEqual(htmlFiles, expectedHtmlFiles);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
-  assert.equal(scripts.length, 4);
+  assert.equal(scripts.length, 6);
   assert.equal(scripts.filter((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/DocumentNavigationStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/document-navigation\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/TerminalDocument\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/clipboard-text\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 2);
   assert.equal(scripts.filter((file) => /^_astro\/MemoTimeline\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   const compatibility = await readFile(path.join(distRoot, 'memos/index.html'), 'utf8');
@@ -561,9 +563,15 @@ test('route closures keep public documents in Terminal styles and isolate home J
   const files = await listFiles(distRoot);
   const homeScript = files.find((file) => /TerminalHome.*\.js$/u.test(file));
   const navigationScript = files.find((file) => /DocumentNavigationStatus.*\.js$/u.test(file));
+  const shareScript = files.find((file) => /TerminalDocument.*\.js$/u.test(file));
+  const clipboardScript = files.find((file) => /clipboard-text.*\.js$/u.test(file));
   const stylesheet = files.find((file) => file.endsWith('.css'));
   assert.ok(homeScript);
   assert.ok(navigationScript);
+  assert.ok(shareScript);
+  assert.ok(clipboardScript);
+  assert.match(await readFile(path.join(distRoot, shareScript), 'utf8'), new RegExp(clipboardScript.split('/').at(-1).replaceAll('.', '\\.')));
+  assert.match(await readFile(path.join(distRoot, homeScript), 'utf8'), new RegExp(clipboardScript.split('/').at(-1).replaceAll('.', '\\.')));
   assert.ok(stylesheet);
 
   const routes = {
@@ -626,7 +634,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.match(html, new RegExp(navigationScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(homeScript.replaceAll('.', '\\.')));
     assert.doesNotMatch(html, new RegExp(stylesheet.replaceAll('.', '\\.')));
-    assert.match(html, /<script type="module">[\s\S]*?\[data-document-sharing\]/u);
+    assert.match(html, new RegExp(`src="/${shareScript.replaceAll('.', '\\.')}`));
   }
   for (const html of semanticDocumentRoutes) {
     assertSharedFavicon(html, 'semantic document');
@@ -638,6 +646,7 @@ test('route closures keep public documents in Terminal styles and isolate home J
     assert.doesNotMatch(html, /data-terminal-theme="firefly"/u);
     assertContentThemeBoundary(html, 'semantic document');
     assert.doesNotMatch(html, /data-document-sharing|data-document-share/u);
+    assert.doesNotMatch(html, new RegExp(shareScript.replaceAll('.', '\\.')));
   }
   for (const [route, html] of Object.entries({
     home: routes.home,

@@ -2301,7 +2301,7 @@ test('inline Share copies canonical links with isolated feedback and preserves d
   expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])).toEqual([2, 8]);
   await expect(page.locator('[data-terminal-announcer]')).toHaveText('Document link copied.');
   await expect(firstShare).toHaveText('Share');
-  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Denied'); } } }));
+  await page.evaluate(() => { document.execCommand = () => false; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Denied'); } } }); });
   await secondShare.click();
   await expect(secondShare).toHaveText('Failed');
   await expect(page.locator('[data-terminal-announcer]')).toContainText('Could not copy document link');
@@ -2340,6 +2340,8 @@ test('inline Share serializes rapid clicks and retires superseded feedback timer
   await submit(page, 'cat ~/blog/pages/markdown-template.md');
   await page.clock.install();
   await page.evaluate(() => {
+    (window as any).shareNativeCalls = 0;
+    document.execCommand = () => { (window as any).shareNativeCalls += 1; return false; };
     const state = window as Window & { shareCalls?: number; finishShare?: (success: boolean) => void };
     state.shareCalls = 0;
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
@@ -2364,6 +2366,7 @@ test('inline Share serializes rapid clicks and retires superseded feedback timer
   await expect(share).toHaveText('Copied');
   await page.evaluate(() => (window as Window & { finishShare?: (success: boolean) => void }).finishShare?.(false));
   await expect(share).toHaveText('Failed');
+  expect(await page.evaluate(() => (window as any).shareNativeCalls)).toBe(1);
   await expect(share).toBeFocused();
   await page.clock.runFor(1900);
   await expect(share).toHaveText('Failed');
@@ -2372,10 +2375,58 @@ test('inline Share serializes rapid clicks and retires superseded feedback timer
   await share.click();
   expect(await page.evaluate(() => (window as Window & { shareCalls?: number }).shareCalls)).toBe(3);
   await submit(page, 'clear');
-  await page.evaluate(() => (window as Window & { finishShare?: (success: boolean) => void }).finishShare?.(true));
+  await page.evaluate(() => (window as Window & { finishShare?: (success: boolean) => void }).finishShare?.(false));
   await page.clock.runFor(3000);
   await expect(page.locator('[data-terminal-stream-document]')).toHaveCount(0);
   await expect(page.locator('[data-terminal-announcer]')).toHaveText('Command transcript cleared.');
+  expect(await page.evaluate(() => (window as any).shareNativeCalls)).toBe(1);
+});
+
+test('inline Share retires late clipboard rejection across mobile suspension and desktop return', async ({ page }) => {
+  await page.addInitScript(() => {
+    const query = '(hover: none) and (pointer: coarse)';
+    const nativeMatchMedia = window.matchMedia.bind(window);
+    const mobile = nativeMatchMedia(query);
+    let coarse = false;
+    Object.defineProperty(mobile, 'matches', { get: () => coarse });
+    window.matchMedia = value => value === query ? mobile : nativeMatchMedia(value);
+    const state = {
+      writes: 0,
+      nativeCalls: 0,
+      reject: undefined as undefined | (() => void),
+      setMobile(value: boolean) {
+        coarse = value;
+        mobile.dispatchEvent(new MediaQueryListEvent('change', { media: query, matches: value }));
+      }
+    };
+    Object.assign(window, { suspendedShare: state });
+    document.execCommand = () => { state.nativeCalls += 1; return false; };
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => {
+      state.writes += 1;
+      if (state.writes > 1) return Promise.resolve();
+      return new Promise<void>((_, reject) => { state.reject = () => reject(new Error('Denied')); });
+    } } });
+  });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await submit(page, 'cat ~/blog/pages/markdown-template.md');
+  const share = page.locator('[data-terminal-share]');
+  const input = page.locator('#terminal-command');
+  await input.fill('retained draft');
+  await input.evaluate((element: HTMLInputElement) => element.setSelectionRange(2, 8, 'backward'));
+  await share.click();
+  expect(await page.evaluate(() => (window as any).suspendedShare.writes)).toBe(1);
+  await page.evaluate(() => (window as any).suspendedShare.setMobile(true));
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-home-mode', 'mobile');
+  await page.evaluate(() => (window as any).suspendedShare.setMobile(false));
+  await expect(page.locator('[data-terminal-home]')).toHaveAttribute('data-terminal-home-mode', 'desktop');
+  await page.evaluate(() => (window as any).suspendedShare.reject());
+  await share.click();
+  await expect(share).toHaveText('Copied');
+  expect(await page.evaluate(() => ({ writes: (window as any).suspendedShare.writes, nativeCalls: (window as any).suspendedShare.nativeCalls }))).toEqual({ writes: 2, nativeCalls: 0 });
+  await expect(page.locator('[data-clipboard-copy-buffer]')).toHaveCount(0);
+  await expect(input).toHaveValue('retained draft');
+  expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd, element.selectionDirection])).toEqual([2, 8, 'backward']);
 });
 
 test('inline code blocks number lines and copy exact source in repeated output', async ({ page }) => {

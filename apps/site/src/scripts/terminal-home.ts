@@ -1,3 +1,4 @@
+import { copyClipboardText } from './clipboard-text';
 import {
   DEFAULT_TERMINAL_COMMAND_REGISTRY,
   createTerminalCommandRegistry,
@@ -1303,7 +1304,14 @@ function initializeTerminalHome(
   });
   const streamOverflow = createStreamOverflowController();
   const copyFeedbackTimers = new Map<HTMLButtonElement, number>();
-  const shareInFlight = new WeakSet<HTMLButtonElement>();
+  let shareRequests = new WeakMap<HTMLButtonElement, object>();
+  let shareActive = true;
+  window.addEventListener('pagehide', () => {
+    shareActive = false;
+    shareRequests = new WeakMap();
+    clearCopyFeedback();
+  });
+  window.addEventListener('pageshow', () => { shareActive = true; });
   const execute: typeof executeCommand = seams.execute ?? ((options) => executeCommand({
     ...options,
     registry: siteTerminalCommandRegistry
@@ -1316,6 +1324,7 @@ function initializeTerminalHome(
   };
   window.matchMedia(MOBILE_DOCUMENT_NAVIGATION_QUERY).addEventListener('change', refreshDocumentLinks);
   const clearCopyFeedback = (): void => {
+    shareRequests = new WeakMap();
     for (const [button, timer] of copyFeedbackTimers) {
       window.clearTimeout(timer);
       if (button.hasAttribute('data-terminal-share')) button.textContent = 'Share';
@@ -1346,22 +1355,22 @@ function initializeTerminalHome(
   };
   const shareDocument = async (button: HTMLButtonElement): Promise<void> => {
     const reference = button.dataset.terminalShareUrl;
-    if (reference === undefined || shareInFlight.has(button)) return;
-    shareInFlight.add(button);
+    if (reference === undefined || shareRequests.has(button) || !shareActive) return;
+    const request = {};
+    shareRequests.set(button, request);
     const previousTimer = copyFeedbackTimers.get(button);
     if (previousTimer !== undefined) window.clearTimeout(previousTimer);
     copyFeedbackTimers.delete(button);
     let copied = false;
     try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-      await navigator.clipboard.writeText(new URL(reference, window.location.origin).href);
-      copied = true;
+      copied = await copyClipboardText(new URL(reference, window.location.origin).href,
+        () => shareRequests.get(button) === request && shareActive && button.isConnected && !failed && available());
     } catch {
       // The native Open link remains available when clipboard access fails.
-    } finally {
-      shareInFlight.delete(button);
     }
-    if (!button.isConnected || failed || !available()) return;
+    if (shareRequests.get(button) !== request) return;
+    shareRequests.delete(button);
+    if (!shareActive || !button.isConnected || failed || !available()) return;
     button.textContent = copied ? 'Copied' : 'Failed';
     nodes.announcer.textContent = copied ? 'Document link copied.' : 'Could not copy document link. Use Open to view the document.';
     copyFeedbackTimers.set(button, window.setTimeout(() => {

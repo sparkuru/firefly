@@ -1,3 +1,5 @@
+import { copyClipboardText } from './clipboard-text';
+
 const startedDocuments = new WeakSet<HTMLElement>();
 
 export function startDocumentShare(root: HTMLElement): void {
@@ -28,14 +30,7 @@ export function startDocumentShare(root: HTMLElement): void {
     const request = {};
     pending = request;
     reset();
-    let copied = false;
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-      await navigator.clipboard.writeText(url.href);
-      copied = true;
-    } catch {
-      // Static article metadata and native links remain usable.
-    }
+    const copied = await copyClipboardText(url.href, () => pending === request && active && button.isConnected);
     if (pending !== request) return;
     pending = null;
     if (!active || !button.isConnected) return;
