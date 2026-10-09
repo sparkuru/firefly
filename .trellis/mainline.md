@@ -455,3 +455,8 @@ fingerprints are unchanged. Evidence is the task's `research/validation.md`.
 Commit/archive/journal reuse the prior owner commit authorization for this
 ongoing refinement after a human-optional review. No lab/content change, remote
 push or production deployment is included.
+
+Completion repair committed as `8617d83`; completed evidence is archived at
+`.trellis/tasks/archive/2026-10/10-09-terminal-completion-viewport-stability/`.
+The developer journal references this work commit only. No new product work is
+inferred from this completion.

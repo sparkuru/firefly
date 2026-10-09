@@ -30,3 +30,5 @@ the supported `task.py archive ... --no-commit` route, inspect and stage only
 this task's source/destination and continuity record, and create the separate
 archive commit with exactly one Codex attribution trailer. Record the developer
 journal with the work commit only. No push, amend or production deployment.
+
+Work commit executed: `8617d83`. Preview readiness and exact rebuilt entry-script serving passed before commit. Archive/journal follow the reviewed plan.
