@@ -331,3 +331,40 @@ Completed owner-directed date/bytes/license ordering in standalone and inline Te
 ### Status
 
 [OK] **Completed**
+
+
+## Session 91: Preview console and Docker endpoint maintenance
+
+**Date**: 2026-10-10
+**Task**: none (owner-directed repository maintenance)
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Owner-approved proposals 6 and 7 completed and committed without creating a task; other Trellis Plus audit proposals remain unchanged.
+
+### Main Changes
+
+- Add semantic console/help, verbose output, bounded owned log redaction and original startup failure preservation.
+- Resolve Docker context/host precedence and classify unsupported CLI, invalid context and daemon access failures.
+- Update only the shared development contract and authorized mainline closeout; no task archive or task attribution commit.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e75d7ef` | (see git log) |
+
+### Testing
+
+- [OK] Bash syntax, ShellCheck, shfmt and diff checks passed.
+- [OK] 39 of 39 isolated preview CLI fixtures passed through the cached project wrapper, including a real timeout on a synthetic hanging log command.
+- Not run: real preview lifecycle, installation, business build, full gate, browser/device validation and deployment.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- No product continuation is authorized; remaining audit GAP/UNKNOWN items stay open.
