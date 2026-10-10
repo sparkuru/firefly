@@ -490,3 +490,31 @@ Metadata/new-tab work committed as `0cc296e`. Completed task evidence is archive
 at `.trellis/tasks/archive/2026-10/10-09-terminal-document-metadata-open/`; the
 developer journal references that work commit only. No further product scope
 is inferred from completion.
+
+## Preview Console and Docker Endpoint Maintenance
+
+On 2026-10-10 the owner requested a read-only Trellis Plus audit, declined task
+creation, then authorized only proposals 6 and 7: preview console/help/redacted
+diagnostics and effective Docker endpoint selection. Other audit proposals
+remain unchanged. The owner subsequently authorized no-task archival/closeout.
+
+The existing `preview.sh`/`sam` boundary is retained. Preview now supports
+semantic terminal output and verbose diagnostics, exact-owned bounded log reads,
+literal/encoded secret and account redaction, failure-before-cleanup reporting,
+and original startup status preservation. Docker context overrides host; host-only
+and current-context discovery use supported operations with distinct capability,
+configuration and daemon errors. Shared rules are in
+`spec/trellis-plus/development.md`; regression fixtures remain in
+`apps/site/tests/preview-command.test.mjs`.
+
+Validation passed: Bash syntax, ShellCheck, shfmt, diff checks and all 39 CLI
+fixtures through the cached pinned `preview.sh render` environment, with no skips.
+Fixtures cover a real timeout around a synthetic hanging log command, redaction
+and ownership failures, existing-instance preservation, endpoint precedence and
+TTY output. No real preview lifecycle, dependency installation, business build,
+full gate, browser/device validation or deployment was run. Existing cached-only
+startup remains unchanged. All 87 protected template hashes still match.
+
+This is repository maintenance without a task or task-archive commit. The
+separate session journal records the work commit. Remaining audit GAP/UNKNOWN
+items are not authorization for further changes or product work.

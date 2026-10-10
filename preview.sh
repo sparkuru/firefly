@@ -9,6 +9,16 @@ readonly SCOPE_LABEL='sam.scope=preview.sh'
 readonly PLAYWRIGHT_IMAGE='mcr.microsoft.com/playwright:v1.62.0-noble'
 readonly VERIFY_IMAGE="${SAM_IMAGE-${PLAYWRIGHT_IMAGE}}"
 readonly VERIFY_IPC="${SAM_IPC-host}"
+readonly STYLE_RESET=$'\033[0m'
+readonly STYLE_TITLE=$'\033[1;36m'
+readonly STYLE_SECTION=$'\033[1;32m'
+readonly STYLE_LOG=$'\033[0;36m'
+readonly STYLE_WARNING=$'\033[1;33m'
+readonly STYLE_ERROR=$'\033[1;31m'
+readonly STYLE_SUCCESS=$'\033[0;32m'
+readonly DIAGNOSTIC_TIMEOUT=5s
+
+preview_verbose=false
 
 startup_container=""
 startup_name=""
@@ -24,9 +34,23 @@ open_urls=()
 local_urls=()
 published_rows=()
 
+styled_line() {
+	local style=$1 output_fd=$2 message=$3
+	if [[ ! -v NO_COLOR && "${TERM:-}" != dumb && -t ${output_fd} ]]; then
+		printf '%s%s%s\n' "${style}" "${message}" "${STYLE_RESET}" >&"${output_fd}"
+	else
+		printf '%s\n' "${message}" >&"${output_fd}"
+	fi
+}
+
+preview_log() { styled_line "${STYLE_LOG}" 2 "[log] $*"; }
+preview_warn() { styled_line "${STYLE_WARNING}" 2 "[warn] $*"; }
+preview_error() { styled_line "${STYLE_ERROR}" 2 "[error] $*"; }
+
 usage() {
+	styled_line "${STYLE_TITLE}" 2 'Usage: ./preview.sh [command] [--verbose]'
+	styled_line "${STYLE_SECTION}" 2 'Commands:'
 	printf '%s\n' \
-		'Usage: ./preview.sh [start|dev|preview|build|stop|status|verify|package]' \
 		'       ./preview.sh render <command> [arguments...]' \
 		'' \
 		'  start    Serve existing dist/ in the background (default; no build).' \
@@ -38,19 +62,42 @@ usage() {
 		'  render   Run a command through sam with pinned Playwright and host IPC.' \
 		'  verify   Run integrated publication, retained recovery and access checks.' \
 		'  package  Build and validate the runtime-only publication image.' \
-		'' \
-		'Set up preview configuration: cp .env.example .env' \
-		'Install missing dependencies explicitly: ./sam npm run install:m51' >&2
+		'' >&2
+	styled_line "${STYLE_SECTION}" 2 'Options:'
+	printf '%s\n' \
+		'  --verbose   Show redacted web/build logs or owned stop progress.' \
+		'  -h, --help  Show help without loading configuration or calling Docker.' >&2
+	styled_line "${STYLE_SECTION}" 2 'First use and configuration:'
+	printf '%s\n' \
+		'  Copy .env.example to .env only if .env is absent; edit required settings.' \
+		'  Required: SAM_IMAGE, SAM_IPC, SAM_BIND_HOST, WEB_BIND_HOST,' \
+		'            WEB_HOST_PORT, WEB_CONTAINER_PORT. No public-preview login.' \
+		'  Host: Bash 4.4+, Docker CLI/reachable daemon, jq, awk and GNU coreutils' \
+		'        (timeout, sha256sum, mktemp); ip for wildcard host publishing.' \
+		'  Root .env is literal; exported variables, including empty ones, win.' \
+		'  Docker target: exported DOCKER_CONTEXT wins over DOCKER_HOST;' \
+		'                 otherwise inspect the current context.' \
+		'  Preserve cached-only startup: obtain the selected image explicitly,' \
+		'  run ./sam npm run install:m51 and ./preview.sh build when needed.' \
+		'  Installation/build may download and take several minutes.' \
+		'  start never pulls, installs, builds or tests; dev needs existing Astro.' \
+		'  Changed static inputs need build; image changes need explicit preparation.' \
+		'  Changed image/bind/ports/content require stop then start (or dev).' \
+		'  stop/down preserve user data; status never prepares or starts services.' \
+		'  Logs/help use stderr; ready access summaries use stdout.' \
+		'  Details are shown after log collection, on failure or --verbose.' \
+		'  NO_COLOR or TERM=dumb disables colors; cross-device access is unverified.' \
+		'  See .trellis/spec/trellis-plus/development.md for command-specific limits.' >&2
 }
 
 die() {
-	printf '[preview] %s\n' "$*" >&2
+	preview_error "$*"
 	exit 1
 }
 
 require_command() {
 	command -v "$1" >/dev/null 2>&1 || {
-		printf '[preview] required command not found: %s\n' "$1" >&2
+		preview_error "required command not found: $1"
 		exit 127
 	}
 }
@@ -88,7 +135,27 @@ validate_release_access() {
 build_publication() {
 	local target=build:m4
 	[[ -z "${FIREFLY_COMMENTS_EXPORT:-}" ]] || target=build:m51
-	render_command npm run "${target}"
+	if [[ "${preview_verbose}" == false ]]; then
+		render_command npm run "${target}"
+		return
+	fi
+	require_sam
+	require_command mktemp
+	require_command head
+	require_command awk
+	startup_dir=$(mktemp -d /tmp/firefly-preview.XXXXXX)
+	trap cleanup_startup EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	preview_log 'Building publication; redacted details follow the build step.'
+	if render_command npm run "${target}" >"${startup_dir}/startup.log" 2>&1; then
+		emit_redacted_log "${startup_dir}/startup.log"
+		cleanup_startup
+		startup_dir=""
+		trap - EXIT INT TERM
+	else
+		return "$?"
+	fi
 }
 
 verify_repository() {
@@ -134,24 +201,25 @@ stop_preview() {
 	require_command docker
 	ids=$(owned_containers)
 	if [[ -z "${ids}" ]]; then
-		printf '[preview] no preview containers found\n' >&2
+		preview_log 'no preview containers found'
 		return 0
 	fi
 	local -a containers=()
 	local -a container_filters=(--filter "label=${PROJECT_LABEL}" --filter "label=${SCOPE_LABEL}" --filter label=sam.service=web)
 	mapfile -t containers <<<"${ids}"
 	for id in "${containers[@]}"; do
+		[[ "${preview_verbose}" != true ]] || preview_log "Stopping selected owned web container ${id}."
 		if ! mode=$(docker inspect --format '{{index .Config.Labels "sam.preview.mode"}}' "${id}" 2>&1); then
 			remaining=$(docker ps -aq "${container_filters[@]}" --filter "id=${id}")
 			if [[ -z "${remaining}" && ("${mode}" == *'No such object:'* || "${mode}" == *'No such container:'*) ]]; then continue; fi
-			printf '[preview] failed to inspect selected container: %s\n' "${mode}" >&2
+			preview_error 'failed to inspect selected container; check Docker daemon access'
 			return 1
 		fi
 		[[ "${mode}" != dev ]] || owned_dev=true
 		if ! result=$(docker stop "${id}" 2>&1); then
 			remaining=$(docker ps -aq "${container_filters[@]}" --filter "id=${id}")
 			if [[ -n "${remaining}" || ("${result}" != *'No such object:'* && "${result}" != *'No such container:'*) ]]; then
-				printf '[preview] failed to stop selected container: %s\n' "${result}" >&2
+				preview_error 'failed to stop selected container; check Docker daemon access'
 				return 1
 			fi
 		fi
@@ -163,14 +231,30 @@ stop_preview() {
 		done
 	done
 	[[ "${owned_dev}" != true ]] || rm -f -- "${REPO_ROOT}/apps/site/.astro/dev.json"
-	printf '[preview] stopped %s preview container(s)\n' "${#containers[@]}" >&2
+	preview_log "stopped ${#containers[@]} preview container(s)"
 }
 
 inspect_daemon() {
-	local endpoint=${DOCKER_HOST:-}
-	if [[ -z "${endpoint}" ]]; then
-		endpoint=$(docker context inspect --format '{{.Endpoints.docker.Host}}') || die 'cannot inspect Docker context'
+	local endpoint capability operation
+	require_command timeout
+	for operation in ps inspect exec logs; do
+		timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker "${operation}" --help >/dev/null 2>&1 ||
+			die "unsupported or unavailable Docker CLI operation: ${operation}; repair the Docker CLI, not the endpoint overrides"
+	done
+	if [[ -n "${DOCKER_CONTEXT:-}" || -z "${DOCKER_HOST:-}" ]]; then
+		capability=$(timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker context inspect --help 2>/dev/null) ||
+			die 'unsupported or unavailable Docker CLI operation: context inspect; repair the Docker CLI rather than setting DOCKER_HOST to hide it'
+		[[ "${capability}" == *--format* ]] || die 'Docker CLI context inspect lacks --format; repair the Docker CLI'
+		local -a context_args=()
+		[[ -z "${DOCKER_CONTEXT:-}" ]] || context_args+=("${DOCKER_CONTEXT}")
+		endpoint=$(timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker context inspect "${context_args[@]}" --format '{{.Endpoints.docker.Host}}' 2>/dev/null) ||
+			die 'cannot inspect the selected Docker context; check DOCKER_CONTEXT/current context configuration'
+	else
+		endpoint=${DOCKER_HOST}
 	fi
+	[[ -n "${endpoint}" ]] || die 'selected Docker endpoint is empty; check the selected context/host configuration'
+	timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker ps -q >/dev/null 2>&1 ||
+		die 'selected Docker daemon is unavailable; check daemon access and the selected context/host'
 	case "${endpoint}" in
 	unix://*) remote_daemon=false ;;
 	*) remote_daemon=true ;;
@@ -223,30 +307,111 @@ preflight_addresses() {
 	esac
 }
 
-startup_diagnostics() {
-	local log=$1 line
-	while IFS= read -r line; do
-		case "${line}" in
-		*'port is already allocated'* | *'address already in use'* | *EADDRINUSE*) printf '[preview] startup diagnostic: configured port is already occupied.\n' >&2 ;;
-		*'No such image'* | *'Unable to find image'*) printf '[preview] startup diagnostic: selected Docker image is not present locally; pull it explicitly before starting.\n' >&2 ;;
-		*'Cannot find module'* | *ERR_MODULE_NOT_FOUND* | *ENOENT*) printf '[preview] startup diagnostic: a dependency or publication file is missing; install locked dependencies or rebuild explicitly.\n' >&2 ;;
-		*'permission denied'* | *'Cannot connect to the Docker daemon'*) printf '[preview] startup diagnostic: Docker daemon access is unavailable.\n' >&2 ;;
-		esac
-	done <"${log}"
+emit_redacted_log() {
+	local log=$1 safe_log="${1}.safe" line
+	if ! head -c 65536 -- "${log}" | LC_ALL=C awk '
+        function mask(text, value, result, position) {
+            if (value == "") return text;
+            while ((position = index(text, value)) > 0) {
+                result = result substr(text, 1, position - 1) "[REDACTED]";
+                text = substr(text, position + length(value));
+            }
+            return result text;
+        }
+        function encode(value, result, i, character) {
+            for (i = 1; i <= length(value); i++) {
+                character = substr(value, i, 1);
+                result = result (character ~ /[A-Za-z0-9_.~-]/ ? character : sprintf("%%%02X", ordinal[character]));
+            }
+            return result;
+        }
+        function mask_environment(text, name, key, value) {
+            for (name in ENVIRON) {
+                key = tolower(name);
+                if (key ~ /password|secret|token|credential|private|account|username|email|(^|_)key($|_)|^user$|^logname$/ || name ~ /^(COMMENTS_|MEMOS_)/) {
+                    value = ENVIRON[name];
+                    text = mask(mask(text, value), encode(value));
+                }
+            }
+            return text;
+        }
+        BEGIN { for (i = 1; i < 256; i++) ordinal[sprintf("%c", i)] = i; }
+        { data = data (NR > 1 ? "\n" : "") $0; }
+        END {
+            data = mask_environment(data);
+            gsub(/\033\[[0-?]*[ -\/]*[@-~]/, "", data);
+            gsub(/[\000-\010\013-\037\177]/, "", data);
+            data = mask_environment(data);
+            gsub(/[Hh][Tt][Tt][Pp][Ss]?:\/\/[^[:space:]\/]+@[^[:space:]]+/, "[REDACTED authenticated URL]", data);
+            gsub(/[Bb][Ee][Aa][Rr][Ee][Rr][ \t]+[A-Za-z0-9._~+\/=-]+/, "Bearer [REDACTED]", data);
+            gsub(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z][A-Za-z]+/, "[REDACTED email]", data);
+            print data;
+        }
+    ' >"${safe_log}" 2>/dev/null; then
+		preview_warn 'diagnostic redaction failed; raw output withheld'
+		return 0
+	fi
+	while IFS= read -r line || [[ -n "${line}" ]]; do preview_log "${line}"; done <"${safe_log}"
+}
+
+container_is_owned() {
+	local id=$1 selected
+	[[ "${id}" =~ ^[0-9a-f]{12,64}$ ]] || return 1
+	selected=$(timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker ps -aq --no-trunc \
+		--filter "label=${PROJECT_LABEL}" --filter "label=${SCOPE_LABEL}" \
+		--filter label=sam.service=web --filter "id=${id}" 2>/dev/null) || return 1
+	[[ "${selected}" == "${id}" ]]
+}
+
+service_diagnostics() {
+	local id=$1 log_dir=$2
+	if ! container_is_owned "${id}"; then
+		preview_warn 'web diagnostic ownership could not be verified; logs withheld'
+		return 0
+	fi
+	if timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker logs --tail 80 "${id}" 2>&1 |
+		head -c 65536 >"${log_dir}/service.log"; then
+		emit_redacted_log "${log_dir}/service.log"
+	else
+		preview_warn 'web log collection failed or timed out; partial output withheld'
+	fi
+}
+
+verbose_diagnostics() {
+	local id=$1 force=${2:-false} log_dir
+	[[ "${preview_verbose}" == true || "${force}" == true ]] || return 0
+	if ! command -v awk >/dev/null || ! command -v head >/dev/null || ! command -v mktemp >/dev/null; then
+		preview_warn 'diagnostic tools unavailable (awk/head/mktemp); raw logs withheld'
+		return 0
+	fi
+	log_dir=$(mktemp -d /tmp/firefly-preview-log.XXXXXX) || return 0
+	service_diagnostics "${id}" "${log_dir}"
+	rm -rf -- "${log_dir}"
 }
 
 cleanup_startup() {
+	local original_status=$?
 	if [[ -z "${startup_container}" && -n "${startup_name}" ]]; then
-		startup_container=$(docker ps -aq --filter "label=${PROJECT_LABEL}" --filter "label=${SCOPE_LABEL}" --filter label=sam.service=web --filter "name=^/${startup_name}$") || startup_container=""
+		startup_container=$(timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker ps -aq --no-trunc --filter "label=${PROJECT_LABEL}" --filter "label=${SCOPE_LABEL}" --filter label=sam.service=web --filter "name=^/${startup_name}$" 2>/dev/null) || startup_container=""
 		[[ "${startup_container}" =~ ^[0-9a-f]{12,64}$ ]] || startup_container=""
 	fi
+	if [[ ${original_status} -ne 0 && -n "${startup_dir}" ]]; then
+		[[ ! -f "${startup_dir}/startup.log" ]] || emit_redacted_log "${startup_dir}/startup.log"
+		[[ -z "${startup_container}" ]] || service_diagnostics "${startup_container}" "${startup_dir}"
+	fi
 	if [[ -n "${startup_container}" ]]; then
-		docker rm -f "${startup_container}" >/dev/null 2>&1 || true
-		[[ "${preview_mode}" != dev ]] || rm -f -- "${REPO_ROOT}/apps/site/.astro/dev.json"
+		if container_is_owned "${startup_container}"; then
+			timeout --kill-after=1s "${DIAGNOSTIC_TIMEOUT}" docker rm -f "${startup_container}" >/dev/null 2>&1 ||
+				preview_warn 'owned startup container cleanup failed; retry ./preview.sh stop'
+			[[ "${preview_mode}" != dev ]] || rm -f -- "${REPO_ROOT}/apps/site/.astro/dev.json"
+		else
+			preview_warn 'startup ownership could not be verified; container left untouched'
+		fi
 	fi
 	if [[ -n "${startup_dir}" && "${startup_dir}" == /tmp/firefly-preview.* ]]; then
 		rm -rf -- "${startup_dir}"
 	fi
+	return "${original_status}"
 }
 
 inspect_container() {
@@ -330,19 +495,25 @@ print_entries() {
 
 print_summary() {
 	local port=$1
-	printf 'System is ready.\n'
+	styled_line "${STYLE_SUCCESS}" 1 'System is ready.'
 	if [[ ${#open_urls[@]} -gt 0 ]]; then
-		printf '\nOpen:\n'
+		printf '\n'
+		styled_line "${STYLE_SECTION}" 1 'Open:'
 		print_entries "${open_urls[@]}"
 	fi
 	if [[ ${#local_urls[@]} -gt 0 ]]; then
-		printf '\nLocal only (preview host):\n'
+		printf '\n'
+		styled_line "${STYLE_SECTION}" 1 'Local only (preview host):'
 		print_entries "${local_urls[@]}"
 	fi
-	printf '\nListeners:\nListening web: %s:%s (container; HTTP)\n' "${listener_address}" "${port}"
-	printf '\nPublished:\n'
+	printf '\n'
+	styled_line "${STYLE_SECTION}" 1 'Listeners:'
+	printf 'Listening web: %s:%s (container; HTTP)\n' "${listener_address}" "${port}"
+	printf '\n'
+	styled_line "${STYLE_SECTION}" 1 'Published:'
 	printf '%s\n' "${published_rows[@]}"
-	printf '\nNotes:\n'
+	printf '\n'
+	styled_line "${STYLE_SECTION}" 1 'Notes:'
 	if [[ "${addresses_discovered}" == true ]]; then
 		printf 'Host addresses enumerated with ip -br a; access from other devices is unverified.\n'
 		[[ ${#open_urls[@]} -gt 0 ]] || printf 'No non-loopback host address found.\n'
@@ -355,6 +526,7 @@ print_summary() {
 preview_status() {
 	local ids id port
 	preview_configuration
+	inspect_daemon
 	ids=$(owned_containers)
 	[[ -n "${ids}" && "${ids}" != *$'\n'* ]] || die 'preview is stopped or has multiple owned containers; use ./preview.sh start or ./preview.sh stop'
 	id=${ids}
@@ -363,9 +535,12 @@ preview_status() {
 	preview_mode=$(jq -r '.[0].Config.Labels["sam.preview.mode"]' <<<"${container_json}")
 	port=$(jq -r '.[0].NetworkSettings.Ports | keys[] | select(endswith("/tcp")) | split("/")[0]' <<<"${container_json}")
 	[[ "${port}" =~ ^[0-9]+$ ]] || die 'web preview port mapping is ambiguous'
-	probe_container "${id}" "${port}" || die 'web preview is unhealthy; inspect its logs with docker logs, then ./preview.sh stop and start'
-	inspect_daemon
+	if ! probe_container "${id}" "${port}"; then
+		verbose_diagnostics "${id}" true
+		die 'web preview is unhealthy; check owned diagnostics, then ./preview.sh stop and start'
+	fi
 	prepare_summary "${port}"
+	verbose_diagnostics "${id}"
 	print_summary "${port}"
 }
 
@@ -400,24 +575,33 @@ start_preview() {
 		inspect_container "${id}"
 		jq -e --arg config "${config_hash}" --arg mode "${mode}" --arg image "${image}" --arg ipc "${ipc}" --arg bind "${SAM_BIND_HOST}" --arg host "${WEB_HOST_PORT}" --arg port "${WEB_CONTAINER_PORT}/tcp" \
 			'.[0] | .State.Running and .Config.Labels["sam.preview.config"] == $config and .Config.Labels["sam.preview.mode"] == $mode and .Config.Image == $image and .HostConfig.IpcMode == $ipc and (.HostConfig.PortBindings[$port] | length == 1) and .HostConfig.PortBindings[$port][0].HostIp == $bind and .HostConfig.PortBindings[$port][0].HostPort == $host' <<<"${container_json}" >/dev/null || die 'preview mode or configuration differs; run ./preview.sh stop before starting the requested preview'
-		probe_container "${id}" "${WEB_CONTAINER_PORT}" || die 'existing web preview is unhealthy; inspect Docker logs and run ./preview.sh stop before restarting'
+		if ! probe_container "${id}" "${WEB_CONTAINER_PORT}"; then
+			verbose_diagnostics "${id}" true
+			die 'existing web preview is unhealthy; check owned diagnostics and run ./preview.sh stop before restarting'
+		fi
 		prepare_summary "${WEB_CONTAINER_PORT}"
+		verbose_diagnostics "${id}"
 		print_summary "${WEB_CONTAINER_PORT}"
 		return 0
 	fi
 	require_command mktemp
+	require_command head
+	require_command awk
 	startup_dir=$(mktemp -d /tmp/firefly-preview.XXXXXX)
 	startup_name="firefly-preview-${startup_dir##*.}"
 	trap cleanup_startup EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
 	[[ "${mode}" != dev ]] || rm -f -- "${REPO_ROOT}/apps/site/.astro/dev.json"
-	if ! FIREFLY_MEMOS_CANDIDATE="" FIREFLY_MEMOS_PUBLIC_ROOT="" SAM_DETACH=1 SAM_CONTAINER_NAME="${startup_name}" SAM_SCOPE=preview.sh SAM_SERVICE=web SAM_PREVIEW_MODE="${mode}" SAM_PREVIEW_CONFIG="${config_hash}" \
+	if FIREFLY_MEMOS_CANDIDATE="" FIREFLY_MEMOS_PUBLIC_ROOT="" SAM_DETACH=1 SAM_CONTAINER_NAME="${startup_name}" SAM_SCOPE=preview.sh SAM_SERVICE=web SAM_PREVIEW_MODE="${mode}" SAM_PREVIEW_CONFIG="${config_hash}" \
 		SAM_IMAGE="${image}" SAM_IPC="${ipc}" SAM_BIND_HOST="${SAM_BIND_HOST}" \
 		WEB_HOST_PORT="${WEB_HOST_PORT}" WEB_CONTAINER_PORT="${WEB_CONTAINER_PORT}" \
 		"${REPO_ROOT}/sam" "${service_command[@]}" >"${startup_dir}/container" 2>"${startup_dir}/startup.log"; then
-		startup_diagnostics "${startup_dir}/startup.log"
-		die 'web startup failed; check Docker availability, the local image (docker image inspect), and configured port; no preview was started'
+		:
+	else
+		local startup_status=$?
+		preview_error 'web startup failed; check Docker availability, the cached image and configured port; this attempt will clean only its owned container'
+		return "${startup_status}"
 	fi
 	read -r startup_container <"${startup_dir}/container"
 	if [[ ! "${startup_container}" =~ ^[0-9a-f]{12,64}$ ]]; then
@@ -428,14 +612,16 @@ start_preview() {
 	for attempt in {1..30}; do
 		if probe_container "${id}" "${WEB_CONTAINER_PORT}"; then break; fi
 		[[ ${attempt} -lt 30 ]] || {
-			docker logs --tail 40 "${id}" >"${startup_dir}/service.log" 2>&1 || true
-			startup_diagnostics "${startup_dir}/service.log"
-			die 'web readiness timed out; check publication/dependencies and configured container port, then retry; failed startup container was removed'
+			die 'web readiness timed out; check publication/dependencies and configured container port; owned startup diagnostics and cleanup follow'
 		}
 		sleep 0.25
 	done
 	inspect_container "${id}"
 	prepare_summary "${WEB_CONTAINER_PORT}"
+	if [[ "${preview_verbose}" == true ]]; then
+		emit_redacted_log "${startup_dir}/startup.log"
+		service_diagnostics "${id}" "${startup_dir}"
+	fi
 	print_summary "${WEB_CONTAINER_PORT}"
 	startup_container="" startup_name=""
 	cleanup_startup
@@ -729,29 +915,51 @@ package_runtime() {
 }
 
 main() {
-	local command=${1:-start}
-	if [[ $# -gt 0 ]]; then shift; fi
-	case "${command}" in
-	--help | -h | help)
-		[[ $# -eq 0 ]] || return 2
-		usage
-		return 0
-		;;
-	render) [[ $# -gt 0 ]] || {
-		usage
-		return 2
-	} ;;
-	start | up | dev | preview | build | stop | down | status | verify | package)
-		[[ $# -eq 0 ]] || {
+	local command=""
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--help | -h | help)
+			usage
+			return 0
+			;;
+		--verbose) preview_verbose=true ;;
+		render)
+			[[ -z "${command}" && "${preview_verbose}" == false ]] || {
+				usage
+				return 2
+			}
+			command=render
+			shift
+			[[ $# -gt 0 ]] || {
+				usage
+				return 2
+			}
+			break
+			;;
+		start | up | dev | preview | build | stop | down | status | verify | package)
+			[[ -z "${command}" ]] || {
+				usage
+				return 2
+			}
+			command=$1
+			;;
+		*)
 			usage
 			return 2
-		}
-		;;
-	*)
-		usage
-		return 2
-		;;
-	esac
+			;;
+		esac
+		shift
+	done
+	command=${command:-start}
+	if [[ "${preview_verbose}" == true ]]; then
+		case "${command}" in
+		start | up | dev | preview | status | build | stop | down) ;;
+		*)
+			preview_error '--verbose applies only to start/dev/preview/build/stop/down/status'
+			return 2
+			;;
+		esac
+	fi
 	if [[ "${command}" != stop && "${command}" != down ]]; then load_environment; fi
 	cd -- "${REPO_ROOT}"
 	case "${command}" in

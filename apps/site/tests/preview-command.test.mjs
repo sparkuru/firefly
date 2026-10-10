@@ -31,6 +31,7 @@ if [[ "\${SAM_DETACH:-}" == 1 ]]; then
   printf '%s' "$SAM_PREVIEW_MODE" > "$FIXTURE_ROOT/mode"
   touch "$FIXTURE_ROOT/running"
   if [[ "$SAM_PREVIEW_MODE" == dev ]]; then mkdir -p "$FIXTURE_ROOT/apps/site/.astro"; touch "$FIXTURE_ROOT/apps/site/.astro/dev.json"; fi
+  [[ -z "\${FIXTURE_START_LOG:-}" ]] || printf '%s\\n' "$FIXTURE_START_LOG" >&2
   if [[ "\${FIXTURE_START_FAIL:-0}" == 1 ]]; then exit 19; fi
   if [[ "\${FIXTURE_START_SIGNAL:-0}" == 1 ]]; then kill -TERM "$PPID"; exit 0; fi
   printf '${containerId}\\n'
@@ -38,22 +39,38 @@ else
   if [[ "$*" == 'node tooling/assemble-publication/scripts/check-runtime-metadata.mjs' ]]; then
     exit "\${FIXTURE_METADATA_EXIT:-0}"
   fi
+  [[ -z "\${FIXTURE_BUILD_LOG:-}" ]] || printf '%s\\n' "$FIXTURE_BUILD_LOG"
   printf '%s\\n' "$SAM_IMAGE" "$SAM_IPC" "$@"
   exit "\${FIXTURE_SAM_EXIT:-0}"
 fi
 `, { mode: 0o755 });
   await writeFile(path.join(root, 'bin/docker'), `#!/usr/bin/env bash
 printf 'docker:%s\\n' "$*" >> "$FIXTURE_LOG"
+if [[ "$*" == *--help* ]]; then
+ [[ "\${FIXTURE_UNSUPPORTED_OP:-}" != "$1" && "\${FIXTURE_HELP_FAIL:-0}" != 1 ]] || exit 3
+ printf 'Fixture Docker CLI --format\\n'
+ exit 0
+fi
 case "$1" in
 ps)
+ [[ "\${FIXTURE_DAEMON_FAIL:-0}" != 1 ]] || exit 42
+ if [[ "$*" == *'--filter id='* && "\${FIXTURE_FOREIGN_OWNER:-0}" == 1 ]]; then exit 0; fi
  if [[ -e "$FIXTURE_ROOT/removing" && "\${FIXTURE_REMOVE_STUCK:-0}" != 1 ]]; then
   read -r remaining < "$FIXTURE_ROOT/removing"
   if ((remaining == 0)); then rm -f "$FIXTURE_ROOT/running" "$FIXTURE_ROOT/removing"; else printf '%s\\n' "$((remaining-1))" > "$FIXTURE_ROOT/removing"; fi
  fi
  [[ ! -e "$FIXTURE_ROOT/running" ]] || printf '${containerId}\\n'
  ;;
-context) printf '%s\\n' "\${FIXTURE_DOCKER_HOST:-unix:///var/run/docker.sock}" ;;
+context)
+ [[ "\${FIXTURE_CONTEXT_FAIL:-0}" != 1 ]] || exit 4
+ printf '%s\\n' "\${FIXTURE_DOCKER_HOST:-unix:///var/run/docker.sock}"
+ ;;
 exec) [[ "\${FIXTURE_HEALTH:-ready}" == ready ]] || exit 1; printf '0.0.0.0\\n' ;;
+logs)
+ [[ "\${FIXTURE_LOG_HANG:-0}" != 1 ]] || /usr/bin/sleep 20
+ printf '%s\\n' "\${FIXTURE_SERVICE_LOG:-Application fixture log}"
+ [[ "\${FIXTURE_LOG_FAIL:-0}" != 1 ]] || exit 43
+ ;;
 inspect)
  if [[ "\${FIXTURE_INSPECT_GONE:-0}" == 1 ]]; then rm -f "$FIXTURE_ROOT/running"; printf 'Error: No such object: ${containerId}\\n' >&2; exit 1; fi
  if [[ "\${FIXTURE_INSPECT_ERROR:-0}" == 1 ]]; then printf 'Cannot connect to the Docker daemon\\n' >&2; exit 1; fi
@@ -106,7 +123,7 @@ down0 DOWN 203.0.113.99/24}"
 `, { mode: 0o755 });
   await writeFile(path.join(root, 'bin/sleep'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
   const env = { ...process.env, PATH: `${root}/bin:${process.env.PATH}`, FIXTURE_ROOT: root, FIXTURE_LOG: path.join(root, 'calls') };
-  for (const key of Object.keys(env)) if (/^(SAM_|WEB_|FIREFLY_)/u.test(key)) delete env[key];
+  for (const key of Object.keys(env)) if (/^(SAM_|WEB_|FIREFLY_|DOCKER_|COMMENTS_|MEMOS_)/u.test(key)) delete env[key];
   return { root, env, run: (args = [], extra = {}) => execute('bash', [path.join(root, 'preview.sh'), ...args], { cwd: tmpdir(), env: { ...env, ...extra } }), log: () => readFile(path.join(root, 'calls'), 'utf8'), cleanup: () => rm(root, { recursive: true, force: true }) };
 }
 
@@ -230,10 +247,10 @@ test('failed readiness removes only its newly created container and never prints
 }));
 
 test('failed or interrupted detached creation recovers only its exact named startup container', () => withFixture(async (f) => {
-  for (const extra of [{ FIXTURE_START_FAIL: '1' }, { FIXTURE_START_SIGNAL: '1' }]) {
+  for (const [extra, expectedStatus] of [[{ FIXTURE_START_FAIL: '1' }, 19], [{ FIXTURE_START_SIGNAL: '1' }, 143]]) {
     await writeFile(path.join(f.root, 'calls'), '');
     await assert.rejects(f.run([], extra), (error) => {
-      assert.ok([19, 1, 143].includes(error.code));
+      assert.equal(error.code, expectedStatus);
       assert.doesNotMatch(error.stdout, /System is ready/u);
       return true;
     });
@@ -288,7 +305,7 @@ test('stop tolerates disappearance between its snapshot, inspect, and stop', () 
 test('stop preserves genuine inspect/stop errors and bounds removal waiting', () => withFixture(async (f) => {
   await f.run();
   for (const extra of [{ FIXTURE_INSPECT_ERROR: '1' }, { FIXTURE_STOP_ERROR: '1' }]) {
-    await assert.rejects(f.run(['stop'], extra), (error) => error.code === 1 && /Cannot connect to the Docker daemon/u.test(error.stderr));
+    await assert.rejects(f.run(['stop'], extra), (error) => error.code === 1 && /check Docker daemon access/u.test(error.stderr));
     await readFile(path.join(f.root, 'running'));
   }
   await writeFile(path.join(f.root, 'calls'), '');
@@ -368,6 +385,7 @@ test('empty service configuration and missing ip fail before detached creation',
   await rm(path.join(f.root, 'bin/ip'));
   await symlink('/bin/bash', path.join(f.root, 'bin/bash'));
   await symlink('/usr/bin/dirname', path.join(f.root, 'bin/dirname'));
+  await symlink('/usr/bin/timeout', path.join(f.root, 'bin/timeout'));
   await assert.rejects(f.run([], { PATH: path.join(f.root, 'bin') }), (error) => error.code === 127 && /required command not found: ip/u.test(error.stderr));
 }));
 
@@ -383,4 +401,210 @@ test('package chooses export-aware renderer build and short-circuits before Dock
   assert.match(calls, /npm run build:m4/u);
   assert.match(calls, /npm run build:m51/u);
   assert.doesNotMatch(calls, /docker:/u);
+}));
+
+test('verbose flags preserve ready summaries and use bounded owned logs on stderr', () => withFixture(async (f) => {
+  const normal = await f.run();
+  assert.doesNotMatch(await f.log(), /docker:logs --tail/u);
+  const verbose = await f.run(['start', '--verbose'], { FIXTURE_SERVICE_LOG: 'A safe web diagnostic' });
+  assert.equal(verbose.stdout, normal.stdout);
+  assert.match(verbose.stderr, /\[log\] A safe web diagnostic/u);
+  const status = await f.run(['--verbose', 'status']);
+  assert.equal(status.stdout, normal.stdout);
+  const calls = await f.log();
+  assert.match(calls, new RegExp(`--filter label=sam\\.repo=${f.root} --filter label=sam\\.scope=preview\\.sh --filter label=sam\\.service=web --filter id=${containerId}`, 'u'));
+  assert.match(calls, new RegExp(`docker:logs --tail 80 ${containerId}`, 'u'));
+  for (const command of ['verify', 'package', 'render']) await assert.rejects(f.run(['--verbose', command]), { code: 2 });
+  const build = await f.run(['build', '--verbose']);
+  assert.match(build.stderr, /Building publication/u);
+  assert.match(build.stderr, /\[log\] build:m4/u);
+  assert.equal(build.stdout, '');
+  const stop = await f.run(['stop', '--verbose']);
+  assert.match(stop.stderr, /Stopping selected owned web container/u);
+  await f.run(['down', '--verbose']);
+}));
+
+test('failure and verbose logs mask literal/encoded secrets, accounts, auth URLs and bearer tokens', () => withFixture(async (f) => {
+  const password = 'dollar$[bracket]/secret';
+  const account = 'private-owner-fixture';
+  const token = 'injected-token-fixture';
+  const payload = `Watcher is running: Error: import failed\n${password}\n${encodeURIComponent(password)}\n${account}\n${token}\nhttps://unconfigured-user:unconfigured-pass@example.test/private\nAuthorization: bEaReR unknown-bearer-fixture\nunknown-person@example.test\n\u001b[31mBearer\u001b[0m hidden-by-color-fixture`;
+  const extra = { COMMENTS_PASSWORD: password, COMMENTS_USERNAME: account, FIREFLY_PREVIEW_TOKEN: token, FIXTURE_SERVICE_LOG: payload, FIXTURE_START_LOG: `Wrapper diagnostic ${password}` };
+  const assertSafe = (result) => {
+    assert.match(result.stderr, /Error: import failed/u);
+    assert.match(result.stderr, /\[REDACTED\]/u);
+    for (const value of [password, encodeURIComponent(password), account, token, 'unconfigured-user', 'unconfigured-pass', 'unknown-bearer-fixture', 'unknown-person', 'hidden-by-color-fixture']) assert.ok(!result.stderr.includes(value), `leaked ${value}`);
+    assert.doesNotMatch(result.stderr, /\u001b/u);
+  };
+  await assert.rejects(f.run([], { ...extra, FIXTURE_HEALTH: 'failed' }), (error) => {
+    assert.equal(error.code, 1);
+    assert.doesNotMatch(error.stdout, /System is ready/u);
+    assertSafe(error);
+    return true;
+  });
+  let calls = await f.log();
+  assert.ok(calls.indexOf('docker:logs --tail 80') < calls.indexOf('docker:rm -f'));
+  await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
+  await writeFile(path.join(f.root, 'calls'), '');
+  const verbose = await f.run(['--verbose'], extra);
+  assertSafe(verbose);
+  assert.match(verbose.stdout, /^System is ready/u);
+  calls = await f.log();
+  assert.doesNotMatch(calls, /docker:rm/u);
+}));
+
+test('failed or timed-out log collection withholds partial output and preserves failure/cleanup', () => withFixture(async (f) => {
+  await assert.rejects(f.run([], { FIXTURE_START_FAIL: '1', FIXTURE_LOG_FAIL: '1', FIXTURE_SERVICE_LOG: 'must-not-leak-from-failed-log' }), (error) => {
+    assert.equal(error.code, 19);
+    assert.match(error.stderr, /log collection failed or timed out/u);
+    assert.doesNotMatch(error.stderr, /must-not-leak/u);
+    return true;
+  });
+  await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
+  await writeFile(path.join(f.root, 'bin/timeout'), `#!/usr/bin/env bash
+if [[ "$*" == *'docker logs --tail'* ]]; then printf 'must-not-leak-from-timeout\\n' >&2; exit 124; fi
+exec /usr/bin/timeout "$@"
+`, { mode: 0o755 });
+  await assert.rejects(f.run([], { FIXTURE_HEALTH: 'failed' }), (error) => {
+    assert.equal(error.code, 1);
+    assert.match(error.stderr, /log collection failed or timed out/u);
+    assert.doesNotMatch(error.stderr, /must-not-leak|System is ready/u);
+    return true;
+  });
+  await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
+}));
+
+test('redaction failure never emits partial raw output or changes the original startup status', () => withFixture(async (f) => {
+  await writeFile(path.join(f.root, 'bin/awk'), '#!/usr/bin/env bash\nprintf "must-not-leak-from-redactor\\n"\nexit 23\n', { mode: 0o755 });
+  await assert.rejects(f.run([], { FIXTURE_START_FAIL: '1', FIXTURE_SERVICE_LOG: 'must-not-leak-from-service' }), (error) => {
+    assert.equal(error.code, 19);
+    assert.match(error.stderr, /redaction failed; raw output withheld/u);
+    assert.doesNotMatch(error.stderr, /must-not-leak/u);
+    return true;
+  });
+  assert.match(await f.log(), new RegExp(`docker:rm -f ${containerId}`, 'u'));
+  await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
+}));
+
+test('ownership mismatch withholds logs and never removes an unverified container', () => withFixture(async (f) => {
+  await assert.rejects(f.run([], { FIXTURE_HEALTH: 'failed', FIXTURE_FOREIGN_OWNER: '1' }), (error) => {
+    assert.equal(error.code, 1);
+    assert.match(error.stderr, /ownership could not be verified/u);
+    assert.doesNotMatch(error.stdout, /System is ready/u);
+    return true;
+  });
+  assert.doesNotMatch(await f.log(), /docker:logs --tail|docker:rm/u);
+  await readFile(path.join(f.root, 'running'));
+}));
+
+test('Docker context takes precedence over host and current-context discovery needs no context show', () => withFixture(async (f) => {
+  await f.run([], { DOCKER_CONTEXT: 'selected-fixture', DOCKER_HOST: 'ssh://ignored-fixture' });
+  let calls = await f.log();
+  assert.match(calls, /docker:context inspect selected-fixture --format/u);
+  assert.doesNotMatch(calls, /docker:context show/u);
+  await f.run(['stop']);
+  await writeFile(path.join(f.root, 'calls'), '');
+  await f.run();
+  calls = await f.log();
+  assert.match(calls, /docker:context inspect --format/u);
+  assert.doesNotMatch(calls, /docker:context show/u);
+}));
+
+test('host-only Docker selection skips context operations and remote discovery never uses caller IPs', () => withFixture(async (f) => {
+  await f.run([], { DOCKER_HOST: 'unix:///fixture.sock', FIXTURE_UNSUPPORTED_OP: 'context' });
+  assert.doesNotMatch(await f.log(), /docker:context/u);
+  await f.run(['stop']);
+  await writeFile(path.join(f.root, 'calls'), '');
+  await assert.rejects(f.run([], { DOCKER_HOST: 'ssh://remote-fixture', FIXTURE_DOCKER_HOST: 'unix:///irrelevant.sock' }), (error) => {
+    assert.equal(error.code, 1);
+    assert.match(error.stderr, /remote Docker host/u);
+    return true;
+  });
+  assert.doesNotMatch(await f.log(), /sam:|docker:context/u);
+}));
+
+test('unsupported Docker operations, invalid context and daemon failures are distinct preflight errors', () => withFixture(async (f) => {
+  for (const [extra, message] of [
+    [{ FIXTURE_UNSUPPORTED_OP: 'context' }, /unsupported or unavailable Docker CLI operation: context inspect/u],
+    [{ FIXTURE_UNSUPPORTED_OP: 'logs' }, /unsupported or unavailable Docker CLI operation: logs/u],
+    [{ FIXTURE_CONTEXT_FAIL: '1' }, /cannot inspect the selected Docker context/u],
+    [{ FIXTURE_DAEMON_FAIL: '1' }, /selected Docker daemon is unavailable/u]
+  ]) {
+    await assert.rejects(f.run([], extra), (error) => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, message);
+      assert.doesNotMatch(error.stdout, /System is ready/u);
+      return true;
+    });
+  }
+  assert.doesNotMatch(await f.log(), /sam:/u);
+}));
+
+test('help is side-effect free and color follows the actual output fd, NO_COLOR and TERM', () => withFixture(async (f) => {
+  await rm(path.join(f.root, '.env'));
+  const env = { ...f.env, TERM: 'xterm', PREVIEW_TEST_SCRIPT: path.join(f.root, 'preview.sh'), PREVIEW_TEST_STDERR: path.join(f.root, 'help.stderr') };
+  delete env.NO_COLOR;
+  const colored = await execute('script', ['-qec', 'bash "$PREVIEW_TEST_SCRIPT" --help > /dev/null', '/dev/null'], { env });
+  assert.match(colored.stdout, /\u001b\[1;36mUsage:/u);
+  const noColor = await execute('script', ['-qec', 'bash "$PREVIEW_TEST_SCRIPT" --help', '/dev/null'], { env: { ...env, NO_COLOR: '' } });
+  const dumb = await execute('script', ['-qec', 'bash "$PREVIEW_TEST_SCRIPT" --help', '/dev/null'], { env: { ...env, TERM: 'dumb' } });
+  for (const result of [noColor, dumb]) assert.doesNotMatch(result.stdout, /\u001b/u);
+  await execute('script', ['-qec', 'bash "$PREVIEW_TEST_SCRIPT" --help 2> "$PREVIEW_TEST_STDERR"', '/dev/null'], { env });
+  assert.doesNotMatch(await readFile(env.PREVIEW_TEST_STDERR, 'utf8'), /\u001b/u);
+  const help = await f.run(['start', '--verbose', '--help']);
+  for (const text of ['Bash 4.4+', 'Docker CLI', 'WEB_CONTAINER_PORT', 'DOCKER_CONTEXT wins', 'stop/down preserve', 'exported variables']) assert.ok(help.stderr.includes(text));
+  await assert.rejects(f.log(), { code: 'ENOENT' });
+}));
+
+test('the real timeout bounds a hanging log command while preserving cleanup and startup failure', () => withFixture(async (f) => {
+  const started = Date.now();
+  await assert.rejects(f.run([], { FIXTURE_START_FAIL: '1', FIXTURE_LOG_HANG: '1' }), (error) => {
+    assert.equal(error.code, 19);
+    assert.match(error.stderr, /log collection failed or timed out/u);
+    assert.doesNotMatch(error.stdout, /System is ready/u);
+    return true;
+  });
+  assert.ok(Date.now() - started < 12_000, 'log timeout exceeded its bounded grace');
+  assert.match(await f.log(), new RegExp(`docker:rm -f ${containerId}`, 'u'));
+  await assert.rejects(readFile(path.join(f.root, 'running')), { code: 'ENOENT' });
+}));
+
+test('unhealthy existing start/status show owned diagnostics without deleting the existing instance', () => withFixture(async (f) => {
+  await f.run();
+  await writeFile(path.join(f.root, 'calls'), '');
+  for (const command of ['start', 'status']) {
+    await assert.rejects(f.run([command], { FIXTURE_HEALTH: 'failed', FIXTURE_SERVICE_LOG: 'Existing watcher: Error: import failed' }), (error) => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, /Existing watcher: Error: import failed/u);
+      assert.doesNotMatch(error.stdout, /System is ready/u);
+      return true;
+    });
+  }
+  const calls = await f.log();
+  assert.equal(calls.split('docker:logs --tail 80').length - 1, 2);
+  assert.doesNotMatch(calls, /docker:rm|docker:stop/u);
+  await readFile(path.join(f.root, 'running'));
+}));
+
+test('verbose build failure redacts its output, preserves status and never starts services', () => withFixture(async (f) => {
+  const privateImage = 'private-image-account-fixture';
+  await assert.rejects(f.run(['build', '--verbose'], { COMMENTS_ACCOUNT: privateImage, FIXTURE_BUILD_LOG: `Compiler account ${privateImage}`, FIXTURE_SAM_EXIT: '31' }), (error) => {
+    assert.equal(error.code, 31);
+    assert.match(error.stderr, /\[REDACTED\]/u);
+    assert.ok(!error.stderr.includes(privateImage));
+    assert.equal(error.stdout, '');
+    return true;
+  });
+  assert.doesNotMatch(await f.log(), /docker:/u);
+}));
+
+test('ready TTY summaries color headings while URL lines remain plain', () => withFixture(async (f) => {
+  const env = { ...f.env, TERM: 'xterm', PREVIEW_TEST_SCRIPT: path.join(f.root, 'preview.sh') };
+  delete env.NO_COLOR;
+  const result = await execute('script', ['-qec', 'bash "$PREVIEW_TEST_SCRIPT" start', '/dev/null'], { env });
+  const output = result.stdout.replaceAll('\r', '');
+  assert.match(output, /\u001b\[0;32mSystem is ready/u);
+  const urls = output.split('\n').filter((line) => line.includes('http://'));
+  assert.ok(urls.length > 0);
+  for (const url of urls) assert.match(url, /^http:\/\/[^\s\u001b]+$/u);
 }));
