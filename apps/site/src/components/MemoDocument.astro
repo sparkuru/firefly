@@ -15,9 +15,6 @@ const id = entry.collection === 'memos' ? entry.data.id : null;
 const { Content } = document;
 ---
 <MemoLayout title={title} description={description} pathname={canonical.href} htmlTitle={entry.data.htmlTitle} canonical={entry.data.canonical} seoImage={entry.data.seoImage} noindex={entry.data.noindex} date={entry.data.date} updated={entry.data.updated} collection={entry.collection}>
-  <div class="memo-intro">
-    {id ? <a class="memo-return" href={'/pages/memos/#' + id}>← Return to timeline</a> : <h1>{title}</h1>}
-    {timeline && <p>Thoughts and notes. Move through time to find an entry.</p>}
-  </div>
+  {!id && <h1 class="memo-accessible-title">{title}</h1>}
   {timeline ? <MemoTimeline memos={memos} /> : id ? <div class="memo-detail"><MemoEntry canonical={canonical} document={document} /><a class="memo-return" href={'/pages/memos/#' + id}>← Return to timeline</a></div> : <article class="memo-detail"><div class="memo-body" data-article-content data-content-theme={entry.data.contentTheme}><Content /></div></article>}
 </MemoLayout>

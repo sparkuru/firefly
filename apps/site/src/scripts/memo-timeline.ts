@@ -4,7 +4,7 @@ export function startMemoTimeline(root: HTMLElement) {
   if (root.dataset.memoReady) return;
   const slider = root.querySelector<HTMLElement>('[data-memo-slider]');
   const output = root.querySelector<HTMLElement>('[data-memo-current-date]');
-  const header = document.querySelector<HTMLElement>('[data-memo-header]');
+  const bubble = root.querySelector<HTMLElement>('[data-memo-date-bubble]');
   const control = root.querySelector<HTMLElement>('[data-memo-time-control]');
   const cards = Array.from(root.querySelectorAll<HTMLElement>('[data-memo-entry]'));
   const records: MemoTimeRecord[] = cards.map((card) => ({ id: card.id, date: card.dataset.memoDate ?? '' }));
@@ -18,13 +18,41 @@ export function startMemoTimeline(root: HTMLElement) {
   let frame = 0;
   let releaseFrame = 0;
   let requested = 0;
+  let feedbackTimer = 0;
+  let emphasized: HTMLElement | undefined;
+  let seekLocked = false;
+  let browsingIntent = false;
+  let lockedScrollY = 0;
+  let lockedGeometry: number[] = [];
 
-  const reference = () => Math.ceil(header?.getBoundingClientRect().bottom ?? 0) + (narrow.matches ? control.getBoundingClientRect().height : 0) + 20;
+  const geometry = () => [control.getBoundingClientRect().height, ...cards.flatMap((card) => {
+    const box = card.getBoundingClientRect();
+    return [box.top + window.scrollY, box.height];
+  })];
+  const rememberSeek = () => { lockedScrollY = window.scrollY; lockedGeometry = geometry(); };
+
+  const clearFeedback = () => {
+    window.clearTimeout(feedbackTimer);
+    root.removeAttribute('data-memo-feedback');
+    emphasized?.removeAttribute('data-memo-seek');
+    emphasized = undefined;
+  };
+  const feedback = (entryIndex?: number) => {
+    clearFeedback();
+    root.setAttribute('data-memo-feedback', '');
+    if (entryIndex !== undefined) {
+      emphasized = byId.get(index.entries[entryIndex]?.id ?? '');
+      emphasized?.setAttribute('data-memo-seek', '');
+    }
+    feedbackTimer = window.setTimeout(clearFeedback, 1400);
+  };
+
+  const reference = () => (narrow.matches ? (parseFloat(getComputedStyle(control).top) || 0) + control.getBoundingClientRect().height : 0) + 20;
   const measure = () => {
-    root.style.setProperty('--memo-header-height', (header?.getBoundingClientRect().height ?? 64) + 'px');
     const feed = root.querySelector<HTMLElement>('[data-memo-feed]');
     const last = cards.at(-1);
     if (feed && last) feed.style.paddingBottom = Math.max(0, innerHeight - reference() - last.getBoundingClientRect().height + 32) + 'px';
+    if (seekLocked) rememberSeek();
   };
   const setOwner = (value: typeof owner) => { owner = value; root.dataset.memoInteraction = value; };
   const display = (entryIndex: number, position = index.entries[entryIndex]?.position ?? 0) => {
@@ -40,7 +68,15 @@ export function startMemoTimeline(root: HTMLElement) {
     slider.setAttribute('aria-valuetext', entry.label);
     slider.setAttribute('aria-orientation', narrow.matches ? 'horizontal' : 'vertical');
     output.textContent = entry.label;
-    const trackHeight = slider.getBoundingClientRect().height;
+    const track = slider.getBoundingClientRect();
+    if (bubble) {
+      bubble.textContent = entry.label;
+      const size = narrow.matches ? bubble.offsetWidth : bubble.offsetHeight;
+      const extent = narrow.matches ? track.width : track.height;
+      const coordinate = Math.max(size / 2, Math.min(extent - size / 2, position * extent));
+      bubble.style.setProperty('--memo-bubble-position', coordinate + 'px');
+    }
+    const trackHeight = narrow.matches ? track.width : track.height;
     for (const tick of root.querySelectorAll<HTMLElement>('[data-memo-month-tick]')) {
       const current = tick.dataset.memoMonthTick === index.months[entry.month]?.key;
       tick.toggleAttribute('data-memo-active', current);
@@ -58,31 +94,57 @@ export function startMemoTimeline(root: HTMLElement) {
   };
   const browse = () => {
     frame = 0;
-    if (owner !== 'browsing' || !cards.length) return;
-    const line = reference();
-    let next = cards.findIndex((card) => card.getBoundingClientRect().bottom > line + 1);
-    if (next < 0) next = cards.length - 1;
+    if (owner !== 'browsing' || seekLocked || !cards.length) return;
+    const top = narrow.matches ? Math.max(0, Math.min(innerHeight, control.getBoundingClientRect().bottom)) : 0;
+    const line = (top + innerHeight) / 2;
+    const boxes = cards.map((card) => card.getBoundingClientRect());
+    const visible = boxes.map((box, entryIndex) => ({ box, entryIndex })).filter(({ box }) => box.bottom > top && box.top < innerHeight);
+    const candidates = visible.length ? visible : boxes.map((box, entryIndex) => ({ box, entryIndex }));
+    let next = 0;
+    let nearest = Infinity;
+    for (const { box, entryIndex } of candidates) {
+      const distance = Math.max(box.top - line, line - box.bottom, 0);
+      if (distance < nearest) { next = entryIndex; nearest = distance; }
+    }
     display(next);
   };
   const scheduleBrowse = () => { if (!frame) frame = requestAnimationFrame(browse); };
-  const settle = (entryIndex: number) => {
+  const settle = (entryIndex: number, emphasize = false) => {
     cancelAnimationFrame(releaseFrame);
+    seekLocked = true;
+    browsingIntent = false;
     setOwner('settling');
     align(entryIndex);
-    // Keep induced scroll events from taking ownership of a seek.
-    releaseFrame = requestAnimationFrame(() => {
-      releaseFrame = requestAnimationFrame(() => { setOwner('browsing'); });
-    });
+    rememberSeek();
+    if (emphasize) feedback(entryIndex);
+    let settledScrollY = window.scrollY;
+    // A prior native key scroll can finish after the instant seek. Require quiet frames.
+    const release = () => {
+      if (!seekLocked || browsingIntent) { setOwner('browsing'); return; }
+      if (Math.abs(window.scrollY - settledScrollY) > .5) {
+        align(entryIndex);
+        settledScrollY = window.scrollY;
+        rememberSeek();
+        releaseFrame = requestAnimationFrame(release);
+        return;
+      }
+      releaseFrame = requestAnimationFrame(() => {
+        if (Math.abs(window.scrollY - settledScrollY) > .5) release();
+        else { setOwner('browsing'); rememberSeek(); }
+      });
+    };
+    releaseFrame = requestAnimationFrame(release);
   };
   const interrupt = () => {
+    browsingIntent = true;
     if (owner === 'dragging') {
       cancelAnimationFrame(frame); frame = 0;
       const captured = pointer; pointer = null;
       if (captured !== null && slider.hasPointerCapture(captured)) slider.releasePointerCapture(captured);
+      seekLocked = true;
+      rememberSeek();
+      setOwner('browsing');
     }
-    cancelAnimationFrame(releaseFrame);
-    setOwner('browsing');
-    scheduleBrowse();
   };
   const positionFor = (event: PointerEvent) => {
     const box = slider.getBoundingClientRect();
@@ -102,6 +164,8 @@ export function startMemoTimeline(root: HTMLElement) {
     cancelAnimationFrame(releaseFrame);
     pointer = event.pointerId;
     setOwner('dragging');
+    clearFeedback();
+    root.setAttribute('data-memo-feedback', '');
     slider.setPointerCapture(pointer);
     slider.focus({ preventScroll: true });
     requested = positionFor(event);
@@ -118,7 +182,7 @@ export function startMemoTimeline(root: HTMLElement) {
     frame = 0;
     const selected = nearestMemo(index, requested);
     pointer = null;
-    settle(selected);
+    settle(selected, true);
   };
   slider.addEventListener('pointerup', release);
   slider.addEventListener('pointercancel', release);
@@ -137,12 +201,27 @@ export function startMemoTimeline(root: HTMLElement) {
     }
     if (next === undefined || !cards.length) return;
     event.preventDefault();
-    settle(Math.max(0, Math.min(cards.length - 1, next)));
+    settle(Math.max(0, Math.min(cards.length - 1, next)), true);
   });
-  window.addEventListener('scroll', scheduleBrowse, { passive: true });
+  window.addEventListener('scroll', () => {
+    if (seekLocked && Math.abs(window.scrollY - lockedScrollY) > .5) {
+      // Layout anchoring changes document geometry; a scrollbar scroll changes only the viewport.
+      const current = geometry();
+      if (current.some((value, position) => Math.abs(value - (lockedGeometry[position] ?? value)) > 1)) rememberSeek();
+      else if (owner === 'browsing' || browsingIntent) {
+        seekLocked = false;
+        browsingIntent = false;
+        cancelAnimationFrame(releaseFrame);
+        setOwner('browsing');
+        clearFeedback();
+      }
+    }
+    scheduleBrowse();
+  }, { passive: true });
   window.addEventListener('wheel', interrupt, { passive: true });
   window.addEventListener('touchstart', (event) => { if (!(event.target instanceof Node) || !slider.contains(event.target)) interrupt(); }, { passive: true });
-  window.addEventListener('keydown', (event) => { if (event.target !== slider && ['PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp', ' '].includes(event.key)) interrupt(); });
+  window.addEventListener('pointerdown', (event) => { if (!(event.target instanceof Node) || !control.contains(event.target)) interrupt(); }, { passive: true });
+  window.addEventListener('keydown', (event) => { if (event.target !== slider && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.isComposing && ['PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp', ' '].includes(event.key)) interrupt(); });
   const resize = () => {
     slider.setAttribute('aria-orientation', narrow.matches ? 'horizontal' : 'vertical');
     if (owner !== 'dragging') { measure(); settle(active); }
@@ -150,17 +229,45 @@ export function startMemoTimeline(root: HTMLElement) {
   narrow.addEventListener('change', resize);
   window.addEventListener('resize', resize, { passive: true });
   const observer = new ResizeObserver(() => { measure(); scheduleBrowse(); });
-  if (header) observer.observe(header);
   observer.observe(control);
   for (const card of cards) observer.observe(card);
   const targetFromHash = () => {
-    const id = window.location.hash.slice(1);
+    const stored = history.state?.memoTimelineReturn;
+    const returned = typeof stored?.id === 'string' ? stored.id : undefined;
+    if (stored !== undefined) {
+      const state = { ...history.state };
+      delete state.memoTimelineReturn;
+      history.replaceState(stored?.empty === true && Object.keys(state).length === 0 ? null : state, '');
+    }
+    const id = index.entries.some((entry) => entry.id === returned) ? returned : window.location.hash.slice(1);
     const found = index.entries.findIndex((entry) => entry.id === id);
-    if (found >= 0) settle(found);
+    if (found >= 0) settle(found, true);
     else scheduleBrowse();
   };
   window.addEventListener('hashchange', targetFromHash);
-  window.addEventListener('pageshow', scheduleBrowse);
+  window.addEventListener('pageshow', (event) => { if (event.persisted) targetFromHash(); else scheduleBrowse(); });
+  root.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (!(event.target instanceof Element)) return;
+    const link = event.target.closest<HTMLAnchorElement>('a[href]');
+    if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+    const destination = new URL(link.href);
+    if (link.closest('.memo-month-index') && destination.origin === location.origin && destination.pathname === location.pathname) {
+      const selected = index.entries.findIndex((entry) => entry.id === destination.hash.slice(1));
+      if (selected >= 0) {
+        // Native anchor alignment after this seek would look like a later browsing scroll.
+        event.preventDefault();
+        if (destination.hash !== location.hash) history.pushState(history.state, '', destination.hash);
+        settle(selected, true);
+      }
+      return;
+    }
+    const card = link.closest<HTMLElement>('[data-memo-entry]');
+    if (!card) return;
+    if (destination.origin === location.origin && destination.pathname === '/pages/memos/' + card.id + '/' && byId.has(card.id) && (history.state === null || (typeof history.state === 'object' && Object.getPrototypeOf(history.state) === Object.prototype))) {
+      history.replaceState({ ...history.state, memoTimelineReturn: { id: card.id, empty: history.state === null } }, '');
+    }
+  });
   slider.setAttribute('aria-valuemax', String(Math.max(0, cards.length - 1)));
   slider.setAttribute('aria-disabled', String(cards.length < 2));
   root.dataset.memoReady = 'true';

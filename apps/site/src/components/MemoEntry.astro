@@ -12,15 +12,15 @@ const Heading = preview ? 'h2' : 'h1';
 ---
 <article class:list={['memo-entry', { 'memo-entry-detail': !preview }]} id={preview ? id : undefined} data-memo-entry={preview ? '' : undefined} data-memo-date={preview ? date : undefined}>
   <header class="memo-entry-header">
-    <a class="memo-date" href={canonical.href}><time datetime={date}>{memoDateLabel(date)}</time></a>
-    {canonical.markers.map((marker) => <span class="memo-marker" data-content-marker={marker.id}>{marker.label}</span>)}
-    {entry.data.updated && <span class="memo-updated">Updated {memoDateLabel(entry.data.updated)}</span>}
+    {preview ? <a class="memo-date" href={canonical.href}><time datetime={date}>{memoDateLabel(date)}</time></a> : <time class="memo-detail-date" datetime={date}>{memoDateLabel(date)}</time>}
+    {preview && canonical.markers.map((marker) => <span class="memo-marker" data-content-marker={marker.id}>{marker.label}</span>)}
+    {preview && entry.data.updated && <span class="memo-updated">Updated {memoDateLabel(entry.data.updated)}</span>}
   </header>
   {entry.data.title && <Heading class="memo-entry-title">{preview ? <a href={canonical.href}>{entry.data.title}</a> : entry.data.title}</Heading>}
   {!preview && !entry.data.title && <h1 class="memo-accessible-title">{canonical.displayName}</h1>}
   <div class="memo-body" data-article-content data-content-theme={entry.data.contentTheme}>
     {preview && memoPreview ? <div set:html={memoPreview.html} /> : <Content />}
   </div>
-  {entry.data.tags?.length && <ul class="memo-tags" aria-label="Tags">{entry.data.tags.map((tag: string) => <li>#{tag}</li>)}</ul>}
+  {preview && entry.data.tags?.length && <ul class="memo-tags" aria-label="Tags">{entry.data.tags.map((tag: string) => <li>#{tag}</li>)}</ul>}
   {preview && memoPreview?.truncated && <a class="memo-read-full" href={canonical.href}>Read full entry <span aria-hidden="true">↗</span></a>}
 </article>

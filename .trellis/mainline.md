@@ -518,3 +518,63 @@ startup remains unchanged. All 87 protected template hashes still match.
 This is repository maintenance without a task or task-archive commit. The
 separate session journal records the work commit. Remaining audit GAP/UNKNOWN
 items are not authorization for further changes or product work.
+
+## Memos Reader Redesign
+
+On 2026-10-11 the owner requested task creation for a wider, more distinctive
+standalone Memo reader, then chose silver/white with light-gray layering,
+Apple-inspired light interaction, and coordinated feed/detail changes.
+The owner explicitly approved the complete latest planning summary before
+implementation. Active task: `.trellis/tasks/10-11-memos-page-redesign/`.
+
+Approved scope is the site-owned reader shell, responsive three-column desktop
+feed with right historical rail, coordinated detail reading, and restrained
+heading/date/seek/control feedback. Existing content, URLs, static fallbacks,
+time-index semantics, access boundaries and homepage Terminal remain intact.
+The task owns validation evidence and final local preview review. Implementation
+and independent review passed; the reviewer corrected enlarged-text short
+landscape rail collapse with a measured usability regression. Final complete
+verification passed 417 Node and 244 browser checks with 186 applicability skips;
+normal runtime packaging and all four actual-corpus static/interactive
+desktop/mobile contexts passed. All 180 original Memo source files retain their
+exact aggregate digest. Eight source/test fingerprints stayed fixed through
+the final gates, and the ready local preview serves exact rebuilt Memo HTML/CSS.
+Current evidence: task `research/final-validation.md`.
+
+At first-candidate handoff, owner subjective feed/detail acceptance was pending
+and the task stayed `in_progress`. The subsequent review/revision is recorded
+below. Production deployment, push, commit and archival are not authorized by
+product approval or claimed by local checks.
+
+### Owner preview refinement
+
+The owner accepted the first candidate's overall visual direction, then
+requested removal of global Memo navigation/header, left desktop history,
+minimal detail reading with only one bottom return, and corrected native-scroll
+blue-bar selection. The revised artifacts record this scope; the remaining
+product choice was automatic reading-viewport-center selection versus explicit
+selection only. The owner then explicitly chose the center rule, authorizing
+the revised implementation within the same task. First-candidate gates remain
+historical evidence. No commit,
+archive, push or production deployment is inferred from visual approval.
+
+The refined implementation and independent full-scope check are complete. The
+reviewer fixed duplicate month-anchor alignment and earlier native key-scroll
+tail frames releasing a later seek; genuine cached Back was verified using the
+pinned full Chromium scenario. Final focused checks passed 18 repetitions and
+the Memo matrix passed 37 with 15 applicability skips. The full repository gate
+then passed 417 Node and 254 browser checks, with 192 browser applicability
+skips. Normal packaging and all four real-corpus desktop/mobile static/enhanced
+contexts passed. All 180 original source files and seven reviewed source/test
+fingerprints stayed unchanged, and the restored local preview serves exact
+normal rebuilt Memo HTML/CSS. Revised evidence:
+task `research/owner-refinement-validation.md`. AC1–AC6 are evidenced; revised
+owner acceptance remains pending under AC7 and the task stays `in_progress`.
+No commit, archive, push or production deployment occurred.
+
+On 2026-10-11 the owner accepted the refined preview and explicitly requested
+commit ("效果可以；提交"). All seven acceptance criteria are satisfied. Relevant
+automated gates and subjective design review are complete; additional physical
+device/assistive-technology feedback is optional for this scope. The authorized
+closeout is the task work commit followed by standard archive and journal
+bookkeeping. Remote push and production deployment remain outside this request.
