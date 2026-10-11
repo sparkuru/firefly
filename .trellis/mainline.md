@@ -578,3 +578,9 @@ automated gates and subjective design review are complete; additional physical
 device/assistive-technology feedback is optional for this scope. The authorized
 closeout is the task work commit followed by standard archive and journal
 bookkeeping. Remote push and production deployment remain outside this request.
+
+Closeout completed: work commit `06cfd1b`
+(`feat(memos): simplify reader and center scroll focus`); task archived at
+`.trellis/tasks/archive/2026-10/10-11-memos-page-redesign/` with completed
+acceptance and the work-commit reference. The existing local preview remains
+available. No remote push or production deployment was performed.
