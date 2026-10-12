@@ -620,3 +620,12 @@ production deployment is claimed. Other product priorities remain guided.
 The owner subsequently authorized submission on 2026-10-12. The approved
 closeout is the work commit followed by task archival and session bookkeeping.
 No remote push or deployment is included.
+
+Closeout completed: work commit `afcfcc7`
+(`chore: rename experiments to labs and remove retired memos service`). Task
+status is `completed`, archived at
+`.trellis/tasks/archive/2026-10/10-12-labs-directory-cleanup/` with all acceptance
+evidence and its work-commit reference. This local maintenance task was never
+PR-backed; archival used the supported non-PR branch-validation option.
+The recovery copy remains outside the repository. No remote push or deployment
+was performed.
