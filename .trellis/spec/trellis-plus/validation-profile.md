@@ -39,7 +39,7 @@ Required package gates are:
 | `presentations/terminal` | `./sam npm --prefix presentations/terminal ci`; `run check`; `run test`; `run build` |
 | `tooling/assemble-publication` | `./sam npm --prefix tooling/assemble-publication ci`; `run check`; `run test`; `run build` |
 | `apps/site` | `./sam npm --prefix apps/site ci`; `run test:content`; `run test:x-core`; `run check`; `run build` |
-| `experiments/nerv` | `./sam npm --prefix experiments/nerv ci`; `run check`; `run build` |
+| `labs/nerv` | `./sam npm --prefix labs/nerv ci`; `run check`; `run build` |
 | `plugins/memos` | `./sam npm run test:memos-contract` |
 | `tooling/publish-memos` | `SAM_CONTENT_MODE=none ./sam npm --prefix tooling/publish-memos ci`; `run check`; `run test`; `run build` |
 | Memo integration | `./sam npm run test:memos:site`; `run test:memos-publication`; `run prepare:test:memos`; pinned browser `run test:e2e:memos` |
@@ -65,17 +65,17 @@ with its exact error; it is not counted as a pass.
   owns `node scripts/serve-memos-fixture.mjs` on 4321. These servers live inside
   the browser container and are independent of the root user preview port.
 - focused commands: `./preview.sh render npm --prefix apps/site run test:e2e -- tests/home-browse.spec.ts`;
-  `./preview.sh render npm --prefix experiments/nerv run test:e2e`;
+  `./preview.sh render npm --prefix labs/nerv run test:e2e`;
   `./preview.sh render npm --prefix tooling/assemble-publication run test:e2e`;
   `./preview.sh render npm run test:e2e:memos` after preparing its fixture.
 - full/CI-equivalent gate: `./preview.sh verify`. No separate CI browser job
   is declared in this repository. The maintained host static Memo fixture runs
   only after the inner package/build/browser gate succeeds.
 - tests/config: `apps/site/tests/` and `playwright.config.ts` plus
-  `playwright.memos.config.ts`; `experiments/nerv/tests/` and its config;
+  `playwright.memos.config.ts`; `labs/nerv/tests/` and its config;
   `tooling/assemble-publication/tests/` and its config. MAJO's independent
-  `experiments/majo/playwright.config.ts` uses `/lab/majo/` on 4321 and runs via
-  `./preview.sh render npm --prefix experiments/majo run test:e2e` when affected.
+  `labs/majo/playwright.config.ts` uses `/lab/majo/` on 4321 and runs via
+  `./preview.sh render npm --prefix labs/majo run test:e2e` when affected.
 - browser projects/viewports: main site has `chromium-desktop-static`,
   `chromium-desktop-interactive` at 1440x900 and `chromium-mobile-static`,
   `chromium-mobile-interactive` at 375x812; static disables JS, mobile enables
@@ -115,7 +115,7 @@ SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --pr
 ```
 
 The main site tests are under `apps/site/tests/`, NERV tests are under
-`experiments/nerv/tests/`, and assembled-publication tests are under
+`labs/nerv/tests/`, and assembled-publication tests are under
 `tooling/assemble-publication/tests/`. Build the immutable artifact first;
 Playwright owns the preview server and must not substitute `astro dev` for
 static-publication evidence.

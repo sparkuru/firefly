@@ -19,7 +19,7 @@ services/comments/staging.env
 **/*.sqlite
 **/*.sqlite-*
 **/*.jsonl
-experiments/nerv/reference
+labs/nerv/reference
 prototypes
 
 .firefly/memos/

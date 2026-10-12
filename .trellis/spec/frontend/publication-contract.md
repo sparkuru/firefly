@@ -76,7 +76,7 @@ interface PublicExperiment {
 
 discoverExperiments(options: {
   repositoryRoot: string;
-  experimentsRoot?: string;
+  experimentsRoot?: string; // defaults to <repositoryRoot>/labs
 }): Promise<{
   manifests: readonly ExperimentManifest[];
   catalog: readonly PublicExperiment[];
@@ -121,9 +121,12 @@ commands, and only then assembles the release.
   accessors or decorated array methods.
 - IDs, kinds, roles, tools, and tags are lowercase kebab-case tokens. Titles and
   build commands are non-empty, trimmed, control-free strings.
-- `experiments/<id>`, manifest `id`, and `mountPath: /lab/<id>` agree exactly.
+- `labs/<id>`, manifest `id`, and `mountPath: /lab/<id>` agree exactly.
   Entry paths are normalized root-relative paths inside the mount; output and
   license paths are normalized relative descendants of the Experiment.
+- Source discovery defaults to `labs/`. Experiment API/package/command names
+  and the `artifacts/experiments/<id>` staging format retain their existing
+  meaning; source-directory renames do not change public `/lab/` mounts.
 - Paths reject traversal, backslashes, NUL, query/fragment syntax, schemes,
   drive prefixes, empty/dot segments, malformed encoding, and encoded `/` or
   `\`. IDs, mounts, entry IDs/paths, routes, and tags are unique where owned.
@@ -320,7 +323,7 @@ if (effect.kind === 'navigation') window.location.assign(effect.experiment.href)
 
 ```text
 # Wrong: build an Experiment directly into, or copy it over, the live root.
-apps/site/dist + experiments/nerv/dist -> dist
+apps/site/dist + labs/nerv/dist -> dist
 
 # Correct: validate -> build local outputs -> stage -> validate candidate ->
 # promote artifacts and release together with rollback.
@@ -333,18 +336,18 @@ apps/site/dist + experiments/nerv/dist -> dist
 Use this contract when a listed Experiment needs binary images, audio, fonts, or
 other owner-authorized local media that must be available for a local build but
 must not enter Git. The current reference implementation is
-`experiments/majo/scripts/build.mjs`.
+`labs/majo/scripts/build.mjs`.
 
 ### 2. Signatures
 
 ```text
-experiments/<id>/scripts/build.mjs
+labs/<id>/scripts/build.mjs
   -> validates public/media/<declared input> files
   -> runs the package's static type-check/build
   -> lets Astro copy public/media/ to dist/media/
   -> verifies index.html, 404.html, and every emitted media output
 
-npm run build --prefix experiments/<id>
+npm run build --prefix labs/<id>
   -> exit 0 only when every required input and output is valid
 ```
 
@@ -353,7 +356,7 @@ consumes the resulting ordinary `dist/` tree through the manifest contract.
 
 ### 3. Contracts
 
-- Required inputs live below `experiments/<id>/public/media/` and are regular
+- Required inputs live below `labs/<id>/public/media/` and are regular
   files, not symlinks; the directory is ignored by Git.
 - Every required input has an explicit `dist/media/` destination produced by
   Astro's public-directory copy and served below the mounted Experiment media
@@ -436,9 +439,9 @@ For progressive first-slide text, this same rule applies to the initial DOM:
 
 ## Reference Files
 
-- `experiments/nerv/experiment.json`
-- `experiments/majo/experiment.json`
-- `experiments/majo/scripts/build.mjs`
+- `labs/nerv/experiment.json`
+- `labs/majo/experiment.json`
+- `labs/majo/scripts/build.mjs`
 - `tooling/validate-experiments/src/index.ts`
 - `tooling/validate-experiments/src/cli.ts`
 - `tooling/assemble-publication/src/index.ts`
@@ -447,8 +450,8 @@ For progressive first-slide text, this same rule applies to the initial DOM:
 - `apps/site/src/pages/lab/index.astro`
 - `presentations/terminal/src/runtime.ts`
 - `apps/site/src/scripts/terminal-home.ts`
-- `experiments/nerv/src/layouts/Layout.astro`
-- `experiments/nerv/src/pages/index.astro`
+- `labs/nerv/src/layouts/Layout.astro`
+- `labs/nerv/src/pages/index.astro`
 - `Dockerfile`
 - `nginx.conf`
 - `preview.sh package`

@@ -74,9 +74,9 @@ cp .env.example .env
 ./sam npm --prefix presentations/terminal run test
 ./sam npm --prefix presentations/terminal run build
 
-./sam npm --prefix experiments/nerv ci
-./sam npm --prefix experiments/nerv run check
-./sam npm --prefix experiments/nerv run build
+./sam npm --prefix labs/nerv ci
+./sam npm --prefix labs/nerv run check
+./sam npm --prefix labs/nerv run build
 
 ./preview.sh render npm run check:m4
 ./preview.sh render npm run test:m4
@@ -275,7 +275,7 @@ release, and image inventories exactly before route/header probes.
 docker run --rm node:22-alpine npm --prefix apps/site run check
 ./sam npx playwright test
 SAM_IPC= ./sam npm --prefix apps/site run test:e2e
-WEB_HOST_PORT=4322 ./sam npm --prefix experiments/nerv run start -- --host 0.0.0.0 --port 4321
+WEB_HOST_PORT=4322 ./sam npm --prefix labs/nerv run start -- --host 0.0.0.0 --port 4321
 ```
 
 ```ts

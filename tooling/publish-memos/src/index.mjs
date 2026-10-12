@@ -18,7 +18,7 @@ const ESTABLISHED = 'firefly-owner-memos-v1\n';
 function ownedOutput(outputRoot, sourceRoot) {
   const output = path.resolve(outputRoot);
   if (overlaps(repositoryRoot, output) && !overlaps(path.join(repositoryRoot, '.firefly/memos'), output)) fail('repository output must stay inside the independent .firefly/memos boundary.');
-  for (const protectedRoot of ['artifacts', 'dist', 'apps', 'content', 'packages', 'presentations', 'experiments', 'services', 'plugins']) {
+  for (const protectedRoot of ['artifacts', 'dist', 'apps', 'content', 'packages', 'presentations', 'labs', 'experiments', 'services', 'plugins']) {
     if (overlaps(path.join(repositoryRoot, protectedRoot), output) || overlaps(output, path.join(repositoryRoot, protectedRoot))) fail('output must stay outside blog source and release boundaries.');
   }
   if (sourceRoot && (overlaps(sourceRoot, output) || overlaps(output, sourceRoot))) fail('source and output roots must not overlap.');

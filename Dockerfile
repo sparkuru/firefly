@@ -19,8 +19,8 @@ RUN npm --prefix tooling/validate-experiments ci --ignore-scripts \
     && npm --prefix tooling/assemble-publication run build \
     && npm --prefix apps/site ci --ignore-scripts \
     && npm --prefix apps/site run build \
-    && npm --prefix experiments/nerv ci --ignore-scripts \
-    && npm --prefix experiments/majo ci --ignore-scripts \
+    && npm --prefix labs/nerv ci --ignore-scripts \
+    && npm --prefix labs/majo ci --ignore-scripts \
     && npm --prefix tooling/assemble-publication run build:experiments -- --root /app \
     && npm --prefix tooling/assemble-publication run assemble -- --root /app
 

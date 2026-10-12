@@ -527,7 +527,7 @@ test('site dependency and source paths remain isolated from experiments and refe
     )
   ).join('\n');
   const prohibitedReferences = [
-    /["'](?:\.\.\/)*experiments\/nerv(?:\/[^"']*)?["']/iu,
+    /["'](?:\.\.\/)*labs\/nerv(?:\/[^"']*)?["']/iu,
     /["'](?:\.\.\/)*prototypes\/typecho-terminal(?:\/[^"']*)?["']/iu,
     /["']@firefly\/[^"']*nerv[^"']*["']/iu,
     /["'](?:@xterm\/[^"']+|xterm(?:\/[^"']*)?)["']/iu
@@ -555,7 +555,7 @@ test('semantic and Terminal presentation packages remain bidirectionally isolate
   assert.doesNotMatch(semanticGraph, /["'](?:@firefly\/presentation-terminal|(?:\.\.\/)*(?:presentations\/)?terminal(?:\/|["']))/u);
   assert.doesNotMatch(terminalGraph, /["'](?:@firefly\/presentation-semantic|(?:\.\.\/)*(?:presentations\/)?semantic(?:\/|["']))/u);
   for (const graph of [semanticGraph, terminalGraph]) {
-    assert.doesNotMatch(graph, /["'](?:\.\.\/)*(?:apps\/site|experiments\/nerv|prototypes\/typecho-terminal)(?:\/[^"']*)?["']/u);
+    assert.doesNotMatch(graph, /["'](?:\.\.\/)*(?:apps\/site|labs\/nerv|prototypes\/typecho-terminal)(?:\/[^"']*)?["']/u);
   }
 });
 

@@ -26,7 +26,7 @@ function manifest(id = 'alpha') {
 }
 
 test('decodes, freezes, and projects the exact v1 contract', () => {
-  const decoded = decodeExperimentManifest(manifest(), { directory: '/repo/experiments/alpha' });
+  const decoded = decodeExperimentManifest(manifest(), { directory: '/repo/labs/alpha' });
   assert.equal(Object.isFrozen(decoded), true);
   assert.equal(Object.isFrozen(decoded.entries), true);
   assert.equal(Object.isFrozen(decoded.entries[0]), true);
@@ -42,7 +42,7 @@ test('decodes, freezes, and projects the exact v1 contract', () => {
     ...manifest(),
     entryPath: '/alternate.html',
     entries: [{ id: 'alternate', title: 'Alternate', path: '/alternate.html', role: 'landing' }]
-  }, { directory: '/repo/experiments/alpha' })).entryHref, '/lab/alpha/alternate.html');
+  }, { directory: '/repo/labs/alpha' })).entryHref, '/lab/alpha/alternate.html');
 });
 
 test('rejects malformed schema, paths, ownership, duplicates, and decorated values', () => {
@@ -72,28 +72,28 @@ test('rejects malformed schema, paths, ownership, duplicates, and decorated valu
     { ...manifest(), tags: ['astro', 'astro'] }
   ];
   for (const value of cases) {
-    assert.throws(() => decodeExperimentManifest(value, { directory: '/repo/experiments/alpha' }));
+    assert.throws(() => decodeExperimentManifest(value, { directory: '/repo/labs/alpha' }));
   }
   const sparse = manifest();
   sparse.entries = new Array(1) as typeof sparse.entries;
-  assert.throws(() => decodeExperimentManifest(sparse, { directory: '/repo/experiments/alpha' }), /dense/u);
+  assert.throws(() => decodeExperimentManifest(sparse, { directory: '/repo/labs/alpha' }), /dense/u);
   let invoked = false;
   const accessor = Object.defineProperty({}, 'schemaVersion', { get() { invoked = true; return 1; } });
-  assert.throws(() => decodeExperimentManifest(accessor, { directory: '/repo/experiments/alpha' }), /data property/u);
+  assert.throws(() => decodeExperimentManifest(accessor, { directory: '/repo/labs/alpha' }), /data property/u);
   assert.equal(invoked, false);
 
   const decoratedBuild = manifest();
   decoratedBuild.build = Object.defineProperty({}, 'command', {
     get() { invoked = true; return 'npm run build'; }
   }) as typeof decoratedBuild.build;
-  assert.throws(() => decodeExperimentManifest(decoratedBuild, { directory: '/repo/experiments/alpha' }), /data property/u);
+  assert.throws(() => decodeExperimentManifest(decoratedBuild, { directory: '/repo/labs/alpha' }), /data property/u);
   assert.equal(invoked, false);
 });
 
 test('discovers stable listed and unlisted manifests and rejects overlapping ownership', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'firefly-manifests-'));
   context.after(() => rm(root, { recursive: true, force: true }));
-  const experimentsRoot = path.join(root, 'experiments');
+  const experimentsRoot = path.join(root, 'labs');
   await mkdir(experimentsRoot);
   const writeManifest = async (id: string, visibility: 'listed' | 'unlisted') => {
     const directory = path.join(experimentsRoot, id);
@@ -115,7 +115,7 @@ test('discovery rejects malformed or missing manifests and realpath escapes', as
   const sandbox = await mkdtemp(path.join(os.tmpdir(), 'firefly-manifest-boundary-'));
   context.after(() => rm(sandbox, { recursive: true, force: true }));
   const repositoryRoot = path.join(sandbox, 'repository');
-  const experimentsRoot = path.join(repositoryRoot, 'experiments');
+  const experimentsRoot = path.join(repositoryRoot, 'labs');
   await mkdir(path.join(experimentsRoot, 'alpha'), { recursive: true });
   await assert.rejects(discoverExperiments({ repositoryRoot }), /exactly one experiment\.json/u);
 

@@ -7,7 +7,7 @@
 #   ./sam npm run check:m4
 #   ./sam npm run build:m4
 #   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
-#     ./sam npm --prefix experiments/nerv run test:e2e
+#     ./sam npm --prefix labs/nerv run test:e2e
 #   FIREFLY_COMMENTS_EXPORT=artifacts/comments/comments.public.v1.json \
 #     ./sam npm run build:m51
 #   WEB_HOST_PORT=4322 ./preview.sh start

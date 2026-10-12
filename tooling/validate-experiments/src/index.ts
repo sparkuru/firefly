@@ -376,7 +376,7 @@ export async function discoverExperiments(options: {
   readonly experimentsRoot?: string;
 }): Promise<ExperimentDiscovery> {
   const repositoryRoot = path.resolve(options.repositoryRoot);
-  const experimentsRoot = path.resolve(options.experimentsRoot ?? path.join(repositoryRoot, 'experiments'));
+  const experimentsRoot = path.resolve(options.experimentsRoot ?? path.join(repositoryRoot, 'labs'));
   const repositoryRealRoot = await realpath(repositoryRoot);
   const experimentsRealRoot = await realpath(experimentsRoot);
   if (!contained(repositoryRealRoot, experimentsRealRoot)) {

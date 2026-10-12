@@ -584,3 +584,39 @@ Closeout completed: work commit `06cfd1b`
 `.trellis/tasks/archive/2026-10/10-11-memos-page-redesign/` with completed
 acceptance and the work-commit reference. The existing local preview remains
 available. No remote push or production deployment was performed.
+
+## Labs Source Directory and Retired Service Cleanup
+
+On 2026-10-12 the owner requested task creation for renaming the repository source
+directory `experiments/` to `labs/` and removing `services/memos/` if unused.
+After repository investigation and the final planning summary, the owner approved
+implementation ("可以"). Task: `.trellis/tasks/10-12-labs-directory-cleanup/`.
+
+Both independent source packages now live under `labs/`; all 39 original tracked
+files and 8 local media files retain their contents. Operational discovery,
+scripts, Docker paths, protection rules, fixtures, ignore rules and current
+engineering/third-party path documentation are synchronized. Experiment APIs,
+command/package names, manifests, public `/lab/` URLs and
+`artifacts/experiments/` format retain their existing meaning.
+
+The unused Memo service directory was removed from the repository after all 421
+local inventory entries were preserved and verified in an owner-only temporary
+recovery location. Private databases/keys/history and current Memo document
+components remain intact; no unrelated processes or services were stopped.
+
+All five acceptance criteria are evidenced in task `research/validation.md`:
+41 package tests, affected package/type/build gates, 18 site static tests on
+both fixture and normal configured builds, 6 desktop/mobile publication browser
+checks, Compose syntax and the normal runtime packaging gate passed. The final
+normal release has 354 files; runtime inventory, lab/Memo/media routes, headers,
+404 ownership, non-root/read-only behavior and exact container cleanup passed.
+Normal configured publication was restored after the fixture checks. Independent
+review found no defects and verified content preservation and record privacy.
+
+Implementation and acceptance are complete. The task remains `in_progress`
+pending owner-directed commit/archive; no automatic commit, remote push or
+production deployment is claimed. Other product priorities remain guided.
+
+The owner subsequently authorized submission on 2026-10-12. The approved
+closeout is the work commit followed by task archival and session bookkeeping.
+No remote push or deployment is included.

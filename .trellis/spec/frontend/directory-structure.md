@@ -16,8 +16,8 @@ packages/x-core/                 document and Presentation contracts
 presentations/semantic/          semantic document adapter
 presentations/terminal/          Terminal document adapter and command engine
 presentations/memo/              Memo document adapter; site owns reader shell/time control
-experiments/nerv/                independent NERV static project
-experiments/majo/                independent MAJO static project
+labs/nerv/                       independent NERV static project
+labs/majo/                       independent MAJO static project
 tooling/validate-experiments/    manifest decoder and public catalog
 tooling/assemble-publication/    static artifact validation and assembly
 tooling/publish-memos/           retained independent candidate/history recovery
@@ -50,7 +50,7 @@ package. Build outputs and private inputs are not public source contracts.
 - Put framework-neutral document transforms and adapter interfaces in
   `packages/x-core/`. Put concrete rendering in its owning `presentations/`
   package (Semantic, Terminal or Memo). Presentation packages do not import each other.
-- Add a complete independent experience under `experiments/<id>/` with its own
+- Add a complete independent experience under `labs/<id>/` with its own
   manifest, lockfile, assets, and build. Its public surface is validated and
   mounted by `tooling/`, not imported by `apps/site/`.
 - Put public static comments integration under `plugins/comments/` or the site

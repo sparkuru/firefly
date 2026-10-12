@@ -15,6 +15,10 @@ private readiness endpoint in the current product. New publishing uses the
 owner's local publisher command. Historical source contracts remain in Git
 and archived tasks, not active root checks or Compose services.
 
+The retired `services/memos/` directory is absent from the maintained repository.
+Historical recovery uses matching source/images from history; retaining a local
+service checkout or its old build output is not a publication prerequisite.
+
 ## 3. Contracts
 
 - Remove old service package/build scripts, interactive fixtures, Memo proxy

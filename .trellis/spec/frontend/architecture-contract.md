@@ -23,7 +23,7 @@ chosen Markdown workspace (posts/, pages/, optional memos/, managed resources)
   -> registered firefly, semantic or memo Presentation
   -> apps/site static output
 
-experiments/<id>/experiment.json + independent source
+labs/<id>/experiment.json + independent source
   -> manifest validation -> declared package-local build
   -> isolated Experiment artifact
 
@@ -54,7 +54,7 @@ types, errors, and validation rules live in the linked contracts.
 | `apps/site/` | Static Astro shell, content loading, routes, SEO, presentation dispatch, public catalog, site plugins | Experiment source or private comments database |
 | `packages/x-core/` | Framework-neutral document normalization, adapter selection, diagnostics, JSON-safe enhancement metadata | Routes, browser Terminal state, Experiment builds, plugins, deployment |
 | `presentations/semantic/`, `presentations/terminal/`, `presentations/memo/` | Transform the shared normalized document into semantic HTML | Mutation of source Markdown/tree, database reads, cross-imports between adapters |
-| `experiments/<id>/` | Own source, lockfile, assets, build command, and static output | Main-site source imports or writes to root `dist/` |
+| `labs/<id>/` | Own source, lockfile, assets, build command, and static output | Main-site source imports or writes to root `dist/` |
 | `tooling/validate-experiments/` | Validate manifests and project the safe public catalog | Build arbitrary browser/remote manifests |
 | `tooling/assemble-publication/` | Validate and combine static artifacts as one repository candidate | Rewrite Experiment HTML or switch a deployed release |
 | `tooling/shared/` | Framework-independent contained input reading and HTML sanitation policy | Astro/site source imports, wire/domain rules or service state |
@@ -114,7 +114,7 @@ and [Mobile Experience](./mobile-experience-contract.md) for exact interfaces.
 
 ### Experiments and publication
 
-- Each `experiments/<id>/` has its own `experiment.json`, framework version,
+- Each `labs/<id>/` has its own `experiment.json`, framework version,
   lockfile, assets, and declared build. Its ID agrees with its directory and
   `/lab/<id>` mount. `listed` enters the public catalog; `unlisted` remains
   direct-link-only. Every public entry is checked inside the built mount.
@@ -232,7 +232,7 @@ before any public display.
 
 ## 7. Wrong vs Correct
 
-**Wrong:** An Astro page imports `experiments/nerv/src/` and lets the NERV
+**Wrong:** An Astro page imports `labs/nerv/src/` and lets the NERV
 build copy files over root `dist/`.
 
 **Correct:** `apps/site/` reads the validator's public catalog, the NERV build

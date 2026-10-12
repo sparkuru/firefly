@@ -150,7 +150,7 @@ test('source filenames never become public and output cannot overlap source or b
   assert.ok(!JSON.stringify(candidate.bundle).includes('中文😀.md'));
   await assert.rejects(f.build({ outputRoot: path.join(f.sourceRoot, 'output') }), /overlap/);
   const repo = fileURLToPath(new URL('../../../', import.meta.url));
-  for (const outputRoot of [path.join(repo, 'dist/memos'), path.join(repo, 'artifacts/memos'), path.join(repo, 'tooling/unsafe-output'), path.join(repo, 'config/unsafe-output'), repo]) await assert.rejects(f.build({ outputRoot }), /independent \.firefly\/memos|blog source and release/);
+  for (const outputRoot of [path.join(repo, 'dist/memos'), path.join(repo, 'artifacts/memos'), path.join(repo, 'labs/unsafe-output'), path.join(repo, 'tooling/unsafe-output'), path.join(repo, 'config/unsafe-output'), repo]) await assert.rejects(f.build({ outputRoot }), /independent \.firefly\/memos|blog source and release/);
   symlinkSync(path.join(f.sourceRoot, '中文😀.md'), path.join(f.sourceRoot, 'linked.md'));
   await assert.rejects(f.build(), /Symlink/);
 });

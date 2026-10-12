@@ -15,7 +15,7 @@ async function fixture(context: test.TestContext) {
   await mkdir(path.join(root, 'config'));
   await writeFile(path.join(root, 'config/site.toml'), '[plugins.memos]\nenabled = false\n');
   const site = path.join(root, 'apps/site/dist');
-  const experiment = path.join(root, 'experiments/alpha');
+  const experiment = path.join(root, 'labs/alpha');
   await mkdir(path.join(site, 'lab'), { recursive: true });
   await mkdir(path.join(experiment, 'dist/assets'), { recursive: true });
   await writeAccess(site, { comments: false, memos: false });
@@ -198,7 +198,7 @@ test('fresh assembly is deterministic, excludes stale files, and preserves a pri
 
   await writeFile(path.join(root, 'dist/sentinel.txt'), 'preserve me');
   await writeFile(path.join(root, 'artifacts/sentinel.txt'), 'preserve artifacts');
-  await writeFile(path.join(root, 'experiments/alpha/dist/index.html'), '<img src="missing.svg">');
+  await writeFile(path.join(root, 'labs/alpha/dist/index.html'), '<img src="missing.svg">');
   const missingWarnings = await captureWarnings(async () => {
     await assert.doesNotReject(assemblePublication({ repositoryRoot: root, discovery }));
   });
@@ -208,7 +208,7 @@ test('fresh assembly is deterministic, excludes stale files, and preserves a pri
 
   await writeFile(path.join(root, 'dist/sentinel.txt'), 'preserve me');
   await writeFile(path.join(root, 'artifacts/sentinel.txt'), 'preserve artifacts');
-  await writeFile(path.join(root, 'experiments/alpha/dist/index.html'), '<a href="/posts/private/">escape</a>');
+  await writeFile(path.join(root, 'labs/alpha/dist/index.html'), '<a href="/posts/private/">escape</a>');
   await assert.rejects(assemblePublication({ repositoryRoot: root, discovery }), /escapes \/lab\/alpha/u);
   assert.equal(await readFile(path.join(root, 'dist/sentinel.txt'), 'utf8'), 'preserve me');
   assert.equal(await readFile(path.join(root, 'artifacts/sentinel.txt'), 'utf8'), 'preserve artifacts');
@@ -219,7 +219,7 @@ test('assembly rejects Experiment outputs and licenses reached through symlinked
   const external = path.join(root, 'external');
   await mkdir(path.join(external, 'dist'), { recursive: true });
   await writeFile(path.join(external, 'dist/index.html'), '<h1>External</h1>');
-  await symlink(external, path.join(root, 'experiments/alpha/linked'));
+  await symlink(external, path.join(root, 'labs/alpha/linked'));
 
   const escapedOutput = decodeExperimentManifest({
     schemaVersion: 1,
