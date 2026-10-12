@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 92
-- **Last Active**: 2026-10-11
+- **Total Sessions**: 93
+- **Last Active**: 2026-10-12
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~405 | Active |
+| `journal-2.md` | ~441 | Active |
 | `journal-1.md` | ~1934 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 93 | 2026-10-12 | Labs directory cleanup | `afcfcc7` | `anti-entropy-loss-syndrome` |
 | 92 | 2026-10-11 | Memos reader redesign and owner refinement | `06cfd1b6d3db617e5de17ab19012b82a769ca6c4` | `anti-entropy-loss-syndrome` |
 | 91 | 2026-10-10 | Preview console and Docker endpoint maintenance | `e75d7ef` | `anti-entropy-loss-syndrome` |
 | 90 | 2026-10-09 | Terminal metadata and new-tab opening | `0cc296e` | `anti-entropy-loss-syndrome` |

@@ -403,3 +403,39 @@ Delivered a spacious light Memo reader, left historical rail, center-based readi
 ### Next Steps
 
 - Current task complete. Further product work or remote publication requires a separate owner instruction.
+
+
+## Session 93: Labs directory cleanup
+<!-- trellis-session: v=2 fp=67b6a1122733c6b1 -->
+
+**Date**: 2026-10-12
+**Task**: Labs directory cleanup
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Completed the owner-approved experiments-to-labs source rename and retired Memo service cleanup; submitted reviewed changes and archived the task.
+
+### Main Changes
+
+- Moved 39 tracked source files and preserved 8 ignored media inputs; synchronized discovery, commands, fixtures, ignore rules and current path specs.
+- Removed services/memos after verifying all 421 preserved recovery entries; task archived at .trellis/tasks/archive/2026-10/10-12-labs-directory-cleanup/ (archive commit 230540a).
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `afcfcc7` | chore: rename experiments to labs and remove retired memos service |
+
+### Testing
+
+- [OK] 41 tooling tests, 18 site static tests on fixture and normal builds, and 6 desktop/mobile publication browser checks passed.
+- [OK] Package type/build gates, normal runtime inventory/route/header/read-only checks, Compose config, shell checks and independent review passed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- No remaining work for this task. Future product work requires owner direction.
