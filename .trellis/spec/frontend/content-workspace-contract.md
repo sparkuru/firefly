@@ -651,6 +651,89 @@ node apps/site/scripts/blog-meta.mjs draft.md \
   --blog-root /path/to/blog --collection posts --output posts/draft.md
 ```
 
+## Scenario: Automatic existing-document metadata entry point
+
+### 1. Scope / Trigger
+
+Use `content/add.py` when one existing Markdown document needs front matter
+without the interactive post/memo creation flow. The repository entry point
+is the maintained source; owner-managed external copies are synchronized
+separately.
+
+### 2. Signatures
+
+```sh
+python3 content/add.py format /path/to/blog/posts/category/article.md
+python3 content/add.py format /path/to/blog/pages/about.md --preview
+```
+
+The `format` subcommand accepts one positional Markdown path, the existing
+`--firefly-root`, `--env-file`, and `--log` options, and `--preview`. It cannot
+be combined with `post`, `memo`, `--init`, or an explicit editor. The unreleased
+`--meta` spelling is replaced without an alias; preview belongs to `format`.
+
+### 3. Contracts
+
+- Route metadata mode before configuration setup, content menus, and editor
+  checks. A missing default `.env` does not trigger setup or create a file;
+  an explicitly requested missing configuration remains an error.
+- Resolve tooling with the existing CLI > process environment > dotenv >
+  default priority. Metadata mode requires only Node and the site's metadata
+  organizer, independent of the memo creator and editor.
+- Resolve relative source paths from the caller's working directory. Recognize
+  a source below a `posts/` or `pages/` ancestor whose parent contains both
+  collections as its blog root; otherwise use the entry point's content root.
+- Invoke `apps/site/scripts/blog-meta.mjs` with explicit `--write-back`, adding
+  `--preview` for a no-write candidate. Keep inference and schema validation
+  in that existing organizer rather than adding a Python YAML parser.
+- The organizer fills missing title from H1 or filename, description from the
+  first eligible body line or title, UTC date, draft status and layout. Empty
+  source files use filename fallback. Existing authored fields are preserved;
+  missing draft status becomes `true`. Tags and access follow schema defaults.
+- Preserve body bytes and original mode, normalize one front-matter mapping,
+  and propagate child failures. Preview does not mutate source/configuration.
+- Existing dates use the organizer's schema coercion: a parseable calendar
+  overflow such as `2025-02-30` currently normalizes to `2025-03-02`. Metadata
+  mode does not add the separate `--date` override's calendar validation to
+  authored front matter.
+
+### 4. Validation & Error Matrix
+
+| Input | Result |
+| --- | --- |
+| Empty regular Markdown file | Valid inferred front matter at the original path |
+| Valid authored metadata, repeated command | Values/body retained; no duplicate block |
+| External absolute or caller-relative source | Same explicit source updated |
+| Recognized page workspace path | Page layout and slug inferred |
+| Preview | Candidate printed; source/configuration untouched |
+| Creation/setup/editor option conflict | Usage error before configuration or file writes |
+| Missing/non-Markdown/symlink source, malformed YAML/schema | Nonzero status, no source replacement |
+| Missing organizer, Node or explicit dotenv | Actionable error without interactive setup |
+
+### 5. Good / Base / Bad Cases
+
+Good: an existing Unicode article keeps its exact CRLF body and private access.
+Base: an empty indexed filename receives draft metadata automatically.
+Bad: an editor is opened or first-time setup blocks a redirected `format` run.
+
+### 6. Tests Required
+
+Exercise the real CLI in temporary synthetic workspaces: empty files,
+Unicode/CRLF/BOM body preservation, authored metadata and repeat invocation,
+external/relative/page paths, preview/no-write, configuration priority,
+argument conflicts, retired-option rejection and invalid/symlink/malformed
+inputs. Check Python syntax
+and lint. Run the organizer regression suite through
+`SAM_CONTENT_MODE=none ./sam npm --prefix apps/site run test:blog-meta`.
+Host Node execution is appropriate for the real source-editing CLI; package
+regression checks use `./sam`. This adapter does not require browser gates.
+
+### 7. Wrong vs Correct
+
+Wrong: manually append a second YAML block or replace the article's body.
+Correct: run `python3 content/add.py format /path/to/article.md`; use
+`--preview` to inspect the schema-valid candidate before writing.
+
 #### Terminal registry and virtual filesystem
 
 - A `TerminalEntry` contains exactly `kind`, `virtualPath`, `relativePath`,

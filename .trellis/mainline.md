@@ -629,3 +629,33 @@ evidence and its work-commit reference. This local maintenance task was never
 PR-backed; archival used the supported non-PR branch-validation option.
 The recovery copy remains outside the repository. No remote push or deployment
 was performed.
+
+## Existing Markdown Metadata Formatting
+
+On 2026-10-13 the owner requested task creation and implementation for automatic
+metadata on existing Markdown, prioritizing the repository `content/add.py`.
+The owner then selected `format PATH` as the public command. Task:
+`.trellis/tasks/10-13-add-existing-meta/`.
+
+`python3 content/add.py format PATH [--preview]` now reuses the existing metadata
+organizer without setup prompts, menus or an editor. It supports absolute and
+caller-relative external paths, recognizes post/page workspaces, fills missing
+metadata with draft defaults, and preserves authored values, body bytes and
+file mode. Existing creation/init behavior remains available. The unreleased
+`--meta` spelling is removed. The shared schema's existing date overflow
+coercion remains documented in task validation evidence.
+
+All six acceptance criteria are verified: an independent review reran 12
+focused CLI scenario groups; Python lint/format/syntax, diff/context/privacy
+checks and all 6 existing metadata-organizer regression tests passed. The
+owner-provided empty source also passed a read-only preview using the final
+command. Evidence: task `research/validation.md`. Browser/publication gates
+are not applicable to this CLI adapter. No Python type checker is configured.
+
+Implementation and verification are complete. The task remains `in_progress`
+pending owner-directed commit/archive. The external script copy and original
+Markdown example are unchanged. No commit, remote push or deployment occurred.
+
+The owner subsequently authorized submission on 2026-10-13. The approved
+closeout is the verified work commit followed by task archival and session
+bookkeeping. No remote push or deployment is included.
