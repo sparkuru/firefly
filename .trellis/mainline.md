@@ -659,3 +659,12 @@ Markdown example are unchanged. No commit, remote push or deployment occurred.
 The owner subsequently authorized submission on 2026-10-13. The approved
 closeout is the verified work commit followed by task archival and session
 bookkeeping. No remote push or deployment is included.
+
+Closeout completed: work commit `a4fb132`
+(`feat(content): add format command for Markdown metadata`). Task status is
+`completed`, archived at
+`.trellis/tasks/archive/2026-10/10-13-add-existing-meta/` with acceptance and
+validation evidence plus its work-commit reference. This local task was never
+PR-backed; archival used the supported non-PR branch-validation option. The
+external script and original Markdown example remain unchanged. No remote
+push or deployment was performed.
