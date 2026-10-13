@@ -439,3 +439,37 @@ Completed the owner-approved experiments-to-labs source rename and retired Memo 
 ### Next Steps
 
 - No remaining work for this task. Future product work requires owner direction.
+
+
+## Session 94: Markdown format command
+<!-- trellis-session: v=2 fp=c950a2f8baf697d5 -->
+
+**Date**: 2026-10-13
+**Task**: Markdown format command
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and independently verified format PATH; owner authorized submission, and the task is archived.
+
+### Main Changes
+
+- Added the noninteractive format PATH command with preview, existing metadata/body/mode preservation and external post/page paths.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a4fb132` | feat(content): add format command for Markdown metadata |
+
+### Testing
+
+- [OK] Independent CLI review passed 12 scenario groups; metadata organizer passed 6 regression tests; Ruff, syntax, diff, context and privacy checks passed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- No further implementation is pending; external script copy remains unchanged.
