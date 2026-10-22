@@ -21,6 +21,9 @@ existing behavior.
 - `memoPreview(tree, id, route)` projects balanced sanitized preview HTML.
 - `createMemoTimeIndex(records)`, `nearestMemo(index, position)` and
   `startMemoTimeline(root)` own the time mapping and progressive interaction.
+- `apps/site/src/scripts/memo-actions.ts` enhances `[data-memo-actions]` roots
+  with shared `startDocumentShare(root)` and detail-only `startMemoCopy(root)`;
+  `MemoLayout.astro` initializes actions independently of the timeline controller.
 - `tooling/memo-documents/cli.mjs` exposes `new`, `import`, `validate`, `install`.
   Its `installCandidate({ candidateRoot, workspaceRoot, apply: false })` is
   preflight-only; explicit apply installs absent files exclusively.
@@ -107,8 +110,8 @@ The owner's preview refinement removes global site header/identity/navigation
 and the large intro. Above `48rem` the feed contains only a sticky left vertical
 historical rail and a spacious readable stream. At `48rem` and below, CSS and
 the controller agree on a sticky top horizontal rail and one content column.
-Details are flat bounded date/content reading followed by a divider, exactly
-one bottom Return to timeline link and the footer. Keep authored titles as
+Details are flat bounded date/metadata/content reading followed by a divider,
+exactly one bottom Return to timeline link and the footer. Keep authored titles as
 content when present and the accessible title for untitled entries; omit global
 header/sidebar, top return and visible marker/tag/update chrome in details.
 Do not render an unused historical control or repeat author identity per entry.
@@ -142,9 +145,25 @@ padding-only height. Native anchor margins leave an absolute 96px content
 allowance instead of a font-scaled remainder that can shrink below the rail.
 Assert usable control area and the target's visible top/clearance, not only
 partial viewport intersection or a click that auto-scrolls a clipped control.
-Native browsing uses the center of the unobscured reading viewport, excluding
-the sticky horizontal rail on narrow screens. Select the visible entry interval
-containing that center; if the center is in a gap, choose the nearest visible
+The owner's 2026-10-21 refinement makes feed timestamps plain semantic time
+text, without timestamp links/tab stops or link-hover decoration. Every feed
+entry has a native bottom `Read Full` link, including complete untitled
+short entries; its footer places Share at the right. Read Full stays underlined,
+omits the trailing arrow and reuses Share's action hover/press/focus treatment,
+retaining native link navigation. Removing timestamp links
+must not strand short entries without complete-detail access.
+
+Mouse hover selects the entry under the pointer and synchronizes its one active
+border with the historical rail/date, without scrolling or creating history.
+Bodies remain selectable text, without a card-wide click action. During ordinary
+browsing, scrolling or layout movement under a stationary pointer reconciles the
+actual hovered entry; do not retain offscreen hover or let touch latch it.
+Explicit rail/month/hash/return seeks override stale pointer coordinates until
+actual browsing or deliberate mouse movement takes ownership.
+
+With no hovered entry, native browsing uses the center of the unobscured reading
+viewport, excluding the sticky horizontal rail on narrow screens. Select the
+visible entry interval containing that center; if the center is in a gap, choose the nearest visible
 interval with deterministic feed-order ties. A long entry stays active while
 containing the reading center. The clipped first visible entry is not inherently
 the active reading entry. This is a reading-position proxy, not gaze detection.
@@ -156,9 +175,10 @@ started before a seek must not be mistaken for fresh browsing when its final
 frames arrive. Fresh browsing input can still take ownership on actual movement.
 Explicit pointer/keyboard/month/hash/return seeks retain their selected entry
 through feedback expiry, induced events and geometry/observer updates. Resume
-central browse selection only after actual user scrolling; non-scrolling taps,
-body selection or modified keys must not reassign that explicit target. Wheel,
-touch, keyboard and scrollbar scrolling must still work. Preserve active ID
+central browse selection only after actual user scrolling when no entry is
+hovered; deliberate mouse movement may instead select its hovered entry.
+Non-scrolling taps, body selection or modified keys must not reassign that
+explicit target. Wheel, touch, keyboard and scrollbar scrolling must still work. Preserve active ID
 across orientation changes,
 long entries and media geometry; reserve sufficient tail space for the oldest
 entry to align below sticky controls.
@@ -179,6 +199,35 @@ controller-owned alignment, adding a native-equivalent fragment history entry
 only when the fragment changes; repeated same-fragment activation adds no
 history. Avoid a second default anchor scroll overriding an explicit target.
 Static anchors and modified/other-target activations remain native links.
+
+### Reading metadata and clipboard actions
+
+Detail headers retain the date on the left and right-align the compact metadata
+sequence: original Markdown bytes, CC BY-NC 4.0, COPY, Share. Use
+`renderDocument(entry).sourceByteLength`, including original frontmatter bytes;
+never derive this count from rendered or transformed text. The Memo license is
+a fixed display-only CC BY-NC 4.0 deed from the existing trusted license mapping;
+the authored `license` field remains post-only. No owner-source rewrite or
+Memo-schema extension accompanies this chrome.
+The native license link reuses Share's action hover/press/focus treatment and
+timing, without an underline; preserve its official deed href and static access.
+
+Share copies each entry's fragment-free canonical detail URL using the shared
+`resolveDocumentShareUrl` and `startDocumentShare` boundaries. Each feed entry
+owns its own action root/announcer and feedback. Detail COPY copies the complete
+rendered body as plain text with meaningful paragraph/line boundaries and
+Unicode, including content beyond the feed preview. Exclude metadata, actions,
+footer and return navigation. Both actions use `copyClipboardText` compatibility
+handling and report actual Copied/Failed feedback, then reset independently.
+
+Enhance clipboard controls independently of timeline startup; keep buttons and
+associated separators hidden until initialized. No-JS reading retains original
+metadata, license and native detail links without inert clipboard actions.
+Preserve document selection, focus and scroll on fallback; pending requests and
+page lifecycle changes must not produce stale feedback or reset newer requests.
+Keep feedback widths stable, native keyboard focus visible and touch actions at
+least 44px. Header metadata wraps below the date on narrow screens as necessary,
+without covering the body or overflowing at 200% text/short landscape widths.
 
 ### Bounded migration and retention
 
@@ -213,6 +262,8 @@ archival. Real corpus data stays ignored and never becomes tracked fixtures.
 | Draft/private entry or private-only asset | Absent from public projection |
 | Unsafe/missing/encoded traversal asset or dangling symlink | Reject, no substitute bytes |
 | Cursor seek/native scroll overlap | Ownership prevents oscillation |
+| Hover / explicit seek / stationary-pointer scroll | One controller-selected entry and matching rail/date, no hover-induced scroll |
+| Clipboard unavailable/rejected or retired request | Honest local failure/no stale feedback; native reading remains available |
 | JS failure, disabled JS or reduced motion | Static reading/native links remain usable |
 | Candidate/hash/history/title mismatch or racing target | Reject; preserve sources/evidence |
 | Legacy independent push or active combined-candidate setting | Explicit migration guidance |
@@ -239,6 +290,13 @@ clipped-edge/central/long-entry reading, seek retention versus actual browse
 takeover, date-bubble bounds after keyboard/touch seeks, transient emphasis and
 no-JS/runtime-failure navigation. Text/focus contrast and touch-target coverage
 must include the light surfaces and new navigation feedback.
+For reading-action changes, cover noncentral hover, pointer leave/gutters,
+stationary-pointer wheel, explicit-seek precedence and later mouse/browse
+takeover, native touch, noninteractive timestamps and short-entry detail links.
+Assert exact canonical Share URLs and independent local success/failure/reset,
+full-body COPY beyond preview with verse/Unicode/code/list boundaries, original
+source bytes and fixed deed. Cover pending/pagehide/pageshow cleanup, no-JS
+hidden actions, responsive metadata and ordinary Terminal Share regressions.
 Serialize content materialization and fixture preparation: negative-build tests
 and browser fixtures share the generated content/store. After interrupted or
 overlapping preparation, rebuild full/empty/single fixtures successfully before

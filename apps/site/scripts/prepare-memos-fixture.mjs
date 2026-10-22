@@ -23,8 +23,8 @@ export async function prepareMemoDocumentSources(root, { mode = 'full' } = {}) {
   for (let number = 0; number < 16; number += 1) await write('dense-' + String(number).padStart(2, '0'), 'm_fixture_dense_' + String(number).padStart(2, '0'), '2026-06-' + String(17 - number).padStart(2, '0') + 'T01:30:00.000Z', 'A June thought, number ' + number + '.');
   await write('middle', 'm_fixture_middle', '2024-08-04T10:20:00.000Z',
     'A long note with a complete independent reading page.\n\n## Reading\n\n' + 'A thoughtful sentence. '.repeat(65) +
-    '\n\n    indented code\n\n```text\n  code indentation\n' + 'longcode'.repeat(80) + '\n```\n\n| Column | Another |\n| --- | --- |\n| ' + 'longword'.repeat(70) + ' | cell |\n\n![Synthetic pixel](/pages/memos/assets/pixel.png)\n\n![Encoded Unicode image](/pages/memos/assets/%E5%9B%BE%E5%83%8F.png)\n\n<script>memoHostile()</script>\n\nThe final line survives in full.',
-    'title: A longer note\n');
+    '\n\n    indented code\n\n```text\n  code indentation\n' + 'longcode'.repeat(80) + '\n```\n\n| Column | Another |\n| --- | --- |\n| ' + 'longword'.repeat(70) + ' | cell |\n\n![Synthetic pixel](/pages/memos/assets/pixel.png)\n\n![Encoded Unicode image](/pages/memos/assets/%E5%9B%BE%E5%83%8F.png)\n\n<script>memoHostile()</script>\n\n- First list item\n- Second list item\n\n中文与星光 ✨\nVerse continues here.\u200b\n\nThe final line survives in full.',
+    'title: A longer note\ncanonical: https://canonical.fixture.invalid/complete-note/\n');
   await write('old', 'm_fixture_old', '2022-03-21T11:59:13.000Z', 'First verse line\nSecond verse line\n\nA distinct old entry.');
   await write('oldest', 'm_fixture_oldest', '2022-02-01T00:00:00.000Z', 'The earliest thought.');
   await writeFile(path.join(sourceRoot, 'memos/draft.md'), '---\nid: m_fixture_draft\ndate: 2027-12-01T00:00:00.000Z\ndraft: true\n---\nMEMO_FIXTURE_PRIVATE_INPUT draft\n');

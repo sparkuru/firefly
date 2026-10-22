@@ -630,6 +630,62 @@ PR-backed; archival used the supported non-PR branch-validation option.
 The recovery copy remains outside the repository. No remote push or deployment
 was performed.
 
+## Memo Reading Actions
+
+On 2026-10-21 the owner requested task creation for pointer-following Memo
+highlighting, plain feed timestamps, per-entry Share and detail byte/license/
+COPY/Share metadata. The owner explicitly approved the final planning summary
+with "开始". Active task: `.trellis/tasks/10-21-memo-reading-actions/`.
+
+The approved design preserves viewport-center fallback, explicit-seek behavior
+and static reading while giving mouse hover priority. Every entry retains a
+bottom detail link after timestamp navigation is removed. Detail COPY copies
+the complete rendered body as plain text; Share uses the permanent canonical
+detail URL. The license display is fixed CC BY-NC 4.0 without authored-schema
+changes. Implementation and local validation are authorized; source content,
+remote deployment, commit and archive remain outside the current instruction.
+
+Implementation and independent full-scope review are complete, with no review
+defects. The complete gate passed 417 Node tests and 265 browser checks, with
+201 browser applicability skips, plus both retained local runtime fixtures.
+Normal configured packaging passed route/header/404, exact inventory and
+non-root/read-only probes; its exact disposable image/container were cleaned.
+All 183 current Memo source files and nine reviewed app/test fingerprints stayed
+unchanged through final gates. The configured local preview is ready with the
+normal rebuilt publication. Evidence: task `research/validation.md`.
+Submit-ready review is human-optional; task remains `in_progress` awaiting
+owner-directed visual feedback/commit/archive. No push or deployment occurred.
+
+On 2026-10-22 the owner generally accepted the Memo changes and directly
+requested that the detail-entry link use Share's interaction visuals, drop its
+arrow and read underlined `Read Full`. This bounded refinement stays in the
+same task. Earlier complete-gate evidence remains the accepted baseline;
+focused revalidation and normal preview refresh are pending for the refinement.
+Commit/archive/push/deployment remain outside this instruction.
+
+The Read Full refinement is implemented and independently reviewed with no
+defects. Focused four-mode browser checks passed 8/8, site build/static checks
+18/18 and the changed Memo build fixture 1/1. Normal configured publication
+build and ready preview passed; served Memo HTML matches the rebuilt artifact,
+and all four refinement source/test fingerprints stayed fixed. The earlier
+complete-gate results remain historical baseline evidence. Task stays active
+for owner-directed acceptance/commit/archive; no push or deployment occurred.
+
+The owner's additional 2026-10-22 refinement makes Memo's CC BY-NC 4.0 deed
+link match Share's action visuals/timing without an underline, retaining native
+navigation and the underlined Read Full link. Focused four-project browser
+checks passed 4/4, site build/static checks 18/18 and independent review found
+no defects. Normal configured build/preview passed with exact served-detail
+artifact identity and three unchanged source/test fingerprints. No further
+full verify/package was needed for this scoped style change. Evidence remains
+in the active task's `research/validation.md`; commit/archive remain pending.
+
+On 2026-10-22 the owner accepted the final preview and explicitly authorized
+submission ("可以提交"). All requested behavior and visual refinements are
+accepted. The approved local closeout is the coherent work commit followed by
+supported task archival and session bookkeeping. No remote push or deployment
+is included, and no subsequent product work is inferred from this acceptance.
+
 ## Existing Markdown Metadata Formatting
 
 On 2026-10-13 the owner requested task creation and implementation for automatic

@@ -30,6 +30,13 @@ test('Memo-only workspace publishes projected full routes and referenced assets 
   const feed = await readFile(path.join(output, 'pages/memos/index.html'), 'utf8');
   const home = await readFile(path.join(output, 'index.html'), 'utf8');
   assert.match(feed, /id="m_fixture_middle"/u);
+  assert.equal((feed.match(/class="(?:[^"\n]*\s)?memo-read-full(?:\s[^"\n]*)?"/gu) ?? []).length, 20);
+  assert.doesNotMatch(feed, /<a[^>]*class="memo-date"/u);
+  const detail = await readFile(path.join(output, 'pages/memos/m_fixture_middle/index.html'), 'utf8');
+  const original = await readFile(path.join(sourceRoot, 'memos/middle.md'));
+  assert.match(detail, new RegExp('>' + original.length + ' bytes<', 'u'));
+  assert.match(detail, /href="https:\/\/creativecommons.org\/licenses\/by-nc\/4.0\/"/u);
+  assert.match(detail, /data-document-share-url="https:\/\/canonical.fixture.invalid\/complete-note\/"/u);
   assert.doesNotMatch(home, /data-memo-entry|A brief entry, fully readable|MemoTimeline/u);
   assert.match(home, /Open the Memo timeline/u);
   for (const filename of inventory.filter((item) => /\.(?:html|js|json|xml)$/u.test(item))) {

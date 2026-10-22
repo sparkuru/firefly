@@ -66,8 +66,7 @@
 .memo-entry[data-memo-active] { box-shadow: inset 2px 0 var(--memo-accent); }
 .memo-entry[data-memo-seek] { background: var(--memo-active-surface); }
 .memo-entry-header { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .8rem; margin-bottom: .65rem; color: var(--memo-muted); font-size: .85rem; }
-.memo-date { font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; min-height: 44px; margin-block: -.5rem; color: var(--memo-muted) !important; text-decoration: none; }
-.memo-date:hover { color: var(--memo-accent) !important; text-decoration: underline; }
+.memo-date { font-variant-numeric: tabular-nums; }
 .memo-marker { color: var(--memo-accent); background: var(--memo-active-surface); padding: .1rem .5rem; border-radius: 1rem; font-size: .75rem; }
 .memo-updated { font-size: .75rem; }
 .memo-entry-title { font-size: 1.25rem; line-height: 1.4; margin: .4rem 0 1rem; letter-spacing: -.025em; }
@@ -90,7 +89,17 @@
 .memo-body td, .memo-body th { text-align: left; padding: .6rem; border-bottom: 1px solid var(--memo-border); }
 .memo-tags { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: .75rem 0 0; color: var(--memo-muted); font-size: .85rem; }
 .memo-read-full, .memo-return { display: inline-flex; align-items: center; gap: .3rem; min-height: 44px; font-size: .9rem; }
-.memo-read-full { margin-top: .6rem; }
+.memo-entry-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .6rem; }
+.memo-action { display: inline-flex; justify-content: center; align-items: center; min-height: 44px; min-width: 6ch; padding: 0 .25rem; border: 0; border-radius: .25rem; color: var(--memo-accent); background: transparent; font: inherit; cursor: pointer; }
+.memo-action:hover { background: var(--memo-active-surface); }
+.memo-action:active { opacity: .7; }
+.memo-page .memo-read-full { text-decoration: underline; transition: none; }
+.memo-page .memo-license { text-decoration: none; transition: none; }
+.memo-action[hidden], .memo-metadata-item[hidden] { display: none !important; }
+.memo-entry-actions .memo-action { font-size: .9rem; }
+.memo-detail-metadata { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 .55rem; font-variant-numeric: tabular-nums; }
+.memo-metadata-item { display: inline-flex; align-items: center; gap: .55rem; white-space: nowrap; }
+.memo-detail-metadata a { display: inline-flex; align-items: center; min-height: 44px; }
 .memo-return { text-decoration: none; border-radius: .5rem; padding-inline: .5rem; }
 .memo-return:hover { background: var(--memo-active-surface); }
 .memo-detail { max-width: 46rem; margin-inline: auto; }

@@ -17,7 +17,7 @@ test('unified static feed, full details, publication policy and Pages discovery'
   await page.screenshot({ path: info.outputPath('integrated-memo-reading.png') });
   const preview = page.locator('#m_fixture_middle');
   await expect(preview).not.toContainText('The final line survives in full.');
-  await preview.getByRole('link', { name: /Read full entry/u }).click();
+  await preview.getByRole('link', { name: 'Read Full', exact: true }).click();
   await expect(page).toHaveURL(/\/pages\/memos\/m_fixture_middle\/$/u);
   await expect(page.getByRole('heading', { name: 'A longer note', exact: true })).toBeVisible();
   await expect(page.locator('.memo-body')).toContainText('The final line survives in full.');
@@ -58,6 +58,268 @@ test('empty/single timelines, keyboard links, zoom and local overflow stay reada
   await page.goto('/fixture-single/pages/memos/');
   await expect(page.locator('[data-memo-entry]')).toHaveCount(1);
   await expect(page.getByRole('slider', { name: 'Historical time', includeHidden: true })).toHaveAttribute('aria-disabled', 'true');
+});
+
+test('plain dates, complete entry links and progressive metadata actions remain readable', async ({ page }, info) => {
+  await page.goto('/pages/memos/');
+  const dates = page.locator('[data-memo-entry] .memo-date');
+  expect(await dates.evaluateAll((nodes) => nodes.every((node) => node.tagName === 'TIME' && node.closest('a') === null && !node.hasAttribute('tabindex')))).toBe(true);
+  await dates.first().click();
+  await expect(page).toHaveURL(/\/pages\/memos\/$/u);
+  await expect(page.locator('.memo-read-full')).toHaveCount(20);
+  const first = page.locator('#m_fixture_recent');
+  const readFull = first.getByRole('link', { name: 'Read Full', exact: true });
+  const feedShare = first.locator('[data-document-share]');
+  await expect(readFull).toHaveText('Read Full');
+  await expect(readFull.locator('span,svg')).toHaveCount(0);
+  await expect(readFull).toHaveAttribute('href', '/pages/memos/m_fixture_recent/');
+  await expect(readFull).toHaveCSS('text-decoration-line', 'underline');
+  expect((await readFull.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await readFull.hover();
+  await expect(readFull).toHaveCSS('background-color', 'rgb(237, 244, 252)');
+  await page.mouse.down();
+  await expect(readFull).toHaveCSS('opacity', '0.7');
+  await page.mouse.up();
+  await expect(page).toHaveURL(/\/pages\/memos\/m_fixture_recent\/$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/pages\/memos\/$/u);
+  await readFull.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(readFull).toHaveCSS('outline-style', 'solid');
+  await expect(readFull).toHaveCSS('outline-width', '3px');
+  const focus = await readFull.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { color: style.outlineColor, width: style.outlineWidth, offset: style.outlineOffset };
+  });
+  if (info.project.use.javaScriptEnabled) await expect(first.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
+  else await expect(first.locator('[data-document-share]')).toBeHidden();
+  if (info.project.use.javaScriptEnabled) {
+    await feedShare.hover();
+    await expect(feedShare).toHaveCSS('background-color', 'rgb(237, 244, 252)');
+    await page.mouse.down();
+    await expect(feedShare).toHaveCSS('opacity', '0.7');
+    await page.mouse.move(0, 0);
+    await page.mouse.up();
+    await feedShare.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    expect(await feedShare.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { color: style.outlineColor, width: style.outlineWidth, offset: style.outlineOffset };
+    })).toEqual(focus);
+  }
+  await page.screenshot({ path: info.outputPath('memo-actions-feed.png') });
+  await readFull.click();
+  await expect(page.locator('.memo-detail-metadata')).toContainText(/\d+ bytes/u);
+  const license = page.getByRole('link', { name: 'CC BY-NC 4.0', exact: true });
+  const deed = 'https://creativecommons.org/licenses/by-nc/4.0/';
+  await expect(license).toHaveAttribute('href', deed);
+  await expect(license).toHaveAttribute('rel', 'license');
+  await expect(license).toHaveCSS('text-decoration-line', 'none');
+  await expect(license).toHaveCSS('transition-duration', '0s');
+  expect((await license.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await license.hover();
+  await expect(license).toHaveCSS('background-color', 'rgb(237, 244, 252)');
+  await page.mouse.down();
+  await expect(license).toHaveCSS('opacity', '0.7');
+  await page.route(deed, (route) => route.fulfill({ contentType: 'text/plain', body: 'License destination fixture.' }));
+  await page.mouse.up();
+  await expect(page).toHaveURL(deed);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/pages\/memos\/m_fixture_recent\/$/u);
+  await license.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(license).toHaveCSS('outline-style', 'solid');
+  expect(await license.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { color: style.outlineColor, width: style.outlineWidth, offset: style.outlineOffset };
+  })).toEqual(focus);
+  const copy = page.locator('[data-memo-copy]');
+  const share = page.locator('[data-document-share]');
+  await expect(share).toHaveCSS('transition-duration', '0s');
+  if (info.project.use.javaScriptEnabled) {
+    await expect(copy).toBeVisible();
+    await expect(share).toBeVisible();
+    for (const action of [copy, share]) {
+      expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await action.focus();
+      await expect(action).toBeFocused();
+    }
+  } else {
+    await expect(copy).toBeHidden();
+    await expect(share).toBeHidden();
+    await expect(page.locator('[data-memo-copy-group]')).toBeHidden();
+    await expect(page.locator('[data-document-share-group]')).toBeHidden();
+  }
+  await page.screenshot({ path: info.outputPath('memo-actions-detail.png') });
+  for (const viewport of [{ width: 375, height: 812 }, { width: 667, height: 375 }]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await expect(page.getByRole('link', { name: 'CC BY-NC 4.0', exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath('memo-actions-detail-enlarged-' + viewport.width + '.png') });
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('.memo-entry')).toHaveCSS('transition-duration', '0s');
+});
+
+test('mouse hover owns the active entry without moving the page and reconciles scrolling', async ({ page }, info) => {
+  test.skip(info.project.name !== 'memos-desktop-interactive', 'Mouse hover is exercised separately from native touch browsing.');
+  await page.goto('/pages/memos/');
+  const root = page.locator('[data-memo-timeline]');
+  await expect(root).toHaveAttribute('data-memo-ready', 'true');
+  await page.evaluate(() => {
+    for (const card of document.querySelectorAll<HTMLElement>('[data-memo-entry]')) {
+      card.style.height = '180px';
+      card.style.overflow = 'hidden';
+    }
+    scrollTo({ top: 180, behavior: 'instant' });
+  });
+  await page.mouse.move(1, 400);
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_dense_02');
+  const before = await page.evaluate(() => ({ y: scrollY, url: location.href, history: history.length }));
+  const hover = async (id: string) => {
+    const card = page.locator('#' + id);
+    const box = (await card.boundingBox())!;
+    await page.mouse.move(box.x + 20, Math.max(1, box.y + 50));
+    await expect(root).toHaveAttribute('data-memo-active-id', id);
+    await expect(page.locator('[data-memo-entry][data-memo-active]')).toHaveCount(1);
+    await expect(page.locator('[data-memo-current-date]')).toHaveText(await card.locator('time').innerText());
+  };
+  await hover('m_fixture_dense_00');
+  await hover('m_fixture_dense_01');
+  expect(await page.evaluate(() => ({ y: scrollY, url: location.href, history: history.length }))).toEqual(before);
+  const point = await page.locator('#m_fixture_dense_01').boundingBox();
+  await page.mouse.wheel(0, 360);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(before.y + 360);
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_dense_03');
+  expect(point!.y).toBeLessThan(900);
+  await page.mouse.move(1, 400);
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_dense_04');
+  await page.mouse.move(700, 200);
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_dense_02');
+  await page.mouse.move(-10, -10);
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_dense_04');
+  await page.getByRole('slider').focus();
+  await page.keyboard.press('Home');
+  await expect(root).toHaveAttribute('data-memo-interaction', 'browsing');
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
+  await page.evaluate(() => { dispatchEvent(new Event('scroll')); document.querySelector<HTMLElement>('#m_fixture_dense_01')!.style.height = '190px'; });
+  await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
+  await hover('m_fixture_dense_00');
+});
+
+test('feed Share and detail COPY use exact independent values and local clipboard feedback', async ({ page }, info) => {
+  test.skip(!info.project.use.javaScriptEnabled, 'Static controls are intentionally hidden.');
+  await page.addInitScript(() => {
+    (window as any).memoWrites = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => { (window as any).memoWrites.push(text); } } });
+  });
+  await page.goto('/pages/memos/');
+  const first = page.locator('#m_fixture_recent [data-document-share]');
+  const second = page.locator('#m_fixture_dense_00 [data-document-share]');
+  const width = (await first.boundingBox())!.width;
+  await first.focus();
+  await page.locator('#m_fixture_recent .memo-body').evaluate((body) => {
+    const range = document.createRange(); range.selectNodeContents(body);
+    getSelection()!.removeAllRanges(); getSelection()!.addRange(range);
+  });
+  const reading = await page.evaluate(() => ({ text: getSelection()!.toString(), y: scrollY }));
+  await page.keyboard.press('Enter');
+  await expect(first).toHaveText('Copied');
+  await expect(first).toBeFocused();
+  expect(await page.evaluate(() => ({ text: getSelection()!.toString(), y: scrollY }))).toEqual(reading);
+  expect((await first.boundingBox())!.width).toBe(width);
+  await expect(second).toHaveText('Share');
+  await second.click();
+  expect(await page.evaluate(() => (window as any).memoWrites)).toEqual([
+    'https://site.fixture.invalid/pages/memos/m_fixture_recent/',
+    'https://site.fixture.invalid/pages/memos/m_fixture_dense_00/'
+  ]);
+  await expect(page).toHaveURL(/\/pages\/memos\/$/u);
+  await page.goto('/pages/memos/m_fixture_middle/');
+  const copy = page.locator('[data-memo-copy]');
+  const share = page.locator('[data-document-share]');
+  await copy.click();
+  await expect(copy).toHaveText('Copied');
+  await expect(share).toHaveText('Share');
+  const text = await page.evaluate(() => (window as any).memoWrites[0] as string);
+  expect(text).toContain('A long note with a complete independent reading page.\n\nReading\n\n');
+  expect(text).toContain('  code indentation\n');
+  expect(text).toContain('First list item\nSecond list item');
+  expect(text).toContain('中文与星光 ✨\nVerse continues here.\u200b');
+  expect(text.endsWith('The final line survives in full.')).toBe(true);
+  expect(text).not.toMatch(/bytes|CC BY|COPY|Share|Return to timeline|Notes, through time|memoHostile/u);
+  await share.click();
+  await expect(share).toHaveText('Copied');
+  expect(await page.evaluate(() => (window as any).memoWrites[1])).toBe('https://canonical.fixture.invalid/complete-note/');
+  await expect(copy).toHaveText('COPY');
+  await expect(share).toHaveText('Share');
+});
+
+test('Memo clipboard fallback preserves selected body, focus and scroll and reports denial', async ({ page }, info) => {
+  test.skip(!info.project.use.javaScriptEnabled, 'Static controls are intentionally hidden.');
+  await page.goto('/pages/memos/m_fixture_middle/');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Denied'); } } });
+    document.execCommand = (command: string) => {
+      (window as any).memoFallback = (document.activeElement as HTMLTextAreaElement).value;
+      return command === 'copy';
+    };
+  });
+  const copy = page.locator('[data-memo-copy]');
+  await copy.focus();
+  await page.locator('.memo-body p').first().evaluate((body) => {
+    const range = document.createRange(); range.selectNodeContents(body);
+    getSelection()!.removeAllRanges(); getSelection()!.addRange(range);
+  });
+  const before = await page.evaluate(() => ({ text: getSelection()!.toString(), y: scrollY }));
+  await page.keyboard.press('Enter');
+  await expect(copy).toHaveText('Copied');
+  await expect(copy).toBeFocused();
+  expect(await page.evaluate(() => ({ text: getSelection()!.toString(), y: scrollY }))).toEqual(before);
+  expect(await page.evaluate(() => (window as any).memoFallback)).toContain('The final line survives in full.');
+  await expect(page.locator('[data-clipboard-copy-buffer]')).toHaveCount(0);
+  await page.evaluate(() => { document.execCommand = () => false; });
+  await page.keyboard.press('Enter');
+  await expect(copy).toHaveText('Failed');
+  await expect(page.locator('[data-memo-copy-announcer]')).toHaveText('Could not copy Memo text.');
+  await page.locator('[data-document-share]').click();
+  await expect(page.locator('[data-document-share]')).toHaveText('Failed');
+  await expect(page.locator('[data-document-share-announcer]')).toHaveText('Could not copy document link.');
+  await expect(copy).toHaveText('COPY');
+  await expect(page.locator('[data-document-share]')).toHaveText('Share');
+});
+
+test('Memo pending requests serialize and page lifecycle retires stale completions', async ({ page }, info) => {
+  test.skip(!info.project.use.javaScriptEnabled, 'Static controls are intentionally hidden.');
+  await page.goto('/pages/memos/m_fixture_recent/');
+  await page.evaluate(() => {
+    (window as any).memoPending = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => new Promise<void>((resolve, reject) => { (window as any).memoPending.push({ resolve, reject }); }) } });
+    document.execCommand = () => { (window as any).lateFallback = true; return false; };
+  });
+  for (const selector of ['[data-memo-copy]', '[data-document-share]']) {
+    const button = page.locator(selector);
+    const label = await button.innerText();
+    await button.click();
+    await button.click();
+    expect(await page.evaluate(() => (window as any).memoPending.length)).toBe(1);
+    await page.evaluate(() => { dispatchEvent(new PageTransitionEvent('pagehide')); dispatchEvent(new PageTransitionEvent('pageshow')); });
+    await button.click();
+    expect(await page.evaluate(() => (window as any).memoPending.length)).toBe(2);
+    await page.evaluate(() => (window as any).memoPending[0].reject(new Error('Retired')));
+    await expect(button).toHaveText(label);
+    await button.click();
+    expect(await page.evaluate(() => (window as any).memoPending.length)).toBe(2);
+    await page.evaluate(() => (window as any).memoPending[1].resolve());
+    await expect(button).toHaveText('Copied');
+    expect(await page.evaluate(() => (window as any).lateFallback)).toBeUndefined();
+    await expect(button).toHaveText(label);
+    await page.evaluate(() => { (window as any).memoPending = []; });
+  }
 });
 
 test('scrub, natural scroll, equal months and detail return synchronize in both orientations', async ({ page }, info) => {
@@ -110,7 +372,7 @@ test('scrub, natural scroll, equal months and detail return synchronize in both 
     scrollTo({ top: scrollY + card.getBoundingClientRect().top - offset - 20, behavior: 'instant' });
   });
   await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_middle');
-  await page.locator('#m_fixture_middle .memo-date').click();
+  await page.locator('#m_fixture_middle .memo-read-full').click();
   await expect(page).toHaveURL(/\/m_fixture_middle\/$/u);
   await page.goBack();
   await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_middle');
@@ -130,7 +392,7 @@ test('missing controller keeps native month/detail navigation', async ({ page },
   await page.getByRole('link', { name: '2022-03', exact: true }).click();
   await expect(page).toHaveURL(/#m_fixture_old$/u);
   await expect(page.locator('#m_fixture_old')).toBeVisible();
-  await page.locator('#m_fixture_old .memo-date').click();
+  await page.locator('#m_fixture_old .memo-read-full').click();
   await expect(page).toHaveURL(/\/m_fixture_old\/$/u);
 });
 
@@ -355,11 +617,16 @@ test('explicit seeks survive scroll and geometry callbacks until browsing resume
   expect(await page.evaluate(() => scrollY)).toBe(stillY);
   await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
   if (info.project.name === 'memos-mobile-interactive') {
+    // The preceding real mouse move now takes hover ownership; establish a fresh seek for the touch-only case.
+    await slider.focus();
+    await page.keyboard.press('Home');
+    await expect(root).toHaveAttribute('data-memo-interaction', 'browsing');
+    const beforeTap = await page.evaluate(() => scrollY);
     const contact = await page.context().newCDPSession(page);
     const body = (await page.locator('#m_fixture_recent .memo-body').boundingBox())!;
     await contact.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: body.x + 20, y: body.y + 10, id: 1 }] });
     await contact.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    expect(await page.evaluate(() => scrollY)).toBe(stillY);
+    expect(await page.evaluate(() => scrollY)).toBe(beforeTap);
     await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
     await contact.detach();
   }
@@ -412,7 +679,7 @@ test('minimal untitled detail and Back restore the clicked entry without stale h
     await expect(root).toHaveAttribute('data-memo-ready', 'true');
     await page.evaluate(() => history.replaceState({ otherOwner: 'preserved' }, ''));
   }
-  await page.locator('#m_fixture_recent .memo-date').click();
+  await page.locator('#m_fixture_recent .memo-read-full').click();
   await expect(page.locator('h1')).toHaveCount(1);
   await expect(page.locator('.memo-entry-title,.memo-marker,.memo-tags,.memo-updated,[data-memo-header]')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /Return to timeline/u })).toHaveCount(1);
@@ -423,7 +690,7 @@ test('minimal untitled detail and Back restore the clicked entry without stale h
     await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
     expect(await page.evaluate(() => history.state)).toEqual({ otherOwner: 'preserved' });
     await page.evaluate(() => history.replaceState(null, ''));
-    await page.locator('#m_fixture_recent .memo-date').click();
+    await page.locator('#m_fixture_recent .memo-read-full').click();
     await expect(page).toHaveURL(/\/m_fixture_recent\/$/u);
     await page.goBack();
     await expect(root).toHaveAttribute('data-memo-active-id', 'm_fixture_recent');
@@ -449,7 +716,7 @@ cachedTest('BFCache Back consumes return context and preserves the clicked short
         document.body.dataset.memoBfcacheSentinel = 'original-document';
         addEventListener('pageshow', (event) => { document.body.dataset.memoBfcacheReturn = String(event.persisted); });
       });
-      await page.locator('#m_fixture_recent .memo-date').click();
+      await page.locator('#m_fixture_recent .memo-read-full').click();
       await expect(page).toHaveURL(/\/m_fixture_recent\/$/u);
       await page.goBack();
       await expect(page).toHaveURL(/\/pages\/memos\/#m_fixture_old$/u);

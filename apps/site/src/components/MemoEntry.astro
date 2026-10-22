@@ -2,6 +2,8 @@
 import type { CanonicalDocument } from '../lib/content';
 import { memoDateLabel } from '../lib/memo-time.mjs';
 import type { renderDocument } from '../lib/render-document';
+import { resolveDocumentShareUrl } from '../lib/document-share-url.mjs';
+import { getPostLicense } from '../lib/post-license.mjs';
 interface Props { canonical: CanonicalDocument; document: Awaited<ReturnType<typeof renderDocument>>; preview?: boolean; }
 const { canonical, document, preview = false } = Astro.props;
 const { entry } = canonical;
@@ -9,10 +11,18 @@ const { Content, memoPreview } = document;
 const id = entry.collection === 'memos' ? entry.data.id : entry.id;
 const date = entry.data.date.toISOString();
 const Heading = preview ? 'h2' : 'h1';
+const shareUrl = resolveDocumentShareUrl(canonical.href, entry.data.canonical);
+const license = getPostLicense('CC-BY-NC-4.0');
 ---
-<article class:list={['memo-entry', { 'memo-entry-detail': !preview }]} id={preview ? id : undefined} data-memo-entry={preview ? '' : undefined} data-memo-date={preview ? date : undefined}>
+<article class:list={['memo-entry', { 'memo-entry-detail': !preview }]} id={preview ? id : undefined} data-memo-entry={preview ? '' : undefined} data-memo-date={preview ? date : undefined} data-memo-actions>
   <header class="memo-entry-header">
-    {preview ? <a class="memo-date" href={canonical.href}><time datetime={date}>{memoDateLabel(date)}</time></a> : <time class="memo-detail-date" datetime={date}>{memoDateLabel(date)}</time>}
+    <time class={preview ? 'memo-date' : 'memo-detail-date'} datetime={date}>{memoDateLabel(date)}</time>
+    {!preview && <div class="memo-detail-metadata">
+      <span>{document.sourceByteLength} bytes</span>
+      <span class="memo-metadata-item"><span aria-hidden="true">·</span><a class="memo-license memo-action" href={license.href} rel="license">{license.label}</a></span>
+      <span class="memo-metadata-item" data-memo-copy-group hidden><span aria-hidden="true">·</span><button class="memo-action" type="button" data-memo-copy hidden>COPY</button></span>
+      <span class="memo-metadata-item" data-document-share-group hidden><span aria-hidden="true">·</span><button class="memo-action" type="button" data-document-share data-document-share-url={shareUrl} hidden>Share</button></span>
+    </div>}
     {preview && canonical.markers.map((marker) => <span class="memo-marker" data-content-marker={marker.id}>{marker.label}</span>)}
     {preview && entry.data.updated && <span class="memo-updated">Updated {memoDateLabel(entry.data.updated)}</span>}
   </header>
@@ -22,5 +32,7 @@ const Heading = preview ? 'h2' : 'h1';
     {preview && memoPreview ? <div set:html={memoPreview.html} /> : <Content />}
   </div>
   {preview && entry.data.tags?.length && <ul class="memo-tags" aria-label="Tags">{entry.data.tags.map((tag: string) => <li>#{tag}</li>)}</ul>}
-  {preview && memoPreview?.truncated && <a class="memo-read-full" href={canonical.href}>Read full entry <span aria-hidden="true">↗</span></a>}
+  {preview && <div class="memo-entry-actions"><a class="memo-read-full memo-action" href={canonical.href}>Read Full</a><button class="memo-action" type="button" data-document-share data-document-share-url={shareUrl} hidden>Share</button></div>}
+  <span class="memo-accessible-title" data-document-share-announcer aria-live="polite" aria-atomic="true"></span>
+  {!preview && <span class="memo-accessible-title" data-memo-copy-announcer aria-live="polite" aria-atomic="true"></span>}
 </article>

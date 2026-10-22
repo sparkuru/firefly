@@ -24,6 +24,8 @@ export function startMemoTimeline(root: HTMLElement) {
   let browsingIntent = false;
   let lockedScrollY = 0;
   let lockedGeometry: number[] = [];
+  let mousePoint: { x: number; y: number } | null = null;
+  let mouseIntent = false;
 
   const geometry = () => [control.getBoundingClientRect().height, ...cards.flatMap((card) => {
     const box = card.getBoundingClientRect();
@@ -95,6 +97,11 @@ export function startMemoTimeline(root: HTMLElement) {
   const browse = () => {
     frame = 0;
     if (owner !== 'browsing' || seekLocked || !cards.length) return;
+    if (mouseIntent && mousePoint) {
+      const hovered = document.elementFromPoint(mousePoint.x, mousePoint.y)?.closest<HTMLElement>('[data-memo-entry]');
+      const entryIndex = hovered ? cards.indexOf(hovered) : -1;
+      if (entryIndex >= 0) { display(entryIndex); return; }
+    }
     const top = narrow.matches ? Math.max(0, Math.min(innerHeight, control.getBoundingClientRect().bottom)) : 0;
     const line = (top + innerHeight) / 2;
     const boxes = cards.map((card) => card.getBoundingClientRect());
@@ -113,6 +120,7 @@ export function startMemoTimeline(root: HTMLElement) {
     cancelAnimationFrame(releaseFrame);
     seekLocked = true;
     browsingIntent = false;
+    mouseIntent = false;
     setOwner('settling');
     align(entryIndex);
     rememberSeek();
@@ -210,6 +218,7 @@ export function startMemoTimeline(root: HTMLElement) {
       if (current.some((value, position) => Math.abs(value - (lockedGeometry[position] ?? value)) > 1)) rememberSeek();
       else if (owner === 'browsing' || browsingIntent) {
         seekLocked = false;
+        mouseIntent = mousePoint !== null;
         browsingIntent = false;
         cancelAnimationFrame(releaseFrame);
         setOwner('browsing');
@@ -218,11 +227,32 @@ export function startMemoTimeline(root: HTMLElement) {
     }
     scheduleBrowse();
   }, { passive: true });
+  window.addEventListener('pointermove', (event) => {
+    if (event.pointerType !== 'mouse' || (mousePoint?.x === event.clientX && mousePoint.y === event.clientY)) return;
+    mousePoint = { x: event.clientX, y: event.clientY };
+    if (owner === 'dragging') return;
+    mouseIntent = true;
+    const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-memo-entry]');
+    if (hovered && root.contains(hovered)) {
+      seekLocked = false;
+      browsingIntent = false;
+      cancelAnimationFrame(releaseFrame);
+      setOwner('browsing');
+      clearFeedback();
+    }
+    scheduleBrowse();
+  }, { passive: true });
+  const clearMouse = () => { mousePoint = null; mouseIntent = false; scheduleBrowse(); };
+  document.addEventListener('pointerout', (event) => { if (event.pointerType === 'mouse' && event.relatedTarget === null) clearMouse(); });
+  window.addEventListener('pointercancel', clearMouse);
+  window.addEventListener('blur', clearMouse);
+  window.addEventListener('pagehide', clearMouse);
   window.addEventListener('wheel', interrupt, { passive: true });
-  window.addEventListener('touchstart', (event) => { if (!(event.target instanceof Node) || !slider.contains(event.target)) interrupt(); }, { passive: true });
+  window.addEventListener('touchstart', (event) => { clearMouse(); if (!(event.target instanceof Node) || !slider.contains(event.target)) interrupt(); }, { passive: true });
   window.addEventListener('pointerdown', (event) => { if (!(event.target instanceof Node) || !control.contains(event.target)) interrupt(); }, { passive: true });
   window.addEventListener('keydown', (event) => { if (event.target !== slider && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.isComposing && ['PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp', ' '].includes(event.key)) interrupt(); });
   const resize = () => {
+    clearMouse();
     slider.setAttribute('aria-orientation', narrow.matches ? 'horizontal' : 'vertical');
     if (owner !== 'dragging') { measure(); settle(active); }
   };

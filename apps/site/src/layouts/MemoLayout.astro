@@ -27,5 +27,8 @@ const { title, description, ...head } = Astro.props;
     <a class="memo-skip" href="#main-content">Skip to content</a>
     <main id="main-content" class="memo-main" tabindex="-1"><slot /></main>
     <footer class="memo-footer">Notes, through time.</footer>
+    <script>
+      import '../scripts/memo-actions.ts';
+    </script>
   </body>
 </html>

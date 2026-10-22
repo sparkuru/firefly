@@ -133,6 +133,23 @@ async function listFiles(directory, prefix = '') {
   return files.sort();
 }
 
+async function scriptClosure(entry) {
+  const visited = new Set();
+  const pending = [entry];
+  while (pending.length) {
+    const current = pending.pop();
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const source = await readFile(path.join(distRoot, current), 'utf8');
+    for (const [, reference] of source.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)["'`](\.[^"'`]+\.js)["'`]/gu)) {
+      const dependency = path.posix.normalize(path.posix.join(path.posix.dirname(current), reference));
+      assert.ok(dependency.startsWith('_astro/'), 'Built script imports must stay in the local asset namespace.');
+      pending.push(dependency);
+    }
+  }
+  return visited;
+}
+
 async function collectContentRoutes(directory, prefix, includeDirectories) {
   const routes = [];
 
@@ -286,12 +303,14 @@ test('static build emits only the implemented route surface', async () => {
 
   assert.deepEqual(htmlFiles, expectedHtmlFiles);
   const scripts = files.filter((file) => /\.[cm]?js$/u.test(file));
-  assert.equal(scripts.length, 6);
+  assert.equal(scripts.length, 8);
   assert.equal(scripts.filter((file) => /^_astro\/TerminalHome\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/DocumentNavigationStatus\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/document-navigation\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/TerminalDocument\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(scripts.filter((file) => /^_astro\/clipboard-text\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/document-share\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
+  assert.equal(scripts.filter((file) => /^_astro\/MemoLayout\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   assert.equal(files.filter((file) => file.endsWith('.css')).length, 2);
   assert.equal(scripts.filter((file) => /^_astro\/MemoTimeline\.astro_astro_type_script_index_0_lang\.[A-Za-z0-9_-]+\.js$/u.test(file)).length, 1);
   const compatibility = await readFile(path.join(distRoot, 'memos/index.html'), 'utf8');
@@ -565,13 +584,25 @@ test('route closures keep public documents in Terminal styles and isolate home J
   const navigationScript = files.find((file) => /DocumentNavigationStatus.*\.js$/u.test(file));
   const shareScript = files.find((file) => /TerminalDocument.*\.js$/u.test(file));
   const clipboardScript = files.find((file) => /clipboard-text.*\.js$/u.test(file));
+  const sharedShareScript = files.find((file) => /document-share\.[A-Za-z0-9_-]+\.js$/u.test(file));
+  const memoActionsScript = files.find((file) => /MemoLayout.*\.js$/u.test(file));
   const stylesheet = files.find((file) => file.endsWith('.css'));
   assert.ok(homeScript);
   assert.ok(navigationScript);
   assert.ok(shareScript);
   assert.ok(clipboardScript);
-  assert.match(await readFile(path.join(distRoot, shareScript), 'utf8'), new RegExp(clipboardScript.split('/').at(-1).replaceAll('.', '\\.')));
-  assert.match(await readFile(path.join(distRoot, homeScript), 'utf8'), new RegExp(clipboardScript.split('/').at(-1).replaceAll('.', '\\.')));
+  assert.ok(sharedShareScript);
+  assert.ok(memoActionsScript);
+  const standaloneClosure = await scriptClosure(shareScript);
+  const homeClosure = await scriptClosure(homeScript);
+  const memoClosure = await scriptClosure(memoActionsScript);
+  assert.ok(standaloneClosure.has(sharedShareScript));
+  assert.ok(standaloneClosure.has(clipboardScript));
+  assert.ok(homeClosure.has(clipboardScript));
+  assert.ok(memoClosure.has(sharedShareScript));
+  assert.ok(memoClosure.has(clipboardScript));
+  assert.ok(!homeClosure.has(memoActionsScript));
+  assert.ok(!standaloneClosure.has(memoActionsScript));
   assert.ok(stylesheet);
 
   const routes = {
@@ -583,6 +614,9 @@ test('route closures keep public documents in Terminal styles and isolate home J
     markdown: await readFile(path.join(distRoot, 'pages/markdown-template/index.html'), 'utf8')
   };
   const terminalDocumentRoutes = [routes.about, routes.article, routes.markdown];
+  for (const html of Object.values(routes)) assert.doesNotMatch(html, new RegExp(escapeRegExp(memoActionsScript)));
+  const memoTimeline = await readFile(path.join(distRoot, 'pages/memos/index.html'), 'utf8');
+  assert.match(memoTimeline, new RegExp(escapeRegExp(memoActionsScript)));
   const builtDocumentRoutes = await Promise.all(
     files
       .filter((file) => file.endsWith('.html'))
