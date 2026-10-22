@@ -473,3 +473,40 @@ Implemented and independently verified format PATH; owner authorized submission,
 ### Next Steps
 
 - No further implementation is pending; external script copy remains unchanged.
+
+
+## Session 95: Memo reading actions and visual refinements
+<!-- trellis-session: v=2 fp=f231d72867e8c419 -->
+
+**Date**: 2026-10-22
+**Task**: Memo reading actions and visual refinements
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and validated Memo hover selection, plain timestamps, per-entry Share, detail metadata/COPY/Share and owner-requested Read Full/license visuals; owner accepted and authorized local closeout.
+
+### Main Changes
+
+- Preserved native reading, explicit seeks and viewport-center fallback while adding mouse-hover priority.
+- Added independently scoped clipboard actions and native Read Full/license links with consistent interaction visuals.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1175351` | feat(memos): refine selection and reading actions |
+
+### Testing
+
+- [OK] Baseline: 417 Node passes, 265 browser passes with 201 applicability skips, complete local runtime fixtures and normal packaging passed.
+- [OK] Read Full refinement: focused browser 8/8, static 18/18 and Memo build fixture 1/1; license refinement: focused browser 4/4 and static 18/18. Independent reviews passed.
+- [OK] Configured preview refresh and exact served-artifact/source fingerprint checks passed; original Memo source hashes were preserved.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Task is archived. Await new owner direction; no push, deployment or subsequent product work authorized.
