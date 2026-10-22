@@ -161,7 +161,7 @@ main() {
 	media_route="/memos/${media_file}"
 	upstream_container=$(docker run --detach --read-only --cap-drop ALL --security-opt no-new-privileges:true \
 		--user "$(id -u):$(id -g)" --label "sam.repo=${REPO_ROOT}" --label sam.scope=plugin-access-fixture --publish 127.0.0.1::8080 \
-		--mount "type=bind,src=${fixture_root}/upstream.mjs,dst=/fixture-upstream.mjs,readonly" node:22-alpine node /fixture-upstream.mjs)
+		--mount "type=bind,src=${fixture_root}/upstream.mjs,dst=/fixture-upstream.mjs,readonly" node:22.23.4-alpine node /fixture-upstream.mjs)
 	for attempt in {1..30}; do
 		[[ "$(docker inspect --format '{{.State.Running}}' "${upstream_container}")" == true ]] || return 1
 		if docker exec "${upstream_container}" node -e 'fetch("http://127.0.0.1:8787/v1/comments/admin/export").then(r => process.exit(r.status === 200 ? 0 : 1)).catch(() => process.exit(1))'; then break; fi
@@ -172,7 +172,7 @@ main() {
 		--user nginx --network "container:${upstream_container}" --label "sam.repo=${REPO_ROOT}" --label sam.scope=plugin-access-fixture \
 		--mount "type=bind,src=${fixture_root}/nginx.conf,dst=/etc/nginx/nginx.conf,readonly" \
 		--mount "type=bind,src=${fixture_root}/blog,dst=/fixture/blog,readonly" \
-		--mount "type=bind,src=${candidate}/public,dst=/fixture/memos,readonly" --entrypoint nginx nginx:1.28-alpine -g 'daemon off;')
+		--mount "type=bind,src=${candidate}/public,dst=/fixture/memos,readonly" --entrypoint nginx nginx:1.30.6-alpine -g 'daemon off;')
 	docker exec "${nginx_container}" nginx -t
 	port=$(docker port "${upstream_container}" 8080/tcp)
 	origin="http://127.0.0.1:${port##*:}"

@@ -54,7 +54,9 @@ with its exact error; it is not counted as a pass.
 ### Trellis Plus: Playwright Validation Profile
 
 - execution mode: `docker-wrapper`; every Node/browser command uses `sam`.
-- setup/install: `./sam npm run install:m51`; the pinned Playwright Noble image
+- setup/install: `./sam npm run install:m51`;
+  `docker build --tag firefly-renderer:pw1.64.1-node24.22.1 tooling/renderer`.
+  The patched Playwright Noble image
   provides matching Chromium binaries/libraries. Docker/image access is a
   prerequisite, not granted by this profile. Do not use global browsers.
 - application readiness/base URL: after `./preview.sh build`, the site config
@@ -107,11 +109,11 @@ required/not-applicable/unavailable before implementation. Missing automation
 is not evidence of success. The submit-ready gate in `commit-policy.md` handles
 only residual human judgment after all runnable automated checks.
 
-The main site and NERV use the pinned pair `@playwright/test@1.62.0` and
-`mcr.microsoft.com/playwright:v1.62.0-noble`. Browser commands run through:
+The main site and NERV use the pinned pair `@playwright/test@1.64.1` and
+`firefly-renderer:pw1.64.1-node24.22.1`. Browser commands run through:
 
 ```text
-SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host ./sam npm --prefix <package> run test:e2e
+SAM_IMAGE=firefly-renderer:pw1.64.1-node24.22.1 SAM_IPC=host ./sam npm --prefix <package> run test:e2e
 ```
 
 The main site tests are under `apps/site/tests/`, NERV tests are under

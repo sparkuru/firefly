@@ -1,7 +1,7 @@
 import { renderDiagram } from './mermaid-renderer.mjs';
 
 // Keep Mermaid source intact before the trusted diagram stage.
-export const diagramPipelineVersion = 'firefly-static-mermaid-v4';
+export const diagramPipelineVersion = 'firefly-static-mermaid-v5';
 
 const text = (value) => ({ type: 'text', value });
 const element = (tagName, properties, children) => ({ type: 'element', tagName, properties, children });

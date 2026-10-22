@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# sam - Run firefly development commands inside node:22-alpine.
+# sam - Run firefly development commands inside node:22.23.4-alpine.
 # The host needs Docker only; the repository is mounted at /app with uid mapping.
 #
 # Usage:
 #   ./sam npm run install:m4
 #   ./sam npm run check:m4
 #   ./sam npm run build:m4
-#   SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+#   SAM_IMAGE=firefly-renderer:pw1.64.1-node24.22.1 SAM_IPC=host \
 #     ./sam npm --prefix labs/nerv run test:e2e
 #   FIREFLY_COMMENTS_EXPORT=artifacts/comments/comments.public.v1.json \
 #     ./sam npm run build:m51
@@ -27,7 +27,7 @@ readonly REPO_ROOT DEVHOME
 source "${REPO_ROOT}/tooling/shared/dev-env.sh"
 load_dev_environment "${REPO_ROOT}"
 
-IMAGE="${SAM_IMAGE:-node:22-alpine}"
+IMAGE="${SAM_IMAGE:-node:22.23.4-alpine}"
 SAM_IPC="${SAM_IPC-private}"
 SAM_BIND_HOST="${SAM_BIND_HOST:-0.0.0.0}"
 WEB_HOST_PORT="${WEB_HOST_PORT:-4321}"

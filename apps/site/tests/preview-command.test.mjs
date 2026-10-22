@@ -15,7 +15,7 @@ async function fixture() {
   await mkdir(path.join(root, 'bin'));
   await copyFile(new URL('../../../preview.sh', import.meta.url), path.join(root, 'preview.sh'));
   await copyFile(new URL('../../../tooling/shared/dev-env.sh', import.meta.url), path.join(root, 'tooling/shared/dev-env.sh'));
-  await writeFile(path.join(root, '.env'), 'SAM_BIND_HOST=0.0.0.0\nWEB_BIND_HOST=0.0.0.0\nWEB_HOST_PORT=7081\nWEB_CONTAINER_PORT=4321\nSAM_IMAGE=node:22-alpine\nSAM_IPC=private\n');
+  await writeFile(path.join(root, '.env'), 'SAM_BIND_HOST=0.0.0.0\nWEB_BIND_HOST=0.0.0.0\nWEB_HOST_PORT=7081\nWEB_CONTAINER_PORT=4321\nSAM_IMAGE=node:22.23.4-alpine\nSAM_IPC=private\n');
   for (const file of ['dist/index.html', 'dist/lab/index.html', 'dist/lab/majo/index.html', 'dist/lab/nerv/index.html', 'tooling/assemble-publication/dist/src/serve-release.js']) {
     await mkdir(path.dirname(path.join(root, file)), { recursive: true });
     await writeFile(path.join(root, file), 'fixture');
@@ -91,7 +91,7 @@ const config=readFileSync(root+'/config-hash','utf8');
 const mode=readFileSync(root+'/mode','utf8');
 const bind=process.env.FIXTURE_BIND??'0.0.0.0';
 const host=process.env.FIXTURE_PUBLISHED_PORT??'7081';
-console.log(JSON.stringify([{State:{Running:true},Config:{Image:'node:22-alpine',Labels:{'sam.preview.config':config,'sam.preview.mode':mode}},HostConfig:{IpcMode:'private',PortBindings:{'4321/tcp':[{HostIp:bind,HostPort:'7081'}]}},NetworkSettings:{Ports:{'4321/tcp':[{HostIp:bind,HostPort:host}]}}}]));
+console.log(JSON.stringify([{State:{Running:true},Config:{Image:'node:22.23.4-alpine',Labels:{'sam.preview.config':config,'sam.preview.mode':mode}},HostConfig:{IpcMode:'private',PortBindings:{'4321/tcp':[{HostIp:bind,HostPort:'7081'}]}},NetworkSettings:{Ports:{'4321/tcp':[{HostIp:bind,HostPort:host}]}}}]));
 `);
   // The browser image does not require host jq. The fixture supplies Docker's
   // inspection projections, keeping Docker/address behavior independent of it.
@@ -133,9 +133,9 @@ async function withFixture(work) {
 }
 
 test('render preserves exact arguments, exit status, and pins browser environment', () => withFixture(async (f) => {
-  await assert.rejects(f.run(['render', 'npm', 'argument with spaces', '$(not-a-command)'], { SAM_IMAGE: 'node:22-alpine', SAM_IPC: 'private', FIXTURE_SAM_EXIT: '17' }), (error) => {
+  await assert.rejects(f.run(['render', 'npm', 'argument with spaces', '$(not-a-command)'], { SAM_IMAGE: 'node:22.23.4-alpine', SAM_IPC: 'private', FIXTURE_SAM_EXIT: '17' }), (error) => {
     assert.equal(error.code, 17);
-    assert.deepEqual(error.stdout.trimEnd().split('\n'), ['mcr.microsoft.com/playwright:v1.62.0-noble', 'host', 'npm', 'argument with spaces', '$(not-a-command)']);
+    assert.deepEqual(error.stdout.trimEnd().split('\n'), ['firefly-renderer:pw1.64.1-node24.22.1', 'host', 'npm', 'argument with spaces', '$(not-a-command)']);
     return true;
   });
 }));
@@ -174,7 +174,7 @@ test('active preview rejects retired independent Memo composition before Docker 
 test('verify forces tracked content and runs Memo plus plugin runtime fixtures only after the inner gate', () => withFixture(async (f) => {
   await f.run(['verify'], { FIREFLY_CONTENT_ROOT: '/private/owner' });
   let calls = await f.log();
-  assert.match(calls, new RegExp(`sam:mcr\\.microsoft\\.com/playwright:v1\\.62\\.0-noble:host:${f.root}/content:npm run verify:m51\\nhost-memo\\nhost-plugins\\n`, 'u'));
+  assert.match(calls, new RegExp(`sam:firefly-renderer:pw1\\.64\\.1-node24\\.22\\.1:host:${f.root}/content:npm run verify:m51\\nhost-memo\\nhost-plugins\\n`, 'u'));
   await writeFile(path.join(f.root, 'calls'), '');
   await assert.rejects(f.run(['verify'], { FIXTURE_SAM_EXIT: '23' }), { code: 23 });
   calls = await f.log();
@@ -330,7 +330,7 @@ test('.env values remain literal, exported environment wins, malformed configura
   assert.ok((await f.log()).includes(`$(touch ${sideEffect})`));
   await assert.rejects(readFile(sideEffect), { code: 'ENOENT' });
   await f.run(['render', 'node'], { FIREFLY_CONTENT_ROOT: '' });
-  assert.match(await f.log(), /sam:mcr\.microsoft\.com\/playwright:v1\.62\.0-noble:host::node/u);
+  assert.match(await f.log(), /sam:firefly-renderer:pw1\.64\.1-node24\.22\.1:host::node/u);
   await writeFile(path.join(f.root, '.env'), 'SAM_IPC=host\nSAM_IPC=private\n');
   await assert.rejects(f.run(['build']), { code: 2 });
   await writeFile(path.join(f.root, '.env'), 'SAM_IMAGE="missing-end\n');

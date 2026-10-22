@@ -241,13 +241,20 @@ and CSSOM. Rendering is serial with a fresh browser/page per uncached source;
 all browser resources close even on failure. Invalid source is readable with a
 route-scoped diagnostic; unavailable renderer infrastructure fails the build.
 
+Bundle Mermaid's core ESM entry with the locked esbuild dependency for the
+isolated rendering page. Do not load the distributed `mermaid.min.js`: its
+embedded DOMPurify can lag behind the resolved package dependency. Verify the
+sanitizer in the actual generated runtime when upgrading. Its SHA-256 digest
+participates in diagram cache keys; also bump the serialized Astro pipeline
+version when changing renderer dependencies so cached HTML is regenerated.
+
 Astro content storage uses explicit `cacheDir: './.astro/cache/'`; generated
 diagrams live in the sibling `.astro/diagrams/`. Clearing the complete site
 `.astro/` directory invalidates both rendered HTML and its generated assets.
 Do not independently clear only the diagrams subdirectory. The old default
 `node_modules/.astro/` is no longer used by site builds.
 
-The ignored `.astro/diagrams/` cache is content/config/policy addressed and
+The ignored `.astro/diagrams/` cache is content/config/policy/runtime addressed and
 written atomically. `astro:build:done` scans current public HTML (including inert
 templates) and copies only referenced `/diagrams/<sha256>.svg` assets. Cached
 Astro HTML therefore still resolves assets, while unrelated/private cached

@@ -6,7 +6,7 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly REPO_ROOT
 readonly PROJECT_LABEL="sam.repo=${REPO_ROOT}"
 readonly SCOPE_LABEL='sam.scope=preview.sh'
-readonly PLAYWRIGHT_IMAGE='mcr.microsoft.com/playwright:v1.62.0-noble'
+readonly PLAYWRIGHT_IMAGE='firefly-renderer:pw1.64.1-node24.22.1'
 readonly VERIFY_IMAGE="${SAM_IMAGE-${PLAYWRIGHT_IMAGE}}"
 readonly VERIFY_IPC="${SAM_IPC-host}"
 readonly STYLE_RESET=$'\033[0m'
@@ -545,7 +545,7 @@ preview_status() {
 }
 
 start_preview() {
-	local mode=$1 ids id attempt config_hash image=${SAM_IMAGE:-node:22-alpine} ipc=${SAM_IPC-private}
+	local mode=$1 ids id attempt config_hash image=${SAM_IMAGE:-node:22.23.4-alpine} ipc=${SAM_IPC-private}
 	local -a service_command=()
 	validate_selected_memos
 	preview_configuration

@@ -83,9 +83,10 @@ cp .env.example .env
 ./preview.sh render npm run build:m4
 ./preview.sh render npm run publication:m4
 ./sam npm run install:m51
+docker build --tag firefly-renderer:pw1.64.1-node24.22.1 tooling/renderer
 ./preview.sh verify
 FIREFLY_CONTENT_ROOT="$PWD/content" \
-  SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+  SAM_IMAGE=firefly-renderer:pw1.64.1-node24.22.1 SAM_IPC=host \
   ./sam npm run verify:m51
 ./preview.sh package
 tooling/publish-memos/ops/check-runtime.sh
@@ -118,7 +119,7 @@ syntax check.
 
 | Input / boundary | Contract |
 | --- | --- |
-| `SAM_IMAGE` | Defaults to `node:22-alpine`. Browser runs use `mcr.microsoft.com/playwright:v1.62.0-noble`. `preview.sh render` explicitly selects this image plus host IPC for diagram-bearing site build/check/dev commands and delegates to `sam`. |
+| `SAM_IMAGE` | Defaults to `node:22.23.4-alpine`. Browser runs use `firefly-renderer:pw1.64.1-node24.22.1`. `preview.sh render` explicitly selects this image plus host IPC for diagram-bearing site build/check/dev commands and delegates to `sam`. |
 | `SAM_IPC` | Unset means `private`; accepted values are exactly `private` and `host`. Browser runs use `host`; explicit empty is invalid. |
 | `SAM_BIND_HOST` | Root `.env` supplies the preview host bind; `.env.example` uses `0.0.0.0` for trusted-LAN development. Direct `sam` uses the same file and retains clone-safe defaults without it. |
 | `WEB_BIND_HOST` | Root `.env` selects the container listener (`0.0.0.0` or `::`), passed to Astro or the publication server; host publishing remains separate. |
@@ -272,7 +273,7 @@ release, and image inventories exactly before route/header probes.
 #### Wrong
 
 ```bash
-docker run --rm node:22-alpine npm --prefix apps/site run check
+docker run --rm node:22.23.4-alpine npm --prefix apps/site run check
 ./sam npx playwright test
 SAM_IPC= ./sam npm --prefix apps/site run test:e2e
 WEB_HOST_PORT=4322 ./sam npm --prefix labs/nerv run start -- --host 0.0.0.0 --port 4321
@@ -292,7 +293,7 @@ webServer: {
 WEB_HOST_PORT=4322 ./preview.sh
 ./preview.sh package
 
-SAM_IMAGE=mcr.microsoft.com/playwright:v1.62.0-noble SAM_IPC=host \
+SAM_IMAGE=firefly-renderer:pw1.64.1-node24.22.1 SAM_IPC=host \
   ./sam npm --prefix apps/site run test:e2e -- tests/site.spec.ts
 ```
 

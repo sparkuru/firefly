@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:22.23.4-alpine
 WORKDIR /opt/firefly/tooling/publish-memos
 COPY tooling/publish-memos/package.json tooling/publish-memos/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force

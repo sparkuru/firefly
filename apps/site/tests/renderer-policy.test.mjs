@@ -4,7 +4,15 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { renderDiagram, sourcePolicyError } from '../src/build/mermaid-renderer.mjs';
+import { loadMermaidRuntime, renderDiagram, sourcePolicyError } from '../src/build/mermaid-renderer.mjs';
+
+test('actual diagram runtime contains the patched sanitizer and has a content identity', async () => {
+  const { content, digest } = await loadMermaidRuntime();
+  assert.match(content, /DOMPurify/u);
+  assert.match(content, /version="3\.4\.17"/u);
+  assert.doesNotMatch(content, /version="3\.4\.12"/u);
+  assert.match(digest, /^[a-f0-9]{64}$/u);
+});
 
 test('ordinary URL and click instruction labels render as inert SVG text', async () => {
   const cacheDir = await mkdtemp(path.join(tmpdir(), 'firefly-diagram-labels-'));

@@ -9,6 +9,7 @@ former four root shell entrypoints; `sam` remains the shared Docker executor.
 ```sh
 cp .env.example .env             # only if .env is absent
 ./sam npm run install:m51        # explicit locked dependency preparation
+docker build --tag firefly-renderer:pw1.64.1-node24.22.1 tooling/renderer
 ./preview.sh build              # assemble public site and Experiments
 ./preview.sh start              # serve existing assembled output, background
 ./preview.sh status
@@ -83,7 +84,11 @@ namespaces are `SAM_`, `WEB_`, `FIREFLY_`, `COMMENTS_` and `MEMOS_`.
 The ordinary public preview requires no account/password. Optional private
 comments consumers retain `config/plugins/comments/secrets.env` and their existing
 Compose paths; this CLI does not start those services or print their secrets.
-`render` pins Playwright Noble 1.62.0 with host IPC after loading configuration.
+`render` pins `firefly-renderer:pw1.64.1-node24.22.1` with host IPC after loading
+configuration. Prepare it explicitly with the Docker build command above.
+`tooling/renderer/Dockerfile` retains Playwright Noble 1.64.1 browsers and
+replaces its NodeSource binary with official Node 24.22.1, verifying actual
+binary resolution and version at build time. Startup never builds this image.
 `verify` forces tracked content before `sam` reads `.env` and preserves explicit
 diagnostic image/IPC overrides. Memo uses a host-owned publisher and static
 mount; its retired visitor/mail runtime is not started. Disposable static Memo

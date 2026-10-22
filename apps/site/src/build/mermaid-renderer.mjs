@@ -3,13 +3,33 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import { build } from 'esbuild';
 
 const require = createRequire(import.meta.url);
 export const diagramCache = fileURLToPath(new URL('../../.astro/diagrams/', import.meta.url));
 const configuration = { startOnLoad: false, securityLevel: 'strict', htmlLabels: false, deterministicIds: true, deterministicIDSeed: 'firefly', fontFamily: 'Arial, sans-serif', flowchart: { htmlLabels: false }, theme: 'default' };
-const policyVersion = 'firefly-diagram-v4-mermaid12-playwright1.62';
+const policyVersion = 'firefly-diagram-v5-mermaid-core-playwright1.64';
 const pending = new Map();
 let renderQueue = Promise.resolve();
+let runtime;
+
+export function loadMermaidRuntime() {
+  // The distributed min.js embeds its own stale sanitizer. Bundle the core
+  // entry instead so rendering uses the dependencies resolved by our lockfile.
+  runtime ??= build({
+    entryPoints: [require.resolve('mermaid')],
+    bundle: true,
+    write: false,
+    platform: 'browser',
+    format: 'iife',
+    globalName: 'fireflyMermaid',
+    minify: true
+  }).then(({ outputFiles }) => {
+    const content = outputFiles[0].text;
+    return { content, digest: createHash('sha256').update(content).digest('hex') };
+  });
+  return runtime;
+}
 
 export function sourcePolicyError(source) {
   if (Buffer.byteLength(source) > 65536) return 'Diagram exceeds the 64 KiB source limit.';
@@ -89,29 +109,30 @@ function artifactResult(key, svg) {
 async function render(source, cacheDir, timeoutMs) {
   const policyError = sourcePolicyError(source);
   if (policyError) return { error: policyError };
-  const key = createHash('sha256').update(JSON.stringify([policyVersion, configuration, source])).digest('hex');
+  const runtime = await loadMermaidRuntime();
+  const key = createHash('sha256').update(JSON.stringify([policyVersion, runtime.digest, configuration, source])).digest('hex');
   const filename = `${cacheDir}/${key}.svg`;
   try { return artifactResult(key, await readFile(filename, 'utf8')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
   } catch (cause) {
-    throw new Error('Mermaid renderer unavailable. Install locked site dependencies and run this command through ./preview.sh render (Playwright 1.62.0 Noble).', { cause });
+    throw new Error('Mermaid renderer unavailable. Install locked site dependencies and run this command through ./preview.sh render (Playwright 1.64.1 Noble).', { cause });
   }
   try {
     const context = await browser.newContext({ javaScriptEnabled: true, serviceWorkers: 'block' });
     await context.route('**/*', (route) => route.abort());
     const page = await context.newPage();
     try {
-      await page.addScriptTag({ path: require.resolve('mermaid/dist/mermaid.min.js') });
+      await page.addScriptTag({ content: runtime.content });
     } catch (cause) {
       throw new Error('Mermaid runtime unavailable. Install the locked apps/site dependencies and use ./preview.sh render.', { cause });
     }
     let timeout;
     const work = (async () => {
       const svg = await page.evaluate(async ({ source, configuration }) => {
-        window.mermaid.initialize(configuration);
-        return (await window.mermaid.render('firefly-diagram', source)).svg;
+        window.fireflyMermaid.default.initialize(configuration);
+        return (await window.fireflyMermaid.default.render('firefly-diagram', source)).svg;
       }, { source, configuration });
       await page.evaluate(validateSvg, svg);
       const normalized = await page.evaluate(normalizeSvgDimensions, svg);
