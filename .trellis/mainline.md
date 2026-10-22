@@ -686,6 +686,14 @@ accepted. The approved local closeout is the coherent work commit followed by
 supported task archival and session bookkeeping. No remote push or deployment
 is included, and no subsequent product work is inferred from this acceptance.
 
+Local closeout completed with work commit `1175351`
+(`feat(memos): refine selection and reading actions`). The task is completed
+and archived at `.trellis/tasks/archive/2026-10/10-21-memo-reading-actions/`
+through the supported no-auto-commit route. The archive commit carries the
+required Codex attribution; the separate session journal follows. This task
+was never PR-backed, so archival used the supported branch-validation option.
+The ready local preview remains available. No push or deployment occurred.
+
 ## Existing Markdown Metadata Formatting
 
 On 2026-10-13 the owner requested task creation and implementation for automatic

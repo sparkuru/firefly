@@ -152,3 +152,9 @@ now satisfied; physical-device/assistive-technology feedback remains optional.
 The authorized Git sequence is one coherent work commit, then the attributed
 task archive commit, then a separate developer-journal commit. No push or
 deployment accompanies this closeout.
+
+The accepted implementation, tests, specs and planning evidence are committed
+as `1175351` (`feat(memos): refine selection and reading actions`). Supported
+archival and the separate session journal follow this work commit. Curated
+JSONL context manifests remain local under the existing repository ignore rule;
+their validation passed without force-adding ignored material.
