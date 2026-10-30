@@ -732,3 +732,25 @@ validation evidence plus its work-commit reference. This local task was never
 PR-backed; archival used the supported non-PR branch-validation option. The
 external script and original Markdown example remain unchanged. No remote
 push or deployment was performed.
+
+## Component Vulnerability Assessment and Repair
+
+The owner authorized assessment on 2026-10-22, then requested the proposed
+repository dependency and runtime repairs. The completed work covers eleven
+lockfiles, the three Astro graphs, the diagram renderer and sanitizer, and
+Node, Nginx and Playwright runtime images. Work commit `e639345` contains the
+repair, updated project contracts and the assessment and remediation evidence.
+
+The 2026-10-22 npm advisory recheck found no matches across the eleven locks;
+the full tracked-fixture verification and isolated publication packaging
+passed. Independent review found no unresolved source issue. This historical
+evidence is not a current advisory scan, an operating-system image audit, or
+proof of a deployed repair. Existing services were not restarted as part of
+the work.
+
+The owner requested archival on 2026-10-30 after reviewing completion. The
+task is completed and archived at
+`.trellis/tasks/archive/2026-10/10-22-component-vulnerability-assessment/`.
+The supported no-auto-commit route preserves the unrelated planning task;
+the archive commit records Codex attribution and the session journal follows
+separately.
