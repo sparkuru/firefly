@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { glob } from 'astro/loaders';
 
 export function workspaceCollectionLoader(collection) {
@@ -20,7 +20,19 @@ export function workspaceCollectionLoader(collection) {
       if (!entries.some((entry) => entry.isFile() && entry.name.endsWith('.md'))) {
         context.store.clear();
       }
-      await loader.load(context);
+      if (collection === 'posts' || collection === 'pages') {
+        // Rendered media URLs depend on asset bytes outside the Markdown source.
+        const mediaDigest = context.generateDigest(await readFile(
+          new URL('.generated-content/.firefly-media.json', context.config.root),
+          'utf8'
+        ));
+        await loader.load({
+          ...context,
+          generateDigest: (data) => context.generateDigest([data, mediaDigest])
+        });
+      } else {
+        await loader.load(context);
+      }
     }
   };
 }

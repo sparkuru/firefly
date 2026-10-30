@@ -81,7 +81,9 @@ with its exact error; it is not counted as a pass.
 - browser projects/viewports: main site has `chromium-desktop-static`,
   `chromium-desktop-interactive` at 1440x900 and `chromium-mobile-static`,
   `chromium-mobile-interactive` at 375x812; static disables JS, mobile enables
-  touch. Memo has desktop-static/mobile-static/mobile-interactive; NERV/MAJO
+  touch. The `firefly-display.spec.ts` and `firefly-media.spec.ts` suites also
+  run in Firefox with static and interactive desktop/mobile viewports. Firefox
+  mobile uses a narrow viewport without touch emulation. Memo has desktop-static/mobile-static/mobile-interactive; NERV/MAJO
   have `chromium-desktop`/`chromium-mobile`; publication has
   `publication-desktop`/`publication-mobile`, at the same widths/heights.
 - mobile applicability: ordinary changed reading/navigation/forms require

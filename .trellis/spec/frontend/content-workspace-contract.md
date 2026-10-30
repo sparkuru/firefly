@@ -2,6 +2,11 @@
 
 ## Current Memo Document Extension
 
+The [Firefly Display Blocks](./firefly-display-blocks-contract.md) contract
+extends posts/pages with structured media and composition fences, document-
+relative referenced assets and nested reader units. It supersedes the earlier
+attachment deferral below only for those explicit Firefly media references.
+
 The 2026-10-07 [Memo Documents](./memo-document-contract.md) contract extends the
 selected workspace with optional `memos/`, a separate public Memo collection,
 minimal metadata and native Memo reading routes. It supersedes older statements
@@ -425,8 +430,8 @@ createDocumentNavigationLookup(
   symlinked, special, unreadable, undecodable, or malformed policy with its
   logical policy path and line where available, and never materializes the
   control file. `.gitignore`, global Git excludes, and repository state have no
-  publication effect. Attachments remain outside this Markdown-only filter and
-  are deferred.
+  publication effect. Referenced Firefly media follows the policy in the
+  display-block contract; other attachment handling remains deferred.
 - Policy decisions occur after Markdown type/empty-file and link-safety checks
   but before collision reservation and inventory insertion. Excluded files and
   directories therefore reserve no public path or route, while included files
@@ -1546,8 +1551,9 @@ if (roots === undefined) return failureResult('grep can search only listed publi
 - The document navigator owns local `normal`, `visual`, `search`, and `command` modes. Its
   bounded keys are `j`, `k`, `g`, `G`, `/`, `?`, `n`, `N`, `v`, `Escape`, and
   `:q`. It is a navigator, not an editor.
-- Movement uses semantic top-level reading units and scrolls the active unit to
-  a centered reading band; reduced motion changes smooth scrolling to immediate.
+- Movement uses semantic top-level reading units and the direct prose/list
+  units inside Firefly compositions, and scrolls the active unit to a centered
+  reading band; reduced motion changes smooth scrolling to immediate.
 - Visual mode owns a real `Range` only while the browser selection has exactly
   the same boundaries. A user-replaced selection is never cleared or captured.
 - Search uses a labeled native input, literal case-insensitive matching, and a

@@ -62,7 +62,7 @@ const license = entry.collection === 'posts' ? getPostLicense(entry.data.license
       </header>
     )
   }
-  <div id={bodyId} class="terminal-stream-prose"><Content /></div>
+  <div id={bodyId} class="terminal-stream-prose" data-article-content><Content /></div>
   <footer class="terminal-stream-footer">
     <span>{formatResourcePath(`/${terminalEntry.virtualPath}`)}</span>
     <span aria-hidden="true"> · </span>

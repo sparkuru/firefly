@@ -30,7 +30,12 @@ const readingUnitSelector = [
   ':scope > ol > li',
   ':scope > pre',
   ':scope > table',
-  ':scope > .terminal-wide'
+  ':scope > .terminal-wide',
+  ':scope > .firefly-block-composition > :is(h2, h3, h4, h5, h6, p, blockquote, pre, table, .terminal-wide, .wide-content)',
+  ':scope > .firefly-block-composition > :is(ul, ol) > li',
+  ':scope > .firefly-block-composition > .firefly-block-media > figcaption',
+  ':scope > :is(.firefly-block-image, .firefly-block-video, .firefly-block-audio)',
+  ':scope > .firefly-block-link'
 ].join(',');
 
 const protectedNavigationTargetSelector = [

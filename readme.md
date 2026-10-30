@@ -53,6 +53,8 @@ node apps/site/scripts/blog-meta.mjs /path/to/article.md --blog-root /path/to/bl
 
 The [content contract](.trellis/spec/frontend/content-workspace-contract.md) documents front matter, slugs, `.fireflyignore`, markers, and publication visibility. The [site configuration contract](.trellis/spec/frontend/site-configuration-contract.md) documents `config/site.toml`, SEO fields, and content themes.
 
+For image-and-text layouts, GIFs, link cards, and native audio/video, see the [Firefly display block guide](docs/firefly-blocks.md). The source remains ordinary Markdown, with a readable code block fallback in other Markdown readers.
+
 <p align = "center" style="font-size: 28px;" > <strong> Themes </strong> </p>
 
 The default `firefly` presentation uses a dark Terminal with slate-blue, teal, soft-green, yellow, and orange accents inspired by [Honkai: Star Rail](https://zhuanlan.zhihu.com/p/704319639). Set `presentation: semantic` in a post or page's front matter for a conventional reading layout.

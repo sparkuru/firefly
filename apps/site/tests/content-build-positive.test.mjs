@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import {
   mkdir,
@@ -52,7 +53,7 @@ function documentHeadingId(html) {
   return /<h2\b[^>]*\bid="([^"]+)"[^>]*>Shared paper heading<\/h2>/u.exec(html)?.[1] ?? null;
 }
 
-test('paper routes and nested native directories build with shared content and empty friends', async () => {
+test('paper routes, nested directories and public Firefly media survive and withdraw correctly', async () => {
   await mkdir(testResultsRoot, { recursive: true });
   const runRoot = await mkdtemp(path.join(testResultsRoot, 'paper-build-'));
   const contentRoot = path.join(runRoot, 'content');
@@ -78,6 +79,18 @@ The same Markdown body reaches both presentations with a [safe link](https://exa
 paper content with a deliberately long line for local scrolling
 \`\`\`
 `;
+  const localMediaBlock = `
+\`\`\`firefly
+type: composition
+layout: image-right
+media:
+  type: image
+  src: ./assets/public.png
+  alt: Public fixture image
+content: |
+  The public composition preserves this searchable paragraph.
+\`\`\`
+`;
   const semanticSource = `---
 title: Paper semantic fixture
 slug: paper-semantic
@@ -90,7 +103,8 @@ contentTheme: paper
 license: CC-BY-SA-4.0
 canonical: https://example.test/shared/paper/
 ---
-${body}`;
+${body}
+${localMediaBlock}`;
   const terminalSource = `---
 title: Paper Terminal fixture
 slug: paper-terminal
@@ -110,6 +124,37 @@ ${body}`;
   const terminalPostSource = semanticSource.replaceAll('paper-semantic', 'child').replace('presentation: semantic', 'presentation: firefly');
   await writeFile(path.join(contentRoot, 'posts/category/child.md'), terminalPostSource);
   await writeFile(path.join(contentRoot, 'posts/category/deeper/leaf.md'), semanticSource.replaceAll('paper-semantic', 'leaf'));
+  const publicMedia = await readFile(path.join(siteRoot, 'public/favicon.png'));
+  const privateMedia = Buffer.concat([publicMedia, Buffer.from('private media fixture')]);
+  for (const directory of ['posts', 'posts/category', 'posts/category/deeper']) {
+    await mkdir(path.join(contentRoot, directory, 'assets'), { recursive: true });
+    await writeFile(path.join(contentRoot, directory, 'assets/public.png'), publicMedia);
+  }
+  await writeFile(path.join(contentRoot, 'posts/assets/private.png'), privateMedia);
+  const hiddenSource = `---
+title: Private media fixture
+slug: private-media
+date: 2026-08-12
+description: Private assets must never be published.
+draft: false
+layout: post
+access:
+  visibility: private
+  owner: fixture
+---
+
+\`\`\`firefly
+type: image
+src: ./assets/private.png
+alt: Private fixture image
+\`\`\`
+`;
+  await writeFile(path.join(contentRoot, 'posts/private-media.md'), hiddenSource);
+  await writeFile(path.join(contentRoot, 'posts/draft-media.md'), hiddenSource
+    .replace('slug: private-media', 'slug: draft-media')
+    .replace('draft: false', 'draft: true')
+    .replace('access:\n  visibility: private\n  owner: fixture\n', '')
+    .replace('src: ./assets/private.png', 'src: ./assets/missing.png'));
   const configPath = path.join(runRoot, 'site.toml');
   const siteConfig = await readFile(path.resolve(siteRoot, '../../config/site.toml.example'), 'utf8');
   await writeFile(configPath, siteConfig.replace(/\[\[terminal\.friends\]\][\s\S]*?(?=\n\[(?!\[terminal\.friends\])|$)/gu, '') + '\n[documentNavigation.firefly]\nnavigator = "none"\n');
@@ -139,6 +184,15 @@ ${body}`;
     assert.equal(result.status, 0, output);
 
     const home = await readFile(path.join(outputRoot, 'index.html'), 'utf8');
+    const publicDigest = createHash('sha256').update(publicMedia).digest('hex');
+    const privateDigest = createHash('sha256').update(privateMedia).digest('hex');
+    const publicMediaPath = `firefly-media/${publicDigest}.png`;
+    const publicMediaUrl = `/${publicMediaPath}`;
+    assert.deepEqual((await listFiles(outputRoot)).filter((name) => name.startsWith('firefly-media/')), [publicMediaPath]);
+    assert.deepEqual(await readFile(path.join(outputRoot, publicMediaPath)), publicMedia);
+    assert.doesNotMatch(home, new RegExp(privateDigest, 'u'));
+    assert.doesNotMatch(home, /Private media fixture|Private fixture image/u);
+    assert.match(home, new RegExp(publicMediaUrl, 'u'));
     assert.match(home, /data-home-root-navigation/u);
     assert.match(home, /data-home-friends[\s\S]*?No friend links\./u);
     assert.doesNotMatch(home, /data-terminal-friend-name=/u);
@@ -186,6 +240,8 @@ ${body}`;
       path.join(outputRoot, 'posts/paper-semantic/index.html'),
       'utf8'
     );
+    assert.match(semanticRoute, new RegExp(publicMediaUrl, 'u'));
+    assert.match(semanticRoute, /The public composition preserves this searchable paragraph\./u);
     const terminalRoute = await readFile(
       path.join(outputRoot, 'pages/paper-terminal/index.html'),
       'utf8'
@@ -236,6 +292,63 @@ ${body}`;
     assert.ok(stylesheetFiles.includes(semanticStylesheet.replace(/^\/+/, '')));
     assert.match(await readFile(stylesheetPath, 'utf8'), paperSelector);
     assert.match(terminalRoute, paperSelector);
+
+    const buildWarm = () => spawnSync(
+      'npm',
+      ['run', 'astro', '--', 'build', '--outDir', outputRoot],
+      {
+        cwd: siteRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          ASTRO_TELEMETRY_DISABLED: '1',
+          FIREFLY_CONTENT_ROOT: contentRoot,
+          FIREFLY_SITE_CONFIG_PATH: path.relative(path.resolve(siteRoot, '../..'), configPath)
+        },
+        maxBuffer: 8 * 1024 * 1024
+      }
+    );
+    const updatedMedia = Buffer.concat([publicMedia, Buffer.from('updated public media fixture')]);
+    const updatedDigest = createHash('sha256').update(updatedMedia).digest('hex');
+    for (const directory of ['posts', 'posts/category', 'posts/category/deeper']) {
+      await writeFile(path.join(contentRoot, directory, 'assets/public.png'), updatedMedia);
+    }
+    const updated = buildWarm();
+    const updatedOutput = `${updated.stdout ?? ''}\n${updated.stderr ?? ''}`;
+    assert.equal(updated.error, undefined, updatedOutput);
+    assert.equal(updated.status, 0, updatedOutput);
+    const updatedMediaPath = `firefly-media/${updatedDigest}.png`;
+    assert.deepEqual((await listFiles(outputRoot)).filter((name) => name.startsWith('firefly-media/')), [updatedMediaPath],
+      'Replacing media bytes must publish the new hash and withdraw the old hash without editing Markdown.');
+    assert.deepEqual(await readFile(path.join(outputRoot, updatedMediaPath)), updatedMedia);
+    for (const [source, markdown, route] of [
+      ['posts/physical-source.md', semanticSource, 'posts/paper-semantic/index.html'],
+      ['posts/category/child.md', terminalPostSource, 'posts/category/child/index.html'],
+      ['posts/category/deeper/leaf.md', semanticSource.replaceAll('paper-semantic', 'leaf'), 'posts/category/deeper/leaf/index.html']
+    ]) {
+      assert.equal(await readFile(path.join(contentRoot, source), 'utf8'), markdown,
+        'Media cache invalidation must preserve the exact authored Markdown.');
+      const updatedRoute = await readFile(path.join(outputRoot, route), 'utf8');
+      assert.match(updatedRoute, new RegExp(updatedDigest, 'u'));
+      assert.doesNotMatch(updatedRoute, new RegExp(publicDigest, 'u'));
+    }
+    const updatedHome = await readFile(path.join(outputRoot, 'index.html'), 'utf8');
+    assert.match(updatedHome, new RegExp(updatedDigest, 'u'));
+    assert.doesNotMatch(updatedHome, new RegExp(publicDigest, 'u'));
+
+    await writeFile(path.join(contentRoot, 'posts/physical-source.md'), semanticSource.replace(localMediaBlock, ''));
+    await writeFile(path.join(contentRoot, 'posts/category/child.md'), terminalPostSource.replace(localMediaBlock, ''));
+    await writeFile(path.join(contentRoot, 'posts/category/deeper/leaf.md'), semanticSource.replaceAll('paper-semantic', 'leaf').replace(localMediaBlock, ''));
+    const warm = buildWarm();
+    const warmOutput = `${warm.stdout ?? ''}\n${warm.stderr ?? ''}`;
+    assert.equal(warm.error, undefined, warmOutput);
+    assert.equal(warm.status, 0, warmOutput);
+    assert.deepEqual((await listFiles(outputRoot)).filter((name) => name.startsWith('firefly-media/')), [],
+      'A warm build must withdraw media no longer referenced by public documents.');
+    const warmHome = await readFile(path.join(outputRoot, 'index.html'), 'utf8');
+    assert.doesNotMatch(warmHome, new RegExp(publicDigest, 'u'));
+    assert.doesNotMatch(warmHome, new RegExp(updatedDigest, 'u'));
+    assert.doesNotMatch(warmHome, new RegExp(privateDigest, 'u'));
   } finally {
     await rm(runRoot, { recursive: true, force: true });
     await rm(generatedContentRoot, { recursive: true, force: true });

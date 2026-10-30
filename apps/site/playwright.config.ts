@@ -25,7 +25,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop-static',
-      testMatch: /(?:site|terminal-refinement|document-sharing|mermaid|home-search|home-browse|mobile-homepage)\.spec\.ts/u,
+      testMatch: /(?:site|terminal-refinement|document-sharing|mermaid|home-search|home-browse|mobile-homepage|firefly-(?:display|media))\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: false,
@@ -34,7 +34,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-static',
-      testMatch: /(?:site|terminal-refinement|document-sharing|mermaid|home-search|home-browse|mobile-homepage)\.spec\.ts/u,
+      testMatch: /(?:site|terminal-refinement|document-sharing|mermaid|home-search|home-browse|mobile-homepage|firefly-(?:display|media))\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: false,
@@ -44,7 +44,7 @@ export default defineConfig({
     },
     {
       name: 'chromium-desktop-interactive',
-      testMatch: /(?:terminal|terminal-refinement|document-sharing|document-navigator(?:-mobile)?|mermaid|home-search|home-browse|mobile-homepage)\.spec\.ts/u,
+      testMatch: /(?:terminal|terminal-refinement|document-sharing|document-navigator(?:-mobile)?|mermaid|home-search|home-browse|mobile-homepage|firefly-(?:display|media))\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: true,
@@ -53,13 +53,23 @@ export default defineConfig({
     },
     {
       name: 'chromium-mobile-interactive',
-      testMatch: /(?:terminal-refinement|document-sharing|document-navigator(?:-mobile)?|mermaid|home-search|home-browse|mobile-homepage)\.spec\.ts/u,
+      testMatch: /(?:terminal-refinement|document-sharing|document-navigator(?:-mobile)?|mermaid|home-search|home-browse|mobile-homepage|firefly-(?:display|media))\.spec\.ts/u,
       use: {
         browserName: 'chromium',
         javaScriptEnabled: true,
         hasTouch: true,
         viewport: { width: 375, height: 812 }
       }
-    }
+    },
+    ...[
+      { name: 'firefox-desktop-static', javaScriptEnabled: false, viewport: { width: 1440, height: 900 } },
+      { name: 'firefox-mobile-static', javaScriptEnabled: false, viewport: { width: 375, height: 812 } },
+      { name: 'firefox-desktop-interactive', javaScriptEnabled: true, viewport: { width: 1440, height: 900 } },
+      { name: 'firefox-mobile-interactive', javaScriptEnabled: true, viewport: { width: 375, height: 812 } }
+    ].map(({ name, javaScriptEnabled, viewport }) => ({
+      name,
+      testMatch: /firefly-(?:display|media)\.spec\.ts/u,
+      use: { browserName: 'firefox' as const, javaScriptEnabled, viewport }
+    }))
   ]
 });

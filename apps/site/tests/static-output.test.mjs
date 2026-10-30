@@ -226,6 +226,32 @@ function collectMemoAssetReferences(html) {
   return references;
 }
 
+function collectFireflyMediaReferences(html) {
+  const references = new Set();
+  const pending = [parse(html)];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    for (const { name, value } of node.attrs ?? []) {
+      if (!['href', 'src'].includes(name) || !value.startsWith('/firefly-media/')) continue;
+      const match = /^\/firefly-media\/([a-f0-9]{64}\.[a-z0-9]+)(?:[?#].*)?$/u.exec(value);
+      assert.ok(match, 'Firefly media references must use canonical content-addressed paths.');
+      references.add(`firefly-media/${match[1]}`);
+    }
+    pending.push(...(node.childNodes ?? []));
+    if (node.content) pending.push(node.content);
+  }
+  return references;
+}
+
+async function assertFireflyMediaIdentity(relative) {
+  const filename = relative.slice('firefly-media/'.length);
+  const original = await readFile(path.join(siteRoot, '.generated-content/.firefly-media', filename));
+  const emitted = await readFile(path.join(distRoot, relative));
+  assert.deepEqual(emitted, original, 'Published Firefly media must match the staged bytes.');
+  assert.equal(createHash('sha256').update(emitted).digest('hex'), filename.split('.')[0],
+    'The public media name must match its content digest.');
+}
+
 async function assertMemoAssetIdentity(relative) {
   const segments = relative.slice('pages/memos/assets/'.length).split('/');
   let source = path.join(generatedMemosRoot, 'assets');
@@ -320,9 +346,11 @@ test('static build emits only the implemented route surface', async () => {
   const diagrams = files.filter((file) => /^diagrams\/[a-f0-9]{64}\.svg$/u.test(file));
   const diagramReferences = new Set();
   const memoAssets = new Set();
+  const fireflyMedia = new Set();
   for (const file of htmlFiles) {
     const html = await readFile(path.join(distRoot, file), 'utf8');
     for (const asset of collectMemoAssetReferences(html)) memoAssets.add(asset);
+    for (const asset of collectFireflyMediaReferences(html)) fireflyMedia.add(asset);
     for (const [, asset] of html.matchAll(/(?:src|href)="\/(diagrams\/[a-f0-9]{64}\.svg)"/gu)) {
       diagramReferences.add(asset);
     }
@@ -330,10 +358,14 @@ test('static build emits only the implemented route surface', async () => {
   assert.deepEqual(diagrams, [...diagramReferences].sort(), 'publish exactly the diagrams referenced by public HTML');
   assert.deepEqual(files.filter((file) => file.startsWith('pages/memos/assets/')), [...memoAssets].sort(),
     'Publish exactly the Memo assets referenced by parsed public HTML, without orphan assets.');
+  assert.deepEqual(files.filter((file) => file.startsWith('firefly-media/')), [...fireflyMedia].sort(),
+    'Publish exactly the Firefly media referenced by parsed public HTML, without orphan assets.');
   for (const asset of memoAssets) await assertMemoAssetIdentity(asset);
+  for (const asset of fireflyMedia) await assertFireflyMediaIdentity(asset);
   assert.deepEqual(files.filter((file) => !/\.(?:css|html|js)$/u.test(file)), [
     ...diagrams,
     ...memoAssets,
+    ...fireflyMedia,
     'favicon.ico',
     'favicon.png',
     'fonts/JetBrainsMono-Medium-v2.304.woff2',

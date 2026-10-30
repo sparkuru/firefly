@@ -57,6 +57,24 @@ probe_reading_headers() {
 	fi
 }
 
+probe_media_policy() {
+	local route=$1 policy=$2 headers expected
+	headers=$(curl --silent --show-error --head "${origin}${route}")
+	if [[ "${policy}" == article ]]; then
+		expected="^content-security-policy: default-src 'self'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: http: https:; media-src 'self' http: https:; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+	else
+		expected="^content-security-policy: default-src 'self'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data:; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+	fi
+	expected+='[[:space:]]*$'
+	rg --ignore-case --quiet "${expected}" <<<"${headers}" || {
+		printf '[plugins-runtime] unexpected %s CSP for %s\n' "${policy}" "${route}" >&2
+		return 1
+	}
+	rg --ignore-case --quiet '^referrer-policy: strict-origin-when-cross-origin' <<<"${headers}"
+	rg --ignore-case --quiet '^x-content-type-options: nosniff' <<<"${headers}"
+	rg --ignore-case --quiet '^x-frame-options: sameorigin' <<<"${headers}"
+}
+
 check_state() {
 	local comments=$1 memos=$2 method route
 	local -a memo_routes=(/memos /memos/ /memos/index.html /memos/memos.public.v2.json /memos/assets/style.css)
@@ -140,7 +158,7 @@ main() {
 		printf 'Usage: check-runtime.sh\n' >&2
 		return 2
 	}
-	local dependency candidate port attempt media_file state
+	local dependency candidate port attempt media_file state route
 	for dependency in docker jq mktemp cp mkdir rm chmod curl rg sed ln mv cat id sleep sha256sum; do
 		command -v "${dependency}" >/dev/null || {
 			printf 'Missing command: %s\n' "${dependency}" >&2
@@ -155,6 +173,9 @@ main() {
 	cp -- "${REPO_ROOT}/tooling/plugin-access/fixture-upstream.mjs" "${fixture_root}/upstream.mjs"
 	sed -e 's#/usr/share/nginx/html#/fixture/blog/current#g' -e 's#/usr/share/nginx/memos/#/fixture/memos/#g' "${REPO_ROOT}/nginx.conf" >"${fixture_root}/nginx.conf"
 	chmod 644 -- "${fixture_root}/nginx.conf" "${fixture_root}/upstream.mjs"
+	mkdir -p -- "${fixture_root}/blog/integrated-c0/posts/csp-fixture" "${fixture_root}/blog/integrated-c0/lab/nerv"
+	printf '<h1>Article CSP fixture</h1>' >"${fixture_root}/blog/integrated-c0/posts/csp-fixture/index.html"
+	printf '<h1>Lab CSP fixture</h1>' >"${fixture_root}/blog/integrated-c0/lab/nerv/index.html"
 	SAM_CONTENT_MODE=none SAM_MEMOS_WORK_ROOT="${fixture_root}" "${REPO_ROOT}/sam" node tooling/plugin-access/runtime-fixture.mjs "${fixture_root}"
 	candidate=$(cat "${fixture_root}/candidate-path.txt")
 	media_file=$(jq -r '.inventory[].path | select(startswith("public/assets/") and endswith(".png")) | sub("^public/"; "")' "${candidate}/receipt.json")
@@ -190,6 +211,17 @@ main() {
 	for state in integrated-c0 integrated-c1 integrated-c0 c0m0 integrated-c1; do
 		switch_release "${state}"
 		if [[ "${state}" == c0m0 ]]; then check_state 0 0; else check_integrated_state "${state: -1}"; fi
+	done
+	switch_release integrated-c0
+	for route in / /posts/csp-fixture/ /pages/memos/; do
+		probe 200 GET "${route}"
+		probe_media_policy "${route}" article
+	done
+	probe 200 GET /lab/nerv/
+	probe 404 GET /v1/unknown
+	probe 200 GET /memos/index.html
+	for route in /lab/nerv/ /v1/unknown /memos/index.html; do
+		probe_media_policy "${route}" strict
 	done
 	SAM_CONTENT_MODE=none SAM_MEMOS_WORK_ROOT="${fixture_root}" "${REPO_ROOT}/sam" node tooling/plugin-access/runtime-fixture.mjs "${fixture_root}" --verify
 	printf '[plugins-runtime] retained v1 states, integrated v2 ownership, version switches without reload and missing legacy markers passed\n'

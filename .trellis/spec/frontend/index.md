@@ -25,6 +25,7 @@
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Development Runtime](./development-runtime.md) | Container commands, local servers, and validation boundaries | Established |
 | [Content Workspace](./content-workspace-contract.md) | Authoring, publication input, and content routes | Established |
+| [Firefly Display Blocks](./firefly-display-blocks-contract.md) | Fenced media blocks, image/text composition, safe publication and navigation | Established |
 | [X Core and Presentation](./x-core-contract.md) | Document transform, adapter, metadata, and enhancement contracts | Established |
 | [Experiment Publication](./publication-contract.md) | Manifests, isolated builds, safe static assembly, and runtime inventory | Established |
 | [Comments and Publication](./comments-publication-contract.md) | Private write service and static public read projection | Established |

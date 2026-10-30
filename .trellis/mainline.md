@@ -754,3 +754,41 @@ task is completed and archived at
 The supported no-auto-commit route preserves the unrelated planning task;
 the archive commit records Codex attribution and the session journal follows
 separately.
+
+## Firefly Markdown Display Blocks
+
+The owner approved task creation, PRD, technical design and implementation on
+2026-10-30. Active task: `.trellis/tasks/10-30-firefly-display-blocks/`.
+The site-owned build extension now supports images/GIFs, URL cards, native
+audio/video and bounded image-left/right/top compositions in ordinary Markdown.
+Nested prose participates in existing reading/search/Terminal consumers;
+guest-visible media is published by content hash with warm-update/withdrawal
+checks. No additional client parser/runtime or package dependency was added.
+
+Implementation and automated acceptance are complete. The full
+`./preview.sh verify` gate exited zero: site browser 255 passes (205
+applicability skips), Memo 48 passes (24 skips), NERV 8 and publication 6,
+plus package/build/static and real Nginx runtime checks. The final media-only
+cache fix passed its separate warm-build regression and tracked sample rebuild
+with 18 static checks. Details and the AC mapping are in the task's
+`research/validation.md`; the author guide is `docs/firefly-blocks.md`.
+
+The approved first version preserves original media without resizing or
+transcoding. Firefox mobile evidence is a narrow viewport rather than touch or
+physical-device certification. Subjective appearance review is optional after
+the passing automated matrix. The task remains `in_progress` pending the
+Phase 3.4 submission decision in the initial validation record. The owner then
+explicitly authorized submission ("提交") and requested a previewable demo
+project under `content`. The approved closeout includes this bounded demo,
+work commit, supported archival and session record. No push, production
+deployment or subsequent product work is authorized.
+
+The requested demonstration is now `content/posts/firefly-playground/`, with
+Chinese prose, three original raster illustrations and local GIF/MP3/MP4 test
+media. It previews at `/posts/firefly-playground/showcase/`. The tracked
+publication rebuild passed all 18 static checks; eight Chromium/Firefox
+desktop/narrow JS/no-JS demo contexts passed geometry, decoding, HTTP range
+and playback checks. Focused mobile-home regression passed 7 with 13
+applicability skips after updating fixture counts. The local preview is ready
+and its demo response exactly matches the assembled artifact. These checks
+supplement the complete gate above; they do not claim physical-device access.

@@ -21,6 +21,7 @@ import {
 import { stageMemoSource, memoAggregateSource, copyMemoAssets } from './memo-source.mjs';
 import { addRuntimeFrontmatter } from '../src/lib/content-metadata.mjs';
 import { SOURCE_PROVENANCE_FILENAME } from '../src/lib/source-provenance.mjs';
+import { stageFireflyMedia } from '../src/build/firefly-assets.mjs';
 
 const siteRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaultContentRoot = path.resolve(siteRoot, '../../content');
@@ -133,7 +134,7 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
     }
   }
 
-  async function walk(physicalPath, virtualSegments, resolvedAncestors, blockedByIgnoredParent) {
+  async function walk(physicalPath, virtualSegments, resolvedAncestors, blockedByIgnoredParent, sourceAncestors) {
     let nodeStat = await lstat(physicalPath).catch(() => null);
     if (nodeStat === null) {
       throw new Error(`Broken content link: ${safeDiagnosticPath(virtualSegments, collection)}`);
@@ -191,7 +192,8 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
             path.join(resolvedPath, child.name),
             [...virtualSegments, child.name],
             nextAncestors,
-            directoryBlocked
+            directoryBlocked,
+            [...sourceAncestors, resolvedDirectory]
           );
         }
       } finally {
@@ -226,6 +228,8 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
       collection,
       mtimeMs: nodeStat.mtimeMs,
       sourcePath: resolvedPath,
+      sourceDirectory: await realpath(path.dirname(physicalPath)),
+      sourceAncestors,
       virtualPath
     }));
   }
@@ -271,7 +275,7 @@ export async function scanMarkdownWorkspace(sourceRoot, options = {}) {
       continue;
     }
     validateSegment(child.name, [], collection);
-    await walk(path.join(source, child.name), [child.name], new Set([rootRealPath]), sourceBlocked);
+    await walk(path.join(source, child.name), [child.name], new Set([rootRealPath]), sourceBlocked, [rootRealPath]);
   }
   return Object.freeze(files);
 }
@@ -451,6 +455,7 @@ export async function materializeContentWorkspace({
         provenance[collection] = await copyFiles(inventory[collection], collectionTarget);
         if (collection === 'memos') await copyMemoAssets(path.join(sourceRoot, 'memos'), collectionTarget);
       }
+      await stageFireflyMedia({ sourceRoot, targetRoot: candidate, inventory });
       if (!inventory.pages.some(({ virtualPath }) => virtualPath === 'memos.md')) {
         const generatedBytes = Buffer.from(memoAggregateSource(latestMemoDate?.toISOString()), 'utf8');
         await writeFile(path.join(candidate, 'pages/memos.md'), generatedBytes);

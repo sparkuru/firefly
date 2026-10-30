@@ -8,8 +8,8 @@ async function expectNativeHome(page: Page) {
   await expect(page.locator('[data-terminal-startup]')).toBeHidden();
   await expect(page.locator('[data-terminal-session]')).toBeHidden();
   await expect(page.locator('[data-terminal-fallback]')).toBeVisible();
-  expect(await page.locator('[data-terminal-entry] a').count()).toBe(17);
-  expect(await page.locator('[data-terminal-entry-kind="post"] a').count()).toBe(12);
+  expect(await page.locator('[data-terminal-entry] a').count()).toBe(19);
+  expect(await page.locator('[data-terminal-entry-kind="post"] a').count()).toBe(13);
   const memoIntro = page.locator('[data-terminal-entry-kind="page"] a[href="/pages/memos/"]');
   await expect(memoIntro).toHaveCount(1);
   await expect(memoIntro).toHaveText('Memos');
