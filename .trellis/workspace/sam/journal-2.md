@@ -544,3 +544,38 @@ Archived the completed dependency and runtime vulnerability assessment and repai
 ### Next Steps
 
 - The separate Markdown display-block task remains in planning and was left unchanged.
+
+
+## Session 97: Firefly display blocks and local demo
+<!-- trellis-session: v=2 fp=909d0f682c022d35 -->
+
+**Date**: 2026-10-30
+**Task**: Firefly display blocks and local demo
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Implemented and verified Firefly fenced media/composition blocks, added an original Chinese local-media demonstration, and completed owner-approved submission and archival.
+
+### Main Changes
+
+- Added strict build-time YAML rendering, guest-only content-addressed media, bounded responsive layouts, reader/search integration, native media preview support, author documentation and demo.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cfad1fd` | feat(content): add Firefly display blocks |
+
+### Testing
+
+- [OK] Complete preview.sh verify passed; site browser255/Memo48/NERV8/publication6, final cache regression1 and static18 passed.
+- [OK] Final demo publication build passed, Chromium/Firefox desktop/narrow JS/no-JS8contexts passed, mobile-home7passed13applicability-skips; served demo matches artifact.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Owner may inspect the running local preview at /posts/firefly-playground/showcase/. No push, deployment or further product task authorized.
