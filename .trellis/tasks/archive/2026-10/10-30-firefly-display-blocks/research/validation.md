@@ -164,3 +164,27 @@ is completed and archived through the supported `--no-commit` route with
 `--skip-branch-validation` because this task was never PR-backed. Archive and
 journal are separate bookkeeping commits after the work commit. The approved
 local preview remains running. No push or production deployment occurred.
+
+## Owner-requested content cleanup
+
+The owner requested direct cleanup without a new task. The archived PRD now
+retains generic layout requirements and neutral examples, with external-article
+identifiers, narrative excerpts and recording anecdotes removed. The author
+guide uses geometric-illustration and synthetic-media examples. The demo is now
+an independently written Chinese layout laboratory rather than a narrative.
+No source excerpts or identifying details are reproduced in this record.
+
+The six original local media files retain their exact checksums. Source-marker
+searches across the task archives, author guide and demo returned no matches.
+The tracked publication rebuild passed, including 18 static-output checks;
+eight Chromium/Firefox desktop/narrow JS/no-JS contexts passed layout, decoding,
+media delivery/playback and overflow checks. The running preview's response
+matches the rebuilt artifact. Logs: `/tmp/firefly-reference-cleanup-build.log`
+and `/tmp/firefly-reference-cleanup-browser.log`. Independent source/diff review
+found no remaining issue within this cleanup scope.
+
+The owner subsequently authorized sanitizing the historical snapshots in the
+four local feature commits. Those commits are replayed with their original
+identity/date fields and attribution; recorded work hashes are remapped.
+Earlier history and unrelated refs are preserved. The task remains completed;
+the owner handles any remote update. No new task or deployment is created.

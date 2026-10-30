@@ -799,3 +799,15 @@ Local closeout completed with work commit `cfad1fd`
 archive route completed with the non-PR branch-validation option; the separate
 archive commit carries Codex attribution and the journal follows. The preview
 remains available for owner inspection. No remote push or deployment occurred.
+
+The owner then requested direct content cleanup without a new task. The
+archived PRD and author guide now use neutral examples, with external-article
+discussion and excerpts removed. The demo is independently written layout-lab
+prose, retaining the six original synthetic media files byte-for-byte. The
+publication rebuild passed 18 static checks; eight Chromium/Firefox
+desktop/narrow JS/no-JS contexts passed, and the refreshed preview response
+matches its artifact. Evidence is appended to the archived validation record.
+The owner subsequently authorized rewriting the four local feature commits
+to sanitize their historical document snapshots as well. Original identities,
+timestamps, attribution and earlier history are preserved. The task stays
+completed; no new task, push or production deployment is included.
