@@ -758,7 +758,8 @@ separately.
 ## Firefly Markdown Display Blocks
 
 The owner approved task creation, PRD, technical design and implementation on
-2026-10-30. Active task: `.trellis/tasks/10-30-firefly-display-blocks/`.
+2026-10-30. Completed task:
+`.trellis/tasks/archive/2026-10/10-30-firefly-display-blocks/`.
 The site-owned build extension now supports images/GIFs, URL cards, native
 audio/video and bounded image-left/right/top compositions in ordinary Markdown.
 Nested prose participates in existing reading/search/Terminal consumers;
@@ -776,8 +777,8 @@ with 18 static checks. Details and the AC mapping are in the task's
 The approved first version preserves original media without resizing or
 transcoding. Firefox mobile evidence is a narrow viewport rather than touch or
 physical-device certification. Subjective appearance review is optional after
-the passing automated matrix. The task remains `in_progress` pending the
-Phase 3.4 submission decision in the initial validation record. The owner then
+the passing automated matrix. The initial validation record kept the task
+`in_progress` pending the Phase 3.4 submission decision. The owner then
 explicitly authorized submission ("提交") and requested a previewable demo
 project under `content`. The approved closeout includes this bounded demo,
 work commit, supported archival and session record. No push, production
@@ -792,3 +793,9 @@ and playback checks. Focused mobile-home regression passed 7 with 13
 applicability skips after updating fixture counts. The local preview is ready
 and its demo response exactly matches the assembled artifact. These checks
 supplement the complete gate above; they do not claim physical-device access.
+
+Local closeout completed with work commit `cfad1fd`
+(`feat(content): add Firefly display blocks`). The supported no-auto-commit
+archive route completed with the non-PR branch-validation option; the separate
+archive commit carries Codex attribution and the journal follows. The preview
+remains available for owner inspection. No remote push or deployment occurred.

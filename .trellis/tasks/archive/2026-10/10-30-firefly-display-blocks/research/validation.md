@@ -156,3 +156,11 @@ Final demo checks, all exit 0:
 This is a content-only follow-up to the passing complete gate above; focused
 demo/fixture checks cover its changed resources, route and counts. Commit,
 archive and journal follow the already approved `commit-plan.md` batch.
+
+## Local closeout
+
+Work commit: `cfad1fd` (`feat(content): add Firefly display blocks`). The task
+is completed and archived through the supported `--no-commit` route with
+`--skip-branch-validation` because this task was never PR-backed. Archive and
+journal are separate bookkeeping commits after the work commit. The approved
+local preview remains running. No push or production deployment occurred.

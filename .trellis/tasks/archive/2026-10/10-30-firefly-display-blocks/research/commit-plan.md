@@ -1,8 +1,10 @@
 # Submission plan
 
 Status: the owner approved submission on 2026-10-30 and requested a local
-demonstration project under `content`. Include that bounded addition after
-its build/browser checks, then execute this batch without another approval.
+demonstration project under `content`. Work commit `cfad1fd` includes that
+addition and its passing build/browser checks. Supported archival and session
+bookkeeping follow the approved batch. Paths below preserve the reviewed
+pre-archive staging list.
 All current dirty files belong to this task; no unrecognized file is proposed.
 The task-local JSONL context manifests are intentionally ignored by the existing
 repository rule and will not be force-added. No dependency lockfile changed.
