@@ -510,3 +510,37 @@ Implemented and validated Memo hover selection, plain timestamps, per-entry Shar
 ### Next Steps
 
 - Task is archived. Await new owner direction; no push, deployment or subsequent product work authorized.
+
+
+## Session 96: Archive component vulnerability assessment
+<!-- trellis-session: v=2 fp=22ce6ee4befaab3c -->
+
+**Date**: 2026-10-30
+**Task**: Archive component vulnerability assessment
+**Branch**: `anti-entropy-loss-syndrome`
+
+### Summary
+
+Archived the completed dependency and runtime vulnerability assessment and repair after owner approval.
+
+### Main Changes
+
+- Recorded work commit e639345, completed status, archive location, and historical validation boundaries; archive commit 2725264 carries Codex attribution.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e639345` | fix(security): patch component dependencies and runtime images |
+
+### Testing
+
+- [OK] Archived task context validation and Git whitespace checks passed; all 16 tracked evidence files match the pre-archive commit. No product tests were rerun during archival.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- The separate Markdown display-block task remains in planning and was left unchanged.
